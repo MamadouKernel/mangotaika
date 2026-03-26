@@ -21,6 +21,16 @@ public class ProfilViewModel
     public DateTime DateCreation { get; set; }
 }
 
+public class TelechargementDonneesViewModel
+{
+    public string FormatExport { get; set; } = "json";
+
+    [DataType(DataType.Password)]
+    public string MotDePasseConfirmation { get; set; } = string.Empty;
+
+    public bool ConfirmerExport { get; set; }
+}
+
 public class ChangerMotDePasseViewModel
 {
     [Required(ErrorMessage = "L'ancien mot de passe est requis.")]

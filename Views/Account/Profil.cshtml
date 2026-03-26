@@ -3,6 +3,9 @@
     ViewData["Title"] = "Mon profil";
     var isAdmin = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
     Layout = isAdmin ? "_LayoutAdmin" : "_Layout";
+    var exportError = TempData["ErrorExportDonnees"] as string;
+    var exportFormat = (TempData["SelectedExportFormat"] as string ?? "json").ToLowerInvariant();
+    var ouvrirExport = string.Equals(TempData["OpenExportPanel"]?.ToString(), "True", StringComparison.OrdinalIgnoreCase) || !string.IsNullOrWhiteSpace(exportError);
 }
 
 <div class="profile-page @(isAdmin ? "profile-page--admin py-4" : "container profile-page--public py-5")">
@@ -169,14 +172,52 @@
                 <!-- Droit d'accès : Télécharger mes données -->
                 <div class="d-flex align-items-start gap-3 mt-3 p-3" style="background:var(--vert-pale);border-radius:12px;border:1px solid var(--vert-pastel);">
                     <i class="bi bi-download" style="font-size:1.5rem;color:var(--vert-logo);margin-top:2px;"></i>
-                    <div>
+                    <div class="w-100">
                         <strong class="small" style="color:var(--bleu-logo);">Droit d'accès — Télécharger mes données</strong>
-                        <p class="text-muted-custom small mb-2">Obtenez une copie de toutes les données personnelles que nous détenons sur vous (format JSON).</p>
-                        <form asp-action="TelechargerMesDonnees" method="post" class="d-inline">
-                            <button type="submit" class="btn btn-sm btn-mango">
-                                <i class="bi bi-download"></i> Télécharger mes données
-                            </button>
-                        </form>
+                        <p class="text-muted-custom small mb-2">Obtenez une copie de toutes les donnees personnelles que nous detenons sur vous en JSON, Excel, PDF signe ou texte simple.</p>
+                        @if (!string.IsNullOrWhiteSpace(exportError))
+                        {
+                            <div class="alert alert-danger small py-2 mb-3" style="border-radius:10px;">@exportError</div>
+                        }
+                        <button type="button" class="btn btn-sm btn-mango" data-bs-toggle="collapse" data-bs-target="#confirmExportDonnees" aria-expanded="@(ouvrirExport ? "true" : "false")">
+                            <i class="bi bi-shield-lock"></i> Preparer mon export
+                        </button>
+                        <div class="collapse @(ouvrirExport ? "show" : "") mt-3" id="confirmExportDonnees">
+                            <div class="profile-export-panel">
+                                <form asp-action="TelechargerMesDonnees" method="post" class="form-modern">
+                                    <input type="hidden" name="ConfirmerExport" value="false" />
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Format d'export</label>
+                                            <select name="FormatExport" class="form-select">
+                                                <option value="json" selected="@(exportFormat == "json" ? "selected" : null)">JSON structure</option>
+                                                <option value="xlsx" selected="@(exportFormat == "xlsx" ? "selected" : null)">Excel (.xlsx)</option>
+                                                <option value="pdf" selected="@(exportFormat == "pdf" ? "selected" : null)">PDF signe (.pdf)</option>
+                                                <option value="txt" selected="@(exportFormat == "txt" ? "selected" : null)">Texte (.txt)</option>
+                                            </select>
+                                            <div class="form-text">JSON pour l'archivage, Excel pour la lecture, PDF signe pour le partage, texte pour une copie simple.</div>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Mot de passe actuel</label>
+                                            <input type="password" name="MotDePasseConfirmation" class="form-control" required autocomplete="current-password" />
+                                            <div class="form-text">Une verification supplementaire est demandee avant le telechargement.</div>
+                                        </div>
+                                    </div>
+                                    <div class="form-check profile-export-panel__check">
+                                        <input class="form-check-input" type="checkbox" value="true" id="ConfirmerExport" name="ConfirmerExport" required />
+                                        <label class="form-check-label" for="ConfirmerExport">
+                                            Je confirme vouloir generer une copie complete de mes donnees personnelles.
+                                        </label>
+                                    </div>
+                                    <div class="profile-export-panel__actions">
+                                        <button type="submit" class="btn btn-sm btn-mango">
+                                            <i class="bi bi-download"></i> Generer et telecharger
+                                        </button>
+                                        <span class="text-muted-custom small">L'export est prepare a la demande, sans stockage supplementaire cote navigateur.</span>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

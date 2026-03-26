@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using ClosedXML.Excel;
 using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.Helpers;
@@ -808,13 +809,543 @@ public class AccountController(
 
     // === DROITS RGPD / ARTCI ===
 
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> TelechargerMesDonnees(TelechargementDonneesViewModel model)
+    {
+        var user = await userManager.GetUserAsync(User);
+        if (user is null) return RedirectToAction(nameof(Login));
+
+        var format = NormaliserFormatExport(model.FormatExport);
+        if (!model.ConfirmerExport)
+            return RedirigerErreurExport("Veuillez confirmer explicitement la demande d'export avant le telechargement.", format);
+
+        if (string.IsNullOrWhiteSpace(model.MotDePasseConfirmation) ||
+            !await userManager.CheckPasswordAsync(user, model.MotDePasseConfirmation))
+        {
+            return RedirigerErreurExport("Mot de passe incorrect. L'export de vos donnees a ete annule.", format);
+        }
+
+        var donnees = await ConstruireDonneesPersonnellesAsync(user);
+        var exportRoot = JsonSerializer.SerializeToElement(donnees, ExportJsonOptions);
+        var horodatage = DateTime.UtcNow.ToString("yyyyMMdd-HHmm");
+        var nomBase = $"mes-donnees-mangotaika-{horodatage}";
+        var signatureExport = $"{user.Prenom} {user.Nom}".Trim();
+
+        return format switch
+        {
+            "xlsx" => File(
+                ConstruireClasseurExport(exportRoot),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"{nomBase}.xlsx"),
+            "pdf" => File(
+                ConstruirePdfExport(ConstruireTexteExport(exportRoot, signatureExport)),
+                "application/pdf",
+                $"{nomBase}.pdf"),
+            "txt" => File(
+                Encoding.UTF8.GetBytes(ConstruireTexteExport(exportRoot, signatureExport)),
+                "text/plain; charset=utf-8",
+                $"{nomBase}.txt"),
+            _ => File(
+                Encoding.UTF8.GetBytes(JsonSerializer.Serialize(exportRoot, ExportJsonOptions)),
+                "application/json",
+                $"{nomBase}.json")
+        };
+    }
+
+    private async Task<Dictionary<string, object?>> ConstruireDonneesPersonnellesAsync(ApplicationUser user)
+    {
+        var userId = user.Id;
+        var roles = await userManager.GetRolesAsync(user);
+
+        var donnees = new Dictionary<string, object?>
+        {
+            ["InformationsPersonnelles"] = new
+            {
+                user.Nom,
+                user.Prenom,
+                user.Email,
+                Telephone = user.PhoneNumber,
+                user.PhotoUrl,
+                user.Matricule,
+                user.IsActive,
+                user.DateCreation,
+                Roles = roles.ToList(),
+                MfaActif = await userManager.GetTwoFactorEnabledAsync(user)
+            }
+        };
+
+        await db.Entry(user).Reference(u => u.Groupe).LoadAsync();
+        await db.Entry(user).Reference(u => u.Branche).LoadAsync();
+        donnees["Groupe"] = user.Groupe != null ? new { user.Groupe.Nom, user.Groupe.Adresse } : null;
+        donnees["Branche"] = user.Branche != null ? new { user.Branche.Nom } : null;
+
+        var scoutLie = await db.Scouts
+            .Include(s => s.Groupe)
+            .Include(s => s.Branche)
+            .FirstOrDefaultAsync(s => s.UserId == userId);
+
+        if (scoutLie != null)
+        {
+            donnees["ProfilScout"] = new
+            {
+                scoutLie.Nom,
+                scoutLie.Prenom,
+                scoutLie.Matricule,
+                scoutLie.NumeroCarte,
+                scoutLie.DateNaissance,
+                scoutLie.Telephone,
+                scoutLie.Email,
+                scoutLie.RegionScoute,
+                scoutLie.District,
+                scoutLie.Fonction,
+                Groupe = scoutLie.Groupe?.Nom,
+                Branche = scoutLie.Branche?.Nom
+            };
+
+            donnees["Competences"] = await db.Competences
+                .Where(c => c.ScoutId == scoutLie.Id)
+                .Select(c => new { c.Nom, c.Niveau, c.DateObtention })
+                .ToListAsync();
+
+            donnees["SuiviAcademique"] = await db.SuivisAcademiques
+                .Where(s => s.ScoutId == scoutLie.Id)
+                .Select(s => new { s.AnneeScolaire, s.Etablissement, s.NiveauScolaire, s.Classe, s.MoyenneGenerale, s.Mention })
+                .ToListAsync();
+
+            donnees["ParticipationsActivites"] = await db.ParticipantsActivite
+                .Include(p => p.Activite)
+                .Where(p => p.ScoutId == scoutLie.Id)
+                .Select(p => new { Activite = p.Activite!.Titre, p.Activite.DateDebut, p.Activite.Lieu, p.Presence })
+                .ToListAsync();
+
+            donnees["Cotisations"] = await db.TransactionsFinancieres
+                .Where(t => t.ScoutId == scoutLie.Id && !t.EstSupprime)
+                .Select(t => new { t.Libelle, t.Montant, t.Type, t.DateTransaction })
+                .ToListAsync();
+        }
+
+        donnees["Tickets"] = await db.Tickets
+            .Where(t => t.CreateurId == userId && !t.EstSupprime)
+            .Select(t => new { t.Sujet, t.Description, t.Statut, t.Priorite, t.DateCreation })
+            .ToListAsync();
+
+        donnees["HistoriqueFonctions"] = await db.HistoriqueFonctions
+            .Where(h => h.UserId == userId)
+            .Select(h => new { h.Fonction, h.DateDebut, h.DateFin, h.Commentaire })
+            .ToListAsync();
+
+        donnees["DemandesAutorisation"] = await db.DemandesAutorisation
+            .Where(d => d.DemandeurId == userId)
+            .Select(d => new { d.Titre, d.TypeActivite, d.Statut, d.DateCreation, d.DateActivite })
+            .ToListAsync();
+
+        return donnees;
+    }
+
+    private IActionResult RedirigerErreurExport(string message, string format)
+    {
+        TempData["ErrorExportDonnees"] = message;
+        TempData["SelectedExportFormat"] = format;
+        TempData["OpenExportPanel"] = true;
+        return RedirectToAction(nameof(Profil));
+    }
+
+    private static string NormaliserFormatExport(string? format) =>
+        format?.Trim().ToLowerInvariant() switch
+        {
+            "xlsx" => "xlsx",
+            "pdf" => "pdf",
+            "txt" => "txt",
+            _ => "json"
+        };
+
+    private static JsonSerializerOptions ExportJsonOptions => new()
+    {
+        WriteIndented = true,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+
+    private static byte[] ConstruireClasseurExport(JsonElement root)
+    {
+        using var workbook = new XLWorkbook();
+        var nomsFeuilles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var section in root.EnumerateObject())
+        {
+            var feuille = workbook.Worksheets.Add(SanitiserNomFeuille(section.Name, nomsFeuilles));
+            feuille.Style.Alignment.Vertical = XLAlignmentVerticalValues.Top;
+
+            switch (section.Value.ValueKind)
+            {
+                case JsonValueKind.Array:
+                    EcrireSectionListe(feuille, section.Value);
+                    break;
+                case JsonValueKind.Object:
+                    EcrireSectionObjet(feuille, section.Value);
+                    break;
+                default:
+                    feuille.Cell(1, 1).Value = "Valeur";
+                    feuille.Cell(2, 1).Value = FormatterValeurJson(section.Value);
+                    break;
+            }
+
+            feuille.Columns().AdjustToContents();
+        }
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        return stream.ToArray();
+    }
+
+    private static void EcrireSectionObjet(IXLWorksheet feuille, JsonElement element)
+    {
+        feuille.Cell(1, 1).Value = "Champ";
+        feuille.Cell(1, 2).Value = "Valeur";
+        StyliserEntete(feuille.Range(1, 1, 1, 2));
+
+        var row = 2;
+        foreach (var prop in element.EnumerateObject())
+        {
+            feuille.Cell(row, 1).Value = HumaniserCle(prop.Name);
+            feuille.Cell(row, 2).Value = FormatterValeurJson(prop.Value);
+            row++;
+        }
+    }
+
+    private static void EcrireSectionListe(IXLWorksheet feuille, JsonElement element)
+    {
+        var elements = element.EnumerateArray().ToList();
+        if (elements.Count == 0)
+        {
+            feuille.Cell(1, 1).Value = "Aucune donnee";
+            return;
+        }
+
+        if (elements.All(e => e.ValueKind == JsonValueKind.Object))
+        {
+            var colonnes = new List<string>();
+            foreach (var item in elements)
+            {
+                foreach (var prop in item.EnumerateObject())
+                {
+                    if (!colonnes.Contains(prop.Name))
+                        colonnes.Add(prop.Name);
+                }
+            }
+
+            for (var i = 0; i < colonnes.Count; i++)
+                feuille.Cell(1, i + 1).Value = HumaniserCle(colonnes[i]);
+
+            StyliserEntete(feuille.Range(1, 1, 1, colonnes.Count));
+
+            var row = 2;
+            foreach (var item in elements)
+            {
+                for (var i = 0; i < colonnes.Count; i++)
+                {
+                    if (item.TryGetProperty(colonnes[i], out var valeur))
+                        feuille.Cell(row, i + 1).Value = FormatterValeurJson(valeur);
+                }
+
+                row++;
+            }
+
+            return;
+        }
+
+        feuille.Cell(1, 1).Value = "Valeur";
+        StyliserEntete(feuille.Range(1, 1, 1, 1));
+
+        for (var i = 0; i < elements.Count; i++)
+            feuille.Cell(i + 2, 1).Value = FormatterValeurJson(elements[i]);
+    }
+
+    private static void StyliserEntete(IXLRange range)
+    {
+        range.Style.Font.Bold = true;
+        range.Style.Fill.BackgroundColor = XLColor.FromHtml("#eef4e0");
+        range.Style.Font.FontColor = XLColor.FromHtml("#313e45");
+        range.Style.Border.BottomBorder = XLBorderStyleValues.Thin;
+    }
+
+    private static string ConstruireTexteExport(JsonElement root, string? signatureNom = null)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("EXPORT DES DONNEES PERSONNELLES - MANGO TAIKA");
+        sb.AppendLine($"Genere le : {DateTime.UtcNow:dd/MM/yyyy HH:mm} UTC");
+        sb.AppendLine(new string('=', 56));
+
+        foreach (var section in root.EnumerateObject())
+        {
+            var titre = HumaniserCle(section.Name);
+            sb.AppendLine();
+            sb.AppendLine(titre.ToUpperInvariant());
+            sb.AppendLine(new string('-', Math.Max(18, titre.Length)));
+            AjouterValeurTexte(sb, section.Value, 0);
+        }
+
+        if (!string.IsNullOrWhiteSpace(signatureNom))
+        {
+            sb.AppendLine();
+            sb.AppendLine(new string('-', 56));
+            sb.AppendLine("ATTESTATION ET SIGNATURE");
+            sb.AppendLine($"Document genere pour : {signatureNom}");
+            sb.AppendLine($"Signature nominative : {signatureNom}");
+            sb.AppendLine($"Date de validation : {DateTime.UtcNow:dd/MM/yyyy HH:mm} UTC");
+        }
+
+        return sb.ToString();
+    }
+
+    private static byte[] ConstruirePdfExport(string contenu)
+    {
+        var lignes = DecouperLignesPdf(NormaliserPdfTexte(contenu), 92);
+        if (lignes.Count == 0)
+            lignes.Add(string.Empty);
+
+        const int lignesParPage = 44;
+        var pages = lignes.Chunk(lignesParPage).ToList();
+        var pageCount = pages.Count;
+        var firstPageObjectId = 3;
+        var fontObjectId = firstPageObjectId + pageCount;
+        var firstContentObjectId = fontObjectId + 1;
+
+        var objets = new List<string>
+        {
+            "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj",
+            $"2 0 obj\n<< /Type /Pages /Kids [{string.Join(" ", Enumerable.Range(firstPageObjectId, pageCount).Select(id => $"{id} 0 R"))}] /Count {pageCount} >>\nendobj"
+        };
+
+        for (var i = 0; i < pageCount; i++)
+        {
+            var pageObjectId = firstPageObjectId + i;
+            var contentObjectId = firstContentObjectId + i;
+            objets.Add($"{pageObjectId} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 {fontObjectId} 0 R >> >> /Contents {contentObjectId} 0 R >>\nendobj");
+        }
+
+        objets.Add($"{fontObjectId} 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj");
+
+        for (var i = 0; i < pageCount; i++)
+        {
+            var contentObjectId = firstContentObjectId + i;
+            var streamBuilder = new StringBuilder();
+            streamBuilder.AppendLine("BT");
+            streamBuilder.AppendLine("/F1 11 Tf");
+
+            var y = 794;
+            foreach (var ligne in pages[i])
+            {
+                streamBuilder.AppendLine($"1 0 0 1 48 {y} Tm ({EchapperTextePdf(ligne)}) Tj");
+                y -= 16;
+            }
+
+            streamBuilder.AppendLine("ET");
+            var streamContent = streamBuilder.ToString();
+            var streamLength = Encoding.ASCII.GetByteCount(streamContent);
+            objets.Add($"{contentObjectId} 0 obj\n<< /Length {streamLength} >>\nstream\n{streamContent}endstream\nendobj");
+        }
+
+        using var stream = new MemoryStream();
+        var offsets = new List<long> { 0 };
+
+        static void EcrireAscii(MemoryStream target, string value)
+        {
+            var buffer = Encoding.ASCII.GetBytes(value);
+            target.Write(buffer, 0, buffer.Length);
+        }
+
+        EcrireAscii(stream, "%PDF-1.4\n");
+        foreach (var objet in objets)
+        {
+            offsets.Add(stream.Position);
+            EcrireAscii(stream, objet);
+            EcrireAscii(stream, "\n");
+        }
+
+        var xrefStart = stream.Position;
+        EcrireAscii(stream, $"xref\n0 {offsets.Count}\n");
+        EcrireAscii(stream, "0000000000 65535 f \n");
+
+        for (var i = 1; i < offsets.Count; i++)
+            EcrireAscii(stream, $"{offsets[i]:D10} 00000 n \n");
+
+        EcrireAscii(stream, $"trailer\n<< /Size {offsets.Count} /Root 1 0 R >>\nstartxref\n{xrefStart}\n%%EOF");
+        return stream.ToArray();
+    }
+
+    private static void AjouterValeurTexte(StringBuilder sb, JsonElement element, int indent)
+    {
+        var prefix = new string(' ', indent);
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+                foreach (var prop in element.EnumerateObject())
+                {
+                    if (prop.Value.ValueKind is JsonValueKind.Object or JsonValueKind.Array)
+                    {
+                        sb.AppendLine($"{prefix}- {HumaniserCle(prop.Name)} :");
+                        AjouterValeurTexte(sb, prop.Value, indent + 2);
+                    }
+                    else
+                    {
+                        sb.AppendLine($"{prefix}- {HumaniserCle(prop.Name)} : {FormatterValeurJson(prop.Value)}");
+                    }
+                }
+                break;
+            case JsonValueKind.Array:
+                var index = 1;
+                foreach (var item in element.EnumerateArray())
+                {
+                    if (item.ValueKind is JsonValueKind.Object or JsonValueKind.Array)
+                    {
+                        sb.AppendLine($"{prefix}{index}.");
+                        AjouterValeurTexte(sb, item, indent + 2);
+                    }
+                    else
+                    {
+                        sb.AppendLine($"{prefix}{index}. {FormatterValeurJson(item)}");
+                    }
+
+                    index++;
+                }
+
+                if (index == 1)
+                    sb.AppendLine($"{prefix}Aucune donnee");
+                break;
+            default:
+                sb.AppendLine($"{prefix}{FormatterValeurJson(element)}");
+                break;
+        }
+    }
+
+    private static List<string> DecouperLignesPdf(string contenu, int longueurMax)
+    {
+        var lignes = new List<string>();
+        foreach (var ligneBrute in contenu.Replace("\r\n", "\n").Split('\n'))
+        {
+            var ligne = ligneBrute.TrimEnd();
+            if (string.IsNullOrWhiteSpace(ligne))
+            {
+                lignes.Add(string.Empty);
+                continue;
+            }
+
+            var reste = ligne;
+            while (reste.Length > longueurMax)
+            {
+                var index = reste.LastIndexOf(' ', Math.Min(longueurMax, reste.Length - 1));
+                if (index <= 0)
+                    index = longueurMax;
+
+                lignes.Add(reste[..index].TrimEnd());
+                reste = reste[index..].TrimStart();
+            }
+
+            lignes.Add(reste);
+        }
+
+        return lignes;
+    }
+
+    private static string NormaliserPdfTexte(string contenu)
+    {
+        var texte = contenu
+            .Replace("’", "'")
+            .Replace("‘", "'")
+            .Replace("“", "\"")
+            .Replace("”", "\"")
+            .Replace("–", "-")
+            .Replace("—", "-")
+            .Replace("•", "-");
+
+        var decomposed = texte.Normalize(NormalizationForm.FormD);
+        var sb = new StringBuilder(decomposed.Length);
+        foreach (var caractere in decomposed)
+        {
+            var category = char.GetUnicodeCategory(caractere);
+            if (category == System.Globalization.UnicodeCategory.NonSpacingMark)
+                continue;
+
+            if (caractere is '\r' or '\n' or '\t')
+            {
+                sb.Append(caractere == '\t' ? ' ' : caractere);
+                continue;
+            }
+
+            if (caractere >= 32 && caractere <= 126)
+                sb.Append(caractere);
+        }
+
+        return sb.ToString();
+    }
+
+    private static string EchapperTextePdf(string texte) =>
+        texte
+            .Replace("\\", "\\\\")
+            .Replace("(", "\\(")
+            .Replace(")", "\\)");
+
+    private static string FormatterValeurJson(JsonElement element) =>
+        element.ValueKind switch
+        {
+            JsonValueKind.String => element.GetString() ?? string.Empty,
+            JsonValueKind.Number => element.ToString(),
+            JsonValueKind.True => "Oui",
+            JsonValueKind.False => "Non",
+            JsonValueKind.Null or JsonValueKind.Undefined => string.Empty,
+            JsonValueKind.Object or JsonValueKind.Array => JsonSerializer.Serialize(element, new JsonSerializerOptions { WriteIndented = false }),
+            _ => element.ToString()
+        };
+
+    private static string HumaniserCle(string valeur)
+    {
+        if (string.IsNullOrWhiteSpace(valeur)) return "Valeur";
+
+        var sb = new StringBuilder();
+        for (var i = 0; i < valeur.Length; i++)
+        {
+            var c = valeur[i];
+            if (i > 0 && char.IsUpper(c) && !char.IsUpper(valeur[i - 1]))
+                sb.Append(' ');
+
+            sb.Append(c);
+        }
+
+        return sb.ToString().Replace("_", " ");
+    }
+
+    private static string SanitiserNomFeuille(string nomSouhaite, ISet<string> nomsExistants)
+    {
+        var nom = HumaniserCle(nomSouhaite);
+        foreach (var caractere in new[] { ':', '\\', '/', '?', '*', '[', ']' })
+            nom = nom.Replace(caractere.ToString(), string.Empty);
+
+        nom = string.IsNullOrWhiteSpace(nom) ? "Export" : nom;
+        nom = nom.Length > 31 ? nom[..31] : nom;
+
+        var baseName = nom;
+        var compteur = 1;
+        while (nomsExistants.Contains(nom))
+        {
+            var suffixe = $"-{compteur}";
+            var longueurBase = Math.Max(1, 31 - suffixe.Length);
+            nom = $"{baseName[..Math.Min(baseName.Length, longueurBase)]}{suffixe}";
+            compteur++;
+        }
+
+        nomsExistants.Add(nom);
+        return nom;
+    }
+
     /// <summary>
     /// Droit d'accès : Télécharger toutes les données personnelles de l'utilisateur (JSON)
     /// </summary>
     [Authorize]
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> TelechargerMesDonnees()
+    private async Task<IActionResult> TelechargerMesDonneesJsonLegacy()
     {
         var user = await userManager.GetUserAsync(User);
         if (user is null) return RedirectToAction(nameof(Login));

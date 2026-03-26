@@ -1101,6 +1101,27 @@ body {
     line-height: 1.55;
     color: var(--texte-secondaire);
 }
+.profile-export-panel {
+    margin-top: 0.95rem;
+    padding: 1rem;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.72);
+    border: 1px solid rgba(89,117,55,0.16);
+}
+.profile-export-panel__check {
+    padding: 0.85rem 1rem;
+    margin: 0 0 1rem;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid var(--gris-border);
+}
+.profile-export-panel__actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.85rem;
+    flex-wrap: wrap;
+}
 .profile-panel {
     border-radius: 20px;
 }
@@ -1726,6 +1747,12 @@ main { animation: fadeInUp 0.35s ease-out; }
     .profile-summary-card__avatar {
         width: 104px;
         height: 104px;
+    }
+    .profile-export-panel__actions {
+        align-items: stretch;
+    }
+    .profile-export-panel__actions .btn {
+        width: 100%;
     }
   }
 
