@@ -1,14 +1,133 @@
 # MangoTaika
 
+[![.NET](https://img.shields.io/badge/.NET-9.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
+[![ASP.NET Core MVC](https://img.shields.io/badge/ASP.NET%20Core-MVC-5C2D91?logo=dotnet&logoColor=white)](https://learn.microsoft.com/aspnet/core/mvc/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Docker Ready](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![Tests](https://img.shields.io/badge/tests-46%2F46-success)](#tests)
+[![Status](https://img.shields.io/badge/status-active%20development-597537)](#roadmap)
+
 Plateforme web ASP.NET Core MVC pour le District Scout MANGO TAIKA.
 
-Le projet couvre plusieurs domaines dans une seule application:
-- gestion des utilisateurs et des rôles
-- gestion des scouts, groupes, branches et activités
-- demandes administratives et demandes de groupe
-- centre de support inspiré ServiceNow
-- LMS interne avec parcours, sessions, quiz, certificats et forum de formation
-- finances, AGR, actualités, galerie, partenaires et historique
+Le projet regroupe dans une seule application:
+- la gestion des scouts, groupes, branches et activites
+- les demandes administratives et demandes de groupe
+- un centre de support inspire ServiceNow
+- un LMS interne type campus avec sessions, quiz, certificats et forum
+- la communication publique et institutionnelle
+- les finances, AGR, partenaires et historique
+
+Repository GitHub:
+[https://github.com/MamadouKernel/mangotaika.git](https://github.com/MamadouKernel/mangotaika.git)
+
+## Sommaire
+
+- [Vision](#vision)
+- [Fonctionnalites](#fonctionnalites)
+- [Architecture](#architecture)
+- [Stack technique](#stack-technique)
+- [Structure du projet](#structure-du-projet)
+- [Roles](#roles)
+- [Installation locale](#installation-locale)
+- [Tests](#tests)
+- [Docker](#docker)
+- [Deploiement VPS](#deploiement-vps)
+- [Configuration](#configuration)
+- [Securite](#securite)
+- [Roadmap](#roadmap)
+
+## Vision
+
+MangoTaika est pense comme une plateforme metier unifiee pour un district scout:
+- outil d'administration interne
+- portail de support et de traitement
+- espace de suivi des scouts et des familles
+- campus de formation pour les parcours pedagogiques
+- socle de communication publique
+
+L'objectif n'est pas seulement de stocker des donnees, mais d'offrir un produit exploitable par plusieurs profils avec des experiences adaptees par role.
+
+## Fonctionnalites
+
+### 1. Administration et organisation
+
+- gestion des utilisateurs et des roles
+- profils `Administrateur`, `Gestionnaire`, `AgentSupport`, `Scout`, `Parent`, `Superviseur`, `Consultant`
+- tableaux de bord adaptes par role
+- permissions alignees entre menu, vues et controleurs
+
+### 2. Territoire scout
+
+- gestion des scouts
+- gestion des groupes et branches
+- suivi de fiches, competences, historique et academique
+- import Excel de scouts
+
+### 3. Activites et demandes
+
+- activites, participants, documents et commentaires
+- demandes administratives
+- demandes de groupe
+- workflows de validation
+
+### 4. Centre de support
+
+- ticketing inspire ServiceNow
+- files de traitement
+- SLA, escalades et reaffectation intelligente
+- base de connaissances
+- catalogue de services
+- notifications temps reel et persistantes
+
+### 5. LMS campus
+
+- catalogue de formations
+- inscriptions et parcours apprenant
+- sessions de formation
+- jalons pedagogiques
+- annonces de cours
+- lecons, quiz, tentatives et progression
+- badges, attestations et certificats
+- forum de formation
+- experience UI "campus / salle de cours"
+
+### 6. Communication
+
+- actualites
+- galerie
+- mot du commissaire
+- contact public
+- parcours WhatsApp public
+- reseaux sociaux officiels
+
+## Architecture
+
+```mermaid
+flowchart LR
+    U["Utilisateurs"]
+    MVC["ASP.NET Core MVC"]
+    S["Services metier"]
+    EF["EF Core"]
+    DB["PostgreSQL"]
+    HUB["SignalR NotificationHub"]
+    WWW["wwwroot / uploads"]
+
+    U --> MVC
+    MVC --> S
+    S --> EF
+    EF --> DB
+    MVC --> HUB
+    MVC --> WWW
+```
+
+### Principes
+
+- `Controllers/` oriente les flux HTTP et les droits d'acces
+- `Services/` concentre la logique metier
+- `Data/Entities/` porte le modele EF Core
+- `DTOs/` transporte les vues de lecture et de formulaire
+- `Views/` contient les experiences Razor par role et par module
+- `wwwroot/` contient les assets et les uploads persistants
 
 ## Stack technique
 
@@ -18,23 +137,38 @@ Le projet couvre plusieurs domaines dans une seule application:
 - `PostgreSQL`
 - `ASP.NET Core Identity`
 - `SignalR`
-- `ClosedXML` pour les exports/imports Excel
-- `Docker` / `docker compose` pour le déploiement
+- `ClosedXML`
+- `Docker`
+- `docker compose`
 
-## Modules principaux
+Packages principaux:
+- `Microsoft.AspNetCore.Identity.EntityFrameworkCore`
+- `Npgsql.EntityFrameworkCore.PostgreSQL`
+- `Microsoft.EntityFrameworkCore.InMemory`
+- `ClosedXML`
 
-- `Support`
-  - tickets, SLA, escalades, assignation intelligente, notifications, base de connaissances, catalogue de services
-- `LMS`
-  - catalogue, inscriptions, sessions, jalons, annonces, quiz, certificats, forum de classe
-- `Administration`
-  - rôles, utilisateurs, dashboard, paramètres métier
-- `Communication`
-  - actualités, galerie, mot du commissaire, réseaux sociaux
+## Structure du projet
 
-## Rôles
+```text
+Controllers/
+Data/
+  Entities/
+DTOs/
+Helpers/
+Hubs/
+Models/
+Services/
+Views/
+wwwroot/
+Migrations/
+MangoTaika.Tests/
+Dockerfile
+docker-compose.yml
+```
 
-Les rôles gérés par l’application:
+## Roles
+
+Roles geres par l'application:
 - `Administrateur`
 - `Gestionnaire`
 - `AgentSupport`
@@ -43,17 +177,34 @@ Les rôles gérés par l’application:
 - `Superviseur`
 - `Consultant`
 
-## Démarrage local
+Chaque role dispose d'une experience dediee, y compris sur:
+- le menu
+- les actions disponibles
+- les vues de consultation
+- les droits serveur
 
-### Prérequis
+## Installation locale
+
+### Prerequis
 
 - `.NET SDK 9`
 - `PostgreSQL`
+- `Git`
 
-### Configuration
+### 1. Cloner le projet
 
-Mettre à jour [appsettings.json](C:/Users/kerne/Downloads/rodi/new/MangoTaika/appsettings.json) ou utiliser des variables d’environnement:
+```bash
+git clone https://github.com/MamadouKernel/mangotaika.git
+cd mangotaika
+```
 
+### 2. Configurer l'application
+
+Vous pouvez utiliser:
+- [appsettings.json](./appsettings.json) pour le developpement local
+- ou des variables d'environnement pour une configuration plus propre
+
+Variables importantes:
 - `ConnectionStrings__DefaultConnection`
 - `AdminSeed__Email`
 - `AdminSeed__Phone`
@@ -64,73 +215,88 @@ Mettre à jour [appsettings.json](C:/Users/kerne/Downloads/rodi/new/MangoTaika/a
 - `DataProtection__KeysPath`
 
 Important:
-- l’admin seed n’est créé que si `AdminSeed__Password` est renseigné
-- en production, il est recommandé de laisser `SeedDemoData=false`
+- le compte admin seed n'est cree que si `AdminSeed__Password` est renseigne
+- `SeedDemoData=false` est recommande hors developpement
 
-### Commandes
+### 3. Appliquer la base
 
 ```powershell
 dotnet restore
 dotnet ef database update
+```
+
+### 4. Lancer l'application
+
+```powershell
 dotnet run
 ```
 
-Application:
-- URL locale typique: `https://localhost:xxxx` ou `http://localhost:xxxx`
-- health check: `/health`
+Health check:
+- `GET /health`
 
 ## Tests
 
-Projet de tests: [MangoTaika.Tests](C:/Users/kerne/Downloads/rodi/new/MangoTaika/MangoTaika.Tests/MangoTaika.Tests.csproj)
+Projet de tests:
+- [MangoTaika.Tests/MangoTaika.Tests.csproj](./MangoTaika.Tests/MangoTaika.Tests.csproj)
 
-Lancer les tests:
+Executer la suite:
 
 ```powershell
 dotnet test .\MangoTaika.Tests\MangoTaika.Tests.csproj
 ```
 
-Couverture actuelle:
+Couverture fonctionnelle actuelle:
 - tests unitaires
-- tests d’intégration
+- tests d'integration
 - tests fonctionnels HTTP
+
+Etat connu au dernier passage:
+- `46/46` tests OK
 
 ## Docker
 
 Fichiers fournis:
-- [Dockerfile](C:/Users/kerne/Downloads/rodi/new/MangoTaika/Dockerfile)
-- [docker-compose.yml](C:/Users/kerne/Downloads/rodi/new/MangoTaika/docker-compose.yml)
-- [.env.example](C:/Users/kerne/Downloads/rodi/new/MangoTaika/.env.example)
+- [Dockerfile](./Dockerfile)
+- [docker-compose.yml](./docker-compose.yml)
+- [.env.example](./.env.example)
+- [.dockerignore](./.dockerignore)
 
-### Déploiement rapide avec Docker Compose
+### Build manuel
+
+```bash
+docker build -t mangotaika .
+```
+
+### Lancement avec compose
 
 1. Copier `.env.example` en `.env`
-2. Remplir les valeurs sensibles
+2. Renseigner les variables sensibles
 3. Lancer:
 
 ```bash
 docker compose up -d --build
 ```
 
-Services lancés:
+Services:
 - `db` : PostgreSQL
-- `app` : application MangoTaika
+- `app` : MangoTaika
 
 Volumes persistants:
 - base PostgreSQL
 - uploads
-- clés Data Protection
+- cles Data Protection
 
-## Déploiement VPS
+## Deploiement VPS
 
 ### Recommandation
 
-Déployer derrière un reverse proxy `Nginx` avec HTTPS.
+Deployer derriere `Nginx` avec HTTPS.
 
-### Étapes minimales
+### Etapes minimales
 
 1. Installer Docker et Docker Compose
 2. Cloner le repository
-3. Créer le fichier `.env`
+3. Creer `.env`
 4. Renseigner au minimum:
    - `POSTGRES_PASSWORD`
    - `ADMIN_SEED_PASSWORD`
@@ -142,7 +308,7 @@ Déployer derrière un reverse proxy `Nginx` avec HTTPS.
 docker compose up -d --build
 ```
 
-### Vérifications
+### Verification
 
 ```bash
 docker compose ps
@@ -150,9 +316,9 @@ docker compose logs -f app
 curl http://localhost:8080/health
 ```
 
-## Variables d’environnement utiles
+## Configuration
 
-Exemples disponibles dans [.env.example](C:/Users/kerne/Downloads/rodi/new/MangoTaika/.env.example):
+Exemples disponibles dans [.env.example](./.env.example):
 
 - `APP_PORT`
 - `POSTGRES_DB`
@@ -166,25 +332,31 @@ Exemples disponibles dans [.env.example](C:/Users/kerne/Downloads/rodi/new/Mango
 - `SEED_DEMO_DATA`
 - `TZ`
 
-## Sécurité et publication
+## Securite
 
-Quelques points déjà en place:
-- migrations automatiques au démarrage
-- rôle admin seed optionnel
+Points deja en place:
+- migrations automatiques au demarrage
+- seed admin optionnel
 - `ForwardedHeaders` pour reverse proxy
-- persistance des clés `DataProtection`
-- protection antiforgery
-- cookies et en-têtes de sécurité
+- persistance des cles `DataProtection`
+- antiforgery global
+- cookies et en-tetes de securite
 - endpoint `/health`
 
-## Repository
+Bonnes pratiques:
+- ne jamais conserver de secrets reels dans `appsettings.json`
+- privilegier `.env` non versionne ou des variables d'environnement
+- utiliser un mot de passe admin seed fort et unique
 
-Repository GitHub:
-[https://github.com/MamadouKernel/mangotaika.git](https://github.com/MamadouKernel/mangotaika.git)
+## Roadmap
 
-Branche principale:
-- `main`
+Pistes d'evolution naturelles:
+- README avec captures d'ecran reelles
+- workflow CI GitHub Actions
+- badges de build dynamiques
+- release GitHub avec changelog
+- documentation d'architecture plus fine par module
 
-## Note
+## Licence
 
-Pour un déploiement public, ne pas conserver de mots de passe réels dans `appsettings.json`. Utiliser uniquement des variables d’environnement ou le fichier `.env` non versionné.
+A definir.
