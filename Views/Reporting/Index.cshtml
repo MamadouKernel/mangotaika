@@ -1,0 +1,132 @@
+@{
+    ViewData["Title"] = "Reporting & Statistiques";
+    Layout = "_LayoutAdmin";
+    var annee = (int)ViewBag.Annee;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-bar-chart-fill text-or"></i> Reporting & <span class="accent">Statistiques</span></h2>
+    <div class="d-flex gap-2">
+        <a asp-action="ExportScouts" class="btn btn-mango btn-sm"><i class="bi bi-file-earmark-excel"></i> Export Scouts</a>
+        <a asp-action="ExportFinances" asp-route-annee="@annee" class="btn btn-mango btn-sm"><i class="bi bi-file-earmark-excel"></i> Export Finances @annee</a>
+        <a asp-action="ExportActivites" class="btn btn-mango btn-sm"><i class="bi bi-file-earmark-excel"></i> Export Activités</a>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card-3d p-4">
+            <h6 style="color:var(--bleu-logo);"><i class="bi bi-pie-chart-fill"></i> Scouts par branche</h6>
+            <canvas id="chartBranche" height="250"></canvas>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card-3d p-4">
+            <h6 style="color:var(--bleu-logo);"><i class="bi bi-bar-chart-fill"></i> Scouts par groupe</h6>
+            <canvas id="chartGroupe" height="250"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-8">
+        <div class="card-3d p-4">
+            <h6 style="color:var(--bleu-logo);"><i class="bi bi-graph-up"></i> Finances mensuelles @annee (FCFA)</h6>
+            <canvas id="chartFinances" height="200"></canvas>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card-3d p-4">
+            <h6 style="color:var(--bleu-logo);"><i class="bi bi-calendar-event"></i> Activités par type</h6>
+            <canvas id="chartActivites" height="250"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card-3d p-4">
+            <h6 style="color:var(--bleu-logo);"><i class="bi bi-ticket-detailed"></i> Tickets par statut</h6>
+            <canvas id="chartTickets" height="250"></canvas>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card-3d p-4">
+            <h6 style="color:var(--bleu-logo);"><i class="bi bi-person-plus"></i> Nouvelles inscriptions @annee</h6>
+            <canvas id="chartInscriptions" height="250"></canvas>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    <script>
+        var colors = ['#597537','#8ab55a','#3b82f6','#eab308','#f87171','#8b5cf6','#06b6d4','#f59e0b','#10b981','#ec4899'];
+        var moisNoms = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+
+        // Données sérialisées côté serveur (JSON sûr, pas de Html.Raw avec des chaînes utilisateur)
+        var brancheData = JSON.parse('@Html.Raw(ViewBag.ScoutsParBrancheJson)');
+        var groupeData = JSON.parse('@Html.Raw(ViewBag.ScoutsParGroupeJson)');
+        var finData = JSON.parse('@Html.Raw(ViewBag.FinancesMensuellesJson)');
+        var typeData = JSON.parse('@Html.Raw(ViewBag.ActivitesParTypeJson)');
+        var statutData = JSON.parse('@Html.Raw(ViewBag.TicketsParStatutJson)');
+        var insData = JSON.parse('@Html.Raw(ViewBag.InscriptionsParMoisJson)');
+
+        new Chart(document.getElementById('chartBranche'), {
+            type: 'doughnut',
+            data: {
+                labels: brancheData.map(x => x.Nom),
+                datasets: [{ data: brancheData.map(x => x.Count), backgroundColor: colors }]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        });
+
+        new Chart(document.getElementById('chartGroupe'), {
+            type: 'bar',
+            data: {
+                labels: groupeData.map(x => x.Nom),
+                datasets: [{ label: 'Scouts', data: groupeData.map(x => x.Count), backgroundColor: '#8ab55a', borderRadius: 8 }]
+            },
+            options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } } }
+        });
+
+        new Chart(document.getElementById('chartFinances'), {
+            type: 'line',
+            data: {
+                labels: finData.map(f => moisNoms[f.Mois]),
+                datasets: [
+                    { label: 'Recettes', data: finData.map(f => f.Recettes), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: true, tension: 0.3 },
+                    { label: 'Dépenses', data: finData.map(f => f.Depenses), borderColor: '#f87171', backgroundColor: 'rgba(248,113,113,0.1)', fill: true, tension: 0.3 }
+                ]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        });
+
+        new Chart(document.getElementById('chartActivites'), {
+            type: 'pie',
+            data: {
+                labels: typeData.map(x => x.Type),
+                datasets: [{ data: typeData.map(x => x.Count), backgroundColor: colors }]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        });
+
+        new Chart(document.getElementById('chartTickets'), {
+            type: 'doughnut',
+            data: {
+                labels: statutData.map(x => x.Statut),
+                datasets: [{ data: statutData.map(x => x.Count), backgroundColor: ['#3b82f6','#eab308','#f59e0b','#10b981','#94a3b8'] }]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        });
+
+        new Chart(document.getElementById('chartInscriptions'), {
+            type: 'bar',
+            data: {
+                labels: insData.map(i => moisNoms[i.Mois]),
+                datasets: [{ label: 'Inscriptions', data: insData.map(i => i.Count), backgroundColor: '#597537', borderRadius: 8 }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+    </script>
+}

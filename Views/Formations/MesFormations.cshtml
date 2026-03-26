@@ -1,0 +1,268 @@
+@model List<MangoTaika.DTOs.LmsParcoursItemDto>
+@{
+    ViewData["Title"] = "Mes formations";
+    Layout = "_LayoutAdmin";
+
+    var totalEnCours = Model.Count(p => p.Statut != MangoTaika.Data.Entities.StatutInscription.Terminee);
+    var totalTerminees = Model.Count(p => p.Statut == MangoTaika.Data.Entities.StatutInscription.Terminee);
+    var moyenneProgression = Model.Any() ? (int)Math.Round(Model.Average(p => p.ProgressionPourcent)) : 0;
+}
+
+<div class="lms-campus">
+    <section class="campus-hero">
+        <div class="campus-hero__main">
+            <span class="campus-hero__eyebrow">
+                <i class="bi bi-mortarboard"></i> Mon campus
+            </span>
+            <h1 class="campus-hero__title">Mes formations</h1>
+            <p class="campus-hero__text">
+                Suivez vos parcours comme un espace apprenant complet: progression, sessions, jalons a venir, activite de cours et vie de classe.
+            </p>
+            <div class="campus-hero__stats">
+                <div class="campus-stat">
+                    <span>Parcours actifs</span>
+                    <strong>@totalEnCours</strong>
+                </div>
+                <div class="campus-stat">
+                    <span>Termines</span>
+                    <strong>@totalTerminees</strong>
+                </div>
+                <div class="campus-stat">
+                    <span>Progression moyenne</span>
+                    <strong>@moyenneProgression%</strong>
+                </div>
+                <div class="campus-stat">
+                    <span>Parcours suivis</span>
+                    <strong>@Model.Count</strong>
+                </div>
+            </div>
+        </div>
+
+        <aside class="campus-hero__side">
+            <div class="campus-hero-card">
+                <div class="campus-hero-card__label">Navigation rapide</div>
+                <strong>Reprenez votre prochain cours</strong>
+                <small>Chaque carte affiche la prochaine etape, l'etat pedagogique et l'activite recente du parcours.</small>
+                <a asp-action="Catalogue" class="btn btn-outline-light btn-sm mt-3">
+                    <i class="bi bi-book"></i> Voir le catalogue
+                </a>
+            </div>
+        </aside>
+    </section>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+
+    <section class="classroom-panel">
+        <div class="classroom-panel__head">
+            <div>
+                <span class="classroom-panel__eyebrow">Filtrer mes parcours</span>
+                <h2 class="classroom-panel__title">Trouver un cours en cours de route</h2>
+            </div>
+        </div>
+
+        <form method="get" class="campus-filter-grid">
+            <div>
+                <label class="form-label">Recherche</label>
+                <input type="text" name="q" value="@ViewBag.Recherche" class="form-control" placeholder="Titre, prochaine etape..." />
+            </div>
+            <div>
+                <label class="form-label">Statut</label>
+                <select name="statut" class="form-select">
+                    <option value="">Tous</option>
+                    @if (string.Equals((string?)ViewBag.Statut, "encours", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <option value="encours" selected="selected">En cours</option>
+                    }
+                    else
+                    {
+                        <option value="encours">En cours</option>
+                    }
+                    @if (string.Equals((string?)ViewBag.Statut, "terminee", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <option value="terminee" selected="selected">Terminee</option>
+                    }
+                    else
+                    {
+                        <option value="terminee">Terminee</option>
+                    }
+                    @if (string.Equals((string?)ViewBag.Statut, "avenir", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <option value="avenir" selected="selected">Session a venir</option>
+                    }
+                    else
+                    {
+                        <option value="avenir">Session a venir</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="form-label">Certifiant</label>
+                <select name="certifiant" class="form-select">
+                    <option value="">Tous</option>
+                    @if (ViewBag.Certifiant is true)
+                    {
+                        <option value="true" selected="selected">Oui</option>
+                    }
+                    else
+                    {
+                        <option value="true">Oui</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="form-label">Tri</label>
+                <select name="tri" class="form-select">
+                    @if (string.IsNullOrWhiteSpace((string?)ViewBag.Tri) || string.Equals((string?)ViewBag.Tri, "recent", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <option value="recent" selected="selected">Recent</option>
+                    }
+                    else
+                    {
+                        <option value="recent">Recent</option>
+                    }
+                    @if (string.Equals((string?)ViewBag.Tri, "progression", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <option value="progression" selected="selected">Progression</option>
+                    }
+                    else
+                    {
+                        <option value="progression">Progression</option>
+                    }
+                    @if (string.Equals((string?)ViewBag.Tri, "activite", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <option value="activite" selected="selected">Activite</option>
+                    }
+                    else
+                    {
+                        <option value="activite">Activite</option>
+                    }
+                    @if (string.Equals((string?)ViewBag.Tri, "titre", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <option value="titre" selected="selected">Titre</option>
+                    }
+                    else
+                    {
+                        <option value="titre">Titre</option>
+                    }
+                </select>
+            </div>
+            <div class="campus-filter-actions">
+                <button class="btn btn-mango" type="submit"><i class="bi bi-funnel"></i> Filtrer</button>
+                <a asp-action="MesFormations" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </section>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">Vous n'etes inscrit a aucune formation. <a asp-action="Catalogue">Voir le catalogue</a></div>
+    }
+    else
+    {
+        <section class="campus-track-list">
+            @foreach (var parcours in Model)
+            {
+                var isCompleted = parcours.Statut == MangoTaika.Data.Entities.StatutInscription.Terminee;
+                <article class="campus-track-card">
+                    <div class="campus-track-card__main">
+                        <div class="campus-track-card__head">
+                            <div>
+                                <div class="campus-track-card__eyebrow">Parcours apprenant</div>
+                                <h2 class="campus-track-card__title">@parcours.Titre</h2>
+                            </div>
+                            <div class="campus-track-card__badges">
+                                <span class="badge @(isCompleted ? "bg-success" : "bg-primary")">@(isCompleted ? "Termine" : "En cours")</span>
+                                @if (!string.IsNullOrWhiteSpace(parcours.SessionStatut))
+                                {
+                                    <span class="badge @(parcours.EstSessionSelfPaced ? "bg-success-subtle text-success-emphasis" : "bg-dark")">@parcours.SessionStatut</span>
+                                }
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(parcours.Description))
+                        {
+                            <p class="campus-track-card__text">
+                                @(parcours.Description!.Length > 180 ? parcours.Description[..180] + "..." : parcours.Description)
+                            </p>
+                        }
+
+                        <div class="classroom-progress">
+                            <div class="classroom-progress__bar">
+                                <div class="classroom-progress__fill" style="width: @parcours.ProgressionPourcent%;"></div>
+                            </div>
+                            <div class="classroom-progress__meta">
+                                <strong>@parcours.ProgressionPourcent% complete</strong>
+                                <span>@parcours.ProchaineEtape</span>
+                            </div>
+                        </div>
+
+                        <div class="campus-track-card__pillars">
+                            <article class="classroom-pillar">
+                                <span class="classroom-pillar__label">Pedagogie</span>
+                                <strong>@parcours.EtatPedagogique</strong>
+                                <small>@parcours.NombreModulesTermines / @parcours.NombreModules modules valides</small>
+                            </article>
+                            <article class="classroom-pillar">
+                                <span class="classroom-pillar__label">Evaluation</span>
+                                <strong>@parcours.EtatEvaluation</strong>
+                                <small>
+                                    @parcours.NombreQuizReussis / @parcours.NombreQuiz quiz
+                                    @if (parcours.MeilleurScoreQuiz.HasValue)
+                                    {
+                                        <span>- meilleur score @parcours.MeilleurScoreQuiz%</span>
+                                    }
+                                </small>
+                            </article>
+                            <article class="classroom-pillar">
+                                <span class="classroom-pillar__label">Delivrance</span>
+                                <strong>@parcours.EtatCertifiant</strong>
+                                <small>@parcours.NombreCertificationsObtenues element(s) obtenus</small>
+                            </article>
+                        </div>
+                    </div>
+
+                    <aside class="campus-track-card__side">
+                        <div class="campus-side-note">
+                            <div class="campus-side-note__label">Session</div>
+                            <strong>@(string.IsNullOrWhiteSpace(parcours.SessionTitre) ? "Affectation automatique" : parcours.SessionTitre)</strong>
+                            <small>@(string.IsNullOrWhiteSpace(parcours.SessionStatut) ? "Parcours actif" : parcours.SessionStatut)</small>
+                        </div>
+                        <div class="campus-side-note">
+                            <div class="campus-side-note__label">Vie de classe</div>
+                            <strong>@parcours.NombreAnnonces annonce(s), @parcours.NombreDiscussions discussion(s)</strong>
+                            <small>
+                                @if (parcours.DerniereActiviteCours.HasValue)
+                                {
+                                    <span>Derniere activite le @parcours.DerniereActiviteCours.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                                }
+                                else
+                                {
+                                    <span>Aucune activite recente signee</span>
+                                }
+                            </small>
+                        </div>
+                        @if (parcours.ProchainJalonDate.HasValue && !string.IsNullOrWhiteSpace(parcours.ProchainJalonTitre))
+                        {
+                            <div class="campus-side-note">
+                                <div class="campus-side-note__label">Prochain jalon</div>
+                                <strong>@parcours.ProchainJalonTitre</strong>
+                                <small>@parcours.ProchainJalonDate.Value.ToString("dd/MM/yyyy HH:mm")</small>
+                            </div>
+                        }
+                        <div class="d-grid gap-2">
+                            <a asp-action="Suivre" asp-route-id="@parcours.FormationId" class="btn btn-mango">
+                                <i class="bi bi-play-fill"></i> @(isCompleted ? "Revoir le parcours" : "Continuer")
+                            </a>
+                            <a asp-controller="ForumFormations" asp-action="Index" asp-route-formationId="@parcours.FormationId" class="btn btn-outline-success">
+                                <i class="bi bi-chat-dots"></i> Forum de la formation
+                            </a>
+                        </div>
+                    </aside>
+                </article>
+            }
+        </section>
+    }
+</div>

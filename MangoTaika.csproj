@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.*" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.*">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.*">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.*" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="MangoTaika.Tests\\**\\*.cs" />
+    <Compile Remove="obj-test\\**\\*.cs" />
+    <Compile Remove="artifacts\\**\\*.cs" />
+    <EmbeddedResource Remove="MangoTaika.Tests\\**\\*" />
+    <EmbeddedResource Remove="obj-test\\**\\*" />
+    <EmbeddedResource Remove="artifacts\\**\\*" />
+    <None Remove="MangoTaika.Tests\\**\\*" />
+    <None Remove="obj-test\\**\\*" />
+    <None Remove="artifacts\\**\\*" />
+    <Content Remove="MangoTaika.Tests\\**\\*" />
+    <Content Remove="obj-test\\**\\*" />
+    <Content Remove="artifacts\\**\\*" />
+  </ItemGroup>
+
+</Project>

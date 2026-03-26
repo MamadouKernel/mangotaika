@@ -1,0 +1,76 @@
+@model MangoTaika.DTOs.FormationCreateDto
+@{
+    ViewData["Title"] = "Nouvelle formation";
+    Layout = "_LayoutAdmin";
+}
+
+<h2><i class="bi bi-plus-lg"></i> Nouvelle formation</h2>
+
+<form asp-action="Create" method="post" class="mt-3" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
+    <div class="row g-3">
+        <div class="col-md-8">
+            <label class="form-label">Titre</label>
+            <input asp-for="Titre" class="form-control" required />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Niveau</label>
+            <select asp-for="Niveau" class="form-select" asp-items="Html.GetEnumSelectList<MangoTaika.Data.Entities.NiveauFormation>()"></select>
+        </div>
+        <div class="col-12">
+            <label class="form-label">Description</label>
+            <textarea asp-for="Description" class="form-control" rows="4"></textarea>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Image de couverture</label>
+            <input type="file" name="image" class="form-control" accept="image/*" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Duree estimee (heures)</label>
+            <input asp-for="DureeEstimeeHeures" type="number" class="form-control" min="1" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Branche cible (optionnel)</label>
+            <select asp-for="BrancheCibleId" class="form-select">
+                <option value="">- Toutes les branches -</option>
+                @foreach (var branche in (List<MangoTaika.Data.Entities.Branche>)ViewBag.Branches)
+                {
+                    <option value="@branche.Id">@branche.Nom</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Competence liee (ID, optionnel)</label>
+            <input asp-for="CompetenceLieeId" class="form-control" placeholder="Laisser vide si aucune" />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Prerequis (optionnel)</label>
+            <select asp-for="PrerequisFormationIds" class="form-select" multiple size="5">
+                @foreach (var formation in (List<MangoTaika.DTOs.FormationDto>)ViewBag.FormationOptions)
+                {
+                    <option value="@formation.Id">@formation.Titre</option>
+                }
+            </select>
+            <div class="form-text">Les apprenants devront terminer ces formations avant de pouvoir s'inscrire.</div>
+        </div>
+        <div class="col-12">
+            <label class="form-label d-block">Delivrance</label>
+            <div class="form-check form-check-inline">
+                <input asp-for="DelivreBadge" class="form-check-input" />
+                <label asp-for="DelivreBadge" class="form-check-label">Badge</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input asp-for="DelivreAttestation" class="form-check-input" />
+                <label asp-for="DelivreAttestation" class="form-check-label">Attestation</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input asp-for="DelivreCertificat" class="form-check-input" />
+                <label asp-for="DelivreCertificat" class="form-check-label">Certificat</label>
+            </div>
+        </div>
+    </div>
+    <div class="mt-4">
+        <button type="submit" class="btn btn-success"><i class="bi bi-check-lg"></i> Creer</button>
+        <a asp-action="Index" class="btn btn-secondary">Annuler</a>
+    </div>
+</form>

@@ -1,0 +1,75 @@
+@model ActiviteDto
+@using MangoTaika.Data.Entities
+@{
+    ViewData["Title"] = "Modifier l'activité";
+    Layout = "_LayoutAdmin";
+    var groupes = ViewBag.Groupes as IList<Groupe>;
+}
+
+<h2 class="section-title mb-1"><i class="bi bi-pencil text-or"></i> Modifier <span class="accent">@Model.Titre</span></h2>
+<div class="section-divider"></div>
+
+<div class="card-3d p-4 mt-3" style="max-width:800px;">
+    <form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="form-modern">
+        <div class="row">
+            <div class="col-md-8 mb-3">
+                <label class="form-label">Titre</label>
+                <input name="Titre" class="form-control" value="@Model.Titre" required />
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Type d'activité</label>
+                <select name="Type" class="form-select">
+                    @foreach (var t in Enum.GetValues<TypeActivite>())
+                    {
+                        <option value="@t" selected="@(Model.Type == t)">@t</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea name="Description" class="form-control" rows="4">@Model.Description</textarea>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Date début</label>
+                <input name="DateDebut" class="form-control" type="date" value="@Model.DateDebut.ToString("yyyy-MM-dd")" required />
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Date fin</label>
+                <input name="DateFin" class="form-control" type="date" value="@Model.DateFin?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Lieu</label>
+                <input name="Lieu" class="form-control" value="@Model.Lieu" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Groupe</label>
+                <select name="GroupeId" class="form-select">
+                    <option value="">— Tout le district —</option>
+                    @if (groupes != null)
+                    {
+                        @foreach (var g in groupes)
+                        {
+                            <option value="@g.Id" selected="@(Model.GroupeId == g.Id)">@g.Nom</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Responsable</label>
+                <input name="NomResponsable" class="form-control" value="@Model.NomResponsable" />
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Budget prévisionnel (FCFA)</label>
+                <input name="BudgetPrevisionnel" class="form-control" type="number" min="0" step="100" value="@Model.BudgetPrevisionnel" />
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-2">
+            <button type="submit" class="btn btn-mango" title="Enregistrer"><i class="bi bi-check-lg"></i></button>
+            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-or" title="Annuler"><i class="bi bi-x-lg"></i></a>
+        </div>
+    </form>
+</div>

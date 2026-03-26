@@ -1,0 +1,59 @@
+@model AdminUtilisateurDetailsViewModel
+@{
+    ViewData["Title"] = "Fiche utilisateur";
+    Layout = "_LayoutAdmin";
+}
+
+@if (TempData["Success"] is string ok && !string.IsNullOrEmpty(ok))
+{
+    <div class="alert alert-success border-0 mb-3">@ok</div>
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-person-badge text-or"></i> Fiche <span class="accent">utilisateur</span></h2>
+    <div class="d-flex flex-wrap gap-2">
+        <a asp-action="EditerUtilisateur" asp-route-id="@Model.Id" class="btn btn-bleu btn-sm" title="Modifier"><i class="bi bi-pencil"></i></a>
+        <a asp-action="Utilisateurs" class="btn btn-outline-or btn-sm" title="Liste"><i class="bi bi-arrow-left"></i></a>
+    </div>
+</div>
+
+<div class="card-3d p-4" style="max-width:720px;">
+    <div class="d-flex align-items-start gap-3 mb-4">
+        @if (!string.IsNullOrEmpty(Model.PhotoUrl))
+        {
+            <img src="@Model.PhotoUrl" alt="" style="width:88px;height:88px;object-fit:cover;border-radius:50%;border:3px solid var(--vert-pastel);" />
+        }
+        else
+        {
+            <div style="width:88px;height:88px;border-radius:50%;background:var(--vert-logo);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="bi bi-person-fill" style="font-size:2.5rem;color:#fff;"></i>
+            </div>
+        }
+        <div>
+            <h4 class="text-or mb-1">@Model.Prenom @Model.Nom</h4>
+            <span class="badge-3d badge-soumise">@Model.Role</span>
+            @if (Model.IsActive)
+            {
+                <span class="badge-3d badge-validee ms-1">Actif</span>
+            }
+            else
+            {
+                <span class="badge-3d badge-rejetee ms-1">Inactif</span>
+            }
+        </div>
+    </div>
+    <dl class="row mb-0 small">
+        <dt class="col-sm-4 text-muted-custom">Téléphone</dt>
+        <dd class="col-sm-8">@(Model.Telephone ?? "—")</dd>
+        <dt class="col-sm-4 text-muted-custom">E-mail</dt>
+        <dd class="col-sm-8">@(Model.Email ?? "—")</dd>
+        <dt class="col-sm-4 text-muted-custom">Groupe</dt>
+        <dd class="col-sm-8">@(Model.NomGroupe ?? "—")</dd>
+        <dt class="col-sm-4 text-muted-custom">Branche</dt>
+        <dd class="col-sm-8">@(Model.NomBranche ?? "—")</dd>
+        <dt class="col-sm-4 text-muted-custom">Inscription</dt>
+        <dd class="col-sm-8">@Model.DateCreation.ToString("dd/MM/yyyy HH:mm")</dd>
+        <dt class="col-sm-4 text-muted-custom">MFA (SMS)</dt>
+        <dd class="col-sm-8">@(Model.MfaActif ? "Activé" : "Non")</dd>
+    </dl>
+</div>

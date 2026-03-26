@@ -1,0 +1,90 @@
+@model MangoTaika.Models.WhatsAppContactViewModel
+@{
+    ViewData["Title"] = "WhatsApp";
+}
+
+<section class="wa-hub">
+    <div class="container">
+        <div class="wa-hub__hero">
+            <div class="wa-hub__hero-content">
+                <span class="wa-hub__eyebrow"><i class="bi bi-whatsapp"></i> Contact public</span>
+                <h1 class="wa-hub__title">Choisissez votre <span>motif de contact</span></h1>
+                <p class="wa-hub__text">
+                    Ce canal WhatsApp est ouvert a tout le public. Selectionnez simplement l'option qui correspond
+                    le mieux a votre besoin pour ouvrir une conversation avec un message deja prepare.
+                </p>
+
+                <div class="wa-hub__meta">
+                    <div class="wa-hub__meta-card">
+                        <span class="wa-hub__meta-label">Numero officiel</span>
+                        <strong class="wa-hub__meta-value">@Model.DisplayPhoneNumber</strong>
+                    </div>
+                    <div class="wa-hub__meta-card">
+                        <span class="wa-hub__meta-label">Disponibilite</span>
+                        <strong class="wa-hub__meta-value">Informations, familles, inscriptions</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="wa-hub__hero-visual">
+                <div class="wa-hub__logo-shell">
+                    <img src="~/images/logo.png" alt="Logo MANGO TAIKA" class="wa-hub__logo" />
+                </div>
+                <div class="wa-hub__signal">
+                    <span class="wa-hub__signal-dot"></span>
+                    District Scout MANGO TAIKA
+                </div>
+            </div>
+        </div>
+
+        <div class="wa-hub__intro">
+            <div>
+                <h2 class="wa-hub__section-title">Trois parcours simples</h2>
+                <p class="wa-hub__section-text">
+                    Chaque option ouvre WhatsApp avec un ton adapte a votre demande. Vous pouvez ensuite completer
+                    librement votre message avant l'envoi.
+                </p>
+            </div>
+            <a asp-action="Contact" class="btn btn-outline-or">
+                <i class="bi bi-envelope"></i> Preferer l'email
+            </a>
+        </div>
+
+        <div class="row g-4">
+            @{
+                var index = 1;
+            }
+            @foreach (var option in Model.Options)
+            {
+                <div class="col-lg-4 col-md-6">
+                    <article class="wa-option-card">
+                        <div class="wa-option-card__top">
+                            <span class="wa-option-card__index">0@index</span>
+                            <div class="wa-option-card__icon">
+                                <i class="bi @option.IconClass"></i>
+                            </div>
+                        </div>
+
+                        <div class="wa-option-card__header">
+                            <h3 class="wa-option-card__title">@option.Title</h3>
+                            <p class="wa-option-card__description">@option.Description</p>
+                        </div>
+
+                        <div class="wa-option-card__message">
+                            <div class="wa-option-card__message-label">Message pre-rempli</div>
+                            <p>@option.Message</p>
+                        </div>
+
+                        <div class="wa-option-card__footer">
+                            <a href="@option.Url" target="_blank" rel="noopener" class="btn btn-mango w-100">
+                                <i class="bi bi-whatsapp"></i> Ouvrir WhatsApp
+                            </a>
+                        </div>
+                    </article>
+                </div>
+
+                index++;
+            }
+        </div>
+    </div>
+</section>

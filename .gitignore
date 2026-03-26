@@ -1,0 +1,26 @@
+# Build artifacts
+bin/
+obj/
+obj-test/
+artifacts/
+
+# IDE / local tooling
+.vs/
+.vscode/
+*.user
+*.suo
+*.cache
+
+# Local dotnet homes / tools
+.dotnet/
+.dotnet-home/
+
+# Environment files
+.env
+
+# Logs
+*.log
+
+# OS files
+Thumbs.db
+Desktop.ini

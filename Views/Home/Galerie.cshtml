@@ -1,0 +1,88 @@
+@model List<MangoTaika.Data.Entities.Galerie>
+@{
+    ViewData["Title"] = "Galerie";
+}
+
+<div class="container py-5">
+    <div class="text-center mb-4">
+        <h2 class="section-title"><i class="bi bi-images text-or"></i> <span class="accent">Galerie</span></h2>
+        <div class="section-divider mx-auto"></div>
+        <p class="text-muted-custom">Les moments forts du district MANGO TAÏKA</p>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-images" style="font-size:3rem;opacity:0.3;"></i>
+            <p class="text-muted-custom mt-2">Aucun média pour le moment.</p>
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var item in Model)
+            {
+                <div class="col-6 col-md-4 col-lg-3">
+                    <div class="galerie-item" style="cursor:pointer;" onclick="showMedia('@item.CheminMedia','@item.Titre','@(item.Description ?? "")','@item.TypeMedia')">
+                        @if (item.TypeMedia == "video")
+                        {
+                            <div style="position:relative;">
+                                <video src="@item.CheminMedia" style="width:100%;height:200px;object-fit:cover;" muted></video>
+                                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.5);border-radius:50%;width:50px;height:50px;display:flex;align-items:center;justify-content:center;">
+                                    <i class="bi bi-play-fill" style="font-size:1.5rem;color:#fff;"></i>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <img src="@item.CheminMedia" alt="@item.Titre" />
+                        }
+                        <div class="galerie-overlay">@item.Titre</div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Modal zoom média -->
+<div class="modal fade" id="mediaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="background:transparent;border:none;">
+            <div class="text-end p-2">
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <img id="modalImg" src="" alt="" style="width:100%;border-radius:14px;display:none;" />
+            <video id="modalVid" src="" style="width:100%;border-radius:14px;display:none;" controls autoplay></video>
+            <div class="text-center mt-2">
+                <strong id="modalTitle" style="color:#fff;"></strong>
+                <p id="modalDesc" class="small" style="color:rgba(255,255,255,0.7);"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function showMedia(src, title, desc, type) {
+    var img = document.getElementById('modalImg');
+    var vid = document.getElementById('modalVid');
+    img.style.display = 'none';
+    vid.style.display = 'none';
+    vid.pause();
+    if (type === 'video') {
+        vid.src = src;
+        vid.style.display = 'block';
+    } else {
+        img.src = src;
+        img.style.display = 'block';
+    }
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalDesc').textContent = desc;
+    new bootstrap.Modal(document.getElementById('mediaModal')).show();
+}
+document.getElementById('mediaModal').addEventListener('hidden.bs.modal', function() {
+    document.getElementById('modalVid').pause();
+});
+</script>
+}

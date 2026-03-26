@@ -1,0 +1,70 @@
+@model ActiviteCreateDto
+@using MangoTaika.Data.Entities
+@{
+    ViewData["Title"] = "Nouvelle activité";
+    Layout = "_LayoutAdmin";
+    var groupes = ViewBag.Groupes as IList<Groupe>;
+}
+
+<h2 class="section-title mb-1"><i class="bi bi-plus-lg text-or"></i> Nouvelle <span class="accent">activité</span></h2>
+<div class="section-divider"></div>
+
+<div class="card-3d p-4 mt-3" style="max-width:800px;">
+    <form asp-action="Create" method="post" class="form-modern">
+        <div class="row">
+            <div class="col-md-8 mb-3">
+                <label asp-for="Titre" class="form-label">Titre</label>
+                <input asp-for="Titre" class="form-control" required />
+            </div>
+            <div class="col-md-4 mb-3">
+                <label asp-for="Type" class="form-label">Type d'activité</label>
+                <select asp-for="Type" class="form-select" asp-items="Html.GetEnumSelectList<TypeActivite>()"></select>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Description" class="form-label">Description</label>
+            <textarea asp-for="Description" class="form-control" rows="4" placeholder="Objectifs, programme, consignes..."></textarea>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label asp-for="DateDebut" class="form-label">Date début</label>
+                <input asp-for="DateDebut" class="form-control" type="date" required />
+            </div>
+            <div class="col-md-4 mb-3">
+                <label asp-for="DateFin" class="form-label">Date fin</label>
+                <input asp-for="DateFin" class="form-control" type="date" />
+            </div>
+            <div class="col-md-4 mb-3">
+                <label asp-for="Lieu" class="form-label">Lieu</label>
+                <input asp-for="Lieu" class="form-control" placeholder="Ex: Parc du Banco" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label asp-for="GroupeId" class="form-label">Groupe</label>
+                <select asp-for="GroupeId" class="form-select">
+                    <option value="">— Tout le district —</option>
+                    @if (groupes != null)
+                    {
+                        @foreach (var g in groupes)
+                        {
+                            <option value="@g.Id">@g.Nom</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label asp-for="NomResponsable" class="form-label">Responsable</label>
+                <input asp-for="NomResponsable" class="form-control" placeholder="Nom du responsable" />
+            </div>
+            <div class="col-md-4 mb-3">
+                <label asp-for="BudgetPrevisionnel" class="form-label">Budget prévisionnel (FCFA)</label>
+                <input asp-for="BudgetPrevisionnel" class="form-control" type="number" min="0" step="100" />
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-2">
+            <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Créer</button>
+            <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
+        </div>
+    </form>
+</div>

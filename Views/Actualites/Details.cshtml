@@ -1,0 +1,24 @@
+@model ActualiteDto
+@{
+    ViewData["Title"] = Model.Titre;
+}
+
+<div class="container py-5" style="max-width:800px;">
+    <a asp-action="Index" class="btn btn-outline-or mb-3" title="Retour aux actualités"><i class="bi bi-arrow-left"></i></a>
+
+    <div class="card-3d p-4">
+        @if (!string.IsNullOrEmpty(Model.ImageUrl))
+        {
+            <img src="@Model.ImageUrl" alt="@Model.Titre" style="width:100%;max-height:400px;object-fit:cover;border-radius:14px;" class="mb-3" />
+        }
+        <small class="text-muted-custom">
+            <i class="bi bi-calendar3"></i> @Model.DatePublication.ToString("dd MMMM yyyy")
+            @if (!string.IsNullOrEmpty(Model.NomCreateur))
+            {
+                <span class="ms-3"><i class="bi bi-person"></i> @Model.NomCreateur</span>
+            }
+        </small>
+        <h2 class="mt-2 mb-3" style="color:var(--vert);">@Model.Titre</h2>
+        <div class="actualite-contenu" style="line-height:1.8;white-space:pre-line;">@Model.Contenu</div>
+    </div>
+</div>

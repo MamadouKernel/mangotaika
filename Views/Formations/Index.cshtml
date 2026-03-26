@@ -1,0 +1,52 @@
+@model List<MangoTaika.DTOs.FormationDto>
+@{
+    ViewData["Title"] = "Gestion des formations";
+    Layout = "_LayoutAdmin";
+    var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-mortarboard-fill text-or"></i> <span class="accent">Formations</span></h2>
+    @if (canManage)
+    {
+        <a asp-action="Create" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Nouvelle formation</a>
+    }
+</div>
+
+<div class="row g-4">
+    @foreach (var f in Model)
+    {
+        <div class="col-lg-4 col-md-6">
+            <div class="card-3d p-4 h-100 d-flex flex-column">
+                <h5 class="text-or mb-2">
+                    <a asp-action="Details" asp-route-id="@f.Id" class="text-decoration-none" style="color:inherit;">@f.Titre</a>
+                </h5>
+                <p class="text-muted-custom small mb-2">
+                    <span class="badge-3d badge-soumise" style="font-size:0.7rem;">@f.Niveau</span>
+                </p>
+                <div class="d-flex flex-column gap-1 mb-3 flex-grow-1" style="font-size:0.85rem;">
+                    <span><i class="bi bi-collection text-bleu"></i> @f.NombreModules module(s)</span>
+                    <span><i class="bi bi-people text-or"></i> @f.NombreInscrits inscrit(s)</span>
+                    <span><i class="bi bi-clock text-bleu"></i> @f.DureeEstimeeHeures h estimees</span>
+                    @if (!string.IsNullOrWhiteSpace(f.SessionTitre))
+                    {
+                        <span><i class="bi bi-calendar3 text-bleu"></i> @f.SessionTitre <span class="text-muted-custom">(@f.SessionStatut)</span></span>
+                    }
+                    @if (f.NombreAnnoncesPubliees > 0)
+                    {
+                        <span><i class="bi bi-megaphone text-or"></i> @f.NombreAnnoncesPubliees annonce(s)</span>
+                    }
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-auto">
+                    <a asp-action="Details" asp-route-id="@f.Id" class="btn btn-sm btn-outline-or" title="Voir"><i class="bi bi-eye"></i></a>
+                    @if (canManage)
+                    {
+                        <a asp-action="Edit" asp-route-id="@f.Id" class="btn btn-sm btn-bleu" title="Modifier"><i class="bi bi-pencil"></i></a>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<partial name="_ListPagination" />

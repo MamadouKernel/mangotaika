@@ -1,0 +1,115 @@
+@using MangoTaika.Helpers
+@{
+    ListPagination.PaginationState? pState =
+        Context.Items.TryGetValue(ListPagination.PaginationItemsKey, out var item) && item is ListPagination.PaginationState ps
+            ? ps
+            : null;
+    if (pState == null && ViewData["PaginationTotal"] != null)
+    {
+        pState = new ListPagination.PaginationState(
+            ListPagination.ReadViewDataInt(ViewData, "PaginationPage", 1),
+            ListPagination.ReadViewDataInt(ViewData, "PaginationPageSize", ListPagination.DefaultPageSize),
+            ListPagination.ReadViewDataInt(ViewData, "PaginationTotal", 0),
+            ListPagination.ReadViewDataInt(ViewData, "PaginationTotalPages", 1));
+    }
+    var hasPaging = pState != null;
+    var currentPage = hasPaging ? pState!.Page : 1;
+    var pageSize = hasPaging ? pState!.PageSize : ListPagination.DefaultPageSize;
+    var totalPages = hasPaging ? pState!.TotalPages : 1;
+    var sizes = ListPagination.AllowedPageSizes;
+    var path = Context.Request.PathBase + Context.Request.Path;
+}
+@if (hasPaging)
+{
+    <nav class="pagination-clean" aria-label="Pagination des résultats">
+        <div class="pagination-clean__toolbar">
+            <div class="pagination-clean__group">
+                <span class="pagination-clean__hint" id="pagination-hint-size">Par page</span>
+                <div class="pagination-clean__segmented" role="group" aria-labelledby="pagination-hint-size">
+                    @foreach (var s in sizes)
+                    {
+                        var isActive = s == pageSize;
+                        if (isActive)
+                        {
+                            <span class="pagination-clean__size is-active" aria-current="true">@s</span>
+                        }
+                        else
+                        {
+                            <a class="pagination-clean__size" href="@path@ListPagination.PagingQuery(Context.Request, 1, s)">@s</a>
+                        }
+                    }
+                </div>
+            </div>
+
+            @if (totalPages > 1)
+            {
+                <ul class="pagination-clean__pager" aria-label="Changer de page">
+                    <li>
+                        @if (currentPage <= 1)
+                        {
+                            <span class="pagination-clean__btn is-disabled" aria-disabled="true"><span class="pagination-clean__nav-char" aria-hidden="true">&lt;&lt;</span></span>
+                        }
+                        else
+                        {
+                            <a class="pagination-clean__btn" href="@path@ListPagination.PagingQuery(Context.Request, 1, pageSize)" title="Première page"><span class="pagination-clean__nav-char" aria-hidden="true">&lt;&lt;</span></a>
+                        }
+                    </li>
+                    <li>
+                        @if (currentPage <= 1)
+                        {
+                            <span class="pagination-clean__btn is-disabled" aria-disabled="true"><span class="pagination-clean__nav-char" aria-hidden="true">&lt;</span></span>
+                        }
+                        else
+                        {
+                            <a class="pagination-clean__btn" href="@path@ListPagination.PagingQuery(Context.Request, Math.Max(1, currentPage - 1), pageSize)" title="Page précédente"><span class="pagination-clean__nav-char" aria-hidden="true">&lt;</span></a>
+                        }
+                    </li>
+                    @{
+                        var windowStart = Math.Max(1, currentPage - 2);
+                        var windowEnd = Math.Min(totalPages, currentPage + 2);
+                        if (windowEnd - windowStart < 4 && totalPages > 4)
+                        {
+                            if (windowStart == 1) windowEnd = Math.Min(totalPages, windowStart + 4);
+                            else windowStart = Math.Max(1, windowEnd - 4);
+                        }
+                    }
+                    @for (var i = windowStart; i <= windowEnd; i++)
+                    {
+                        var pi = i;
+                        var isCur = pi == currentPage;
+                        <li>
+                            @if (isCur)
+                            {
+                                <span class="pagination-clean__page is-current" aria-current="page">@pi</span>
+                            }
+                            else
+                            {
+                                <a class="pagination-clean__page" href="@path@ListPagination.PagingQuery(Context.Request, pi, pageSize)">@pi</a>
+                            }
+                        </li>
+                    }
+                    <li>
+                        @if (currentPage >= totalPages)
+                        {
+                            <span class="pagination-clean__btn is-disabled" aria-disabled="true"><span class="pagination-clean__nav-char" aria-hidden="true">&gt;</span></span>
+                        }
+                        else
+                        {
+                            <a class="pagination-clean__btn" href="@path@ListPagination.PagingQuery(Context.Request, Math.Min(totalPages, currentPage + 1), pageSize)" title="Page suivante"><span class="pagination-clean__nav-char" aria-hidden="true">&gt;</span></a>
+                        }
+                    </li>
+                    <li>
+                        @if (currentPage >= totalPages)
+                        {
+                            <span class="pagination-clean__btn is-disabled" aria-disabled="true"><span class="pagination-clean__nav-char" aria-hidden="true">&gt;&gt;</span></span>
+                        }
+                        else
+                        {
+                            <a class="pagination-clean__btn" href="@path@ListPagination.PagingQuery(Context.Request, totalPages, pageSize)" title="Dernière page"><span class="pagination-clean__nav-char" aria-hidden="true">&gt;&gt;</span></a>
+                        }
+                    </li>
+                </ul>
+            }
+        </div>
+    </nav>
+}

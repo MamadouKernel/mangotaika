@@ -1,0 +1,78 @@
+@model DemandeAutorisationCreateDto
+@{
+    ViewData["Title"] = "Nouvelle demande d'autorisation";
+    Layout = "_LayoutAdmin";
+    var groupes = ViewBag.Groupes as List<Groupe> ?? new();
+}
+
+<h2 class="section-title mb-1"><i class="bi bi-file-earmark-plus-fill text-or"></i> Nouvelle <span class="accent">demande d'autorisation</span></h2>
+<div class="section-divider"></div>
+
+<div class="card-3d p-4 mt-3">
+    <form asp-action="Create" method="post" class="form-modern">
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+        <div class="row">
+            <div class="col-md-8 mb-3">
+                <label asp-for="Titre" class="form-label">Titre de l'activité</label>
+                <input asp-for="Titre" class="form-control" placeholder="Ex: Camp de formation Éclaireurs" />
+            </div>
+            <div class="col-md-4 mb-3">
+                <label asp-for="TypeActivite" class="form-label">Type d'activité</label>
+                <select asp-for="TypeActivite" asp-items="Html.GetEnumSelectList<TypeActiviteDemande>()" class="form-select"></select>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Description" class="form-label">Description / Contexte</label>
+            <textarea asp-for="Description" class="form-control" rows="3" placeholder="Décrivez le contexte et la justification de l'activité..."></textarea>
+        </div>
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label asp-for="DateActivite" class="form-label">Date début</label>
+                <input asp-for="DateActivite" class="form-control" type="date" />
+            </div>
+            <div class="col-md-3 mb-3">
+                <label asp-for="DateFin" class="form-label">Date fin</label>
+                <input asp-for="DateFin" class="form-control" type="date" />
+            </div>
+            <div class="col-md-3 mb-3">
+                <label asp-for="Lieu" class="form-label">Lieu</label>
+                <input asp-for="Lieu" class="form-control" />
+            </div>
+            <div class="col-md-3 mb-3">
+                <label asp-for="NombreParticipants" class="form-label">Nb participants</label>
+                <input asp-for="NombreParticipants" class="form-control" type="number" min="1" />
+            </div>
+        </div>
+        <div class="mb-3">
+            <label asp-for="GroupeId" class="form-label">Groupe concerné</label>
+            <select asp-for="GroupeId" class="form-select">
+                <option value="">— Sélectionner —</option>
+                @foreach (var g in groupes)
+                {
+                    <option value="@g.Id">@g.Nom</option>
+                }
+            </select>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Objectifs" class="form-label">Objectifs</label>
+            <textarea asp-for="Objectifs" class="form-control" rows="2" placeholder="Objectifs de l'activité..."></textarea>
+        </div>
+        <div class="mb-3">
+            <label asp-for="MoyensLogistiques" class="form-label">Moyens logistiques</label>
+            <textarea asp-for="MoyensLogistiques" class="form-control" rows="2" placeholder="Transport, matériel, hébergement..."></textarea>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="Budget" class="form-label">Budget prévisionnel</label>
+                <input asp-for="Budget" class="form-control" placeholder="Ex: 150 000 FCFA" />
+            </div>
+        </div>
+        <div class="mb-4">
+            <label asp-for="Observations" class="form-label">Observations</label>
+            <textarea asp-for="Observations" class="form-control" rows="2"></textarea>
+        </div>
+        <partial name="_ConsentementARTCI" />
+        <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Créer la demande</button>
+        <a asp-action="Index" class="btn btn-outline-or ms-2">Annuler</a>
+    </form>
+</div>

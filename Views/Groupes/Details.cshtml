@@ -1,0 +1,29 @@
+@model GroupeDto
+@{
+    ViewData["Title"] = "Detail du groupe";
+    Layout = "_LayoutAdmin";
+    var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-building text-or"></i> @Model.Nom</h2>
+    <div class="d-flex flex-wrap gap-2">
+        @if (canManage)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-bleu btn-sm" title="Modifier"><i class="bi bi-pencil"></i></a>
+        }
+        <a asp-action="Index" class="btn btn-outline-or btn-sm" title="Liste"><i class="bi bi-arrow-left"></i></a>
+    </div>
+</div>
+
+<div class="card-3d p-4 mb-4">
+    <p class="text-muted-custom mb-3">@(Model.Description ?? "-")</p>
+    <dl class="row mb-0 small">
+        <dt class="col-sm-3 text-muted-custom">Adresse</dt>
+        <dd class="col-sm-9">@(Model.Adresse ?? "-")</dd>
+        <dt class="col-sm-3 text-muted-custom">Membres</dt>
+        <dd class="col-sm-9">@Model.NombreMembres</dd>
+        <dt class="col-sm-3 text-muted-custom">Responsable</dt>
+        <dd class="col-sm-9">@(Model.NomResponsable ?? "-")</dd>
+    </dl>
+</div>

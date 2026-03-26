@@ -1,0 +1,37 @@
+@model MangoTaika.Data.Entities.SupportKnowledgeArticle
+
+<div class="card-3d p-4">
+    <form method="post" class="form-modern">
+        @Html.AntiForgeryToken()
+        <div class="mb-3">
+            <label asp-for="Titre" class="form-label">Titre</label>
+            <input asp-for="Titre" class="form-control" required />
+        </div>
+        <div class="row">
+            <div class="col-md-8 mb-3">
+                <label asp-for="Resume" class="form-label">Resume</label>
+                <textarea asp-for="Resume" class="form-control" rows="3" required></textarea>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label asp-for="Categorie" class="form-label">Categorie</label>
+                <input asp-for="Categorie" class="form-control" required />
+            </div>
+        </div>
+        <div class="mb-3">
+            <label asp-for="MotsCles" class="form-label">Mots-cles</label>
+            <input asp-for="MotsCles" class="form-control" placeholder="incident, mot de passe, inscription..." />
+        </div>
+        <div class="mb-3">
+            <label asp-for="Contenu" class="form-label">Contenu</label>
+            <textarea asp-for="Contenu" class="form-control" rows="12" required></textarea>
+        </div>
+        <div class="form-check mb-3">
+            <input asp-for="EstPublie" class="form-check-input" />
+            <label asp-for="EstPublie" class="form-check-label">Publie</label>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-mango">Enregistrer</button>
+            <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
+        </div>
+    </form>
+</div>

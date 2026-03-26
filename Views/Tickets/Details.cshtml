@@ -1,0 +1,483 @@
+@model TicketDto
+@using MangoTaika.Data.Entities
+@{
+    ViewData["Title"] = Model.Sujet;
+    var isAdminLayout = (bool)ViewBag.IsAdmin;
+    var canManageTicket = (bool)ViewBag.CanManageTicket;
+    var currentUserId = (Guid)ViewBag.CurrentUserId;
+    Layout = isAdminLayout ? "_LayoutAdmin" : "_Layout";
+    var canReply = canManageTicket || User.IsInRole("Scout") || User.IsInRole("Parent");
+    var agents = ViewBag.Agents as IList<ApplicationUser>;
+    var groupes = ViewBag.Groupes as IList<Groupe>;
+
+    string StatusLabel(StatutTicket statut) => statut switch
+    {
+        StatutTicket.Nouveau or StatutTicket.Ouvert => "Nouveau",
+        StatutTicket.Affecte or StatutTicket.EnCours => "Affecte",
+        StatutTicket.EnAttente => "En attente",
+        StatutTicket.EnAttenteDemandeur => "Attente demandeur",
+        StatutTicket.EnAttenteTiers => "Attente tiers",
+        StatutTicket.Resolu => "Resolu",
+        StatutTicket.Ferme => "Ferme",
+        StatutTicket.Annule => "Annule",
+        _ => statut.ToString()
+    };
+
+    string StatusClass(StatutTicket statut) => statut switch
+    {
+        StatutTicket.Nouveau or StatutTicket.Ouvert => "badge-soumise",
+        StatutTicket.Affecte or StatutTicket.EnCours => "badge-soumise",
+        StatutTicket.EnAttente or StatutTicket.EnAttenteDemandeur or StatutTicket.EnAttenteTiers => "badge-archivee",
+        StatutTicket.Resolu => "badge-validee",
+        StatutTicket.Ferme or StatutTicket.Annule => "badge-brouillon",
+        _ => "badge-brouillon"
+    };
+
+    (string text, string css) SlaState(TicketDto ticket)
+    {
+        if (ticket.EstEnRetard) return ($"SLA depasse de {Math.Abs(ticket.HeuresAvantSla):N0} h", "is-danger");
+        if (ticket.HeuresAvantSla <= 4) return ($"SLA critique: {Math.Abs(ticket.HeuresAvantSla):N0} h", "is-watch");
+        if (ticket.HeuresAvantSla <= 12) return ($"SLA a surveiller: {Math.Abs(ticket.HeuresAvantSla):N0} h", "is-watch");
+        return ($"SLA OK: {Math.Abs(ticket.HeuresAvantSla):N0} h", "is-safe");
+    }
+
+    string EscalationLabel(TicketDto ticket) => ticket.NiveauEscalade switch
+    {
+        2 => "Escalade N2",
+        1 => "Escalade N1",
+        _ => "Sous controle"
+    };
+
+    var publicMessages = Model.Messages.Where(m => !m.EstNoteInterne).ToList();
+    var internalNotes = Model.Messages.Where(m => m.EstNoteInterne).ToList();
+    var sla = SlaState(Model);
+}
+
+<div class="@(isAdminLayout ? "" : "container my-5") ticket-detail-shell">
+    <section class="ticket-summary">
+        <div class="ticket-summary__top">
+            <div>
+                <div class="ticket-summary__code">@Model.NumeroTicket</div>
+                <h2 class="ticket-summary__title">@Model.Sujet</h2>
+                <div class="ticket-summary__chips">
+                    <span class="badge-3d @(Model.Type == TypeTicket.Incident ? "badge-rejetee" : "badge-soumise")">@(Model.Type == TypeTicket.Incident ? "Incident" : "Demande de service")</span>
+                    <span class="badge-3d badge-soumise">@Model.Categorie</span>
+                    <span class="badge-3d @(Model.Priorite is PrioriteTicket.Urgente or PrioriteTicket.Haute ? "badge-rejetee" : "badge-soumise")">@Model.Priorite</span>
+                    <span class="badge-3d @StatusClass(Model.Statut)">@StatusLabel(Model.Statut)</span>
+                    @if (!string.IsNullOrWhiteSpace(Model.NomServiceCatalogue))
+                    {
+                        <span class="badge-3d badge-archivee">@Model.NomServiceCatalogue</span>
+                    }
+                    <span class="support-sla-pill @sla.css">@sla.text</span>
+                    @if (Model.EstEscalade)
+                    {
+                        <span class="support-sla-pill is-danger"><i class="bi bi-exclamation-diamond"></i> @EscalationLabel(Model)</span>
+                    }
+                </div>
+            </div>
+            <div>
+                @if (isAdminLayout)
+                {
+                    <a asp-action="Index" class="btn btn-outline-or btn-sm"><i class="bi bi-arrow-left"></i></a>
+                }
+                else
+                {
+                    <a asp-action="MesTickets" class="btn btn-outline-or btn-sm"><i class="bi bi-arrow-left"></i></a>
+                }
+            </div>
+        </div>
+
+        <div class="ticket-summary__grid">
+            <div class="ticket-summary__stat">
+                <div class="ticket-summary__stat-label">Demandeur</div>
+                <div class="ticket-summary__stat-value">@(Model.NomCreateur ?? "-")</div>
+            </div>
+            <div class="ticket-summary__stat">
+                <div class="ticket-summary__stat-label">Agent</div>
+                <div class="ticket-summary__stat-value">@(Model.NomAssigne ?? "Non assigne")</div>
+            </div>
+            <div class="ticket-summary__stat">
+                <div class="ticket-summary__stat-label">SLA cible</div>
+                <div class="ticket-summary__stat-value">@Model.DateLimiteSla.ToString("dd/MM HH:mm")</div>
+            </div>
+            <div class="ticket-summary__stat">
+                <div class="ticket-summary__stat-label">Etat SLA</div>
+                <div class="ticket-summary__stat-value">@(Model.EstEnRetard ? $"Depasse {Math.Abs(Model.HeuresAvantSla):N0} h" : $"{Math.Abs(Model.HeuresAvantSla):N0} h restantes")</div>
+            </div>
+            <div class="ticket-summary__stat">
+                <div class="ticket-summary__stat-label">Escalade</div>
+                <div class="ticket-summary__stat-value" style="color:@(Model.EstEscalade ? "#b91c1c" : "var(--vert-logo)");">@(Model.EstEscalade ? EscalationLabel(Model) : "Aucune")</div>
+            </div>
+        </div>
+    </section>
+
+    <div class="row g-4">
+        <div class="col-md-8">
+            <div class="ticket-panel mb-4">
+                <div class="ticket-panel__head">
+                    <h6 class="ticket-panel__title"><i class="bi bi-file-text"></i> Description</h6>
+                </div>
+                <div class="ticket-panel__body">
+                    <p class="text-muted-custom" style="white-space:pre-wrap;line-height:1.75;">@Model.Description</p>
+                    <div class="d-flex gap-3 mt-3 small text-muted-custom flex-wrap">
+                        <span><i class="bi bi-person"></i> @(Model.NomCreateur ?? "-")</span>
+                        <span><i class="bi bi-calendar"></i> @Model.DateCreation.ToString("dd/MM/yyyy HH:mm")</span>
+                        @if (Model.DatePremiereReponse.HasValue)
+                        {
+                            <span><i class="bi bi-lightning"></i> 1re reponse @Model.DatePremiereReponse.Value.ToString("dd/MM HH:mm")</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="ticket-panel mb-4">
+                <div class="ticket-panel__head">
+                    <h6 class="ticket-panel__title"><i class="bi bi-paperclip"></i> Pieces jointes (@Model.PiecesJointes.Count)</h6>
+                </div>
+                <div class="ticket-panel__body">
+                    @if (!Model.PiecesJointes.Any())
+                    {
+                        <p class="text-muted-custom">Aucune piece jointe.</p>
+                    }
+                    else
+                    {
+                        <div class="ticket-attachment-list">
+                            @foreach (var piece in Model.PiecesJointes)
+                            {
+                                <div class="ticket-attachment">
+                                    <div>
+                                        <div class="fw-semibold">@piece.NomOriginal</div>
+                                        <div class="ticket-attachment__meta">@piece.NomAjoutePar • @piece.DateAjout.ToString("dd/MM/yyyy HH:mm") • @(Math.Round(piece.TailleOctets / 1024d, 1)) Ko</div>
+                                    </div>
+                                    <a asp-action="TelechargerPieceJointe" asp-route-id="@piece.Id" class="btn btn-sm btn-outline-or"><i class="bi bi-download"></i></a>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    @if (canReply && Model.Statut != StatutTicket.Ferme && Model.Statut != StatutTicket.Annule)
+                    {
+                        <form asp-action="AjouterPieceJointe" method="post" enctype="multipart/form-data" class="mt-3 form-modern">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="ticketId" value="@Model.Id" />
+                            <div class="d-flex gap-2 align-items-end flex-wrap">
+                                <div class="flex-grow-1">
+                                    <label class="form-label small text-muted-custom">Ajouter un fichier</label>
+                                    <div class="ticket-dropzone" id="ticketDropzone">
+                                        <div class="ticket-dropzone__prompt">
+                                            <div class="ticket-dropzone__text">
+                                                <span class="ticket-dropzone__title">Glisser-deposer un fichier ici</span>
+                                                <span class="ticket-dropzone__hint">ou cliquer pour selectionner. Taille recommandee: 15 Mo max.</span>
+                                            </div>
+                                            <span class="btn btn-outline-or btn-sm">Choisir un fichier</span>
+                                        </div>
+                                        <input id="ticketAttachmentInput" type="file" name="fichier" class="ticket-dropzone__input" required />
+                                        <div id="ticketAttachmentName" class="ticket-dropzone__filename"></div>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-bleu"><i class="bi bi-upload"></i> Ajouter</button>
+                            </div>
+                        </form>
+                    }
+                </div>
+            </div>
+
+            <div class="ticket-panel mb-4">
+                <div class="ticket-panel__head">
+                    <h6 class="ticket-panel__title"><i class="bi bi-chat-dots"></i> Commentaires publics (@publicMessages.Count)</h6>
+                </div>
+                <div class="ticket-panel__body">
+                    <div class="ticket-message-list" id="messagesContainer">
+                        @if (!publicMessages.Any())
+                        {
+                            <p class="text-muted-custom text-center py-3">Aucun commentaire public pour le moment.</p>
+                        }
+                        @foreach (var msg in publicMessages)
+                        {
+                            var isMe = msg.AuteurId == currentUserId;
+                            <div class="ticket-message @(isMe ? "is-me" : "")">
+                                <div class="ticket-message__meta">
+                                    <span class="ticket-message__author @(msg.EstSupport ? "is-support" : "")">@msg.NomAuteur</span>
+                                    <span>@msg.DateEnvoi.ToString("dd/MM HH:mm")</span>
+                                </div>
+                                <div class="ticket-message__bubble">@msg.Contenu</div>
+                            </div>
+                        }
+                    </div>
+
+                    @if (canReply && Model.Statut != StatutTicket.Ferme && Model.Statut != StatutTicket.Annule)
+                    {
+                        <form asp-action="AjouterMessage" method="post" class="mt-3 form-modern">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="ticketId" value="@Model.Id" />
+                            <div class="d-flex gap-2 flex-wrap">
+                                <textarea name="contenu" class="form-control" rows="3" placeholder="Ajouter un commentaire visible par le demandeur..." required></textarea>
+                                <button type="submit" class="btn btn-mango" style="align-self:flex-end;"><i class="bi bi-send"></i> Repondre</button>
+                            </div>
+                        </form>
+                    }
+                </div>
+            </div>
+
+            @if (canManageTicket)
+            {
+                <div class="ticket-panel mb-4">
+                    <div class="ticket-panel__head">
+                        <h6 class="ticket-panel__title"><i class="bi bi-journal-lock"></i> Notes internes (@internalNotes.Count)</h6>
+                    </div>
+                    <div class="ticket-panel__body">
+                        @if (!internalNotes.Any())
+                        {
+                            <p class="text-muted-custom">Aucune note interne.</p>
+                        }
+                        else
+                        {
+                            @foreach (var note in internalNotes)
+                            {
+                                <div class="ticket-note mb-3">
+                                    <div class="d-flex justify-content-between gap-3 mb-1 flex-wrap">
+                                        <span class="fw-semibold text-bleu">@note.NomAuteur</span>
+                                        <span class="ticket-attachment__meta">@note.DateEnvoi.ToString("dd/MM HH:mm")</span>
+                                    </div>
+                                    <p class="mb-0" style="white-space:pre-wrap;">@note.Contenu</p>
+                                </div>
+                            }
+                        }
+
+                        <form asp-action="AjouterNoteInterne" method="post" class="mt-3 form-modern">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="ticketId" value="@Model.Id" />
+                            <div class="d-flex gap-2 flex-wrap">
+                                <textarea name="contenu" class="form-control" rows="3" placeholder="Ajouter une note interne d'analyse ou de traitement..." required></textarea>
+                                <button type="submit" class="btn btn-bleu" style="align-self:flex-end;"><i class="bi bi-journal-plus"></i> Ajouter</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            }
+
+            <div class="ticket-panel">
+                <div class="ticket-panel__head">
+                    <h6 class="ticket-panel__title"><i class="bi bi-clock-history"></i> Journal d'activite</h6>
+                </div>
+                <div class="ticket-panel__body">
+                    @if (!Model.Historiques.Any())
+                    {
+                        <p class="text-muted-custom">Aucun evenement de workflow.</p>
+                    }
+                    else
+                    {
+                        <div class="ticket-timeline">
+                            @foreach (var h in Model.Historiques)
+                            {
+                                <div class="ticket-timeline__item">
+                                    <div class="fw-semibold">@StatusLabel(h.AncienStatut) -> @StatusLabel(h.NouveauStatut)</div>
+                                    <div class="ticket-timeline__meta">@h.DateChangement.ToString("dd/MM/yyyy HH:mm") @(string.IsNullOrWhiteSpace(h.NomAuteur) ? "" : $"par {h.NomAuteur}")</div>
+                                    @if (!string.IsNullOrWhiteSpace(h.Commentaire))
+                                    {
+                                        <div class="mt-1">@h.Commentaire</div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="ticket-sidebar-stack">
+                <div class="ticket-panel">
+                    <div class="ticket-panel__head">
+                        <h6 class="ticket-panel__title"><i class="bi bi-info-circle"></i> Informations ticket</h6>
+                    </div>
+                    <div class="ticket-panel__body">
+                        <div class="ticket-info-grid">
+                            <div class="ticket-info-card"><div class="ticket-info-card__label">Numero</div><div class="ticket-info-card__value">@Model.NumeroTicket</div></div>
+                            <div class="ticket-info-card"><div class="ticket-info-card__label">Demandeur</div><div class="ticket-info-card__value">@(Model.NomCreateur ?? "-")</div></div>
+                            <div class="ticket-info-card"><div class="ticket-info-card__label">Impact / urgence</div><div class="ticket-info-card__value">@Model.Impact / @Model.Urgence</div></div>
+                            <div class="ticket-info-card"><div class="ticket-info-card__label">Priorite</div><div class="ticket-info-card__value">@Model.Priorite</div></div>
+                            <div class="ticket-info-card"><div class="ticket-info-card__label">Assigne a</div><div class="ticket-info-card__value">@(Model.NomAssigne ?? "Non assigne")</div></div>
+                            <div class="ticket-info-card"><div class="ticket-info-card__label">Groupe assigne</div><div class="ticket-info-card__value">@(Model.NomGroupeAssigne ?? "Aucun")</div></div>
+                            @if (Model.DateAffectation.HasValue)
+                            {
+                                <div class="ticket-info-card"><div class="ticket-info-card__label">Affecte le</div><div class="ticket-info-card__value">@Model.DateAffectation.Value.ToString("dd/MM/yyyy HH:mm")</div></div>
+                            }
+                            <div class="ticket-info-card"><div class="ticket-info-card__label">SLA cible</div><div class="ticket-info-card__value">@Model.DateLimiteSla.ToString("dd/MM/yyyy HH:mm")</div></div>
+                            <div class="ticket-info-card"><div class="ticket-info-card__label">Etat SLA</div><div class="ticket-info-card__value" style="color:@(Model.EstEnRetard ? "#b91c1c" : "var(--vert-logo)");">@(Model.EstEnRetard ? $"Depasse de {Math.Abs(Model.HeuresAvantSla):N0} h" : $"Encore {Math.Abs(Model.HeuresAvantSla):N0} h")</div></div>
+                            <div class="ticket-info-card"><div class="ticket-info-card__label">Escalade</div><div class="ticket-info-card__value" style="color:@(Model.EstEscalade ? "#b91c1c" : "var(--vert-logo)");">@(Model.EstEscalade ? EscalationLabel(Model) : "Aucune")</div></div>
+                            @if (Model.NoteSatisfaction.HasValue)
+                            {
+                                <div class="ticket-info-card"><div class="ticket-info-card__label">Satisfaction</div><div class="ticket-info-card__value">@Model.NoteSatisfaction / 5</div></div>
+                            }
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(Model.ResumeResolution))
+                        {
+                            <div class="ticket-note mt-3">
+                                <div class="fw-semibold mb-1">Resume de resolution</div>
+                                <div style="white-space:pre-wrap;">@Model.ResumeResolution</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                @if (canManageTicket)
+                {
+                    <div class="ticket-panel">
+                        <div class="ticket-panel__head"><h6 class="ticket-panel__title"><i class="bi bi-person-check"></i> Assignation</h6></div>
+                        <div class="ticket-panel__body">
+                            <form asp-action="Assigner" method="post" class="form-modern">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="ticketId" value="@Model.Id" />
+                                <select name="agentId" class="form-select form-select-sm mb-2" required>
+                                    <option value="">Choisir un agent</option>
+                                    @if (agents != null)
+                                    {
+                                        @foreach (var a in agents)
+                                        {
+                                            <option value="@a.Id" selected="@(Model.AssigneAId == a.Id)">@a.Prenom @a.Nom</option>
+                                        }
+                                    }
+                                </select>
+                                <button type="submit" class="btn btn-bleu btn-sm w-100">Affecter</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="ticket-panel">
+                        <div class="ticket-panel__head"><h6 class="ticket-panel__title"><i class="bi bi-diagram-3"></i> File / groupe</h6></div>
+                        <div class="ticket-panel__body">
+                            <form asp-action="AssignerGroupe" method="post" class="form-modern">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="ticketId" value="@Model.Id" />
+                                <select name="groupeId" class="form-select form-select-sm mb-2" required>
+                                    <option value="">Choisir un groupe</option>
+                                    @if (groupes != null)
+                                    {
+                                        @foreach (var g in groupes)
+                                        {
+                                            <option value="@g.Id" selected="@(Model.GroupeAssigneId == g.Id)">@g.Nom</option>
+                                        }
+                                    }
+                                </select>
+                                <button type="submit" class="btn btn-bleu btn-sm w-100">Transferer</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="ticket-panel">
+                        <div class="ticket-panel__head"><h6 class="ticket-panel__title"><i class="bi bi-sliders"></i> Classification</h6></div>
+                        <div class="ticket-panel__body">
+                            <form asp-action="Recategoriser" method="post" class="form-modern">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="ticketId" value="@Model.Id" />
+                                <select name="type" class="form-select form-select-sm mb-2">
+                                    @foreach (var t in Enum.GetValues<TypeTicket>())
+                                    {
+                                        <option value="@t" selected="@(Model.Type == t)">@t</option>
+                                    }
+                                </select>
+                                <select name="categorie" class="form-select form-select-sm mb-2">
+                                    @foreach (var c in Enum.GetValues<CategorieTicket>())
+                                    {
+                                        <option value="@c" selected="@(Model.Categorie == c)">@c</option>
+                                    }
+                                </select>
+                                <select name="impact" class="form-select form-select-sm mb-2">
+                                    @foreach (var impact in Enum.GetValues<ImpactTicket>())
+                                    {
+                                        <option value="@impact" selected="@(Model.Impact == impact)">@impact</option>
+                                    }
+                                </select>
+                                <select name="urgence" class="form-select form-select-sm mb-2">
+                                    @foreach (var urgence in Enum.GetValues<UrgenceTicket>())
+                                    {
+                                        <option value="@urgence" selected="@(Model.Urgence == urgence)">@urgence</option>
+                                    }
+                                </select>
+                                <button type="submit" class="btn btn-bleu btn-sm w-100">Mettre a jour</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="ticket-panel">
+                        <div class="ticket-panel__head"><h6 class="ticket-panel__title"><i class="bi bi-arrow-repeat"></i> Workflow</h6></div>
+                        <div class="ticket-panel__body">
+                            <form asp-action="ChangerStatut" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="ticketId" value="@Model.Id" />
+                                <div class="d-grid gap-2">
+                                    <button type="submit" name="statut" value="@StatutTicket.Affecte" class="btn btn-sm btn-outline-or">Affecte</button>
+                                    <button type="submit" name="statut" value="@StatutTicket.EnCours" class="btn btn-sm btn-outline-or">En cours</button>
+                                    <button type="submit" name="statut" value="@StatutTicket.EnAttenteDemandeur" class="btn btn-sm btn-outline-or">Attente demandeur</button>
+                                    <button type="submit" name="statut" value="@StatutTicket.EnAttenteTiers" class="btn btn-sm btn-outline-or">Attente tiers</button>
+                                    <button type="submit" name="statut" value="@StatutTicket.Ferme" class="btn btn-sm" style="background:rgba(107,114,128,0.15);color:#6b7280;border:1px solid rgba(107,114,128,0.3);border-radius:12px;">Ferme</button>
+                                    <button type="submit" name="statut" value="@StatutTicket.Annule" class="btn btn-sm" style="background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:12px;">Annule</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="ticket-panel">
+                        <div class="ticket-panel__head"><h6 class="ticket-panel__title"><i class="bi bi-check2-circle"></i> Resolution</h6></div>
+                        <div class="ticket-panel__body">
+                            <form asp-action="Resoudre" method="post" class="form-modern">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="TicketId" value="@Model.Id" />
+                                <textarea name="ResumeResolution" class="form-control form-control-sm mb-2" rows="4" placeholder="Documenter la cause et l'action de resolution..." required>@Model.ResumeResolution</textarea>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="FermerApresResolution" name="FermerApresResolution" value="true" />
+                                    <label class="form-check-label" for="FermerApresResolution">Fermer le ticket apres resolution</label>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-mango w-100">Documenter et resoudre</button>
+                            </form>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var mc = document.getElementById('messagesContainer');
+        if (mc) mc.scrollTop = mc.scrollHeight;
+
+        (function () {
+            var zone = document.getElementById('ticketDropzone');
+            var input = document.getElementById('ticketAttachmentInput');
+            var label = document.getElementById('ticketAttachmentName');
+            if (!zone || !input || !label) return;
+
+            function syncLabel() {
+                var name = input.files && input.files.length ? input.files[0].name : '';
+                zone.classList.toggle('has-file', !!name);
+                label.textContent = name ? ('Fichier selectionne: ' + name) : '';
+            }
+
+            ['dragenter', 'dragover'].forEach(function (evt) {
+                zone.addEventListener(evt, function (e) {
+                    e.preventDefault();
+                    zone.classList.add('is-dragover');
+                });
+            });
+
+            ['dragleave', 'drop'].forEach(function (evt) {
+                zone.addEventListener(evt, function (e) {
+                    e.preventDefault();
+                    zone.classList.remove('is-dragover');
+                });
+            });
+
+            zone.addEventListener('drop', function (e) {
+                if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+                    input.files = e.dataTransfer.files;
+                    syncLabel();
+                }
+            });
+
+            input.addEventListener('change', syncLabel);
+        })();
+    </script>
+}

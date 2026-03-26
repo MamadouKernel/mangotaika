@@ -1,0 +1,56 @@
+@model MangoTaika.Data.Entities.MotCommissaire
+@{
+    ViewData["Title"] = "Modifier le mot du Commissaire";
+    Layout = "_LayoutAdmin";
+}
+
+<h2 class="section-title mb-1"><i class="bi bi-megaphone-fill text-or"></i> Modifier le mot du <span class="accent">Commissaire</span></h2>
+<div class="section-divider"></div>
+
+<div class="card-3d p-4 mt-3" style="max-width:700px;">
+    <form asp-action="Edit" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data" class="form-modern">
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Année</label>
+                <input name="Annee" class="form-control" type="number" value="@Model.Annee" />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Statut</label>
+                <select name="EstActif" class="form-select">
+                    <option value="true" selected="@Model.EstActif">Actif (affiché sur le portail)</option>
+                    <option value="false" selected="@(!Model.EstActif)">Inactif</option>
+                </select>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Contenu du message</label>
+            <textarea name="Contenu" class="form-control" rows="6">@Model.Contenu</textarea>
+        </div>
+        <div class="mb-4">
+            <label class="form-label">Photo du Commissaire <span class="text-muted-custom small">(optionnel)</span></label>
+            <div id="photoPreview" class="mb-2" style="@(string.IsNullOrEmpty(Model.PhotoUrl) ? "display:none;" : "")">
+                <img id="photoPreviewImg" src="@Model.PhotoUrl" alt="Aperçu" style="width:150px;height:150px;object-fit:cover;border-radius:12px;border:2px solid var(--vert-pastel);box-shadow:var(--shadow-md);" />
+                <small class="d-block text-muted-custom mt-1">Choisir un fichier pour remplacer.</small>
+            </div>
+            <input type="file" name="Photo" id="photoInput" class="form-control" accept="image/*" />
+        </div>
+        <button type="submit" class="btn btn-mango" title="Enregistrer"><i class="bi bi-check-lg"></i></button>
+        <a asp-action="Index" class="btn btn-outline-or ms-2" title="Annuler"><i class="bi bi-x-lg"></i></a>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('photoInput').addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            var preview = document.getElementById('photoPreview');
+            var img = document.getElementById('photoPreviewImg');
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function(ev) { img.src = ev.target.result; preview.style.display = 'block'; };
+                reader.readAsDataURL(file);
+            }
+        });
+    </script>
+}

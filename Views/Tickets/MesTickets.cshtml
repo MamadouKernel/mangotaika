@@ -1,0 +1,100 @@
+@model List<TicketDto>
+@{
+    ViewData["Title"] = "Mes tickets";
+
+    string StatusLabel(StatutTicket statut) => statut switch
+    {
+        StatutTicket.Nouveau or StatutTicket.Ouvert => "Nouveau",
+        StatutTicket.Affecte or StatutTicket.EnCours => "Affecte",
+        StatutTicket.EnAttente => "En attente",
+        StatutTicket.EnAttenteDemandeur => "Attente demandeur",
+        StatutTicket.EnAttenteTiers => "Attente tiers",
+        StatutTicket.Resolu => "Resolu",
+        StatutTicket.Ferme => "Ferme",
+        StatutTicket.Annule => "Annule",
+        _ => statut.ToString()
+    };
+
+    (string text, string css) SlaState(TicketDto ticket)
+    {
+        if (ticket.EstEnRetard) return ($"SLA depasse de {Math.Abs(ticket.HeuresAvantSla):N0} h", "is-danger");
+        if (ticket.HeuresAvantSla <= 4) return ($"SLA critique: {Math.Abs(ticket.HeuresAvantSla):N0} h", "is-watch");
+        if (ticket.HeuresAvantSla <= 12) return ($"SLA a surveiller: {Math.Abs(ticket.HeuresAvantSla):N0} h", "is-watch");
+        return ($"SLA OK: {Math.Abs(ticket.HeuresAvantSla):N0} h", "is-safe");
+    }
+}
+
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="section-title mb-0"><i class="bi bi-headset text-or"></i> Mes <span class="accent">tickets</span></h2>
+            <p class="text-muted-custom small mt-1">Suivez vos incidents et demandes de service.</p>
+        </div>
+        <a asp-action="Create" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Nouveau ticket</a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="card-3d p-5 text-center">
+            <i class="bi bi-inbox" style="font-size:4rem;color:var(--gris-clair);opacity:0.4;"></i>
+            <p class="text-muted-custom mt-3">Vous n'avez aucun ticket pour le moment.</p>
+            <a asp-action="Create" class="btn btn-mango mt-2"><i class="bi bi-plus-lg"></i> Creer un ticket</a>
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var t in Model)
+            {
+                var statutClass = t.Statut switch {
+                    StatutTicket.Nouveau or StatutTicket.Ouvert => "badge-soumise",
+                    StatutTicket.Affecte or StatutTicket.EnCours => "badge-soumise",
+                    StatutTicket.EnAttente or StatutTicket.EnAttenteDemandeur or StatutTicket.EnAttenteTiers => "badge-archivee",
+                    StatutTicket.Resolu => "badge-validee",
+                    _ => "badge-brouillon"
+                };
+                var prioriteClass = t.Priorite switch {
+                    PrioriteTicket.Urgente => "badge-rejetee",
+                    PrioriteTicket.Haute => "badge-rejetee",
+                    _ => "badge-soumise"
+                };
+                var sla = SlaState(t);
+
+                <div class="col-md-6">
+                    <a asp-action="Details" asp-route-id="@t.Id" class="text-decoration-none">
+                        <div class="card-3d p-4 h-100">
+                            <div class="d-flex justify-content-between align-items-start mb-2 gap-2">
+                                <div>
+                                    <div class="text-muted-custom small">@t.NumeroTicket</div>
+                                    <h6 style="color:var(--bleu-logo);font-weight:700;margin:0;">@t.Sujet</h6>
+                                </div>
+                                <span class="support-sla-pill @sla.css">@sla.text</span>
+                            </div>
+                            <div class="d-flex gap-2 mb-2 flex-wrap">
+                                <span class="badge-3d @(t.Type == TypeTicket.Incident ? "badge-rejetee" : "badge-soumise")" style="font-size:0.65rem;">@(t.Type == TypeTicket.Incident ? "Incident" : "Demande")</span>
+                                <span class="badge-3d @prioriteClass" style="font-size:0.65rem;">@t.Priorite</span>
+                                <span class="badge-3d @statutClass" style="font-size:0.65rem;">@StatusLabel(t.Statut)</span>
+                            </div>
+                            <p class="text-muted-custom small mb-2" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">@t.Description</p>
+                            <div class="d-flex justify-content-between small text-muted-custom flex-wrap gap-2">
+                                <span><i class="bi bi-calendar"></i> @t.DateCreation.ToString("dd/MM/yyyy")</span>
+                                <span><i class="bi bi-person"></i> @(t.NomAssigne ?? "Non assigne")</span>
+                                <span><i class="bi bi-layers"></i> @t.Impact / @t.Urgence</span>
+                                <span><i class="bi bi-hourglass-split"></i> @Math.Abs(t.HeuresAvantSla).ToString("N0") h</span>
+                            </div>
+                            @if (t.NoteSatisfaction.HasValue)
+                            {
+                                <div class="mt-2">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <i class="bi bi-star-fill" style="font-size:0.75rem;color:@(i <= t.NoteSatisfaction ? "#f59e0b" : "var(--gris-clair)");"></i>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </a>
+                </div>
+            }
+        </div>
+    }
+</div>

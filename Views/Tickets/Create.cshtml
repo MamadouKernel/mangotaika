@@ -1,0 +1,209 @@
+@model TicketCreateDto
+@{
+    ViewData["Title"] = "Nouveau ticket";
+    var isAdmin = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire") || User.IsInRole("AgentSupport");
+    var services = ViewBag.ServiceCatalogItems as IEnumerable<MangoTaika.Data.Entities.SupportServiceCatalogueItem> ?? Enumerable.Empty<MangoTaika.Data.Entities.SupportServiceCatalogueItem>();
+    Layout = isAdmin ? "_LayoutAdmin" : "_Layout";
+}
+
+<div class="container my-5" style="max-width:760px;">
+    <h2 class="section-title mb-1"><i class="bi bi-plus-lg text-or"></i> Nouveau <span class="accent">ticket</span></h2>
+    <div class="section-divider"></div>
+    <p class="text-muted-custom small mb-4">Declarez un incident ou une demande de service. Le ticket sera place dans la file de support pour triage et affectation.</p>
+
+    <div class="card-3d p-4">
+        <form id="ticketCreateForm" asp-action="Create" method="post" class="form-modern">
+            @Html.AntiForgeryToken()
+            <div class="mb-3">
+                <label asp-for="ServiceCatalogueId" class="form-label">Service catalogue</label>
+                <select asp-for="ServiceCatalogueId" class="form-select">
+                    <option value="">Aucun service predefini</option>
+                    @foreach (var service in services)
+                    {
+                        <option value="@service.Id">@service.Nom (@service.Code)</option>
+                    }
+                </select>
+                <div class="form-text">Si un service est selectionne, la classification et le SLA seront proposes automatiquement.</div>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Sujet" class="form-label">Sujet</label>
+                <input asp-for="Sujet" class="form-control" placeholder="Resume court de votre besoin" required />
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Type" class="form-label">Type</label>
+                    <select asp-for="Type" class="form-select">
+                        <option value="@TypeTicket.Incident">Incident</option>
+                        <option value="@TypeTicket.Requete">Demande de service</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Categorie" class="form-label">Categorie</label>
+                    <select asp-for="Categorie" class="form-select" asp-items="Html.GetEnumSelectList<CategorieTicket>()"></select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Impact" class="form-label">Impact</label>
+                    <select asp-for="Impact" class="form-select" asp-items="Html.GetEnumSelectList<ImpactTicket>()"></select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Urgence" class="form-label">Urgence</label>
+                    <select asp-for="Urgence" class="form-select" asp-items="Html.GetEnumSelectList<UrgenceTicket>()"></select>
+                </div>
+                <div class="col-md-8 mb-3">
+                    <div class="alert alert-light border" style="border-radius:12px;">
+                        La priorite est calculee automatiquement a partir de l'impact et de l'urgence.
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <label asp-for="Description" class="form-label">Description detaillee</label>
+                    <textarea id="ticketDescriptionInput" asp-for="Description" class="form-control" rows="7" placeholder="Contexte, actions deja tentees, impact observe..." required></textarea>
+                </div>
+            </div>
+            <div class="ticket-panel mb-3">
+                <div class="ticket-panel__head">
+                    <h6 class="ticket-panel__title"><i class="bi bi-lightbulb"></i> Articles suggeres</h6>
+                </div>
+                <div class="ticket-panel__body">
+                    <p class="text-muted-custom small mb-3">Des articles de la base de connaissances s'affichent pendant la saisie pour aider a resoudre plus vite avant soumission.</p>
+                    <div id="kbSuggestLoading" class="text-muted-custom small" style="display:none;">Recherche d'articles utiles...</div>
+                    <div id="kbSuggestEmpty" class="text-muted-custom small">Commence a saisir un sujet ou une description pour voir des suggestions.</div>
+                    <div id="kbSuggestList" class="ticket-attachment-list"></div>
+                    <div id="kbSuggestPreview" class="ticket-note mt-3" style="display:none;">
+                        <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                            <div>
+                                <div id="kbSuggestPreviewTitle" class="fw-semibold"></div>
+                                <div id="kbSuggestPreviewMeta" class="ticket-attachment__meta"></div>
+                            </div>
+                            <a id="kbSuggestPreviewLink" class="btn btn-sm btn-outline-or" target="_blank" href="#"><i class="bi bi-box-arrow-up-right"></i></a>
+                        </div>
+                        <div id="kbSuggestPreviewBody" class="mt-2" style="white-space:pre-wrap;"></div>
+                    </div>
+                </div>
+            </div>
+            <partial name="_ConsentementARTCI" />
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-mango"><i class="bi bi-send"></i> Soumettre</button>
+                @if (isAdmin)
+                {
+                    <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
+                }
+                else
+                {
+                    <a asp-action="MesTickets" class="btn btn-outline-or">Annuler</a>
+                }
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var sujet = document.getElementById('Sujet');
+            var description = document.getElementById('ticketDescriptionInput');
+            var service = document.getElementById('ServiceCatalogueId');
+            var form = document.getElementById('ticketCreateForm');
+            var list = document.getElementById('kbSuggestList');
+            var empty = document.getElementById('kbSuggestEmpty');
+            var loading = document.getElementById('kbSuggestLoading');
+            var preview = document.getElementById('kbSuggestPreview');
+            var previewTitle = document.getElementById('kbSuggestPreviewTitle');
+            var previewMeta = document.getElementById('kbSuggestPreviewMeta');
+            var previewBody = document.getElementById('kbSuggestPreviewBody');
+            var previewLink = document.getElementById('kbSuggestPreviewLink');
+            if (!sujet || !description || !service || !form || !list || !empty || !loading || !preview || !previewTitle || !previewMeta || !previewBody || !previewLink) return;
+
+            var timer = null;
+            var controller = null;
+            var isSubmitting = false;
+
+            function hidePreview() {
+                preview.style.display = 'none';
+                previewTitle.textContent = '';
+                previewMeta.textContent = '';
+                previewBody.textContent = '';
+                previewLink.setAttribute('href', '#');
+            }
+
+            function showPreview(item) {
+                previewTitle.textContent = item.titre || '';
+                previewMeta.textContent = item.categorie || '';
+                previewBody.textContent = item.contenu || item.resume || '';
+                previewLink.setAttribute('href', item.url || '#');
+                preview.style.display = '';
+            }
+
+            function render(items) {
+                list.innerHTML = '';
+                hidePreview();
+
+                if (!items || !items.length) {
+                    empty.style.display = '';
+                    empty.textContent = 'Aucun article pertinent trouve pour la saisie actuelle.';
+                    return;
+                }
+
+                empty.style.display = 'none';
+                items.forEach(function (item, index) {
+                    var row = document.createElement('div');
+                    row.className = 'ticket-attachment';
+                    row.innerHTML =
+                        '<div><div class="fw-semibold">' + item.titre + '</div>' +
+                        '<div class="ticket-attachment__meta">' + item.categorie + ' • ' + item.resume + '</div></div>' +
+                        '<div class="d-flex gap-2"><button type="button" class="btn btn-sm btn-bleu kb-preview-btn">Apercu</button>' +
+                        '<a class="btn btn-sm btn-outline-or" target="_blank" href="' + item.url + '"><i class="bi bi-box-arrow-up-right"></i></a></div>';
+                    row.querySelector('.kb-preview-btn').addEventListener('click', function () {
+                        showPreview(item);
+                    });
+                    list.appendChild(row);
+                    if (index === 0) showPreview(item);
+                });
+            }
+
+            function fetchSuggestions() {
+                if (isSubmitting) return;
+                var q = ((sujet.value || '') + ' ' + (description.value || '')).trim();
+                if (q.length < 6) {
+                    list.innerHTML = '';
+                    hidePreview();
+                    empty.style.display = '';
+                    empty.textContent = 'Commence a saisir un sujet ou une description pour voir des suggestions.';
+                    loading.style.display = 'none';
+                    return;
+                }
+
+                if (controller) controller.abort();
+                controller = new AbortController();
+                loading.style.display = '';
+                empty.style.display = 'none';
+
+                var url = '@Url.Action("SuggestKnowledge", "Tickets")' + '?q=' + encodeURIComponent(q) + '&serviceId=' + encodeURIComponent(service.value || '');
+                fetch(url, { signal: controller.signal })
+                    .then(function (r) { return r.ok ? r.json() : []; })
+                    .then(function (items) { render(items); })
+                    .catch(function () { })
+                    .finally(function () { loading.style.display = 'none'; });
+            }
+
+            function schedule() {
+                window.clearTimeout(timer);
+                timer = window.setTimeout(fetchSuggestions, 260);
+            }
+
+            sujet.addEventListener('input', schedule);
+            description.addEventListener('input', schedule);
+            service.addEventListener('change', schedule);
+            form.addEventListener('submit', function () {
+                isSubmitting = true;
+                window.clearTimeout(timer);
+                if (controller) controller.abort();
+                loading.style.display = 'none';
+                empty.style.display = 'none';
+            });
+        })();
+    </script>
+}

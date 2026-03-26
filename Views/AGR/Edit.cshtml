@@ -1,0 +1,65 @@
+@model ProjetAGR
+@using MangoTaika.Data.Entities
+@{
+    ViewData["Title"] = "Modifier le projet AGR";
+    Layout = "_LayoutAdmin";
+    var groupes = ViewBag.Groupes as List<Groupe> ?? new();
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-pencil text-or"></i> Modifier <span class="accent">le projet</span></h2>
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-or btn-sm" title="Fiche"><i class="bi bi-eye"></i></a>
+</div>
+
+<div class="card-3d p-4" style="max-width:720px;">
+    <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+
+        <div class="mb-3">
+            <label asp-for="Nom" class="form-label small"></label>
+            <input asp-for="Nom" class="form-control" required />
+        </div>
+        <div class="mb-3">
+            <label asp-for="Description" class="form-label small"></label>
+            <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+        </div>
+        <div class="row g-2 mb-3">
+            <div class="col-md-4">
+                <label asp-for="BudgetInitial" class="form-label small"></label>
+                <input asp-for="BudgetInitial" class="form-control" type="number" min="0" step="100" />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="DateDebut" class="form-label small"></label>
+                <input asp-for="DateDebut" class="form-control" type="date" />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="DateFin" class="form-label small"></label>
+                <input asp-for="DateFin" class="form-control" type="date" />
+            </div>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Responsable" class="form-label small"></label>
+            <input asp-for="Responsable" class="form-control" />
+        </div>
+        <div class="mb-3">
+            <label asp-for="Statut" class="form-label small"></label>
+            <select asp-for="Statut" class="form-select" asp-items="Html.GetEnumSelectList<StatutProjetAGR>()"></select>
+        </div>
+        <div class="mb-4">
+            <label class="form-label small">Groupe</label>
+            <select name="GroupeId" class="form-select">
+                <option value="">— District —</option>
+                @foreach (var g in groupes)
+                {
+                    <option value="@g.Id" selected="@(Model.GroupeId == g.Id)">@g.Nom</option>
+                }
+            </select>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-mango" title="Enregistrer"><i class="bi bi-check-lg"></i></button>
+            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary" title="Annuler"><i class="bi bi-x-lg"></i></a>
+        </div>
+    </form>
+</div>

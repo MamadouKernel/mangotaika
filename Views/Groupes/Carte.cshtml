@@ -1,0 +1,73 @@
+@model List<GroupeDto>
+@{
+    ViewData["Title"] = "Carte des groupes";
+    Layout = User.Identity?.IsAuthenticated == true ? "_LayoutAdmin" : "_Layout";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <img src="~/images/logo.png" alt="Logo" style="width:60px;height:60px;" />
+        <h2 class="section-title mb-0"><i class="bi bi-geo-alt-fill text-or"></i> Carte des <span class="accent">groupes scouts</span></h2>
+    </div>
+    <div class="map-gps-shell">
+        <div id="map-groupes"></div>
+    </div>
+
+    @{
+        var sansCoordonnees = Model.Where(g => !g.Latitude.HasValue || !g.Longitude.HasValue).ToList();
+    }
+    @if (sansCoordonnees.Any())
+    {
+        <div class="card-3d p-3 mt-3">
+            <h6 style="color:#f87171;"><i class="bi bi-exclamation-triangle"></i> Groupes sans coordonnées GPS (@sansCoordonnees.Count)</h6>
+            <p class="text-muted-custom small mb-2">Ces groupes n'apparaissent pas sur la carte. Modifiez-les pour ajouter une commune/quartier ou des coordonnées GPS manuelles.</p>
+            <ul class="list-unstyled mb-0">
+                @foreach (var g in sansCoordonnees)
+                {
+                    <li class="d-flex align-items-center gap-2 py-1">
+                        <i class="bi bi-geo text-muted-custom"></i>
+                        <span>@g.Nom</span>
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <a asp-controller="Groupes" asp-action="Edit" asp-route-id="@g.Id" class="btn btn-sm btn-outline-or ms-auto"><i class="bi bi-pencil"></i> Modifier</a>
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+        var mapEl = document.getElementById('map-groupes');
+        var map = L.map('map-groupes', { zoomAnimation: true }).setView([5.33, -4.00], 12);
+        MangoLeafletOsm.addOpenStreetMapLayer(map);
+        MangoLeafletOsm.bindMapResize(map, mapEl);
+
+        var markerIcon = MangoLeafletOsm.groupeMarkerIcon();
+
+        var groupes = @Html.Raw(ViewBag.GroupesJson ?? "[]");
+        function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+        groupes.forEach(function(g) {
+            var detailsHtml = '';
+            if (g.cg) detailsHtml += '<div style="font-size:0.8rem;margin-top:4px;"><strong>👤 CG :</strong> ' + esc(g.cg) + '</div>';
+            if (g.adjoints) detailsHtml += '<div style="font-size:0.8rem;"><strong>👥 Adjoint(s) :</strong> ' + esc(g.adjoints) + '</div>';
+
+            var branchesHtml = '';
+            if (g.branches && g.branches.length > 0) {
+                branchesHtml = '<hr style="margin:6px 0;border-color:#e5e7eb;"/><div style="font-size:0.8rem;"><strong>Branches :</strong>';
+                g.branches.forEach(function(b) {
+                    branchesHtml += '<div style="display:flex;justify-content:space-between;gap:8px;padding:2px 0;"><span>🏕️ ' + esc(b.nom) + ' <span style="color:#597537;font-weight:600;">(' + b.scouts + ')</span></span></div>';
+                    if (b.cu) branchesHtml += '<div style="padding-left:20px;color:#6b7280;font-size:0.75rem;">CU : ' + esc(b.cu) + '</div>';
+                });
+                branchesHtml += '</div>';
+            }
+            L.marker([g.lat, g.lng], {icon: markerIcon}).addTo(map)
+                .bindPopup('<div style="font-family:Poppins;min-width:200px;"><strong style="color:#597537;font-size:1rem;">' + esc(g.nom) + '</strong><br/><small style="color:#6b7280;">' + esc(g.adresse) + '</small><br/><span style="color:#8ab55a;font-weight:600;">' + g.membres + ' membres</span>' + detailsHtml + branchesHtml + '</div>')
+                .bindTooltip(esc(g.nom), {direction: 'top', offset: [0, -30], className: 'groupe-tooltip'});
+        });
+        });
+    </script>
+}

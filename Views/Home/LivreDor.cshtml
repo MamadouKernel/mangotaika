@@ -1,0 +1,89 @@
+@model List<MangoTaika.Data.Entities.LivreDor>
+@{
+    ViewData["Title"] = "Livre d'or";
+}
+
+<div class="container my-5">
+    <div class="text-center mb-4">
+        <img src="~/images/logo.png" alt="Logo MANGO TAÏKA" style="width:90px;height:90px;" />
+        <h2 class="section-title mt-3"><i class="bi bi-book-fill text-or"></i> Livre <span class="accent">d'or</span></h2>
+        <div class="section-divider mx-auto"></div>
+        <p class="text-muted-custom">Partagez votre expérience avec le district MANGO TAÏKA.</p>
+    </div>
+
+    <!-- PAGES HISTORIQUES -->
+    <section class="mb-5">
+        <h4 class="section-title"><i class="bi bi-clock-history text-or"></i> Pages <span class="accent">historiques</span></h4>
+        <div class="section-divider"></div>
+        <div class="row g-4 mt-2">
+            <div class="col-md-4">
+                <a asp-controller="Historique" asp-action="Commissaires" class="text-decoration-none">
+                    <div class="card-3d p-4 text-center h-100">
+                        <i class="bi bi-award-fill" style="font-size:2.5rem;color:var(--vert-lumineux);"></i>
+                        <h6 class="mt-3 text-or">Anciens Commissaires de District</h6>
+                        <p class="text-muted-custom small">Les leaders qui ont guidé le district MANGO TAÏKA à travers les années.</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a asp-controller="Historique" asp-action="ChefsGroupe" class="text-decoration-none">
+                    <div class="card-3d p-4 text-center h-100">
+                        <i class="bi bi-people-fill" style="font-size:2.5rem;color:var(--bleu-gris-pale);"></i>
+                        <h6 class="mt-3 text-or">Anciens Chefs de Groupe</h6>
+                        <p class="text-muted-custom small">Les CG qui ont bâti et animé nos groupes scouts.</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a asp-controller="Historique" asp-action="CAD" class="text-decoration-none">
+                    <div class="card-3d p-4 text-center h-100">
+                        <i class="bi bi-shield-fill-check" style="font-size:2.5rem;color:var(--vert-pastel);"></i>
+                        <h6 class="mt-3 text-or">Membres du CAD</h6>
+                        <p class="text-muted-custom small">Le Conseil d'Administration du District, pilier de notre gouvernance.</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <div class="row justify-content-center mb-5">
+        <div class="col-md-8">
+            <div class="card-3d p-4">
+                <form asp-action="LivreDor" method="post" class="form-modern">
+                    <div style="position:absolute;left:-9999px;" aria-hidden="true">
+                        <input type="text" name="Website" tabindex="-1" autocomplete="off" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Votre nom</label>
+                        <input name="NomAuteur" class="form-control" required placeholder="Votre nom" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Votre message</label>
+                        <textarea name="Message" class="form-control" rows="3" required placeholder="Votre témoignage..."></textarea>
+                    </div>
+                    <partial name="_ConsentementARTCI" />
+                    <button type="submit" class="btn btn-mango">
+                        <i class="bi bi-pencil-square"></i> Publier
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        @foreach (var msg in Model)
+        {
+            <div class="col-md-6">
+                <div class="livre-dor-card">
+                    <p style="position:relative;z-index:1;line-height:1.7;padding-top:1rem;color:var(--texte-secondaire);">
+                        @msg.Message
+                    </p>
+                    <div class="d-flex justify-content-between align-items-center mt-3" style="border-top:1px solid var(--gris-border);padding-top:0.75rem;">
+                        <span class="text-or fw-semibold small">@msg.NomAuteur</span>
+                        <span class="text-muted-custom small">@msg.DateCreation.ToString("dd/MM/yyyy")</span>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

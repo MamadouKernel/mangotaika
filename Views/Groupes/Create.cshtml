@@ -1,0 +1,50 @@
+@model GroupeCreateDto
+@{
+    ViewData["Title"] = "Nouveau groupe";
+    Layout = "_LayoutAdmin";
+}
+
+<h2 class="section-title mb-1"><i class="bi bi-plus-lg text-or"></i> Nouveau <span class="accent">groupe</span></h2>
+<div class="section-divider"></div>
+
+<div class="card-3d p-4 mt-3">
+    <form asp-action="Create" method="post" class="form-modern">
+        <div class="mb-3">
+            <label asp-for="Nom" class="form-label">Nom du groupe</label>
+            <input asp-for="Nom" class="form-control" />
+        </div>
+        <div class="mb-3">
+            <label asp-for="Description" class="form-label">Description</label>
+            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="Commune" class="form-label">Commune</label>
+                <input asp-for="Commune" class="form-control" placeholder="Ex: Cocody" />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label asp-for="Quartier" class="form-label">Quartier / Lieu-dit</label>
+                <input asp-for="Quartier" class="form-control" placeholder="Ex: 2 Plateaux, Carrefour Céleste" />
+            </div>
+        </div>
+        <div class="mb-3">
+            <label asp-for="NomAdjoints" class="form-label">Noms des Adjoints</label>
+            <input asp-for="NomAdjoints" class="form-control" placeholder="Ex: Koné Moussa, Traoré Awa" />
+            <small class="text-muted-custom">Séparez les noms par des virgules.</small>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="Latitude" class="form-label">Latitude <small class="text-muted-custom">(optionnel, si le géocodage échoue)</small></label>
+                <input asp-for="Latitude" class="form-control" type="number" step="0.000001" placeholder="Ex: 5.3364" />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label asp-for="Longitude" class="form-label">Longitude <small class="text-muted-custom">(optionnel)</small></label>
+                <input asp-for="Longitude" class="form-control" type="number" step="0.000001" placeholder="Ex: -4.0267" />
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-2">
+            <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Créer</button>
+            <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
+        </div>
+    </form>
+</div>

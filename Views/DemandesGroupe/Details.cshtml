@@ -1,0 +1,68 @@
+@model DemandeGroupe
+@{
+    ViewData["Title"] = "Demande de groupe";
+    Layout = "_LayoutAdmin";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-building-add text-or"></i> Demande : <span class="accent">@Model.NomGroupe</span></h2>
+    <a asp-action="Index" class="btn btn-outline-or btn-sm" title="Liste"><i class="bi bi-arrow-left"></i></a>
+</div>
+
+<div class="card-3d p-4 mb-4">
+    <p class="mb-3">
+        @{
+            var badgeClass = Model.Statut switch {
+                StatutDemandeGroupe.EnAttente => "badge-soumise",
+                StatutDemandeGroupe.Approuvee => "badge-validee",
+                StatutDemandeGroupe.Rejetee => "badge-rejetee",
+                _ => "badge-brouillon"
+            };
+        }
+        <span class="badge-3d @badgeClass">@Model.Statut</span>
+    </p>
+    <dl class="row mb-0 small">
+        <dt class="col-sm-4 text-muted-custom">Commune / Quartier</dt>
+        <dd class="col-sm-8">@Model.Commune — @Model.Quartier</dd>
+        <dt class="col-sm-4 text-muted-custom">Responsable</dt>
+        <dd class="col-sm-8">@Model.NomResponsable</dd>
+        <dt class="col-sm-4 text-muted-custom">Téléphone</dt>
+        <dd class="col-sm-8">@Model.TelephoneResponsable</dd>
+        <dt class="col-sm-4 text-muted-custom">E-mail</dt>
+        <dd class="col-sm-8">@(Model.EmailResponsable ?? "—")</dd>
+        <dt class="col-sm-4 text-muted-custom">Membres prévus</dt>
+        <dd class="col-sm-8">@Model.NombreMembresPrevus</dd>
+        <dt class="col-sm-4 text-muted-custom">Date de demande</dt>
+        <dd class="col-sm-8">@Model.DateCreation.ToString("dd/MM/yyyy HH:mm")</dd>
+        @if (Model.DateTraitement.HasValue)
+        {
+            <dt class="col-sm-4 text-muted-custom">Traitement</dt>
+            <dd class="col-sm-8">@Model.DateTraitement.Value.ToString("dd/MM/yyyy HH:mm") @(Model.TraitePar != null ? $"par {Model.TraitePar.Prenom} {Model.TraitePar.Nom}" : "")</dd>
+        }
+        @if (!string.IsNullOrEmpty(Model.MotifRejet))
+        {
+            <dt class="col-sm-4 text-muted-custom">Motif du rejet</dt>
+            <dd class="col-sm-8">@Model.MotifRejet</dd>
+        }
+    </dl>
+    @if (!string.IsNullOrWhiteSpace(Model.Motivation))
+    {
+        <h6 class="text-or mt-4 mb-2">Motivation</h6>
+        <p class="text-muted-custom small mb-0" style="white-space:pre-wrap;">@Model.Motivation</p>
+    }
+</div>
+
+@if (Model.Statut == StatutDemandeGroupe.EnAttente)
+{
+    <div class="d-flex flex-wrap gap-2">
+        <form asp-action="Approuver" asp-route-id="@Model.Id" method="post" class="d-inline">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-mango" title="Approuver"><i class="bi bi-check-lg"></i></button>
+        </form>
+        <form asp-action="Rejeter" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="var m=prompt('Motif du rejet :');if(!m)return false;this.querySelector('[name=motif]').value=m;">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="motif" />
+            <button type="submit" class="btn btn-outline-or" style="border-color:#f87171;color:#f87171;" title="Rejeter"><i class="bi bi-x-lg"></i></button>
+        </form>
+    </div>
+}

@@ -1,0 +1,236 @@
+@{
+    ViewData["Title"] = "Accueil";
+    var mot = ViewBag.MotCommissaire as MotCommissaire;
+    var galeries = ViewBag.Galeries as List<Galerie> ?? new();
+    var groupes = ViewBag.Groupes as List<Groupe> ?? new();
+    var actu = ViewBag.DerniereActualite as Actualite;
+    var partenaires = ViewBag.Partenaires as List<Partenaire> ?? new();
+}
+
+<!-- HERO 3D -->
+<section class="hero-section text-center" @if(actu?.ImageUrl != null){<text>style="background-image:url('@actu.ImageUrl');background-size:cover;background-position:center;"</text>}>
+    @if (actu?.ImageUrl != null)
+    {
+        <div style="position:absolute;inset:0;background:rgba(49,62,69,0.68);z-index:1;"></div>
+    }
+    <!-- Particles -->
+    <div class="particle" style="width:6px;height:6px;background:var(--vert-logo);left:10%;animation-duration:12s;"></div>
+    <div class="particle" style="width:4px;height:4px;background:var(--bleu-gris-clair);left:25%;animation-duration:18s;animation-delay:-5s;"></div>
+    <div class="particle" style="width:8px;height:8px;background:var(--vert-lumineux);left:50%;animation-duration:15s;animation-delay:-3s;"></div>
+    <div class="particle" style="width:5px;height:5px;background:var(--bleu-gris-pale);left:70%;animation-duration:20s;animation-delay:-8s;"></div>
+    <div class="particle" style="width:3px;height:3px;background:var(--vert-clair);left:85%;animation-duration:14s;animation-delay:-2s;"></div>
+    <div class="particle" style="width:7px;height:7px;background:var(--bleu-logo);left:40%;animation-duration:16s;animation-delay:-10s;"></div>
+
+    <div class="container position-relative" style="z-index:2;">
+        <img src="~/images/logo.png" alt="Logo MANGO TAÏKA" class="hero-logo" />
+        <h1 class="hero-title">
+            District Scout<br/>
+            <span class="text-gradient-or">MANGO TAÏKA</span>
+        </h1>
+        @if (actu != null)
+        {
+            <p class="hero-subtitle mx-auto">
+                <i class="bi bi-newspaper"></i> @actu.Titre
+            </p>
+            @if (!string.IsNullOrEmpty(actu.Resume))
+            {
+                <p class="mx-auto" style="max-width:600px;color:rgba(255,255,255,0.8);font-size:0.95rem;">@actu.Resume</p>
+            }
+        }
+        else
+        {
+            <p class="hero-subtitle mx-auto">
+                Ensemble, formons les leaders de demain. Rejoignez le mouvement scout du district MANGO TAÏKA.
+            </p>
+        }
+        <div class="hero-buttons">
+            <a asp-controller="Account" asp-action="Register" class="btn btn-mango btn-lg">
+                <i class="bi bi-person-plus"></i> Rejoignez-nous
+            </a>
+            <a asp-controller="Groupes" asp-action="Carte" class="btn btn-outline-or btn-lg">
+                <i class="bi bi-geo-alt"></i> Nos groupes
+            </a>
+            @if (actu != null)
+            {
+                <a asp-controller="Actualites" asp-action="Details" asp-route-id="@actu.Id" class="btn btn-outline-or btn-lg">
+                    <i class="bi bi-arrow-right"></i> Lire l'actualité
+                </a>
+            }
+        </div>
+    </div>
+</section>
+
+<div class="container my-5">
+    <!-- MOT DU COMMISSAIRE -->
+    @if (mot != null)
+    {
+        <section class="mb-5">
+            <h3 class="section-title">Mot du <span class="accent">Commissaire</span></h3>
+            <div class="section-divider"></div>
+            <div class="commissaire-card">
+                <div class="row align-items-center">
+                    <div class="col-md-3 text-center mb-3 mb-md-0">
+                        @if (!string.IsNullOrEmpty(mot.PhotoUrl))
+                        {
+                            <img src="@mot.PhotoUrl" alt="Commissaire de District" class="commissaire-photo" />
+                        }
+                        else
+                        {
+                            <div class="commissaire-placeholder mx-auto">
+                                <i class="bi bi-person-fill" style="font-size:4rem;color:var(--vert-lumineux);"></i>
+                            </div>
+                        }
+                    </div>
+                    <div class="col-md-9">
+                        <p style="font-size:1.1rem;line-height:1.8;color:var(--texte-secondaire);position:relative;z-index:1;">
+                            @mot.Contenu
+                        </p>
+                        <p class="mt-3 mb-0">
+                            <span class="badge-3d badge-soumise">Année @mot.Annee</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    }
+
+    <!-- CARTE DES GROUPES -->
+    @if (groupes.Any())
+    {
+        <section class="mb-5">
+            <h3 class="section-title"><i class="bi bi-geo-alt-fill text-or"></i> Nos <span class="accent">groupes scouts</span></h3>
+            <div class="section-divider"></div>
+            <div class="map-gps-shell">
+                <div id="map-groupes"></div>
+            </div>
+        </section>
+    }
+
+    <!-- GALERIE -->
+    @if (galeries.Any())
+    {
+        <section class="mb-5">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="section-title"><i class="bi bi-images text-or"></i> <span class="accent">Galerie</span></h3>
+                <a asp-controller="Home" asp-action="Galerie" class="btn btn-outline-or btn-sm">Voir tout <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <div class="section-divider"></div>
+            <div class="row g-3">
+                @foreach (var item in galeries)
+                {
+                    <div class="col-6 col-md-3">
+                        <div class="galerie-item">
+                            @if (item.TypeMedia == "video")
+                            {
+                                <div style="position:relative;">
+                                    <video src="@item.CheminMedia" style="width:100%;height:200px;object-fit:cover;" muted></video>
+                                    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.5);border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;">
+                                        <i class="bi bi-play-fill" style="font-size:1.2rem;color:#fff;"></i>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <img src="@item.CheminMedia" alt="@item.Titre" />
+                            }
+                            <div class="galerie-overlay">@item.Titre</div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </section>
+    }
+
+    <!-- PARTENAIRES -->
+    @if (partenaires.Any())
+    {
+        <section class="mb-5">
+            <h3 class="section-title text-center"><i class="bi bi-handshake text-or"></i> Nos <span class="accent">Partenaires</span></h3>
+            <div class="section-divider mx-auto"></div>
+            <div class="row g-3 justify-content-center">
+                @foreach (var p in partenaires)
+                {
+                    <div class="col-6 col-md-3 col-lg-2">
+                        <a href="@(p.SiteWeb ?? "#")" target="_blank" rel="noopener" class="text-decoration-none">
+                            <div class="partenaire-logo-card">
+                                @if (!string.IsNullOrEmpty(p.LogoUrl))
+                                {
+                                    <img src="@p.LogoUrl" alt="@p.Nom" />
+                                }
+                                else
+                                {
+                                    <i class="bi bi-building" style="font-size:2.5rem;color:var(--bleu-gris-pale);"></i>
+                                }
+                                <span class="partenaire-nom">@p.Nom</span>
+                            </div>
+                        </a>
+                    </div>
+                }
+            </div>
+        </section>
+    }
+
+    <!-- FEATURES -->
+    <section class="mb-5">
+        <h3 class="section-title text-center">Pourquoi <span class="accent">MANGO TAÏKA</span> ?</h3>
+        <div class="section-divider mx-auto"></div>
+        <div class="row g-4 mt-2">
+            <div class="col-md-4">
+                <div class="card-3d p-4 text-center h-100">
+                    <i class="bi bi-people-fill" style="font-size:3rem;color:var(--vert-lumineux);"></i>
+                    <h5 class="mt-3">Gestion des scouts</h5>
+                    <p class="text-muted-custom small">Suivi complet des scouts, compétences, historique et affectations.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card-3d p-4 text-center h-100">
+                    <i class="bi bi-calendar-event-fill" style="font-size:3rem;color:var(--bleu-gris-pale);"></i>
+                    <h5 class="mt-3">Activités & Workflows</h5>
+                    <p class="text-muted-custom small">Création, validation et archivage des activités avec notifications.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card-3d p-4 text-center h-100">
+                    <i class="bi bi-mortarboard-fill" style="font-size:3rem;color:var(--vert-pastel);"></i>
+                    <h5 class="mt-3">Formation LMS</h5>
+                    <p class="text-muted-custom small">Plateforme de formation intégrée pour les scouts et chefs.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var mapEl = document.getElementById('map-groupes');
+            if (!mapEl) return;
+
+            var map = L.map('map-groupes', { zoomAnimation: true }).setView([5.33, -4.00], 12);
+            MangoLeafletOsm.addOpenStreetMapLayer(map);
+            MangoLeafletOsm.bindMapResize(map, mapEl);
+
+            var markerIcon = MangoLeafletOsm.groupeMarkerIcon();
+
+            var groupes = @Html.Raw(ViewBag.GroupesJson ?? "[]");
+            function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+            groupes.forEach(function(g) {
+                var popupHtml = '<div style="font-family:Poppins;min-width:220px;">'
+                    + '<strong style="color:#597537;">' + esc(g.nom) + '</strong>'
+                    + '<br/><small>' + esc(g.adresse) + '</small>'
+                    + '<hr style="margin:6px 0;"/>'
+                    + '<small><strong>CG :</strong> ' + esc(g.responsable) + '</small>';
+                if (g.adjoints) popupHtml += '<br/><small><strong>Adjoints :</strong> ' + esc(g.adjoints) + '</small>';
+                g.branches.forEach(function(b) {
+                    popupHtml += '<br/><small>• ' + esc(b.nom) + ' (' + b.ageMin + '-' + b.ageMax + ' ans)';
+                    if (b.chef) popupHtml += ' — Chef : ' + esc(b.chef);
+                    popupHtml += '</small>';
+                });
+                popupHtml += '</div>';
+                var marker = L.marker([g.lat, g.lng], {icon: markerIcon}).addTo(map)
+                    .bindPopup(popupHtml)
+                    .bindTooltip(esc(g.nom), {direction: 'top', offset: [0, -30], className: 'groupe-tooltip'});
+            });
+        });
+    </script>
+}

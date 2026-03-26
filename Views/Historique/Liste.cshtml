@@ -1,0 +1,56 @@
+@model List<MangoTaika.Data.Entities.MembreHistorique>
+@{
+    ViewData["Title"] = ViewBag.Titre;
+    var icone = ViewBag.Icone as string;
+}
+
+<div class="container my-5">
+    <div class="text-center mb-4">
+        <img src="~/images/logo.png" alt="Logo" style="width:90px;height:90px;" />
+        <h2 class="section-title mt-3"><i class="bi @icone text-or"></i> <span class="accent">@ViewBag.Titre</span></h2>
+        <div class="section-divider mx-auto"></div>
+    </div>
+
+    @if (Model.Any())
+    {
+        <div class="row g-4 justify-content-center">
+            @foreach (var m in Model)
+            {
+                <div class="col-md-4 col-sm-6">
+                    <div class="card-3d p-4 text-center h-100">
+                        @if (!string.IsNullOrEmpty(m.PhotoUrl))
+                        {
+                            <img src="@m.PhotoUrl" alt="@m.Nom" style="width:120px;height:120px;object-fit:cover;border-radius:50%;border:3px solid var(--vert-pastel);margin-bottom:1rem;" />
+                        }
+                        else
+                        {
+                            <div style="width:120px;height:120px;border-radius:50%;background:var(--vert-logo);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+                                <i class="bi bi-person-fill" style="font-size:3rem;color:#fff;"></i>
+                            </div>
+                        }
+                        <h5 style="color:var(--bleu-logo);">@m.Nom</h5>
+                        @if (!string.IsNullOrEmpty(m.Periode))
+                        {
+                            <span class="badge-3d badge-soumise mb-2">@m.Periode</span>
+                        }
+                        @if (!string.IsNullOrEmpty(m.Description))
+                        {
+                            <p class="text-muted-custom small mt-2">@m.Description</p>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="text-center text-muted-custom py-5">
+            <i class="bi @icone" style="font-size:3rem;opacity:0.3;"></i>
+            <p class="mt-2">Aucun membre enregistré pour le moment.</p>
+        </div>
+    }
+
+    <div class="text-center mt-4">
+        <a asp-controller="Home" asp-action="LivreDor" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i> Retour au Livre d'or</a>
+    </div>
+</div>

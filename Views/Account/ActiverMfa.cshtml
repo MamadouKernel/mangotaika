@@ -1,0 +1,53 @@
+@model ActiverMfaViewModel
+@{
+    ViewData["Title"] = "Activer l'authentification par SMS";
+    var codeEnvoye = TempData["MfaCodeEnvoye"] != null || Model.CodeEnvoye;
+}
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="auth-card text-center">
+                <img src="~/images/logo.png" alt="Logo MANGO TAÏKA" class="auth-logo" />
+                <h3 class="mb-1">Activer le 2FA par SMS</h3>
+                <p class="text-muted-custom small mb-4">Un code de vérification sera envoyé par SMS au numéro associé à votre compte.</p>
+
+                <div class="card-3d p-3 mb-4">
+                    <i class="bi bi-phone" style="font-size:2rem;color:var(--vert-logo);"></i>
+                    <p class="mb-0 mt-2" style="font-size:1.1rem;font-weight:600;color:var(--bleu-logo);">@Model.Telephone</p>
+                </div>
+
+                @if (!codeEnvoye)
+                {
+                    <form asp-action="EnvoyerCodeMfa" method="post">
+                        <button type="submit" class="btn btn-mango w-100">
+                            <i class="bi bi-send"></i> Envoyer le code SMS
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <form asp-action="ActiverMfa" method="post" class="form-modern text-start">
+                        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+                        <div class="mb-3">
+                            <label asp-for="Code" class="form-label">Code reçu par SMS</label>
+                            <input asp-for="Code" class="form-control text-center" style="font-size:1.5rem;letter-spacing:8px;" placeholder="000000" maxlength="6" autofocus />
+                            <span asp-validation-for="Code" class="text-danger small"></span>
+                        </div>
+                        <button type="submit" class="btn btn-mango w-100"><i class="bi bi-shield-check"></i> Activer le 2FA</button>
+                    </form>
+
+                    <form asp-action="EnvoyerCodeMfa" method="post" class="mt-3">
+                        <button type="submit" class="btn btn-link text-or small p-0">
+                            <i class="bi bi-arrow-clockwise"></i> Renvoyer le code
+                        </button>
+                    </form>
+                }
+
+                <div class="text-center mt-3">
+                    <a asp-action="Profil" class="text-or small">Retour au profil</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

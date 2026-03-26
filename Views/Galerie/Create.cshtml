@@ -1,0 +1,56 @@
+@{
+    ViewData["Title"] = "Ajouter des médias";
+    Layout = "_LayoutAdmin";
+}
+
+<h2 class="section-title mb-1"><i class="bi bi-plus-lg text-or"></i> Ajouter des <span class="accent">médias</span></h2>
+<div class="section-divider"></div>
+
+<div class="card-3d p-4 mt-3" style="max-width:700px;">
+    <form asp-action="Create" method="post" enctype="multipart/form-data" class="form-modern">
+        <div class="mb-3">
+            <label class="form-label">Titre (appliqué à tous les médias)</label>
+            <input name="titre" class="form-control" required />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Description (optionnel)</label>
+            <input name="description" class="form-control" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Fichiers (images ou vidéos — plusieurs fichiers possibles)</label>
+            <input name="medias" class="form-control" type="file" accept="image/*,video/*" required multiple onchange="previewMedias(this)" />
+            <small class="text-muted-custom">Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs fichiers.</small>
+            <div id="previewContainer" class="d-flex flex-wrap gap-2 mt-2"></div>
+        </div>
+        <div class="d-flex gap-2 mt-2">
+            <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Ajouter</button>
+            <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+function previewMedias(input) {
+    var container = document.getElementById('previewContainer');
+    container.innerHTML = '';
+    if (!input.files) return;
+    Array.from(input.files).forEach(function(file) {
+        if (file.type.startsWith('image/')) {
+            var img = document.createElement('img');
+            img.style.maxHeight = '120px';
+            img.style.borderRadius = '12px';
+            img.src = URL.createObjectURL(file);
+            container.appendChild(img);
+        } else if (file.type.startsWith('video/')) {
+            var vid = document.createElement('video');
+            vid.style.maxHeight = '120px';
+            vid.style.borderRadius = '12px';
+            vid.controls = true;
+            vid.src = URL.createObjectURL(file);
+            container.appendChild(vid);
+        }
+    });
+}
+</script>
+}

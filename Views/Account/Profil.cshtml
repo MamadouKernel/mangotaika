@@ -1,0 +1,216 @@
+@model ProfilViewModel
+@{
+    ViewData["Title"] = "Mon profil";
+    var isAdmin = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+    Layout = isAdmin ? "_LayoutAdmin" : "_Layout";
+}
+
+<div class="@(isAdmin ? "" : "container my-5")" style="max-width:800px;@(isAdmin ? "" : "margin:0 auto;")">
+    <h2 class="section-title mb-1"><i class="bi bi-person-circle text-or"></i> Mon <span class="accent">profil</span></h2>
+    <div class="section-divider"></div>
+
+    <div class="row g-4 mt-2">
+        <!-- Carte profil -->
+        <div class="col-md-4">
+            <div class="card-3d p-4 text-center">
+                @if (!string.IsNullOrEmpty(Model.PhotoUrl))
+                {
+                    <img src="@Model.PhotoUrl" alt="Photo" style="width:120px;height:120px;object-fit:cover;border-radius:50%;border:3px solid var(--vert-pastel);margin-bottom:1rem;" />
+                }
+                else
+                {
+                    <div style="width:120px;height:120px;border-radius:50%;background:var(--vert-logo);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+                        <i class="bi bi-person-fill" style="font-size:3rem;color:#fff;"></i>
+                    </div>
+                }
+                <h5 style="color:var(--bleu-logo);margin-bottom:0.25rem;">@Model.Prenom @Model.Nom</h5>
+                <span class="badge-3d badge-soumise">@(Model.Role ?? "Utilisateur")</span>
+                <div class="mt-3 text-muted-custom small">
+                    <p class="mb-1"><i class="bi bi-telephone"></i> @Model.Telephone</p>
+                    @if (!string.IsNullOrEmpty(Model.Email))
+                    {
+                        <p class="mb-1"><i class="bi bi-envelope"></i> @Model.Email</p>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.NomGroupe))
+                    {
+                        <p class="mb-1"><i class="bi bi-building"></i> @Model.NomGroupe</p>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.NomBranche))
+                    {
+                        <p class="mb-1"><i class="bi bi-diagram-3"></i> @Model.NomBranche</p>
+                    }
+                    <p class="mb-0"><i class="bi bi-calendar"></i> Inscrit le @Model.DateCreation.ToString("dd/MM/yyyy")</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulaires -->
+        <div class="col-md-8">
+            <!-- Modifier les infos -->
+            <div class="card-3d p-4 mb-4">
+                <h6 style="color:var(--bleu-logo);font-weight:700;"><i class="bi bi-pencil"></i> Modifier mes informations</h6>
+                <form asp-action="Profil" method="post" enctype="multipart/form-data" class="form-modern mt-3">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Nom" class="form-label">Nom</label>
+                            <input asp-for="Nom" class="form-control" />
+                            <span asp-validation-for="Nom" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Prenom" class="form-label">Prénom</label>
+                            <input asp-for="Prenom" class="form-control" />
+                            <span asp-validation-for="Prenom" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label">Email <span class="text-muted-custom small">(optionnel)</span></label>
+                        <input asp-for="Email" class="form-control" type="email" />
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Telephone" class="form-label">Téléphone</label>
+                        <input asp-for="Telephone" class="form-control" placeholder="Ex: 0701020304" />
+                        <span asp-validation-for="Telephone" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Photo de profil</label>
+                        <input type="file" name="Photo" id="photoInput" class="form-control" accept="image/*" />
+                        <div id="photoPreview" class="mt-2" style="display:none;">
+                            <img id="photoPreviewImg" alt="Aperçu" style="width:80px;height:80px;object-fit:cover;border-radius:50%;border:2px solid var(--vert-pastel);" />
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Enregistrer</button>
+                </form>
+            </div>
+
+            <!-- Changer mot de passe -->
+            <div class="card-3d p-4">
+                <h6 style="color:var(--bleu-logo);font-weight:700;"><i class="bi bi-lock"></i> Changer le mot de passe</h6>
+                @if (TempData["ErrorMdp"] != null)
+                {
+                    <div class="alert alert-danger small mt-2 py-2" style="border-radius:10px;">@TempData["ErrorMdp"]</div>
+                }
+                <form asp-action="ChangerMotDePasse" method="post" class="form-modern mt-3">
+                    <div class="mb-3">
+                        <label class="form-label">Ancien mot de passe</label>
+                        <input type="password" name="AncienMotDePasse" class="form-control" required />
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nouveau mot de passe</label>
+                            <input type="password" name="NouveauMotDePasse" class="form-control" required minlength="8" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Confirmer</label>
+                            <input type="password" name="ConfirmerMotDePasse" class="form-control" required />
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-bleu"><i class="bi bi-lock"></i> Modifier le mot de passe</button>
+                </form>
+            </div>
+
+            <!-- Authentification à deux facteurs -->
+            <div class="card-3d p-4 mt-4">
+                <h6 style="color:var(--bleu-logo);font-weight:700;"><i class="bi bi-shield-lock"></i> Authentification à deux facteurs (2FA)</h6>
+                <p class="text-muted-custom small mt-2">Renforcez la sécurité de votre compte avec un code envoyé par SMS.</p>
+                @if (ViewBag.MfaActif == true)
+                {
+                    <div class="d-flex align-items-center gap-2 mt-2">
+                        <span class="badge-3d badge-validee"><i class="bi bi-check-circle"></i> Activé</span>
+                        <form asp-action="DesactiverMfa" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-outline-or" onclick="return confirm('Désactiver le 2FA ?')">
+                                <i class="bi bi-shield-x"></i> Désactiver
+                            </button>
+                        </form>
+                    </div>
+                }
+                else
+                {
+                    <a asp-action="ActiverMfa" class="btn btn-mango btn-sm mt-2">
+                        <i class="bi bi-shield-check"></i> Activer le 2FA
+                    </a>
+                }
+            </div>
+
+            <!-- Droits RGPD / ARTCI -->
+            <div class="card-3d p-4 mt-4">
+                <h6 style="color:var(--bleu-logo);font-weight:700;"><i class="bi bi-file-earmark-lock"></i> Mes droits sur mes données (ARTCI / Loi n°2013-450)</h6>
+                <p class="text-muted-custom small mt-2">
+                    Conformément à la loi ivoirienne relative à la protection des données personnelles, vous disposez d'un droit d'accès,
+                    de rectification et de suppression de vos données.
+                </p>
+
+                <!-- Droit d'accès : Télécharger mes données -->
+                <div class="d-flex align-items-start gap-3 mt-3 p-3" style="background:var(--vert-pale);border-radius:12px;border:1px solid var(--vert-pastel);">
+                    <i class="bi bi-download" style="font-size:1.5rem;color:var(--vert-logo);margin-top:2px;"></i>
+                    <div>
+                        <strong class="small" style="color:var(--bleu-logo);">Droit d'accès — Télécharger mes données</strong>
+                        <p class="text-muted-custom small mb-2">Obtenez une copie de toutes les données personnelles que nous détenons sur vous (format JSON).</p>
+                        <form asp-action="TelechargerMesDonnees" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-mango">
+                                <i class="bi bi-download"></i> Télécharger mes données
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Droit de rectification -->
+                <div class="d-flex align-items-start gap-3 mt-3 p-3" style="background:#f0f4ff;border-radius:12px;border:1px solid #d0d8f0;">
+                    <i class="bi bi-pencil-square" style="font-size:1.5rem;color:var(--bleu-logo);margin-top:2px;"></i>
+                    <div>
+                        <strong class="small" style="color:var(--bleu-logo);">Droit de rectification</strong>
+                        <p class="text-muted-custom small mb-0">Vous pouvez modifier vos informations personnelles (nom, prénom, email, téléphone, photo) via le formulaire ci-dessus.</p>
+                    </div>
+                </div>
+
+                <!-- Droit à l'oubli : Supprimer mon compte -->
+                <div class="d-flex align-items-start gap-3 mt-3 p-3" style="background:#fff5f5;border-radius:12px;border:1px solid #f0d0d0;">
+                    <i class="bi bi-trash3" style="font-size:1.5rem;color:#dc3545;margin-top:2px;"></i>
+                    <div class="w-100">
+                        <strong class="small" style="color:#dc3545;">Droit à l'oubli — Supprimer mon compte</strong>
+                        <p class="text-muted-custom small mb-2">
+                            Cette action est irréversible. Votre compte sera désactivé et vos données personnelles seront anonymisées.
+                            Les données associatives (historique scout, activités) seront conservées de manière anonyme.
+                        </p>
+                        @if (TempData["ErrorSuppression"] != null)
+                        {
+                            <div class="alert alert-danger small py-2 mb-2" style="border-radius:10px;">@TempData["ErrorSuppression"]</div>
+                        }
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="collapse" data-bs-target="#confirmSuppression">
+                            <i class="bi bi-trash3"></i> Supprimer mon compte
+                        </button>
+                        <div class="collapse mt-3" id="confirmSuppression">
+                            <div class="p-3" style="background:#fff;border-radius:10px;border:1px solid #f0d0d0;">
+                                <p class="small text-danger fw-bold mb-2"><i class="bi bi-exclamation-triangle"></i> Confirmez votre identité pour procéder à la suppression</p>
+                                <form asp-action="SupprimerMonCompte" method="post">
+                                    <div class="mb-3">
+                                        <label class="form-label small">Entrez votre mot de passe actuel</label>
+                                        <input type="password" name="MotDePasseConfirmation" class="form-control form-control-sm" required />
+                                    </div>
+                                    <button type="submit" class="btn btn-danger btn-sm"
+                                            onclick="return confirm('⚠️ ATTENTION : Cette action est IRRÉVERSIBLE.\n\nVotre compte sera définitivement supprimé et vos données personnelles anonymisées.\n\nÊtes-vous sûr de vouloir continuer ?')">
+                                        <i class="bi bi-trash3-fill"></i> Confirmer la suppression définitive
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('photoInput').addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            var preview = document.getElementById('photoPreview');
+            var img = document.getElementById('photoPreviewImg');
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function(ev) { img.src = ev.target.result; preview.style.display = 'block'; };
+                reader.readAsDataURL(file);
+            } else { preview.style.display = 'none'; }
+        });
+    </script>
+}

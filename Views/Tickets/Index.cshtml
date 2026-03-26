@@ -1,0 +1,405 @@
+@model List<TicketDto>
+@using MangoTaika.DTOs
+@{
+    ViewData["Title"] = "Centre de support";
+    Layout = "_LayoutAdmin";
+    var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire") || User.IsInRole("AgentSupport");
+    var dash = ViewBag.Dashboard as SupportDashboardDto;
+    var filtreStatut = ViewBag.FiltreStatut as StatutTicket?;
+    var filtreType = ViewBag.FiltreType as TypeTicket?;
+    var filtreCategorie = ViewBag.FiltreCategorie as CategorieTicket?;
+    var filtrePriorite = ViewBag.FiltrePriorite as PrioriteTicket?;
+    var ticketsTotal = ViewBag.TicketsTotal as int? ?? Model.Count;
+    var vue = ViewBag.Vue as string ?? "all";
+    var recherche = ViewBag.Recherche as string;
+    var tri = ViewBag.Tri as string ?? "sla";
+
+    string StatusLabel(StatutTicket statut) => statut switch
+    {
+        StatutTicket.Nouveau or StatutTicket.Ouvert => "Nouveau",
+        StatutTicket.Affecte or StatutTicket.EnCours => "Affecte",
+        StatutTicket.EnAttente => "En attente",
+        StatutTicket.EnAttenteDemandeur => "Attente demandeur",
+        StatutTicket.EnAttenteTiers => "Attente tiers",
+        StatutTicket.Resolu => "Resolu",
+        StatutTicket.Ferme => "Ferme",
+        StatutTicket.Annule => "Annule",
+        _ => statut.ToString()
+    };
+
+    string StatusClass(StatutTicket statut) => statut switch
+    {
+        StatutTicket.Nouveau or StatutTicket.Ouvert => "badge-soumise",
+        StatutTicket.Affecte or StatutTicket.EnCours => "badge-soumise",
+        StatutTicket.EnAttente or StatutTicket.EnAttenteDemandeur or StatutTicket.EnAttenteTiers => "badge-archivee",
+        StatutTicket.Resolu => "badge-validee",
+        StatutTicket.Ferme or StatutTicket.Annule => "badge-brouillon",
+        _ => "badge-brouillon"
+    };
+
+    (string text, string css) SlaState(TicketDto ticket)
+    {
+        if (ticket.EstEnRetard) return ($"SLA depasse de {Math.Abs(ticket.HeuresAvantSla):N0} h", "is-danger");
+        if (ticket.HeuresAvantSla <= 4) return ($"SLA critique: {Math.Abs(ticket.HeuresAvantSla):N0} h", "is-watch");
+        if (ticket.HeuresAvantSla <= 12) return ($"SLA a surveiller: {Math.Abs(ticket.HeuresAvantSla):N0} h", "is-watch");
+        return ($"SLA OK: {Math.Abs(ticket.HeuresAvantSla):N0} h", "is-safe");
+    }
+
+    string EscalationLabel(TicketDto ticket) => ticket.NiveauEscalade switch
+    {
+        2 => "Escalade N2",
+        1 => "Escalade N1",
+        _ => "Sous controle"
+    };
+}
+
+<div class="support-shell">
+    <section class="support-hero">
+        <div class="support-hero__inner">
+            <div>
+                <span class="support-hero__eyebrow"><i class="bi bi-headset"></i> Support operationnel</span>
+                <h2 class="support-hero__title">Centre de <span class="accent">support</span></h2>
+                <p class="support-hero__text">Console de triage, suivi SLA et resolution, dans l'identité visuelle Mango Taika. Les files, filtres et indicateurs sont présentés avec une lecture plus nette pour le travail quotidien.</p>
+            </div>
+            <div class="support-hero__actions">
+                <a asp-controller="KnowledgeBase" asp-action="Index" class="btn btn-outline-or"><i class="bi bi-journal-text"></i> Base de connaissances</a>
+                @if (canManage)
+                {
+                    <a asp-controller="SupportCatalog" asp-action="Index" class="btn btn-outline-or"><i class="bi bi-grid-1x2"></i> Catalogue</a>
+                }
+                <a asp-action="Print" asp-route-statut="@filtreStatut" asp-route-type="@filtreType" asp-route-categorie="@filtreCategorie" asp-route-priorite="@filtrePriorite" asp-route-vue="@vue" asp-route-recherche="@recherche" target="_blank" class="btn btn-outline-or"><i class="bi bi-printer"></i> PDF / Impression</a>
+                <a asp-action="ExportExcel" asp-route-statut="@filtreStatut" asp-route-type="@filtreType" asp-route-categorie="@filtreCategorie" asp-route-priorite="@filtrePriorite" asp-route-vue="@vue" asp-route-recherche="@recherche" class="btn btn-outline-or"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
+                <a asp-action="Create" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Nouveau ticket</a>
+            </div>
+        </div>
+    </section>
+
+    @if (dash != null)
+    {
+        <section class="support-kpis">
+            <article class="support-kpi">
+                <div class="support-kpi__top">
+                    <span class="support-kpi__label">Nouveaux</span>
+                    <span class="support-kpi__icon is-green"><i class="bi bi-inbox"></i></span>
+                </div>
+                <div class="support-kpi__value">@dash.TicketsOuverts</div>
+                <div class="support-kpi__hint">Tickets a trier immediatement</div>
+            </article>
+            <article class="support-kpi">
+                <div class="support-kpi__top">
+                    <span class="support-kpi__label">Mes tickets</span>
+                    <span class="support-kpi__icon is-blue"><i class="bi bi-person-workspace"></i></span>
+                </div>
+                <div class="support-kpi__value">@dash.MesTicketsAssignes</div>
+                <div class="support-kpi__hint">Charge affectee a l'agent</div>
+            </article>
+            <article class="support-kpi">
+                <div class="support-kpi__top">
+                    <span class="support-kpi__label">Non assignes</span>
+                    <span class="support-kpi__icon is-soft-green"><i class="bi bi-person-x"></i></span>
+                </div>
+                <div class="support-kpi__value">@dash.TicketsNonAssignes</div>
+                <div class="support-kpi__hint">A prendre en charge</div>
+            </article>
+            <article class="support-kpi">
+                <div class="support-kpi__top">
+                    <span class="support-kpi__label">SLA</span>
+                    <span class="support-kpi__icon is-alert"><i class="bi bi-alarm"></i></span>
+                </div>
+                <div class="support-kpi__value">@dash.TicketsEnRetard</div>
+                <div class="support-kpi__hint">Tickets hors delai</div>
+            </article>
+            <article class="support-kpi">
+                <div class="support-kpi__top">
+                    <span class="support-kpi__label">1re reponse</span>
+                    <span class="support-kpi__icon is-blue"><i class="bi bi-lightning"></i></span>
+                </div>
+                <div class="support-kpi__value">@dash.TempsMoyenPremiereReponseHeures h</div>
+                <div class="support-kpi__hint">Moyenne de prise en charge</div>
+            </article>
+            <article class="support-kpi">
+                <div class="support-kpi__top">
+                    <span class="support-kpi__label">Resolution</span>
+                    <span class="support-kpi__icon is-green"><i class="bi bi-check-circle"></i></span>
+                </div>
+                <div class="support-kpi__value">@dash.TempsMoyenResolutionHeures h</div>
+                <div class="support-kpi__hint">Moyenne jusqu'a cloture</div>
+            </article>
+        </section>
+    }
+
+    @if (dash?.StatistiquesAgents?.Any() == true)
+    {
+        <section class="ticket-panel">
+            <div class="ticket-panel__head">
+                <h6 class="ticket-panel__title"><i class="bi bi-people"></i> Performance agents</h6>
+            </div>
+            <div class="ticket-panel__body">
+                <div class="table-responsive">
+                    <table class="table-modern">
+                        <thead>
+                            <tr>
+                                <th>Agent</th>
+                                <th>Actifs</th>
+                                <th>Resolus</th>
+                                <th>Retard SLA</th>
+                                <th>1re reponse</th>
+                                <th>Resolution</th>
+                                <th>Satisfaction</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var agent in dash.StatistiquesAgents)
+                            {
+                                <tr>
+                                    <td>@agent.NomAgent</td>
+                                    <td>@agent.TicketsActifs</td>
+                                    <td>@agent.TicketsResolus</td>
+                                    <td style="color:@(agent.TicketsEnRetard > 0 ? "#b91c1c" : "var(--vert-logo)")">@agent.TicketsEnRetard</td>
+                                    <td>@agent.TempsMoyenPremiereReponseHeures h</td>
+                                    <td>@agent.TempsMoyenResolutionHeures h</td>
+                                    <td>@agent.NoteMoyenneSatisfaction</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    }
+
+    <section class="support-toolbar">
+        <div class="support-tabs">
+            <a asp-action="Index" asp-route-vue="all" class="support-tab @(vue == "all" ? "is-active" : "")">
+                <span class="support-tab__label">Vue</span>
+                <span class="support-tab__value">Toute la file</span>
+            </a>
+            <a asp-action="Index" asp-route-vue="mine" class="support-tab @(vue == "mine" ? "is-active" : "")">
+                <span class="support-tab__label">Vue</span>
+                <span class="support-tab__value">Mes tickets assignes</span>
+            </a>
+            <a asp-action="Index" asp-route-vue="unassigned" class="support-tab @(vue == "unassigned" ? "is-active" : "")">
+                <span class="support-tab__label">Vue</span>
+                <span class="support-tab__value">Non assignes</span>
+            </a>
+            <a asp-action="Index" asp-route-vue="overdue" class="support-tab @(vue == "overdue" ? "is-active" : "")">
+                <span class="support-tab__label">Vue</span>
+                <span class="support-tab__value">En retard SLA</span>
+            </a>
+        </div>
+
+        <div class="support-search-card">
+            <form method="get" class="support-filter-grid form-modern">
+                <input type="hidden" name="vue" value="@vue" />
+                <div>
+                    <label class="form-label small text-muted-custom">Recherche</label>
+                    <input id="supportLiveSearch" type="text" name="recherche" value="@recherche" class="form-control form-control-sm" placeholder="Numero, sujet, demandeur, description..." autocomplete="off" />
+                </div>
+                <div>
+                    <label class="form-label small text-muted-custom">Statut</label>
+                    <select name="statut" class="form-select form-select-sm">
+                        <option value="">Tous</option>
+                        @foreach (var s in new[] { StatutTicket.Nouveau, StatutTicket.Affecte, StatutTicket.EnAttente, StatutTicket.EnAttenteDemandeur, StatutTicket.EnAttenteTiers, StatutTicket.Resolu, StatutTicket.Ferme, StatutTicket.Annule })
+                        {
+                            <option value="@s" selected="@(filtreStatut == s)">@StatusLabel(s)</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label small text-muted-custom">Type</label>
+                    <select name="type" class="form-select form-select-sm">
+                        <option value="">Tous</option>
+                        @foreach (var t in Enum.GetValues<TypeTicket>())
+                        {
+                            <option value="@t" selected="@(filtreType == t)">@t</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label small text-muted-custom">Categorie</label>
+                    <select name="categorie" class="form-select form-select-sm">
+                        <option value="">Toutes</option>
+                        @foreach (var c in Enum.GetValues<CategorieTicket>())
+                        {
+                            <option value="@c" selected="@(filtreCategorie == c)">@c</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label small text-muted-custom">Priorite</label>
+                    <select name="priorite" class="form-select form-select-sm">
+                        <option value="">Toutes</option>
+                        @foreach (var p in Enum.GetValues<PrioriteTicket>())
+                        {
+                            <option value="@p" selected="@(filtrePriorite == p)">@p</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label small text-muted-custom">Tri client</label>
+                    <select id="supportClientSort" class="form-select form-select-sm">
+                        <option value="sla" selected="@(tri == "sla")">SLA</option>
+                        <option value="priority" selected="@(tri == "priority")">Priorite</option>
+                        <option value="recent" selected="@(tri == "recent")">Plus recents</option>
+                        <option value="title" selected="@(tri == "title")">Titre A-Z</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-mango btn-sm"><i class="bi bi-funnel"></i></button>
+                <a asp-action="Index" class="btn btn-outline-or btn-sm"><i class="bi bi-x-lg"></i></a>
+            </form>
+            <div class="support-search-meta">
+                <span>Filtrage instantane sur les tickets deja charges, en plus des filtres serveur.</span>
+                <span id="supportVisibleCount">@Model.Count ticket(s) visibles</span>
+            </div>
+        </div>
+    </section>
+
+    <div class="support-board-header">
+        <div>
+            <h5 class="mb-1">Tickets dans la vue active</h5>
+            <div class="support-board-header__meta">
+                <span><strong>@ticketsTotal</strong> ticket(s)</span>
+                <span>Vue: <strong>@vue</strong></span>
+                @if (!string.IsNullOrWhiteSpace(recherche))
+                {
+                    <span>Recherche: <strong>@recherche</strong></span>
+                }
+            </div>
+        </div>
+    </div>
+
+    <section class="support-ticket-grid">
+        @foreach (var t in Model)
+        {
+            var prioriteClass = t.Priorite switch {
+                PrioriteTicket.Urgente => "badge-rejetee",
+                PrioriteTicket.Haute => "badge-rejetee",
+                PrioriteTicket.Normale => "badge-soumise",
+                _ => "badge-brouillon"
+            };
+
+            var sla = SlaState(t);
+            <article class="support-ticket-card @(t.EstEnRetard ? "is-overdue" : "")"
+                     data-search="@($"{t.NumeroTicket} {t.Sujet} {t.Description} {t.NomCreateur} {t.NomAssigne} {t.NomGroupeAssigne} {t.Categorie} {t.NomServiceCatalogue}".ToLowerInvariant())"
+                     data-sla="@t.HeuresAvantSla"
+                     data-priority="@((int)t.Priorite)"
+                     data-created="@t.DateCreation.Ticks"
+                     data-title="@t.Sujet.ToLowerInvariant()">
+                <div class="support-ticket-card__top">
+                    <div>
+                        <div class="support-ticket-card__code">@t.NumeroTicket</div>
+                        <h5 class="support-ticket-card__title">
+                            <a asp-action="Details" asp-route-id="@t.Id" class="text-decoration-none" style="color:inherit;">@t.Sujet</a>
+                        </h5>
+                    </div>
+                    @if (t.EstEnRetard)
+                    {
+                        <span class="badge-3d badge-rejetee">SLA depasse</span>
+                    }
+                </div>
+
+                <div class="support-ticket-card__badges">
+                    <span class="badge-3d @(t.Type == TypeTicket.Incident ? "badge-rejetee" : "badge-soumise")" style="font-size:0.7rem;">@(t.Type == TypeTicket.Incident ? "Incident" : "Demande")</span>
+                    <span class="badge-3d @StatusClass(t.Statut)" style="font-size:0.7rem;">@StatusLabel(t.Statut)</span>
+                    <span class="badge-3d @prioriteClass" style="font-size:0.7rem;">@t.Priorite</span>
+                    @if (t.EstEscalade)
+                    {
+                        <span class="badge-3d badge-rejetee" style="font-size:0.7rem;">@EscalationLabel(t)</span>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(t.NomServiceCatalogue))
+                    {
+                        <span class="badge-3d badge-archivee" style="font-size:0.7rem;">@t.NomServiceCatalogue</span>
+                    }
+                </div>
+
+                <p class="support-ticket-card__desc">@(t.Description.Length > 135 ? t.Description[..135] + "..." : t.Description)</p>
+
+                <div class="support-ticket-card__meta">
+                    <div class="support-ticket-card__meta-row">
+                        <span class="support-ticket-card__meta-label"><i class="bi bi-folder"></i> Categorie</span>
+                        <span>@t.Categorie</span>
+                    </div>
+                    <div class="support-ticket-card__meta-row">
+                        <span class="support-ticket-card__meta-label"><i class="bi bi-layers"></i> Impact / urgence</span>
+                        <span>@t.Impact / @t.Urgence</span>
+                    </div>
+                    <div class="support-ticket-card__meta-row">
+                        <span class="support-ticket-card__meta-label"><i class="bi bi-person"></i> Demandeur</span>
+                        <span>@(t.NomCreateur ?? "-")</span>
+                    </div>
+                    <div class="support-ticket-card__meta-row">
+                        <span class="support-ticket-card__meta-label"><i class="bi bi-person-check"></i> Agent</span>
+                        <span>@(string.IsNullOrEmpty(t.NomAssigne) ? "Non assigne" : t.NomAssigne)</span>
+                    </div>
+                    <div class="support-ticket-card__meta-row">
+                        <span class="support-ticket-card__meta-label"><i class="bi bi-diagram-3"></i> Groupe</span>
+                        <span>@(t.NomGroupeAssigne ?? "Aucun groupe")</span>
+                    </div>
+                </div>
+
+                <div class="support-ticket-card__footer">
+                    <span class="support-sla-pill @sla.css">
+                        <i class="bi bi-hourglass-split"></i> @sla.text
+                    </span>
+                    @if (t.EstEscalade)
+                    {
+                        <span class="support-sla-pill is-danger">
+                            <i class="bi bi-exclamation-diamond"></i> @EscalationLabel(t)
+                        </span>
+                    }
+                    <a asp-action="Details" asp-route-id="@t.Id" class="btn btn-sm btn-outline-or" title="Ouvrir">
+                        <i class="bi bi-eye"></i> Ouvrir
+                    </a>
+                </div>
+            </article>
+        }
+
+        @if (!Model.Any())
+        {
+            <div class="support-empty" style="grid-column:1 / -1;">
+                <i class="bi bi-inbox" style="font-size:2rem;opacity:0.3;"></i>
+                <div class="mt-2">Aucun ticket dans cette file</div>
+            </div>
+        }
+    </section>
+</div>
+
+<partial name="_ListPagination" />
+
+@section Scripts {
+    <script>
+        (function () {
+            var input = document.getElementById('supportLiveSearch');
+            var cards = Array.prototype.slice.call(document.querySelectorAll('.support-ticket-card'));
+            var count = document.getElementById('supportVisibleCount');
+            var sort = document.getElementById('supportClientSort');
+            var grid = document.querySelector('.support-ticket-grid');
+            if (!input || !cards.length || !count || !sort || !grid) return;
+
+            function compare(a, b) {
+                var mode = sort.value || 'sla';
+                if (mode === 'priority') return Number(b.dataset.priority || 0) - Number(a.dataset.priority || 0);
+                if (mode === 'recent') return Number(b.dataset.created || 0) - Number(a.dataset.created || 0);
+                if (mode === 'title') return String(a.dataset.title || '').localeCompare(String(b.dataset.title || ''));
+                return Number(a.dataset.sla || 0) - Number(b.dataset.sla || 0);
+            }
+
+            function refresh() {
+                var term = (input.value || '').trim().toLowerCase();
+                cards.sort(compare).forEach(function (card) { grid.appendChild(card); });
+                var visible = 0;
+                cards.forEach(function (card) {
+                    var haystack = card.getAttribute('data-search') || '';
+                    var match = !term || haystack.indexOf(term) !== -1;
+                    card.style.display = match ? '' : 'none';
+                    if (match) visible++;
+                });
+                count.textContent = visible + ' ticket(s) visibles';
+            }
+
+            input.addEventListener('input', refresh);
+            sort.addEventListener('change', refresh);
+            refresh();
+        })();
+    </script>
+}

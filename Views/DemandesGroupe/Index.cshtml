@@ -1,0 +1,61 @@
+@model List<MangoTaika.Data.Entities.DemandeGroupe>
+@{
+    ViewData["Title"] = "Demandes de creation de groupe";
+    Layout = "_LayoutAdmin";
+    var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-building-add text-or"></i> Demandes de <span class="accent">creation de groupe</span></h2>
+</div>
+
+<div class="row g-4">
+    @foreach (var d in Model)
+    {
+        var badgeClass = d.Statut switch {
+            StatutDemandeGroupe.EnAttente => "badge-soumise",
+            StatutDemandeGroupe.Approuvee => "badge-validee",
+            StatutDemandeGroupe.Rejetee => "badge-rejetee",
+            _ => "badge-brouillon"
+        };
+        <div class="col-lg-4 col-md-6">
+            <div class="card-3d p-4 h-100 d-flex flex-column">
+                <h5 class="text-or mb-2">@d.NomGroupe</h5>
+                <p class="text-muted-custom small mb-2"><span class="badge-3d @badgeClass">@d.Statut</span></p>
+                <div class="d-flex flex-column gap-1 mb-3 flex-grow-1" style="font-size:0.85rem;">
+                    <span><i class="bi bi-geo-alt text-bleu"></i> @d.Commune, @d.Quartier</span>
+                    <span><i class="bi bi-person-badge text-or"></i> @d.NomResponsable</span>
+                    <span><i class="bi bi-telephone text-bleu"></i> @d.TelephoneResponsable</span>
+                    <span><i class="bi bi-calendar3 text-or"></i> @d.DateCreation.ToString("dd/MM/yyyy")</span>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-auto align-items-center">
+                    <a asp-action="Details" asp-route-id="@d.Id" class="btn btn-sm btn-outline-or" title="Details">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    @if (canManage && d.Statut == StatutDemandeGroupe.EnAttente)
+                    {
+                        <form asp-action="Approuver" asp-route-id="@d.Id" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm" style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:14px;" title="Approuver">
+                                <i class="bi bi-check-lg"></i>
+                            </button>
+                        </form>
+                        <form asp-action="Rejeter" asp-route-id="@d.Id" method="post" class="d-inline" onsubmit="var m=prompt('Motif du rejet :');if(!m)return false;this.querySelector('[name=motif]').value=m;">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="motif" />
+                            <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Rejeter">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+    @if (!Model.Any())
+    {
+        <div class="col-12 text-center text-muted-custom py-5">Aucune demande</div>
+    }
+</div>
+
+<partial name="_ListPagination" />

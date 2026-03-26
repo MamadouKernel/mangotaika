@@ -1,0 +1,191 @@
+@model MangoTaika.DTOs.ForumFormationPageDto
+@{
+    ViewData["Title"] = $"Forum - {Model.FormationTitre}";
+    Layout = "_LayoutAdmin";
+}
+
+<div class="lms-campus">
+    <section class="campus-hero campus-hero--forum">
+        <div class="campus-hero__main">
+            <span class="campus-hero__eyebrow">
+                <i class="bi bi-chat-square-text"></i> Forum de classe
+            </span>
+            <h1 class="campus-hero__title">@Model.FormationTitre</h1>
+            <p class="campus-hero__text">
+                Un espace de discussion pour poser une question, partager une idee, demander un eclaircissement ou prolonger le cours avec la communaute.
+            </p>
+            <div class="campus-hero__stats">
+                <div class="campus-stat">
+                    <span>Sujets</span>
+                    <strong>@Model.Discussions.Count</strong>
+                </div>
+                <div class="campus-stat">
+                    <span>Participation</span>
+                    <strong>@(Model.PeutParticiper ? "Active" : "Lecture seule")</strong>
+                </div>
+                <div class="campus-stat">
+                    <span>Moderation</span>
+                    <strong>@(Model.PeutModerer ? "Equipe pedagogique" : "Standard")</strong>
+                </div>
+                <div class="campus-stat">
+                    <span>Mode</span>
+                    <strong>@(Model.LectureSeule ? "Consultation" : "Echange")</strong>
+                </div>
+            </div>
+        </div>
+
+        <aside class="campus-hero__side">
+            <div class="campus-hero-card">
+                <div class="campus-hero-card__label">Acces rapide</div>
+                @if (User.IsInRole("Scout"))
+                {
+                    <a asp-controller="Formations" asp-action="Suivre" asp-route-id="@Model.FormationId" class="btn btn-outline-light btn-sm mb-2">
+                        <i class="bi bi-arrow-return-left"></i> Retour au parcours
+                    </a>
+                }
+                else if (User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire"))
+                {
+                    <a asp-controller="Formations" asp-action="Details" asp-route-id="@Model.FormationId" class="btn btn-outline-light btn-sm mb-2">
+                        <i class="bi bi-info-circle"></i> Fiche formation
+                    </a>
+                }
+                else
+                {
+                    <a asp-controller="Formations" asp-action="ConsulterFormation" asp-route-id="@Model.FormationId" class="btn btn-outline-light btn-sm mb-2">
+                        <i class="bi bi-info-circle"></i> Fiche formation
+                    </a>
+                }
+                <small>
+                    @(Model.LectureSeule
+                        ? "Vous pouvez suivre les echanges, mais pas publier."
+                        : "Les echanges servent a prolonger la seance et a garder une trace utile des questions.")
+                </small>
+            </div>
+        </aside>
+    </section>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    @if (Model.LectureSeule)
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-eye"></i> Espace en lecture seule. Vous pouvez consulter les echanges, sans publier de message.
+        </div>
+    }
+
+    <div class="campus-detail-grid">
+        <div class="campus-detail-grid__main">
+            <section class="classroom-panel">
+                <div class="classroom-panel__head">
+                    <div>
+                        <span class="classroom-panel__eyebrow">Discussions</span>
+                        <h2 class="classroom-panel__title">Sujets de la classe</h2>
+                    </div>
+                    <span class="classroom-panel__hint">@Model.Discussions.Count sujet(s) ouverts</span>
+                </div>
+
+                @if (!Model.Discussions.Any())
+                {
+                    <div class="campus-empty-state">
+                        <i class="bi bi-chat-square"></i>
+                        <h3>Aucune discussion pour le moment</h3>
+                        <p>Le forum de cette formation est encore calme. Le premier sujet donnera le ton des echanges de la classe.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="campus-discussion-list campus-discussion-list--forum">
+                        @foreach (var discussion in Model.Discussions)
+                        {
+                            <a asp-action="Discussion" asp-route-id="@discussion.Id" class="campus-discussion-card">
+                                <div class="campus-discussion-card__head">
+                                    <div>
+                                        <div class="campus-track-card__eyebrow">Sujet de cours</div>
+                                        <h3 class="campus-discussion-card__title">
+                                            @discussion.Titre
+                                            @if (discussion.EstVerrouillee)
+                                            {
+                                                <span class="badge bg-secondary ms-2">Verrouillee</span>
+                                            }
+                                        </h3>
+                                    </div>
+                                    <div class="campus-discussion-card__stats">
+                                        <span><i class="bi bi-reply"></i> @discussion.NombreMessages reponse(s)</span>
+                                        <span><i class="bi bi-clock-history"></i> @discussion.DateDerniereActivite.ToString("dd/MM/yyyy HH:mm")</span>
+                                    </div>
+                                </div>
+                                <div class="campus-discussion-card__meta">
+                                    Par @discussion.NomAuteur · @discussion.DateCreation.ToString("dd/MM/yyyy HH:mm")
+                                </div>
+                                <p class="campus-discussion-card__text">
+                                    @(discussion.ContenuInitial.Length > 220 ? discussion.ContenuInitial[..220] + "..." : discussion.ContenuInitial)
+                                </p>
+                            </a>
+                        }
+                    </div>
+                }
+            </section>
+        </div>
+
+        <aside class="campus-detail-grid__side">
+            <section class="classroom-panel classroom-panel--compact">
+                <div class="classroom-panel__head">
+                    <div>
+                        <span class="classroom-panel__eyebrow">Nouveau sujet</span>
+                        <h2 class="classroom-panel__title">Ouvrir une discussion</h2>
+                    </div>
+                </div>
+
+                @if (Model.PeutParticiper)
+                {
+                    <form asp-action="NouvelleDiscussion" method="post" class="campus-composer">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="formationId" value="@Model.FormationId" />
+                        <div>
+                            <label class="form-label">Titre du sujet</label>
+                            <input type="text" name="Titre" class="form-control" maxlength="160" required />
+                        </div>
+                        <div>
+                            <label class="form-label">Message initial</label>
+                            <textarea name="Contenu" class="form-control" rows="6" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-mango">
+                            <i class="bi bi-send"></i> Publier la discussion
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <div class="campus-side-note">
+                        <div class="campus-side-note__label">Participation restreinte</div>
+                        <strong>Lecture seule</strong>
+                        <small>La participation est reservee aux scouts inscrits ainsi qu'a l'equipe pedagogique.</small>
+                    </div>
+                }
+            </section>
+
+            <section class="classroom-panel classroom-panel--compact">
+                <div class="classroom-panel__head">
+                    <div>
+                        <span class="classroom-panel__eyebrow">Bon usage</span>
+                        <h2 class="classroom-panel__title">Esprit de classe</h2>
+                    </div>
+                </div>
+
+                <div class="campus-side-note">
+                    <div class="campus-side-note__label">Conseil</div>
+                    <strong>Un sujet = une idee claire</strong>
+                    <small>Posez une question precise, donnez du contexte et utilisez le forum pour aider les autres apprenants.</small>
+                </div>
+            </section>
+        </aside>
+    </div>
+</div>

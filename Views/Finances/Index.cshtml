@@ -1,0 +1,86 @@
+@model List<MangoTaika.Data.Entities.TransactionFinanciere>
+@using MangoTaika.Data.Entities
+@{
+    ViewData["Title"] = "Gestion financiere";
+    Layout = "_LayoutAdmin";
+    var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+    var annee = (int)ViewBag.Annee;
+    var totalR = (decimal)ViewBag.TotalRecettes;
+    var totalD = (decimal)ViewBag.TotalDepenses;
+    var solde = totalR - totalD;
+    var groupes = ViewBag.Groupes as List<Groupe> ?? new();
+    var scouts = ViewBag.Scouts as List<Scout> ?? new();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-wallet2 text-or"></i> Gestion <span class="accent">financiere</span></h2>
+    <div class="d-flex gap-2 align-items-center">
+        <a asp-action="Index" asp-route-annee="@(annee-1)" class="btn btn-sm btn-outline-or"><i class="bi bi-chevron-left"></i></a>
+        <span style="font-weight:700;color:var(--bleu-logo);">@annee</span>
+        <a asp-action="Index" asp-route-annee="@(annee+1)" class="btn btn-sm btn-outline-or"><i class="bi bi-chevron-right"></i></a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4"><div class="card-3d p-3 text-center"><small class="text-muted-custom">Recettes</small><h3 style="color:#10b981;">@totalR.ToString("N0") FCFA</h3></div></div>
+    <div class="col-md-4"><div class="card-3d p-3 text-center"><small class="text-muted-custom">Depenses</small><h3 style="color:#f87171;">@totalD.ToString("N0") FCFA</h3></div></div>
+    <div class="col-md-4"><div class="card-3d p-3 text-center"><small class="text-muted-custom">Solde</small><h3 style="color:@(solde >= 0 ? "#10b981" : "#f87171");">@solde.ToString("N0") FCFA</h3></div></div>
+</div>
+
+@if (canManage)
+{
+    <div class="card-3d p-3 mb-4">
+        <h6 style="color:var(--bleu-logo);"><i class="bi bi-plus-circle"></i> Nouvelle transaction</h6>
+        <form asp-action="Create" method="post" class="row g-2 align-items-end mt-2">
+            <div class="col-md-3"><label class="form-label small">Libelle</label><input name="Libelle" class="form-control" required /></div>
+            <div class="col-md-2"><label class="form-label small">Montant (FCFA)</label><input name="Montant" class="form-control" type="number" min="0" step="100" required /></div>
+            <div class="col-md-1"><label class="form-label small">Type</label><select name="Type" class="form-select"><option value="Recette">Recette</option><option value="Depense">Depense</option></select></div>
+            <div class="col-md-2"><label class="form-label small">Categorie</label><select name="Categorie" class="form-select">@foreach(var c in Enum.GetValues<CategorieFinance>()){<option value="@c">@c</option>}</select></div>
+            <div class="col-md-2"><label class="form-label small">Date</label><input name="DateTransaction" class="form-control" type="date" value="@DateTime.Now.ToString("yyyy-MM-dd")" required /></div>
+            <div class="col-md-2"><label class="form-label small">Groupe</label><select name="GroupeId" class="form-select"><option value="">-</option>@foreach(var g in groupes){<option value="@g.Id">@g.Nom</option>}</select></div>
+            <div class="col-md-2"><label class="form-label small">Reference</label><input name="Reference" class="form-control" /></div>
+            <div class="col-md-2"><label class="form-label small">Scout</label><select name="ScoutId" class="form-select"><option value="">-</option>@foreach(var s in scouts){<option value="@s.Id">@s.Nom @s.Prenom (@s.Matricule)</option>}</select></div>
+            <div class="col-auto"><button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i></button></div>
+        </form>
+    </div>
+}
+
+<div class="row g-4">
+    @foreach (var t in Model)
+    {
+        <div class="col-lg-4 col-md-6">
+            <div class="card-3d p-4 h-100 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                    <h5 class="text-or mb-0" style="font-size:1rem;">@t.Libelle</h5>
+                    <span style="font-weight:700;font-size:1.05rem;color:@(t.Type == TypeTransaction.Recette ? "#10b981" : "#f87171");white-space:nowrap;">
+                        @(t.Type == TypeTransaction.Recette ? "+" : "-")@t.Montant.ToString("N0") <small class="fw-normal">FCFA</small>
+                    </span>
+                </div>
+                <p class="text-muted-custom small mb-2">
+                    <span class="badge bg-secondary bg-opacity-25" style="color:var(--bleu-logo);border-radius:10px;font-size:0.7rem;">@t.Categorie</span>
+                    <span class="badge-3d @(t.Type == TypeTransaction.Recette ? "badge-validee" : "badge-rejetee") ms-1" style="font-size:0.7rem;">@t.Type</span>
+                </p>
+                <div class="d-flex flex-column gap-1 mb-3 flex-grow-1" style="font-size:0.85rem;">
+                    <span><i class="bi bi-calendar3 text-bleu"></i> @t.DateTransaction.ToString("dd/MM/yyyy")</span>
+                    <span><i class="bi bi-building text-or"></i> @(t.Groupe?.Nom ?? "-")</span>
+                    <span><i class="bi bi-person text-bleu"></i> @(t.Scout != null ? $"{t.Scout.Nom} {t.Scout.Prenom}" : "-")</span>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-auto">
+                    <a asp-action="Details" asp-route-id="@t.Id" class="btn btn-sm btn-outline-or" title="Details"><i class="bi bi-eye"></i></a>
+                    @if (canManage)
+                    {
+                        <a asp-action="Edit" asp-route-id="@t.Id" class="btn btn-sm btn-bleu" title="Modifier"><i class="bi bi-pencil"></i></a>
+                        <form asp-action="Delete" asp-route-id="@t.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer ?')">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Supprimer">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<partial name="_ListPagination" />

@@ -1,0 +1,43 @@
+@model MangoTaika.Data.Entities.SupportServiceCatalogueItem
+@{
+    ViewData["Title"] = Model.Nom;
+    Layout = "_LayoutAdmin";
+    var canManage = (bool)(ViewBag.CanManage ?? false);
+}
+
+<div class="support-shell">
+    <section class="support-hero">
+        <div class="support-hero__inner">
+            <div>
+                <span class="support-hero__eyebrow"><i class="bi bi-grid-1x2"></i> Service catalogue</span>
+                <h2 class="support-hero__title">@Model.Nom</h2>
+                <p class="support-hero__text">@Model.Description</p>
+            </div>
+            <div class="support-hero__actions">
+                <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i> Retour</a>
+                @if (canManage)
+                {
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-mango"><i class="bi bi-pencil"></i> Modifier</a>
+                }
+            </div>
+        </div>
+    </section>
+
+    <div class="ticket-panel">
+        <div class="ticket-panel__head">
+            <h6 class="ticket-panel__title"><i class="bi bi-sliders"></i> Parametres du service</h6>
+        </div>
+        <div class="ticket-panel__body">
+            <div class="ticket-info-grid">
+                <div class="ticket-info-card"><div class="ticket-info-card__label">Code</div><div class="ticket-info-card__value">@Model.Code</div></div>
+                <div class="ticket-info-card"><div class="ticket-info-card__label">Etat</div><div class="ticket-info-card__value">@(Model.EstActif ? "Actif" : "Inactif")</div></div>
+                <div class="ticket-info-card"><div class="ticket-info-card__label">Type</div><div class="ticket-info-card__value">@Model.TypeParDefaut</div></div>
+                <div class="ticket-info-card"><div class="ticket-info-card__label">Categorie</div><div class="ticket-info-card__value">@Model.CategorieParDefaut</div></div>
+                <div class="ticket-info-card"><div class="ticket-info-card__label">Impact / urgence</div><div class="ticket-info-card__value">@Model.ImpactParDefaut / @Model.UrgenceParDefaut</div></div>
+                <div class="ticket-info-card"><div class="ticket-info-card__label">SLA cible</div><div class="ticket-info-card__value">@Model.DelaiSlaHeures h</div></div>
+                <div class="ticket-info-card"><div class="ticket-info-card__label">Agent par defaut</div><div class="ticket-info-card__value">@(Model.AssigneParDefaut is null ? "Aucun" : $"{Model.AssigneParDefaut.Prenom} {Model.AssigneParDefaut.Nom}")</div></div>
+                <div class="ticket-info-card"><div class="ticket-info-card__label">Groupe par defaut</div><div class="ticket-info-card__value">@(Model.GroupeParDefaut?.Nom ?? "Aucun")</div></div>
+            </div>
+        </div>
+    </div>
+</div>

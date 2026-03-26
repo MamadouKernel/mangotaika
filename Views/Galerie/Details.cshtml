@@ -1,0 +1,36 @@
+@model Galerie
+@{
+    ViewData["Title"] = Model.Titre;
+    Layout = "_LayoutAdmin";
+    var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-images text-or"></i> @Model.Titre</h2>
+    <div class="d-flex flex-wrap gap-2">
+        @if (canManage)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-bleu btn-sm" title="Modifier"><i class="bi bi-pencil"></i></a>
+        }
+        <a asp-action="Index" class="btn btn-outline-or btn-sm" title="Liste"><i class="bi bi-arrow-left"></i></a>
+    </div>
+</div>
+
+<div class="card-3d p-4">
+    @if (Model.TypeMedia == "video")
+    {
+        <video src="@Model.CheminMedia" controls style="max-width:100%;border-radius:12px;"></video>
+    }
+    else
+    {
+        <img src="@Model.CheminMedia" alt="@Model.Titre" style="max-width:100%;border-radius:12px;" />
+    }
+    <p class="text-muted-custom small mt-3 mb-1">Ajoute le @Model.DateUpload.ToString("dd/MM/yyyy HH:mm")</p>
+    <p class="mb-2">
+        <span class="badge-3d @(Model.EstPublie ? "badge-validee" : "badge-brouillon")">@(Model.EstPublie ? "Publie" : "Masque")</span>
+    </p>
+    @if (!string.IsNullOrWhiteSpace(Model.Description))
+    {
+        <p class="text-muted-custom small mb-0" style="white-space:pre-wrap;">@Model.Description</p>
+    }
+</div>

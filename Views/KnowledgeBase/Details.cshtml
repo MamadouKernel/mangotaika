@@ -1,0 +1,60 @@
+@model MangoTaika.Data.Entities.SupportKnowledgeArticle
+@{
+    ViewData["Title"] = Model.Titre;
+    Layout = "_LayoutAdmin";
+    var canManage = (bool)(ViewBag.CanManage ?? false);
+}
+
+<div class="support-shell">
+    <section class="support-hero">
+        <div class="support-hero__inner">
+            <div>
+                <span class="support-hero__eyebrow"><i class="bi bi-journal-bookmark"></i> Article support</span>
+                <h2 class="support-hero__title">@Model.Titre</h2>
+                <p class="support-hero__text">@Model.Resume</p>
+            </div>
+            <div class="support-hero__actions">
+                <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i> Retour</a>
+                @if (canManage)
+                {
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-mango"><i class="bi bi-pencil"></i> Modifier</a>
+                }
+            </div>
+        </div>
+    </section>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="ticket-panel">
+                <div class="ticket-panel__head">
+                    <h6 class="ticket-panel__title"><i class="bi bi-file-earmark-text"></i> Contenu</h6>
+                </div>
+                <div class="ticket-panel__body" style="white-space:pre-wrap;line-height:1.8;">@Model.Contenu</div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="ticket-sidebar-stack">
+                <div class="ticket-panel">
+                    <div class="ticket-panel__head">
+                        <h6 class="ticket-panel__title"><i class="bi bi-info-circle"></i> Meta</h6>
+                    </div>
+                    <div class="ticket-panel__body">
+                        <div class="ticket-info-grid">
+                            <div class="ticket-info-card"><div class="ticket-info-card__label">Categorie</div><div class="ticket-info-card__value">@Model.Categorie</div></div>
+                            <div class="ticket-info-card"><div class="ticket-info-card__label">Etat</div><div class="ticket-info-card__value">@(Model.EstPublie ? "Publie" : "Brouillon")</div></div>
+                            <div class="ticket-info-card"><div class="ticket-info-card__label">Cree le</div><div class="ticket-info-card__value">@Model.DateCreation.ToString("dd/MM/yyyy HH:mm")</div></div>
+                            <div class="ticket-info-card"><div class="ticket-info-card__label">Mis a jour</div><div class="ticket-info-card__value">@((Model.DateMiseAJour ?? Model.DateCreation).ToString("dd/MM/yyyy HH:mm"))</div></div>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(Model.MotsCles))
+                        {
+                            <div class="ticket-note mt-3">
+                                <div class="fw-semibold mb-1">Mots-cles</div>
+                                <div>@Model.MotsCles</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

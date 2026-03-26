@@ -1,0 +1,611 @@
+@model DashboardDto
+@{
+    ViewData["Title"] = "Tableau de bord";
+    Layout = "_LayoutAdmin";
+    var isAdminGest = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+    var isAgentSupport = User.IsInRole("AgentSupport");
+    var isSupervision = User.IsInRole("Superviseur") || User.IsInRole("Consultant");
+    var isScout = User.IsInRole("Scout");
+    var isParent = User.IsInRole("Parent");
+    var solde = Model.TotalRecettes - Model.TotalDepenses;
+}
+
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+        <img src="~/images/logo.png" alt="Logo MANGO TAIKA" style="width:60px;height:60px;" />
+        <div>
+            <h2 class="section-title mb-1">@Model.TitreBienvenue</h2>
+            <p class="text-muted-custom mb-0">@Model.SousTitreBienvenue</p>
+        </div>
+    </div>
+    <span class="badge-3d badge-soumise">@Model.RoleActif</span>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.MessageInfo))
+{
+    <div class="alert alert-warning border-0 mb-4">@Model.MessageInfo</div>
+}
+
+@if (isAdminGest)
+{
+    <div class="row g-4 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="stat-card-3d bg-scouts">
+                <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+                <h2>@Model.TotalScouts</h2>
+                <p>Scouts actifs</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card-3d bg-groupes">
+                <div class="stat-icon"><i class="bi bi-building"></i></div>
+                <h2>@Model.TotalGroupes</h2>
+                <p>Groupes</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card-3d bg-activites">
+                <div class="stat-icon"><i class="bi bi-calendar-event-fill"></i></div>
+                <h2>@Model.ActivitesEnCours</h2>
+                <p>Activites ouvertes</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card-3d bg-tickets">
+                <div class="stat-icon"><i class="bi bi-ticket-detailed-fill"></i></div>
+                <h2>@Model.TicketsOuverts</h2>
+                <p>Tickets ouverts</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <a asp-controller="Finances" asp-action="Index" class="text-decoration-none">
+                <div class="card-3d p-3 text-center" style="border-left:4px solid @(solde >= 0 ? "#10b981" : "#f87171");">
+                    <i class="bi bi-wallet2" style="font-size:1.5rem;color:@(solde >= 0 ? "#10b981" : "#f87171");"></i>
+                    <h5 class="mb-0 mt-1" style="color:@(solde >= 0 ? "#10b981" : "#f87171");">@solde.ToString("N0") FCFA</h5>
+                    <small class="text-muted-custom">Solde @DateTime.Now.Year</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 col-6">
+            <a asp-controller="Competences" asp-action="Index" class="text-decoration-none">
+                <div class="card-3d p-3 text-center" style="border-left:4px solid var(--vert-logo);">
+                    <i class="bi bi-award-fill text-or" style="font-size:1.5rem;"></i>
+                    <h5 class="mb-0 mt-1" style="color:var(--vert-logo);">@Model.TotalCompetences</h5>
+                    <small class="text-muted-custom">Competences</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 col-6">
+            <a asp-controller="AGR" asp-action="Index" class="text-decoration-none">
+                <div class="card-3d p-3 text-center" style="border-left:4px solid var(--bleu-gris-clair);">
+                    <i class="bi bi-briefcase-fill text-bleu" style="font-size:1.5rem;"></i>
+                    <h5 class="mb-0 mt-1" style="color:var(--bleu-gris);">@Model.TotalProjetsAGR</h5>
+                    <small class="text-muted-custom">Projets AGR</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 col-6">
+            <a asp-controller="Partenaires" asp-action="Index" class="text-decoration-none">
+                <div class="card-3d p-3 text-center" style="border-left:4px solid #8b5cf6;">
+                    <i class="bi bi-handshake" style="font-size:1.5rem;color:#8b5cf6;"></i>
+                    <h5 class="mb-0 mt-1" style="color:#8b5cf6;">@Model.TotalPartenaires</h5>
+                    <small class="text-muted-custom">Partenaires</small>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    @if (Model.MessagesNonLus > 0 || Model.AvisNonLus > 0 || Model.DemandesAutorisationEnAttente > 0 || Model.DemandesGroupeEnAttente > 0)
+    {
+        <div class="row g-3 mb-4">
+            @if (Model.MessagesNonLus > 0)
+            {
+                <div class="col-md-3 col-6">
+                    <a asp-controller="Messages" asp-action="Index" asp-route-type="Contact" class="text-decoration-none">
+                        <div class="card-3d p-3 text-center" style="border-left:4px solid var(--vert-logo);">
+                            <i class="bi bi-envelope-fill text-or" style="font-size:1.5rem;"></i>
+                            <h4 class="mb-0 mt-1" style="color:var(--vert-logo);">@Model.MessagesNonLus</h4>
+                            <small class="text-muted-custom">Messages non lus</small>
+                        </div>
+                    </a>
+                </div>
+            }
+            @if (Model.AvisNonLus > 0)
+            {
+                <div class="col-md-3 col-6">
+                    <a asp-controller="Messages" asp-action="Index" asp-route-type="Avis" class="text-decoration-none">
+                        <div class="card-3d p-3 text-center" style="border-left:4px solid var(--bleu-gris-clair);">
+                            <i class="bi bi-chat-dots-fill text-bleu" style="font-size:1.5rem;"></i>
+                            <h4 class="mb-0 mt-1" style="color:var(--bleu-gris);">@Model.AvisNonLus</h4>
+                            <small class="text-muted-custom">Avis non lus</small>
+                        </div>
+                    </a>
+                </div>
+            }
+            @if (Model.DemandesAutorisationEnAttente > 0)
+            {
+                <div class="col-md-3 col-6">
+                    <a asp-controller="Demandes" asp-action="Index" class="text-decoration-none">
+                        <div class="card-3d p-3 text-center" style="border-left:4px solid #eab308;">
+                            <i class="bi bi-file-earmark-check-fill" style="font-size:1.5rem;color:#eab308;"></i>
+                            <h4 class="mb-0 mt-1" style="color:#eab308;">@Model.DemandesAutorisationEnAttente</h4>
+                            <small class="text-muted-custom">Demandes a traiter</small>
+                        </div>
+                    </a>
+                </div>
+            }
+            @if (Model.DemandesGroupeEnAttente > 0)
+            {
+                <div class="col-md-3 col-6">
+                    <a asp-controller="DemandesGroupe" asp-action="Index" class="text-decoration-none">
+                        <div class="card-3d p-3 text-center" style="border-left:4px solid #f87171;">
+                            <i class="bi bi-building-add" style="font-size:1.5rem;color:#f87171;"></i>
+                            <h4 class="mb-0 mt-1" style="color:#f87171;">@Model.DemandesGroupeEnAttente</h4>
+                            <small class="text-muted-custom">Demandes de groupe</small>
+                        </div>
+                    </a>
+                </div>
+            }
+        </div>
+    }
+}
+else if (isAgentSupport)
+{
+    var backlogClass = Model.TicketsOuverts >= 10 ? "#b91c1c" : Model.TicketsOuverts >= 5 ? "#92400e" : "var(--vert-logo)";
+    var assignedClass = Model.MesTicketsAssignes >= 10 ? "#b91c1c" : Model.MesTicketsAssignes >= 5 ? "#92400e" : "var(--bleu-logo)";
+    var attenteClass = Model.DemandesAutorisationEnAttente >= 8 ? "#b91c1c" : Model.DemandesAutorisationEnAttente >= 4 ? "#92400e" : "var(--vert-logo)";
+    var overdueClass = Model.TicketsEnRetardSla > 0 ? "#b91c1c" : "var(--vert-logo)";
+    var escalationClass = Model.TicketsEscalades > 0 ? "#b91c1c" : "var(--bleu-logo)";
+    <div class="row g-4 mb-4">
+        <div class="col-md-3 col-6">
+            <a asp-controller="Tickets" asp-action="Index" asp-route-vue="all" class="text-decoration-none">
+                <div class="card-3d p-4 text-center h-100" style="border-top:4px solid @backlogClass;">
+                    <div class="stat-icon"><i class="bi bi-inbox-fill"></i></div>
+                    <h2 style="color:@backlogClass;">@Model.TicketsOuverts</h2>
+                    <p class="text-muted-custom mb-0">Nouveaux tickets</p>
+                    <small class="@(Model.TicketsOuverts >= 10 ? "text-danger" : "text-muted-custom")">@(Model.TicketsOuverts >= 10 ? "Charge critique" : Model.TicketsOuverts >= 5 ? "Charge a surveiller" : "Charge maitrisee")</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 col-6">
+            <a asp-controller="Tickets" asp-action="Index" asp-route-vue="mine" class="text-decoration-none">
+                <div class="card-3d p-4 text-center h-100" style="border-top:4px solid @assignedClass;">
+                    <div class="stat-icon"><i class="bi bi-person-workspace"></i></div>
+                    <h2 style="color:@assignedClass;">@Model.MesTicketsAssignes</h2>
+                    <p class="text-muted-custom mb-0">Mes tickets assignes</p>
+                    <small class="text-muted-custom">Vue opérationnelle de traitement</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 col-6">
+            <a asp-controller="Tickets" asp-action="Index" asp-route-statut="EnAttente" class="text-decoration-none">
+                <div class="card-3d p-4 text-center h-100" style="border-top:4px solid @attenteClass;">
+                    <div class="stat-icon"><i class="bi bi-hourglass-split"></i></div>
+                    <h2 style="color:@attenteClass;">@Model.DemandesAutorisationEnAttente</h2>
+                    <p class="text-muted-custom mb-0">Tickets en attente</p>
+                    <small class="@(Model.DemandesAutorisationEnAttente >= 8 ? "text-danger" : "text-muted-custom")">@(Model.DemandesAutorisationEnAttente >= 8 ? "Risque SLA" : "Suivi en attente")</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 col-6">
+            <a asp-controller="SupportCatalog" asp-action="Index" class="text-decoration-none">
+                <div class="stat-card-3d bg-scouts">
+                    <div class="stat-icon"><i class="bi bi-grid-1x2-fill"></i></div>
+                    <h2>@Model.TotalCompetences</h2>
+                    <p>Services actifs</p>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <a asp-controller="Tickets" asp-action="Index" asp-route-vue="overdue" class="text-decoration-none">
+                <div class="card-3d p-3 text-center h-100" style="border-left:4px solid @overdueClass;">
+                    <i class="bi bi-alarm-fill" style="font-size:1.5rem;color:@overdueClass;"></i>
+                    <h4 class="mb-0 mt-1" style="color:@overdueClass;">@Model.TicketsEnRetardSla</h4>
+                    <small class="text-muted-custom">Tickets hors SLA</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 col-6">
+            <a asp-controller="Tickets" asp-action="Index" class="text-decoration-none">
+                <div class="card-3d p-3 text-center h-100" style="border-left:4px solid @escalationClass;">
+                    <i class="bi bi-exclamation-diamond-fill" style="font-size:1.5rem;color:@escalationClass;"></i>
+                    <h4 class="mb-0 mt-1" style="color:@escalationClass;">@Model.TicketsEscalades</h4>
+                    <small class="text-muted-custom">Escalades actives</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card-3d p-3 text-center h-100" style="border-left:4px solid var(--vert-logo);">
+                <i class="bi bi-bell-fill text-or" style="font-size:1.5rem;"></i>
+                <h4 class="mb-0 mt-1" style="color:var(--vert-logo);">@Model.NotificationsNonLues</h4>
+                <small class="text-muted-custom">Notifications non lues</small>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card-3d p-3 text-center h-100" style="border-left:4px solid var(--bleu-logo);">
+                <i class="bi bi-graph-up-arrow text-bleu" style="font-size:1.5rem;"></i>
+                <h4 class="mb-0 mt-1" style="color:var(--bleu-logo);">@Model.TauxRespectSla.ToString("N1")%</h4>
+                <small class="text-muted-custom">Respect SLA</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <a asp-controller="KnowledgeBase" asp-action="Index" class="text-decoration-none">
+                <div class="card-3d p-4 h-100">
+                    <h5 class="mb-2"><i class="bi bi-journal-text text-or"></i> Base de connaissances</h5>
+                    <p class="text-muted-custom mb-0">@Model.TotalProjetsAGR article(s) publiés pour accelerer les resolutions.</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6">
+            <a asp-controller="Tickets" asp-action="Index" asp-route-vue="overdue" class="text-decoration-none">
+                <div class="card-3d p-4 h-100">
+                    <h5 class="mb-2"><i class="bi bi-alarm text-or"></i> Priorite du jour</h5>
+                    <p class="text-muted-custom mb-0">Surveille les tickets en retard SLA, les non assignes et les demandes en attente de reponse.</p>
+                </div>
+            </a>
+        </div>
+    </div>
+}
+else if (isSupervision)
+{
+    <div class="row g-4 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="stat-card-3d bg-scouts">
+                <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+                <h2>@Model.TotalScouts</h2>
+                <p>Scouts suivis</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card-3d bg-groupes">
+                <div class="stat-icon"><i class="bi bi-building"></i></div>
+                <h2>@Model.TotalGroupes</h2>
+                <p>Groupes actifs</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card-3d bg-activites">
+                <div class="stat-icon"><i class="bi bi-calendar-event-fill"></i></div>
+                <h2>@Model.ActivitesEnCours</h2>
+                <p>Activites visibles</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card-3d bg-tickets">
+                <div class="stat-icon"><i class="bi bi-ticket-detailed-fill"></i></div>
+                <h2>@Model.TicketsOuverts</h2>
+                <p>Tickets support</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <a asp-controller="Competences" asp-action="Index" class="text-decoration-none">
+                <div class="card-3d p-3 text-center" style="border-left:4px solid var(--vert-logo);">
+                    <i class="bi bi-award-fill text-or" style="font-size:1.5rem;"></i>
+                    <h5 class="mb-0 mt-1" style="color:var(--vert-logo);">@Model.TotalCompetences</h5>
+                    <small class="text-muted-custom">Competences</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 col-6">
+            <a asp-controller="Demandes" asp-action="Index" class="text-decoration-none">
+                <div class="card-3d p-3 text-center" style="border-left:4px solid #eab308;">
+                    <i class="bi bi-file-earmark-check-fill" style="font-size:1.5rem;color:#eab308;"></i>
+                    <h5 class="mb-0 mt-1" style="color:#eab308;">@Model.DemandesAutorisationEnAttente</h5>
+                    <small class="text-muted-custom">Demandes en attente</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 col-6">
+            <a asp-controller="DemandesGroupe" asp-action="Index" class="text-decoration-none">
+                <div class="card-3d p-3 text-center" style="border-left:4px solid #f87171;">
+                    <i class="bi bi-building-add" style="font-size:1.5rem;color:#f87171;"></i>
+                    <h5 class="mb-0 mt-1" style="color:#f87171;">@Model.DemandesGroupeEnAttente</h5>
+                    <small class="text-muted-custom">Demandes groupe</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 col-6">
+            <a asp-controller="AGR" asp-action="Index" class="text-decoration-none">
+                <div class="card-3d p-3 text-center" style="border-left:4px solid var(--bleu-gris-clair);">
+                    <i class="bi bi-briefcase-fill text-bleu" style="font-size:1.5rem;"></i>
+                    <h5 class="mb-0 mt-1" style="color:var(--bleu-gris);">@Model.TotalProjetsAGR</h5>
+                    <small class="text-muted-custom">Projets AGR</small>
+                </div>
+            </a>
+        </div>
+    </div>
+}
+else if (isScout)
+{
+    <div class="row g-4 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="stat-card-3d bg-activites">
+                <div class="stat-icon"><i class="bi bi-calendar-event-fill"></i></div>
+                <h2>@Model.MesActivites</h2>
+                <p>Mes activites</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card-3d bg-groupes">
+                <div class="stat-icon"><i class="bi bi-file-earmark-check-fill"></i></div>
+                <h2>@Model.MesDemandes</h2>
+                <p>Mes demandes actives</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card-3d bg-scouts">
+                <div class="stat-icon"><i class="bi bi-mortarboard-fill"></i></div>
+                <h2>@Model.MesFormations</h2>
+                <p>Mes formations en cours</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card-3d bg-tickets">
+                <div class="stat-icon"><i class="bi bi-award-fill"></i></div>
+                <h2>@Model.MesCompetences</h2>
+                <p>Mes competences</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <a asp-controller="Certificats" asp-action="MesCertificats" class="text-decoration-none">
+                <div class="card-3d p-3 text-center h-100" style="border-left:4px solid var(--vert-logo);">
+                    <i class="bi bi-patch-check-fill text-or" style="font-size:1.5rem;"></i>
+                    <h4 class="mb-0 mt-1" style="color:var(--vert-logo);">@Model.MesCertificats</h4>
+                    <small class="text-muted-custom">Badges, attestations et certificats</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card-3d p-3 text-center h-100" style="border-left:4px solid var(--bleu-logo);">
+                <i class="bi bi-graph-up-arrow text-bleu" style="font-size:1.5rem;"></i>
+                <h4 class="mb-0 mt-1" style="color:var(--bleu-logo);">@Model.ProgressionLmsMoyenne.ToString("N1")%</h4>
+                <small class="text-muted-custom">Progression LMS moyenne</small>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card-3d p-3 text-center h-100" style="border-left:4px solid #eab308;">
+                <i class="bi bi-calendar-range" style="font-size:1.5rem;color:#eab308;"></i>
+                <h4 class="mb-0 mt-1" style="color:#eab308;">@Model.SessionsLmsAVenir</h4>
+                <small class="text-muted-custom">Sessions a venir</small>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card-3d p-3 text-center h-100" style="border-left:4px solid var(--vert-logo);">
+                <i class="bi bi-chat-square-text text-or" style="font-size:1.5rem;"></i>
+                <h4 class="mb-0 mt-1" style="color:var(--vert-logo);">@Model.DiscussionsLmsActives</h4>
+                <small class="text-muted-custom">Discussions actives</small>
+            </div>
+        </div>
+    </div>
+}
+else if (isParent)
+{
+    <div class="row g-4 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="stat-card-3d bg-scouts">
+                <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+                <h2>@Model.MesEnfants</h2>
+                <p>Enfants suivis</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card-3d bg-activites">
+                <div class="stat-icon"><i class="bi bi-calendar-event-fill"></i></div>
+                <h2>@Model.ActivitesFamille</h2>
+                <p>Activites liees</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card-3d bg-groupes">
+                <div class="stat-icon"><i class="bi bi-mortarboard-fill"></i></div>
+                <h2>@Model.FormationsFamille</h2>
+                <p>Formations en cours</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card-3d bg-tickets">
+                <div class="stat-icon"><i class="bi bi-wallet2"></i></div>
+                <h2>@Model.CotisationsFamille.ToString("N0")</h2>
+                <p>Cotisations enregistrees</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="card-3d p-3 text-center h-100" style="border-left:4px solid var(--bleu-logo);">
+                <i class="bi bi-graph-up-arrow text-bleu" style="font-size:1.5rem;"></i>
+                <h4 class="mb-0 mt-1" style="color:var(--bleu-logo);">@Model.ProgressionLmsMoyenne.ToString("N1")%</h4>
+                <small class="text-muted-custom">Progression moyenne</small>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card-3d p-3 text-center h-100" style="border-left:4px solid #eab308;">
+                <i class="bi bi-calendar-range" style="font-size:1.5rem;color:#eab308;"></i>
+                <h4 class="mb-0 mt-1" style="color:#eab308;">@Model.SessionsLmsAVenir</h4>
+                <small class="text-muted-custom">Sessions a venir</small>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card-3d p-3 text-center h-100" style="border-left:4px solid var(--vert-logo);">
+                <i class="bi bi-patch-check-fill text-or" style="font-size:1.5rem;"></i>
+                <h4 class="mb-0 mt-1" style="color:var(--vert-logo);">@Model.ParcoursCertifiants</h4>
+                <small class="text-muted-custom">Parcours certifiants</small>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card-3d p-3 text-center h-100" style="border-left:4px solid var(--vert-logo);">
+                <i class="bi bi-megaphone-fill text-or" style="font-size:1.5rem;"></i>
+                <h4 class="mb-0 mt-1" style="color:var(--vert-logo);">@Model.AnnoncesLmsActives</h4>
+                <small class="text-muted-custom">Annonces de cours</small>
+            </div>
+        </div>
+    </div>
+}
+
+@if ((isScout || isParent) && (Model.ParcoursLms.Any() || Model.DernieresAnnoncesFormation.Any()))
+{
+    <div class="row g-4 mb-4">
+        <div class="col-lg-7">
+            <div class="card-3d p-4 h-100">
+                <h5 class="mb-3"><i class="bi bi-mortarboard-fill text-or"></i> @(isScout ? "Mes parcours LMS" : "Formations a suivre")</h5>
+                @if (Model.ParcoursLms.Any())
+                {
+                    <div class="d-grid gap-3">
+                        @foreach (var parcours in Model.ParcoursLms)
+                        {
+                            <div class="border rounded-3 p-3 bg-white">
+                                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-3">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex flex-wrap align-items-center gap-2">
+                                            <strong>@parcours.Titre</strong>
+                                            <span class="badge-3d badge-soumise">@parcours.ProgressionPourcent%</span>
+                                        </div>
+                                        @if (isParent)
+                                        {
+                                            <div class="small text-muted-custom mt-1">@parcours.NomScout</div>
+                                        }
+                                        <div class="small text-muted-custom mt-1">
+                                            @(parcours.SessionTitre ?? "Affectation automatique")
+                                            @if (!string.IsNullOrWhiteSpace(parcours.SessionStatut))
+                                            {
+                                                <span>- @parcours.SessionStatut</span>
+                                            }
+                                        </div>
+                                        <div class="small mt-2">
+                                            <span class="me-3"><strong>Pedagogie:</strong> @parcours.EtatPedagogique</span>
+                                            <span class="me-3"><strong>Evaluation:</strong> @parcours.EtatEvaluation</span>
+                                            <span><strong>Prochaine etape:</strong> @parcours.ProchaineEtape</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-lg-end small text-muted-custom">
+                                        <div>@parcours.NombreAnnonces annonce(s)</div>
+                                        <div>@parcours.NombreDiscussions discussion(s)</div>
+                                        <div>@parcours.EtatCertifiant</div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted-custom mb-0">Aucune formation recente a afficher.</p>
+                }
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card-3d p-4 h-100">
+                <h5 class="mb-3"><i class="bi bi-megaphone-fill text-or"></i> Annonces de cours</h5>
+                @if (Model.DernieresAnnoncesFormation.Any())
+                {
+                    <div class="d-flex flex-column gap-3">
+                        @foreach (var annonce in Model.DernieresAnnoncesFormation)
+                        {
+                            <div class="border-bottom pb-2">
+                                <div class="fw-semibold">@annonce.Titre</div>
+                                <div class="small text-muted-custom">@annonce.DatePublication.ToString("dd/MM/yyyy HH:mm")</div>
+                                <div class="small mt-1">@annonce.Contenu</div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted-custom mb-0">Aucune annonce recente.</p>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card-3d p-4">
+            <h5 class="mb-3"><i class="bi bi-calendar-event-fill text-or"></i> Activites recentes</h5>
+            <div class="table-responsive">
+                <table class="table-modern">
+                    <thead><tr><th>Titre</th><th>Date</th><th>Statut</th></tr></thead>
+                    <tbody>
+                        @foreach (var a in Model.DernieresActivites)
+                        {
+                            <tr>
+                                <td>@a.Titre</td>
+                                <td>@a.DateDebut.ToString("dd/MM/yyyy")</td>
+                                <td><span class="badge-3d badge-@a.Statut.ToString().ToLower()">@a.Statut</span></td>
+                            </tr>
+                        }
+                        @if (!Model.DernieresActivites.Any())
+                        {
+                            <tr><td colspan="3" class="text-center text-muted-custom">Aucune activite disponible</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        @if (isAdminGest || isSupervision)
+        {
+            <div class="card-3d p-4">
+                <h5 class="mb-3"><i class="bi bi-building text-or"></i> Derniers groupes</h5>
+                <div class="table-responsive">
+                    <table class="table-modern">
+                        <thead><tr><th>Nom</th><th>Membres</th><th>Adresse</th></tr></thead>
+                        <tbody>
+                            @foreach (var g in Model.DerniersGroupes)
+                            {
+                                <tr>
+                                    <td>@g.Nom</td>
+                                    <td><span class="badge-3d badge-soumise">@g.NombreMembres</span></td>
+                                    <td>@(g.Adresse ?? "-")</td>
+                                </tr>
+                            }
+                            @if (!Model.DerniersGroupes.Any())
+                            {
+                                <tr><td colspan="3" class="text-center text-muted-custom">Aucun groupe disponible</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card-3d p-4 h-100">
+                <h5 class="mb-3"><i class="bi bi-lightning-charge-fill text-or"></i> Acces rapides</h5>
+                <div class="d-grid gap-2">
+                    @if (isScout)
+                    {
+                        <a asp-controller="Account" asp-action="MaFiche" class="btn btn-outline-or text-start"><i class="bi bi-person-badge"></i> Ma fiche scout</a>
+                        <a asp-controller="Formations" asp-action="MesFormations" class="btn btn-outline-or text-start"><i class="bi bi-mortarboard"></i> Mes formations</a>
+                        <a asp-controller="Demandes" asp-action="Index" class="btn btn-outline-or text-start"><i class="bi bi-file-earmark-check-fill"></i> Mes demandes</a>
+                        <a asp-controller="Tickets" asp-action="MesTickets" class="btn btn-outline-or text-start"><i class="bi bi-headset"></i> Mes tickets</a>
+                    }
+                    @if (isParent)
+                    {
+                        <a asp-controller="Account" asp-action="MesEnfants" class="btn btn-outline-or text-start"><i class="bi bi-people-fill"></i> Mes enfants</a>
+                        <a asp-controller="Tickets" asp-action="MesTickets" class="btn btn-outline-or text-start"><i class="bi bi-headset"></i> Mes tickets</a>
+                        <a asp-controller="Dashboard" asp-action="Index" class="btn btn-outline-or text-start"><i class="bi bi-speedometer2"></i> Rafraichir le suivi</a>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>

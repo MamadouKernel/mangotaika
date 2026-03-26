@@ -1,0 +1,62 @@
+@model List<BrancheDto>
+@{
+    ViewData["Title"] = "Branches";
+    Layout = "_LayoutAdmin";
+    var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-diagram-3-fill text-or"></i> Branches <span class="accent">scouts</span></h2>
+    @if (canManage)
+    {
+        <a asp-action="Create" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Nouvelle branche</a>
+    }
+</div>
+
+<div class="row g-4">
+    @foreach (var b in Model)
+    {
+        <div class="col-md-4">
+            <div class="card-3d p-4 h-100">
+                <h5 class="text-or mb-2">@b.Nom</h5>
+                <p class="text-muted-custom small mb-2">@(b.Description ?? "")</p>
+                <div class="d-flex flex-column gap-1 mb-3" style="font-size:0.85rem;">
+                    <span><i class="bi bi-building text-bleu"></i> @(b.NomGroupe ?? "-")</span>
+                    <span><i class="bi bi-people-fill text-bleu"></i> @b.NombreScouts scouts</span>
+                    @if (b.AgeMin.HasValue || b.AgeMax.HasValue)
+                    {
+                        <span><i class="bi bi-calendar-range text-or"></i> @(b.AgeMin ?? 0) - @(b.AgeMax ?? 99) ans</span>
+                    }
+                    @if (!string.IsNullOrEmpty(b.NomChefUnite))
+                    {
+                        <span><i class="bi bi-person-badge-fill text-or"></i> Chef : @b.NomChefUnite</span>
+                    }
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <a asp-action="Details" asp-route-id="@b.Id" class="btn btn-sm btn-outline-or" title="Détails">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    @if (canManage)
+                    {
+                        <a asp-action="Edit" asp-route-id="@b.Id" class="btn btn-sm btn-bleu" title="Modifier">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <form asp-action="Delete" asp-route-id="@b.Id" method="post"
+                              onsubmit="return confirm('Confirmer la désactivation ?')">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Supprimer">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+    @if (!Model.Any())
+    {
+        <div class="col-12 text-center text-muted-custom py-5">Aucune branche enregistrée</div>
+    }
+</div>
+
+<partial name="_ListPagination" />

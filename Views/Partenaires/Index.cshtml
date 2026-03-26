@@ -1,0 +1,59 @@
+@model List<MangoTaika.Data.Entities.Partenaire>
+@using MangoTaika.Data.Entities
+@{
+    ViewData["Title"] = "Partenaires & Reseaux sociaux";
+    Layout = "_LayoutAdmin";
+    var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+    var liens = ViewBag.Liens as List<LienReseauSocial> ?? new();
+}
+
+<h2 class="section-title mb-4"><i class="bi bi-globe text-or"></i> Partenaires & <span class="accent">Reseaux sociaux</span></h2>
+
+@if (canManage)
+{
+    <div class="card-3d p-4 mb-4">
+        <h5><i class="bi bi-share-fill text-or"></i> Liens reseaux sociaux</h5>
+        <form asp-action="CreateLien" method="post" class="row g-2 align-items-end mt-3">
+            <div class="col-md-3"><label class="form-label small">Plateforme</label><select name="Plateforme" class="form-select"><option>Facebook</option><option>Instagram</option><option>Twitter</option><option>TikTok</option><option>WhatsApp</option><option>LinkedIn</option></select></div>
+            <div class="col-md-5"><label class="form-label small">URL</label><input name="Url" class="form-control" placeholder="https://..." required /></div>
+            <div class="col-md-2"><label class="form-label small">Ordre</label><input name="Ordre" class="form-control" type="number" value="0" /></div>
+            <div class="col-auto"><button type="submit" class="btn btn-mango"><i class="bi bi-plus-lg"></i></button></div>
+        </form>
+    </div>
+
+    <div class="card-3d p-4 mb-4">
+        <h5><i class="bi bi-handshake text-or"></i> Partenaires</h5>
+        <form asp-action="CreatePartenaire" method="post" enctype="multipart/form-data" class="row g-2 align-items-end mt-3">
+            <div class="col-md-3"><label class="form-label small">Nom</label><input name="Nom" class="form-control" required /></div>
+            <div class="col-md-2"><label class="form-label small">Type</label><select name="TypePartenariat" class="form-select"><option>Sponsor</option><option>Institutionnel</option><option>Technique</option><option>Media</option></select></div>
+            <div class="col-md-2"><label class="form-label small">Site web</label><input name="SiteWeb" class="form-control" placeholder="https://..." /></div>
+            <div class="col-md-2"><label class="form-label small">Logo</label><input type="file" name="Logo" class="form-control" accept="image/*" /></div>
+            <div class="col-md-1"><label class="form-label small">Ordre</label><input name="Ordre" class="form-control" type="number" value="0" /></div>
+            <div class="col-auto"><button type="submit" class="btn btn-mango"><i class="bi bi-plus-lg"></i></button></div>
+        </form>
+    </div>
+}
+
+<div class="row g-3">
+    @foreach (var p in Model)
+    {
+        <div class="col-md-3 col-6">
+            <div class="card-3d p-3 text-center h-100">
+                <h6 style="color:var(--bleu-logo);font-size:0.85rem;">@p.Nom</h6>
+                <small class="text-muted-custom">@(p.TypePartenariat ?? "-")</small>
+                <div class="mt-2 d-flex flex-wrap gap-1 justify-content-center">
+                    <a asp-action="DetailsPartenaire" asp-route-id="@p.Id" class="btn btn-sm btn-outline-or" style="font-size:0.7rem;" title="Details"><i class="bi bi-eye"></i></a>
+                    @if (canManage)
+                    {
+                        <a asp-action="EditPartenaire" asp-route-id="@p.Id" class="btn btn-sm btn-bleu" style="font-size:0.7rem;" title="Modifier"><i class="bi bi-pencil"></i></a>
+                        <form asp-action="DeletePartenaire" asp-route-id="@p.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer ?')"><button type="submit" class="btn btn-sm p-0 px-1" style="color:#f87171;font-size:0.7rem;" title="Supprimer"><i class="bi bi-trash"></i></button></form>
+                    }
+                    @if (!string.IsNullOrEmpty(p.SiteWeb))
+                    {
+                        <a href="@p.SiteWeb" target="_blank" class="btn btn-sm btn-outline-or" style="font-size:0.7rem;"><i class="bi bi-globe"></i></a>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>

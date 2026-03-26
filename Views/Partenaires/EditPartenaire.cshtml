@@ -1,0 +1,70 @@
+@model Partenaire
+@{
+    ViewData["Title"] = "Modifier le partenaire";
+    Layout = "_LayoutAdmin";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-pencil text-or"></i> Modifier <span class="accent">le partenaire</span></h2>
+    <a asp-action="DetailsPartenaire" asp-route-id="@Model.Id" class="btn btn-outline-or btn-sm" title="Fiche"><i class="bi bi-eye"></i></a>
+</div>
+
+@if (TempData["Error"] is string err && !string.IsNullOrEmpty(err))
+{
+    <div class="alert alert-danger border-0 mb-3">@err</div>
+}
+
+<div class="card-3d p-4" style="max-width:640px;">
+    <form asp-action="EditPartenaire" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+        <div class="mb-3">
+            <label asp-for="Nom" class="form-label small"></label>
+            <input asp-for="Nom" class="form-control" />
+            <span asp-validation-for="Nom" class="text-danger small"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="TypePartenariat" class="form-label small"></label>
+            <select asp-for="TypePartenariat" class="form-select">
+                <option>Sponsor</option>
+                <option>Institutionnel</option>
+                <option>Technique</option>
+                <option>Média</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label asp-for="SiteWeb" class="form-label small"></label>
+            <input asp-for="SiteWeb" class="form-control" placeholder="https://..." />
+        </div>
+        <div class="mb-3">
+            <label asp-for="Description" class="form-label small"></label>
+            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Ordre" class="form-label small"></label>
+            <input asp-for="Ordre" class="form-control" type="number" />
+        </div>
+        <div class="mb-3 form-check">
+            <input asp-for="EstActif" class="form-check-input" />
+            <label asp-for="EstActif" class="form-check-label"></label>
+        </div>
+        <div class="mb-4">
+            <label class="form-label small">Nouveau logo (optionnel)</label>
+            <input type="file" name="Logo" class="form-control" accept="image/*" />
+            @if (!string.IsNullOrEmpty(Model.LogoUrl))
+            {
+                <p class="small text-muted-custom mt-2 mb-0">Logo actuel : <img src="@Model.LogoUrl" alt="" style="height:40px;vertical-align:middle;border-radius:6px;" /></p>
+            }
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-mango" title="Enregistrer"><i class="bi bi-check-lg"></i></button>
+            <a asp-action="DetailsPartenaire" asp-route-id="@Model.Id" class="btn btn-outline-secondary" title="Annuler"><i class="bi bi-x-lg"></i></a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

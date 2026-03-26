@@ -1,0 +1,59 @@
+@model List<MangoTaika.Data.Entities.ContactMessage>
+@{
+    ViewData["Title"] = "Messages & Avis";
+    Layout = "_LayoutAdmin";
+    var typeFiltre = ViewBag.TypeFiltre as string;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-envelope-fill text-or"></i> Messages <span class="accent">& Avis</span></h2>
+    <div class="d-flex gap-2">
+        <a asp-action="Index" class="btn btn-sm @(typeFiltre == null ? "btn-mango" : "btn-outline-or")">Tous</a>
+        <a asp-action="Index" asp-route-type="Contact" class="btn btn-sm @(typeFiltre == "Contact" ? "btn-mango" : "btn-outline-or")">Contacts</a>
+        <a asp-action="Index" asp-route-type="Avis" class="btn btn-sm @(typeFiltre == "Avis" ? "btn-mango" : "btn-outline-or")">Avis</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    @foreach (var m in Model)
+    {
+        <div class="col-md-6">
+            <div class="card-3d p-4 h-100" style="@(!m.EstLu ? "border-left:4px solid var(--vert-logo);" : "opacity:0.75;")">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <span class="badge-3d @(m.Type == "Avis" ? "badge-archivee" : "badge-soumise")" style="font-size:0.7rem;">@m.Type</span>
+                        @if (!m.EstLu)
+                        {
+                            <span class="badge-3d badge-validee" style="font-size:0.65rem;">Nouveau</span>
+                        }
+                    </div>
+                    <small class="text-muted-custom">@m.DateEnvoi.ToString("dd/MM/yyyy HH:mm")</small>
+                </div>
+                <p class="mb-1"><strong style="color:var(--bleu-logo);">@m.Nom</strong></p>
+                <p class="mb-1 small text-muted-custom">@m.Email</p>
+                <p class="mb-1 small"><strong>Sujet :</strong> @m.Sujet</p>
+                <p class="small mb-3" style="color:var(--texte-secondaire);line-height:1.6;">@m.Message</p>
+                <div class="d-flex flex-wrap gap-2">
+                    <a asp-action="Details" asp-route-id="@m.Id" class="btn btn-sm btn-outline-or" title="Détails"><i class="bi bi-eye"></i></a>
+                    @if (!m.EstLu)
+                    {
+                        <form asp-action="MarquerLu" asp-route-id="@m.Id" method="post">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-outline-or" title="Marquer lu"><i class="bi bi-check2"></i></button>
+                        </form>
+                    }
+                    <form asp-action="Supprimer" asp-route-id="@m.Id" method="post" onsubmit="return confirm('Supprimer ce message ?')">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Supprimer">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+    @if (!Model.Any())
+    {
+        <div class="col-12 text-center text-muted-custom py-5">Aucun message</div>
+    }
+</div>

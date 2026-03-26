@@ -1,0 +1,637 @@
+@model MangoTaika.DTOs.FormationProgressionDto
+@{
+    ViewData["Title"] = Model.Formation.Titre;
+    Layout = "_LayoutAdmin";
+
+    var leconsTerminees = Model.LeconsTermineesIds;
+    var maintenant = DateTime.Now;
+    var derniereAnnonce = Model.Formation.Annonces
+        .OrderByDescending(a => a.DatePublication)
+        .FirstOrDefault();
+    var notificationsNonLues = Model.NotificationsLms.Count(n => !n.EstLue);
+    var prochainJalon = Model.Formation.Jalons
+        .Where(j => j.EstPublie)
+        .OrderBy(j => j.DateJalon)
+        .FirstOrDefault(j => j.DateJalon >= maintenant)
+        ?? Model.Formation.Jalons.Where(j => j.EstPublie).OrderBy(j => j.DateJalon).FirstOrDefault();
+    var moduleEnCours = Model.Modules.FirstOrDefault(mp =>
+        mp.EstDisponible &&
+        (mp.LeconsTerminees < mp.TotalLecons || (mp.Module.AQuiz && !mp.QuizReussi)))
+        ?? Model.Modules.FirstOrDefault();
+    var modulesDisponibles = Model.Modules.Count(mp => mp.EstDisponible);
+    var texteSession = !string.IsNullOrWhiteSpace(Model.Formation.SessionTitre)
+        ? Model.Formation.SessionTitre
+        : "Parcours en autonomie";
+
+    static string GetLessonIcon(MangoTaika.Data.Entities.TypeLecon type) => type switch
+    {
+        MangoTaika.Data.Entities.TypeLecon.Texte => "bi-file-text",
+        MangoTaika.Data.Entities.TypeLecon.Video => "bi-play-circle",
+        MangoTaika.Data.Entities.TypeLecon.Document => "bi-file-earmark-pdf",
+        _ => "bi-journal-text"
+    };
+
+    static string GetLessonLabel(MangoTaika.Data.Entities.TypeLecon type) => type switch
+    {
+        MangoTaika.Data.Entities.TypeLecon.Texte => "Lecture",
+        MangoTaika.Data.Entities.TypeLecon.Video => "Capsule video",
+        MangoTaika.Data.Entities.TypeLecon.Document => "Support",
+        _ => "Activite"
+    };
+
+    static string GetJalonIcon(MangoTaika.Data.Entities.TypeJalonFormation type) => type switch
+    {
+        MangoTaika.Data.Entities.TypeJalonFormation.Demarrage => "bi-flag",
+        MangoTaika.Data.Entities.TypeJalonFormation.ClasseVirtuelle => "bi-camera-video",
+        MangoTaika.Data.Entities.TypeJalonFormation.Remise => "bi-upload",
+        MangoTaika.Data.Entities.TypeJalonFormation.Evaluation => "bi-patch-check",
+        _ => "bi-bell"
+    };
+
+    static string GetJalonTone(MangoTaika.Data.Entities.TypeJalonFormation type) => type switch
+    {
+        MangoTaika.Data.Entities.TypeJalonFormation.Demarrage => "is-start",
+        MangoTaika.Data.Entities.TypeJalonFormation.ClasseVirtuelle => "is-live",
+        MangoTaika.Data.Entities.TypeJalonFormation.Remise => "is-deadline",
+        MangoTaika.Data.Entities.TypeJalonFormation.Evaluation => "is-check",
+        _ => "is-note"
+    };
+
+    static string GetJalonLabel(MangoTaika.Data.Entities.TypeJalonFormation type) => type switch
+    {
+        MangoTaika.Data.Entities.TypeJalonFormation.Demarrage => "Demarrage",
+        MangoTaika.Data.Entities.TypeJalonFormation.ClasseVirtuelle => "Classe virtuelle",
+        MangoTaika.Data.Entities.TypeJalonFormation.Remise => "Remise",
+        MangoTaika.Data.Entities.TypeJalonFormation.Evaluation => "Evaluation",
+        _ => "Rappel"
+    };
+}
+
+<div class="lms-classroom">
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success lms-classroom__alert">@TempData["Success"]</div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger lms-classroom__alert">@TempData["Error"]</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.MessageAcces))
+    {
+        <div class="alert @(Model.EstLectureSeule ? "alert-warning" : "alert-info") lms-classroom__alert">
+            <i class="bi bi-info-circle"></i> @Model.MessageAcces
+        </div>
+    }
+
+    <section class="classroom-hero">
+        <div class="classroom-hero__main">
+            <span class="classroom-hero__eyebrow">
+                <i class="bi bi-easel2"></i> Salle de cours
+            </span>
+            <h1 class="classroom-hero__title">@Model.Formation.Titre</h1>
+            <p class="classroom-hero__description">
+                @(string.IsNullOrWhiteSpace(Model.Formation.Description)
+                    ? "Un parcours structure comme une vraie seance d'apprentissage, avec rythme de progression, evaluation et vie de classe."
+                    : Model.Formation.Description)
+            </p>
+
+            <div class="classroom-hero__meta">
+                <div class="classroom-meta-card">
+                    <span class="classroom-meta-card__label">Session</span>
+                    <strong>@texteSession</strong>
+                    <small>
+                        @if (Model.Formation.EstSessionSelfPaced)
+                        {
+                            <span>A votre rythme</span>
+                        }
+                        else if (Model.Formation.DateOuvertureSession.HasValue || Model.Formation.DateFermetureSession.HasValue)
+                        {
+                            <span>
+                                @(Model.Formation.DateOuvertureSession?.ToString("dd/MM/yyyy") ?? "Ouverture libre")
+                                -
+                                @(Model.Formation.DateFermetureSession?.ToString("dd/MM/yyyy") ?? "Sans fin")
+                            </span>
+                        }
+                        else
+                        {
+                            <span>@(Model.Formation.SessionStatut ?? "Session active")</span>
+                        }
+                    </small>
+                </div>
+                <div class="classroom-meta-card">
+                    <span class="classroom-meta-card__label">Niveau</span>
+                    <strong>@Model.Formation.Niveau</strong>
+                    <small>@Model.Formation.DureeEstimeeHeures h estimees</small>
+                </div>
+                <div class="classroom-meta-card">
+                    <span class="classroom-meta-card__label">Progression</span>
+                    <strong>@Model.PourcentageGlobal%</strong>
+                    <small>@Model.NombreModulesTermines / @Model.NombreModulesTotal modules valides</small>
+                </div>
+                <div class="classroom-meta-card">
+                    <span class="classroom-meta-card__label">Vie de classe</span>
+                    <strong>@Model.Formation.NombreDiscussions discussion(s)</strong>
+                    <small>@notificationsNonLues notification(s) non lue(s)</small>
+                </div>
+            </div>
+
+            <div class="classroom-hero__actions">
+                <a asp-controller="ForumFormations"
+                   asp-action="Index"
+                   asp-route-formationId="@Model.Formation.Id"
+                   class="btn btn-mango">
+                    <i class="bi bi-chat-dots"></i> Forum de la classe
+                </a>
+                <a asp-action="MesFormations" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Mes formations
+                </a>
+            </div>
+        </div>
+
+        <aside class="classroom-hero__board">
+            <div class="classroom-board__title">Tableau de seance</div>
+            <div class="classroom-board__item">
+                <span class="classroom-board__label">Travail du moment</span>
+                <strong>@Model.ProchaineEtape</strong>
+            </div>
+            <div class="classroom-board__item">
+                <span class="classroom-board__label">Etat pedagogique</span>
+                <strong>@Model.EtatPedagogique</strong>
+            </div>
+            <div class="classroom-board__item">
+                <span class="classroom-board__label">Evaluation</span>
+                <strong>@Model.EtatEvaluation</strong>
+            </div>
+            <div class="classroom-board__item">
+                <span class="classroom-board__label">Prochain rendez-vous</span>
+                <strong>
+                    @if (prochainJalon != null)
+                    {
+                        @prochainJalon.Titre
+                    }
+                    else
+                    {
+                        @:Aucun jalon programme
+                    }
+                </strong>
+                <small>
+                    @if (prochainJalon != null)
+                    {
+                        @prochainJalon.DateJalon.ToString("dd/MM/yyyy HH:mm")
+                    }
+                    else
+                    {
+                        @:Le parcours suit votre rythme actuel
+                    }
+                </small>
+            </div>
+        </aside>
+    </section>
+
+    <div class="classroom-grid">
+        <div class="classroom-grid__main">
+            <section class="classroom-panel">
+                <div class="classroom-panel__head">
+                    <div>
+                        <span class="classroom-panel__eyebrow">Seance du jour</span>
+                        <h2 class="classroom-panel__title">Comme si vous etiez en cours</h2>
+                    </div>
+                </div>
+
+                <div class="classroom-briefing">
+                    <article class="classroom-briefing__card">
+                        <div class="classroom-briefing__icon is-teacher">
+                            <i class="bi bi-megaphone"></i>
+                        </div>
+                        <div>
+                            <div class="classroom-briefing__label">Consigne du formateur</div>
+                            <h3>@(derniereAnnonce?.Titre ?? "Bienvenue dans votre salle de cours")</h3>
+                            <p>
+                                @(derniereAnnonce?.Contenu
+                                    ?? "Commencez par suivre la prochaine etape indiquee ci-dessous, puis avancez module par module dans l'ordre du parcours.")
+                            </p>
+                            <small>
+                                @if (derniereAnnonce != null)
+                                {
+                                    <span>Diffusee le @derniereAnnonce.DatePublication.ToString("dd/MM/yyyy HH:mm")</span>
+                                }
+                                else
+                                {
+                                    <span>Message d'accueil permanent</span>
+                                }
+                            </small>
+                        </div>
+                    </article>
+
+                    <article class="classroom-briefing__card">
+                        <div class="classroom-briefing__icon is-agenda">
+                            <i class="bi bi-calendar-event"></i>
+                        </div>
+                        <div>
+                            <div class="classroom-briefing__label">Agenda du parcours</div>
+                            <h3>@(prochainJalon?.Titre ?? "Progression en autonomie")</h3>
+                            <p>
+                                @if (prochainJalon != null)
+                                {
+                                    @(string.IsNullOrWhiteSpace(prochainJalon.Description)
+                                        ? "Le prochain rendez-vous du parcours est deja planifie. Gardez ce point de passage en vue pour rester dans le rythme."
+                                        : prochainJalon.Description)
+                                }
+                                else
+                                {
+                                    @:Aucun jalon proche n'est programme. Vous pouvez avancer au rythme de la session et du debloquage pedagogique.
+                                }
+                            </p>
+                            <small>
+                                @if (prochainJalon != null)
+                                {
+                                    <span>@GetJalonLabel(prochainJalon.Type) - @prochainJalon.DateJalon.ToString("dd/MM/yyyy HH:mm")</span>
+                                }
+                                else
+                                {
+                                    <span>@(Model.Formation.SessionStatut ?? "Session ouverte")</span>
+                                }
+                            </small>
+                        </div>
+                    </article>
+
+                    <article class="classroom-briefing__card">
+                        <div class="classroom-briefing__icon is-focus">
+                            <i class="bi bi-bullseye"></i>
+                        </div>
+                        <div>
+                            <div class="classroom-briefing__label">Objectif du moment</div>
+                            <h3>@Model.ProchaineEtape</h3>
+                            <p>
+                                Continuez dans l'ordre des sequences. Les lecons, quiz et validations se debloquent comme dans un vrai cours structure.
+                            </p>
+                            <small>@modulesDisponibles module(s) actuellement disponible(s)</small>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="classroom-panel">
+                <div class="classroom-panel__head">
+                    <div>
+                        <span class="classroom-panel__eyebrow">Progression</span>
+                        <h2 class="classroom-panel__title">Mon tableau de progression</h2>
+                    </div>
+                    <span class="classroom-panel__hint">Avancee globale du parcours</span>
+                </div>
+
+                <div class="classroom-progress">
+                    <div class="classroom-progress__bar">
+                        <div class="classroom-progress__fill" style="width: @Model.PourcentageGlobal%;"></div>
+                    </div>
+                    <div class="classroom-progress__meta">
+                        <strong>@Model.PourcentageGlobal% complete</strong>
+                        <span>@Model.ProchaineEtape</span>
+                    </div>
+                </div>
+
+                <div class="classroom-pillars">
+                    <article class="classroom-pillar">
+                        <span class="classroom-pillar__label">Pedagogie</span>
+                        <strong>@Model.EtatPedagogique</strong>
+                        <small>@Model.NombreModulesTermines / @Model.NombreModulesTotal modules valides</small>
+                    </article>
+                    <article class="classroom-pillar">
+                        <span class="classroom-pillar__label">Evaluation</span>
+                        <strong>@Model.EtatEvaluation</strong>
+                        <small>
+                            @Model.NombreQuizReussis / @Model.NombreQuizTotal quiz
+                            @if (Model.MeilleurScoreGlobal.HasValue)
+                            {
+                                <span>- meilleur score @Model.MeilleurScoreGlobal%</span>
+                            }
+                        </small>
+                    </article>
+                    <article class="classroom-pillar">
+                        <span class="classroom-pillar__label">Delivrance</span>
+                        <strong>@Model.EtatCertifiant</strong>
+                        <small>
+                            @if (Model.BadgeObtenu)
+                            {
+                                <span class="me-2">Badge</span>
+                            }
+                            @if (Model.AttestationObtenue)
+                            {
+                                <span class="me-2">Attestation</span>
+                            }
+                            @if (Model.CertificatObtenu)
+                            {
+                                <span>Certificat</span>
+                            }
+                            @if (!Model.BadgeObtenu && !Model.AttestationObtenue && !Model.CertificatObtenu)
+                            {
+                                <span>Aucun element emis pour le moment</span>
+                            }
+                        </small>
+                    </article>
+                    <article class="classroom-pillar">
+                        <span class="classroom-pillar__label">Vie de classe</span>
+                        <strong>@Model.Formation.NombreAnnoncesPubliees annonce(s)</strong>
+                        <small>@Model.Formation.NombreDiscussions discussion(s) sur le forum</small>
+                    </article>
+                </div>
+            </section>
+
+            <section class="classroom-panel">
+                <div class="classroom-panel__head">
+                    <div>
+                        <span class="classroom-panel__eyebrow">Deroule pedagogique</span>
+                        <h2 class="classroom-panel__title">Sequence par sequence</h2>
+                    </div>
+                    <span class="classroom-panel__hint">Chaque module suit un ordre precis</span>
+                </div>
+
+                <div class="classroom-module-list">
+                    @foreach (var mp in Model.Modules)
+                    {
+                        var module = mp.Module;
+                        var moduleComplete = mp.LeconsTerminees == mp.TotalLecons && (!module.AQuiz || mp.QuizReussi);
+                        var moduleAccessible = mp.EstDisponible || moduleComplete;
+                        var moduleEnFocus = moduleEnCours?.Module.Id == module.Id;
+                        var statutModule = moduleComplete ? "Termine" : moduleAccessible ? "En cours" : "Verrouille";
+
+                        <article class="classroom-module @(moduleComplete ? "is-complete" : moduleAccessible ? "is-open" : "is-locked") @(moduleEnFocus ? "is-focus" : "")">
+                            <header class="classroom-module__header">
+                                <div>
+                                    <div class="classroom-module__index">Sequence @module.Ordre</div>
+                                    <h3 class="classroom-module__title">@module.Titre</h3>
+                                    <p class="classroom-module__description">
+                                        @(string.IsNullOrWhiteSpace(module.Description)
+                                            ? "Travaillez les activites de cette sequence dans l'ordre, puis validez l'evaluation quand elle devient disponible."
+                                            : module.Description)
+                                    </p>
+                                </div>
+                                <div class="classroom-module__status">
+                                    <span class="classroom-status-chip">@statutModule</span>
+                                    <small>@mp.LeconsTerminees / @mp.TotalLecons lecons terminees</small>
+                                </div>
+                            </header>
+
+                            @if (!moduleAccessible && !string.IsNullOrWhiteSpace(mp.MessageBlocage))
+                            {
+                                <div class="classroom-module__block">
+                                    <i class="bi bi-lock"></i> @mp.MessageBlocage
+                                </div>
+                            }
+
+                            <div class="classroom-lesson-list">
+                                @foreach (var lecon in module.Lecons)
+                                {
+                                    var estTerminee = leconsTerminees.Contains(lecon.Id);
+                                    var estDisponible = mp.LeconsDisponiblesIds.Contains(lecon.Id) || estTerminee;
+                                    var collapseId = $"lecon-{lecon.Id}";
+
+                                    <div class="classroom-lesson @(estTerminee ? "is-complete" : estDisponible ? "is-open" : "is-locked")">
+                                        <div class="classroom-lesson__main">
+                                            <div class="classroom-lesson__icon">
+                                                <i class="bi @(estTerminee ? "bi-check2-circle" : GetLessonIcon(lecon.Type))"></i>
+                                            </div>
+                                            <div class="classroom-lesson__content">
+                                                <div class="classroom-lesson__title-row">
+                                                    <strong>@lecon.Titre</strong>
+                                                    <span class="classroom-lesson__type">@GetLessonLabel(lecon.Type)</span>
+                                                </div>
+                                                <div class="classroom-lesson__meta">
+                                                    <span>@lecon.DureeMinutes min</span>
+                                                    <span>@(estTerminee ? "Travail valide" : estDisponible ? "Pret a suivre" : "En attente")</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="classroom-lesson__actions">
+                                            @if (estDisponible && lecon.Type == MangoTaika.Data.Entities.TypeLecon.Texte && !string.IsNullOrEmpty(lecon.ContenuTexte))
+                                            {
+                                                <button class="btn btn-sm btn-outline-info" data-bs-toggle="collapse" data-bs-target="#@collapseId">Lire</button>
+                                            }
+                                            @if (estDisponible && lecon.Type == MangoTaika.Data.Entities.TypeLecon.Video && !string.IsNullOrEmpty(lecon.VideoUrl))
+                                            {
+                                                <button class="btn btn-sm btn-outline-danger" data-bs-toggle="collapse" data-bs-target="#@collapseId">Voir</button>
+                                            }
+                                            @if (estDisponible && lecon.Type == MangoTaika.Data.Entities.TypeLecon.Document && !string.IsNullOrEmpty(lecon.DocumentUrl))
+                                            {
+                                                <a href="@lecon.DocumentUrl" target="_blank" class="btn btn-sm btn-outline-warning">Telecharger</a>
+                                            }
+                                            @if (!estTerminee && estDisponible && Model.PeutInteragir)
+                                            {
+                                                <form asp-action="MarquerLecon" method="post" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="leconId" value="@lecon.Id" />
+                                                    <input type="hidden" name="formationId" value="@Model.Formation.Id" />
+                                                    <button class="btn btn-sm btn-success"><i class="bi bi-check"></i> Marquer terminee</button>
+                                                </form>
+                                            }
+                                            else if (estTerminee)
+                                            {
+                                                <span class="badge bg-success">Completee</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Verrouillee</span>
+                                            }
+                                        </div>
+                                    </div>
+
+                                    <div class="collapse" id="@collapseId">
+                                        <div class="classroom-lesson__detail">
+                                            @if (lecon.Type == MangoTaika.Data.Entities.TypeLecon.Texte && estDisponible)
+                                            {
+                                                <div class="classroom-rich-text">@lecon.ContenuTexte</div>
+                                            }
+                                            @if (lecon.Type == MangoTaika.Data.Entities.TypeLecon.Video && !string.IsNullOrEmpty(lecon.VideoUrl))
+                                            {
+                                                var videoUrl = lecon.VideoUrl ?? string.Empty;
+                                                if (estDisponible && (videoUrl.StartsWith("https://www.youtube.com/") || videoUrl.StartsWith("https://player.vimeo.com/")))
+                                                {
+                                                    <div class="ratio ratio-16x9">
+                                                        <iframe src="@videoUrl" allowfullscreen loading="lazy" sandbox="allow-scripts allow-same-origin allow-presentation"></iframe>
+                                                    </div>
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+
+                            @if (module.AQuiz && module.Quiz != null)
+                            {
+                                <div class="classroom-quiz @(mp.QuizReussi ? "is-complete" : mp.QuizDisponible ? "is-open" : "is-locked")">
+                                    <div class="classroom-quiz__head">
+                                        <div>
+                                            <span class="classroom-quiz__eyebrow">Evaluation de sequence</span>
+                                            <h4>@module.Quiz.Titre</h4>
+                                            <p>Note minimale : @module.Quiz.NoteMinimale%</p>
+                                        </div>
+                                        <div class="classroom-quiz__status">
+                                            @if (mp.QuizReussi)
+                                            {
+                                                <span class="badge bg-success">Reussi (@mp.MeilleurScore%)</span>
+                                            }
+                                            else if (mp.QuizDisponible)
+                                            {
+                                                <a asp-action="PasserQuiz"
+                                                   asp-route-quizId="@module.Quiz.Id"
+                                                   asp-route-formationId="@Model.Formation.Id"
+                                                   class="btn btn-warning btn-sm">
+                                                    <i class="bi bi-pencil-square"></i> Passer le quiz
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Quiz verrouille</span>
+                                            }
+                                        </div>
+                                    </div>
+
+                                    <div class="classroom-quiz__facts">
+                                        <div>
+                                            <span>Tentatives</span>
+                                            <strong>@mp.NombreTentativesQuiz</strong>
+                                        </div>
+                                        <div>
+                                            <span>Restantes</span>
+                                            <strong>@(mp.TentativesRestantesQuiz.HasValue ? mp.TentativesRestantesQuiz.Value.ToString() : "Illimite")</strong>
+                                        </div>
+                                        <div>
+                                            <span>Meilleur score</span>
+                                            <strong>@(mp.MeilleurScore.HasValue ? $"{mp.MeilleurScore}%" : "Aucun")</strong>
+                                        </div>
+                                    </div>
+
+                                    @if (!string.IsNullOrWhiteSpace(mp.MessageQuiz))
+                                    {
+                                        <div class="classroom-quiz__note">@mp.MessageQuiz</div>
+                                    }
+
+                                    @if (module.Quiz.DateOuvertureDisponibilite.HasValue || module.Quiz.DateFermetureDisponibilite.HasValue)
+                                    {
+                                        <div class="classroom-quiz__window">
+                                            Fenetre :
+                                            @(module.Quiz.DateOuvertureDisponibilite?.ToString("dd/MM/yyyy HH:mm") ?? "immediate")
+                                            -
+                                            @(module.Quiz.DateFermetureDisponibilite?.ToString("dd/MM/yyyy HH:mm") ?? "sans fin")
+                                        </div>
+                                    }
+
+                                    @if (mp.TentativesQuiz.Any())
+                                    {
+                                        <div class="classroom-quiz__history">
+                                            @foreach (var tentative in mp.TentativesQuiz.Take(4))
+                                            {
+                                                <span class="badge @(tentative.Reussi ? "bg-success" : "bg-secondary")">
+                                                    @tentative.Score% - @tentative.DateTentative.ToString("dd/MM")
+                                                </span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </article>
+                    }
+                </div>
+            </section>
+        </div>
+
+        <aside class="classroom-grid__side">
+            <section class="classroom-panel classroom-panel--compact">
+                <div class="classroom-panel__head">
+                    <div>
+                        <span class="classroom-panel__eyebrow">Repere rapide</span>
+                        <h2 class="classroom-panel__title">Mon rythme de classe</h2>
+                    </div>
+                </div>
+
+                <div class="classroom-side-stack">
+                    <div class="classroom-side-card">
+                        <span class="classroom-side-card__label">Module en focus</span>
+                        <strong>@(moduleEnCours?.Module.Titre ?? "Parcours termine")</strong>
+                        <small>@Model.ProchaineEtape</small>
+                    </div>
+                    <div class="classroom-side-card">
+                        <span class="classroom-side-card__label">Forum</span>
+                        <strong>@Model.Formation.NombreDiscussions discussion(s)</strong>
+                        <small>
+                            @if (Model.Formation.DateDerniereActiviteForum.HasValue)
+                            {
+                                <span>Derniere activite le @Model.Formation.DateDerniereActiviteForum.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                            }
+                            else
+                            {
+                                <span>Soyez le premier a lancer un echange.</span>
+                            }
+                        </small>
+                    </div>
+                    <div class="classroom-side-card">
+                        <span class="classroom-side-card__label">Certifications</span>
+                        <strong>@Model.EtatCertifiant</strong>
+                        <small>Badge, attestation et certificat se debloquent selon vos validations.</small>
+                    </div>
+                </div>
+            </section>
+
+            @if (Model.Formation.Jalons.Any())
+            {
+                <section class="classroom-panel classroom-panel--compact">
+                    <div class="classroom-panel__head">
+                        <div>
+                            <span class="classroom-panel__eyebrow">Calendrier</span>
+                            <h2 class="classroom-panel__title">Agenda pedagogique</h2>
+                        </div>
+                    </div>
+
+                    <div class="classroom-agenda">
+                        @foreach (var jalon in Model.Formation.Jalons.Where(j => j.EstPublie).OrderBy(j => j.DateJalon).Take(5))
+                        {
+                            <div class="classroom-agenda__item @GetJalonTone(jalon.Type)">
+                                <div class="classroom-agenda__icon">
+                                    <i class="bi @GetJalonIcon(jalon.Type)"></i>
+                                </div>
+                                <div>
+                                    <div class="classroom-agenda__type">@GetJalonLabel(jalon.Type)</div>
+                                    <div class="classroom-agenda__title">@jalon.Titre</div>
+                                    <div class="classroom-agenda__date">@jalon.DateJalon.ToString("dd/MM/yyyy HH:mm")</div>
+                                    @if (!string.IsNullOrWhiteSpace(jalon.Description))
+                                    {
+                                        <div class="classroom-agenda__text">@jalon.Description</div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </section>
+            }
+
+            @if (Model.NotificationsLms.Any())
+            {
+                <section class="classroom-panel classroom-panel--compact">
+                    <div class="classroom-panel__head">
+                        <div>
+                            <span class="classroom-panel__eyebrow">Messages</span>
+                            <h2 class="classroom-panel__title">Notifications du cours</h2>
+                        </div>
+                    </div>
+
+                    <div class="classroom-notices">
+                        @foreach (var notification in Model.NotificationsLms.Take(5))
+                        {
+                            <div class="classroom-notice @(notification.EstLue ? "" : "is-unread")">
+                                <div class="classroom-notice__top">
+                                    <strong>@notification.Titre</strong>
+                                    <span>@notification.DateCreation.ToString("dd/MM HH:mm")</span>
+                                </div>
+                                <p>@notification.Message</p>
+                                <small>@notification.Categorie</small>
+                            </div>
+                        }
+                    </div>
+                </section>
+            }
+        </aside>
+    </div>
+</div>

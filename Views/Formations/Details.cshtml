@@ -1,0 +1,371 @@
+@model MangoTaika.DTOs.FormationDetailDto
+@{
+    ViewData["Title"] = Model.Titre;
+    Layout = "_LayoutAdmin";
+
+    var stats = (MangoTaika.DTOs.FormationStatsDto)ViewBag.Stats;
+    var lectureSeule = ViewBag.LectureSeule as bool? ?? false;
+    var canManage = !lectureSeule && (User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire"));
+    var totalElementsCertifiants = (Model.DelivreBadge ? 1 : 0) + (Model.DelivreAttestation ? 1 : 0) + (Model.DelivreCertificat ? 1 : 0);
+}
+
+<div class="lms-campus">
+    <section class="campus-hero campus-hero--detail">
+        <div class="campus-hero__main">
+            <span class="campus-hero__eyebrow">
+                <i class="bi bi-journal-richtext"></i> Fiche parcours
+            </span>
+            <h1 class="campus-hero__title">@Model.Titre</h1>
+            <p class="campus-hero__text">
+                @(string.IsNullOrWhiteSpace(Model.Description)
+                    ? "Presentation complete du parcours, de sa dynamique pedagogique, de ses sessions et de sa vie de cours."
+                    : Model.Description)
+            </p>
+
+            <div class="campus-hero__stats">
+                <div class="campus-stat">
+                    <span>Inscrits</span>
+                    <strong>@stats.TotalInscrits</strong>
+                </div>
+                <div class="campus-stat">
+                    <span>En cours</span>
+                    <strong>@stats.EnCours</strong>
+                </div>
+                <div class="campus-stat">
+                    <span>Terminees</span>
+                    <strong>@stats.Terminees</strong>
+                </div>
+                <div class="campus-stat">
+                    <span>Taux de reussite</span>
+                    <strong>@stats.TauxReussite.ToString("0.#")%</strong>
+                </div>
+            </div>
+        </div>
+
+        <aside class="campus-hero__side">
+            <div class="campus-hero-card">
+                <div class="campus-hero-card__label">Vue d'ensemble</div>
+                <strong>@Model.Niveau · @Model.DureeEstimeeHeures h · @Model.NombreModules modules</strong>
+                <small>
+                    Auteur : @Model.NomAuteur
+                    @if (!string.IsNullOrWhiteSpace(Model.NomBrancheCible))
+                    {
+                        <span> · Branche cible : @Model.NomBrancheCible</span>
+                    }
+                </small>
+
+                @if (canManage)
+                {
+                    <div class="campus-manage-actions">
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-light btn-sm">
+                            <i class="bi bi-pencil"></i> Modifier
+                        </a>
+                        @if (Model.Statut == MangoTaika.Data.Entities.StatutFormation.Brouillon)
+                        {
+                            <form asp-action="Publier" asp-route-id="@Model.Id" method="post">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-success btn-sm w-100">
+                                    <i class="bi bi-send"></i> Publier
+                                </button>
+                            </form>
+                        }
+                        @if (Model.Statut == MangoTaika.Data.Entities.StatutFormation.Publiee)
+                        {
+                            <form asp-action="Archiver" asp-route-id="@Model.Id" method="post">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-warning btn-sm w-100">
+                                    <i class="bi bi-archive"></i> Archiver
+                                </button>
+                            </form>
+                        }
+                    </div>
+                }
+            </div>
+        </aside>
+    </section>
+
+    <div class="campus-detail-grid">
+        <div class="campus-detail-grid__main">
+            <section class="classroom-panel">
+                <div class="classroom-panel__head">
+                    <div>
+                        <span class="classroom-panel__eyebrow">Positionnement</span>
+                        <h2 class="classroom-panel__title">Repere du parcours</h2>
+                    </div>
+                </div>
+
+                <div class="campus-outline-grid">
+                    <div class="campus-side-note">
+                        <div class="campus-side-note__label">Session en vedette</div>
+                        <strong>@(string.IsNullOrWhiteSpace(Model.SessionTitre) ? "Aucune session mise en avant" : Model.SessionTitre)</strong>
+                        <small>@(string.IsNullOrWhiteSpace(Model.SessionStatut) ? "Parcours disponible selon sa publication" : Model.SessionStatut)</small>
+                    </div>
+                    <div class="campus-side-note">
+                        <div class="campus-side-note__label">Vie de cours</div>
+                        <strong>@Model.NombreAnnoncesPubliees annonce(s) · @Model.NombreDiscussions discussion(s)</strong>
+                        <small>
+                            @if (Model.DateDerniereActiviteForum.HasValue)
+                            {
+                                <span>Derniere activite le @Model.DateDerniereActiviteForum.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                            }
+                            else
+                            {
+                                <span>Pas encore d'activite forum recente.</span>
+                            }
+                        </small>
+                    </div>
+                    <div class="campus-side-note">
+                        <div class="campus-side-note__label">Delivrance</div>
+                        <strong>@(totalElementsCertifiants == 0 ? "Aucune delivrance" : $"{totalElementsCertifiants} element(s) certifiant(s)")</strong>
+                        <small>
+                            @if (Model.DelivreBadge)
+                            {
+                                <span class="me-2">Badge</span>
+                            }
+                            @if (Model.DelivreAttestation)
+                            {
+                                <span class="me-2">Attestation</span>
+                            }
+                            @if (Model.DelivreCertificat)
+                            {
+                                <span>Certificat</span>
+                            }
+                        </small>
+                    </div>
+                    <div class="campus-side-note">
+                        <div class="campus-side-note__label">Prerequis</div>
+                        <strong>@(Model.Prerequis.Any() ? $"{Model.Prerequis.Count} parcours requis" : "Aucun prerequis")</strong>
+                        <small>
+                            @if (Model.Prerequis.Any())
+                            {
+                                @string.Join(", ", Model.Prerequis.Select(p => p.Titre))
+                            }
+                            else
+                            {
+                                @:Inscription libre selon le role et la publication.
+                            }
+                        </small>
+                    </div>
+                </div>
+            </section>
+
+            <section class="classroom-panel">
+                <div class="classroom-panel__head">
+                    <div>
+                        <span class="classroom-panel__eyebrow">Architecture pedagogique</span>
+                        <h2 class="classroom-panel__title">Modules du parcours</h2>
+                    </div>
+                </div>
+
+                <div class="campus-module-overview">
+                    @foreach (var module in Model.Modules.OrderBy(m => m.Ordre))
+                    {
+                        <article class="classroom-module is-open">
+                            <header class="classroom-module__header">
+                                <div>
+                                    <div class="classroom-module__index">Sequence @module.Ordre</div>
+                                    <h3 class="classroom-module__title">@module.Titre</h3>
+                                    <p class="classroom-module__description">
+                                        @(string.IsNullOrWhiteSpace(module.Description)
+                                            ? "Module structure avec ressources et evaluation associee."
+                                            : module.Description)
+                                    </p>
+                                </div>
+                                <div class="classroom-module__status">
+                                    <span class="classroom-status-chip">@module.NombreLecons lecon(s)</span>
+                                    <small>@(module.AQuiz ? "Quiz inclus" : "Sans quiz")</small>
+                                </div>
+                            </header>
+
+                            @if (module.Lecons.Any())
+                            {
+                                <div class="campus-module-overview__lessons">
+                                    @foreach (var lecon in module.Lecons.OrderBy(l => l.Ordre))
+                                    {
+                                        <div class="campus-module-lesson">
+                                            <span class="campus-module-lesson__index">L@lecon.Ordre</span>
+                                            <div>
+                                                <strong>@lecon.Titre</strong>
+                                                <div class="small text-muted">@lecon.Type · @lecon.DureeMinutes min</div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+
+                            @if (module.Quiz != null)
+                            {
+                                <div class="classroom-quiz is-open">
+                                    <div class="classroom-quiz__head">
+                                        <div>
+                                            <span class="classroom-quiz__eyebrow">Evaluation</span>
+                                            <h4>@module.Quiz.Titre</h4>
+                                            <p>Note minimale : @module.Quiz.NoteMinimale%</p>
+                                        </div>
+                                    </div>
+                                    @if (module.Quiz.DateOuvertureDisponibilite.HasValue || module.Quiz.DateFermetureDisponibilite.HasValue)
+                                    {
+                                        <div class="classroom-quiz__window">
+                                            Fenetre :
+                                            @(module.Quiz.DateOuvertureDisponibilite?.ToString("dd/MM/yyyy HH:mm") ?? "immediate")
+                                            -
+                                            @(module.Quiz.DateFermetureDisponibilite?.ToString("dd/MM/yyyy HH:mm") ?? "sans fin")
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </article>
+                    }
+                </div>
+            </section>
+
+            <section class="classroom-panel">
+                <div class="classroom-panel__head">
+                    <div>
+                        <span class="classroom-panel__eyebrow">Dynamique de cours</span>
+                        <h2 class="classroom-panel__title">Sessions et annonces</h2>
+                    </div>
+                </div>
+
+                <div class="campus-detail-split">
+                    <div class="campus-detail-column">
+                        <h3 class="campus-detail-column__title">Sessions</h3>
+                        @if (Model.Sessions.Any())
+                        {
+                            <div class="campus-session-list">
+                                @foreach (var session in Model.Sessions)
+                                {
+                                    <div class="campus-session-item">
+                                        <div class="d-flex justify-content-between align-items-start gap-3">
+                                            <div>
+                                                <strong>@session.Titre</strong>
+                                                <div class="small text-muted">
+                                                    @(session.EstSelfPaced ? "A votre rythme" : $"{session.DateOuverture:dd/MM/yyyy} - {session.DateFermeture:dd/MM/yyyy}")
+                                                </div>
+                                            </div>
+                                            <span class="badge @(session.EstSelfPaced ? "bg-success" : "bg-secondary")">@session.StatutAffichage</span>
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(session.Description))
+                                        {
+                                            <div class="small text-muted mt-2">@session.Description</div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted mb-0">Aucune session configuree pour cette formation.</p>
+                        }
+                    </div>
+
+                    <div class="campus-detail-column">
+                        <h3 class="campus-detail-column__title">Annonces recentes</h3>
+                        @if (Model.Annonces.Any())
+                        {
+                            <div class="campus-session-list">
+                                @foreach (var annonce in Model.Annonces.Take(5))
+                                {
+                                    <div class="campus-session-item">
+                                        <strong>@annonce.Titre</strong>
+                                        <div class="small text-muted">
+                                            @annonce.DatePublication.ToString("dd/MM/yyyy HH:mm")
+                                            @(string.IsNullOrWhiteSpace(annonce.NomAuteur) ? "" : $" · {annonce.NomAuteur}")
+                                        </div>
+                                        <div class="small text-muted mt-2">@annonce.Contenu</div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted mb-0">Aucune annonce publiee pour le moment.</p>
+                        }
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <aside class="campus-detail-grid__side">
+            @if (!string.IsNullOrEmpty(Model.ImageUrl))
+            {
+                <section class="classroom-panel classroom-panel--compact">
+                    <img src="@Model.ImageUrl" alt="@Model.Titre" class="campus-detail-cover" />
+                </section>
+            }
+
+            @if (Model.Jalons.Any())
+            {
+                <section class="classroom-panel classroom-panel--compact">
+                    <div class="classroom-panel__head">
+                        <div>
+                            <span class="classroom-panel__eyebrow">Calendrier</span>
+                            <h2 class="classroom-panel__title">Jalons pedagogiques</h2>
+                        </div>
+                    </div>
+
+                    <div class="classroom-agenda">
+                        @foreach (var jalon in Model.Jalons.OrderBy(j => j.DateJalon))
+                        {
+                            <div class="classroom-agenda__item">
+                                <div class="classroom-agenda__icon">
+                                    <i class="bi bi-calendar-event"></i>
+                                </div>
+                                <div>
+                                    <div class="classroom-agenda__type">@jalon.Type</div>
+                                    <div class="classroom-agenda__title">@jalon.Titre</div>
+                                    <div class="classroom-agenda__date">@jalon.DateJalon.ToString("dd/MM/yyyy HH:mm")</div>
+                                    @if (!string.IsNullOrWhiteSpace(jalon.Description))
+                                    {
+                                        <div class="classroom-agenda__text">@jalon.Description</div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </section>
+            }
+
+            <section class="classroom-panel classroom-panel--compact">
+                <div class="classroom-panel__head">
+                    <div>
+                        <span class="classroom-panel__eyebrow">Forum</span>
+                        <h2 class="classroom-panel__title">Vie de communaute</h2>
+                    </div>
+                </div>
+
+                <a asp-controller="ForumFormations" asp-action="Index" asp-route-formationId="@Model.Id" class="btn btn-outline-success w-100 mb-3">
+                    <i class="bi bi-chat-square-text"></i> Ouvrir le forum
+                </a>
+
+                @if (Model.DiscussionsRecentes.Any())
+                {
+                    <div class="campus-discussion-list">
+                        @foreach (var discussion in Model.DiscussionsRecentes)
+                        {
+                            <a asp-controller="ForumFormations" asp-action="Discussion" asp-route-id="@discussion.Id" class="campus-discussion-item">
+                                <div class="fw-semibold">
+                                    @discussion.Titre
+                                    @if (discussion.EstVerrouillee)
+                                    {
+                                        <span class="badge bg-secondary ms-2">Verrouillee</span>
+                                    }
+                                </div>
+                                <div class="small text-muted">Par @discussion.NomAuteur · @discussion.DateCreation.ToString("dd/MM/yyyy HH:mm")</div>
+                                <div class="small text-muted mt-1">@discussion.NombreMessages reponse(s)</div>
+                            </a>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted mb-0">Aucun sujet n'a encore ete lance pour cette formation.</p>
+                }
+            </section>
+
+            <a asp-action="@(lectureSeule ? "ConsulterCatalogue" : "Index")" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Retour
+            </a>
+        </aside>
+    </div>
+</div>

@@ -1,0 +1,73 @@
+@model BrancheCreateDto
+@{
+    ViewData["Title"] = "Nouvelle branche";
+    Layout = "_LayoutAdmin";
+    var groupes = ViewBag.Groupes as List<MangoTaika.Data.Entities.Groupe> ?? new();
+}
+
+<h2 class="section-title mb-1"><i class="bi bi-diagram-3-fill text-or"></i> Nouvelle <span class="accent">branche</span></h2>
+<div class="section-divider"></div>
+
+<div class="card-3d p-4 mt-3" style="max-width:600px;">
+    <form asp-action="Create" method="post" class="form-modern">
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+        <div class="mb-3">
+            <label asp-for="Nom" class="form-label">Nom de la branche</label>
+            <input asp-for="Nom" class="form-control" placeholder="Ex: Louveteaux" />
+        </div>
+        <div class="mb-3">
+            <label asp-for="Description" class="form-label">Description</label>
+            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="AgeMin" class="form-label">Âge minimum</label>
+                <input asp-for="AgeMin" class="form-control" type="number" placeholder="Ex: 8" />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label asp-for="AgeMax" class="form-label">Âge maximum</label>
+                <input asp-for="AgeMax" class="form-control" type="number" placeholder="Ex: 12" />
+            </div>
+        </div>
+        <div class="mb-3">
+            <label asp-for="GroupeId" class="form-label">Groupe</label>
+            <select asp-for="GroupeId" class="form-select" id="groupeSelect">
+                <option value="">— Sélectionner un groupe —</option>
+                @foreach (var g in groupes)
+                {
+                    <option value="@g.Id">@g.Nom</option>
+                }
+            </select>
+        </div>
+        <div class="mb-4">
+            <label asp-for="ChefUniteId" class="form-label">Chef d'unité</label>
+            <select asp-for="ChefUniteId" class="form-select" id="chefSelect">
+                <option value="">— Sélectionner d'abord un groupe —</option>
+            </select>
+            <small class="text-muted-custom">Sélectionnez un groupe pour voir les scouts disponibles.</small>
+        </div>
+        <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Créer</button>
+        <a asp-action="Index" class="btn btn-outline-or ms-2">Annuler</a>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+    document.getElementById('groupeSelect').addEventListener('change', function () {
+        var chefSelect = document.getElementById('chefSelect');
+        var groupeId = this.value;
+        if (!groupeId) {
+            chefSelect.innerHTML = '<option value="">— Sélectionner d\'abord un groupe —</option>';
+            return;
+        }
+        chefSelect.innerHTML = '<option value="">Chargement...</option>';
+        fetch('/Branches/GetScoutsByGroupe?groupeId=' + groupeId)
+            .then(r => r.json())
+            .then(data => {
+                var html = '<option value="">— Aucun (pas de chef) —</option>';
+                data.forEach(s => { html += '<option value="' + s.id + '">' + s.nom + '</option>'; });
+                chefSelect.innerHTML = html;
+            });
+    });
+</script>
+}

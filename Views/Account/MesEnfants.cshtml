@@ -1,0 +1,44 @@
+@model List<MangoTaika.Data.Entities.Scout>
+@{
+    ViewData["Title"] = "Mes enfants";
+    Layout = "_LayoutAdmin";
+}
+
+<h2 class="section-title mb-1"><i class="bi bi-people-fill text-or"></i> Mes <span class="accent">enfants</span></h2>
+<div class="section-divider"></div>
+
+<div class="row g-4 mt-2">
+    @foreach (var scout in Model)
+    {
+        <div class="col-md-6 col-lg-4">
+            <div class="card-3d p-4 text-center h-100">
+                <div style="width:80px;height:80px;border-radius:50%;background:var(--vert-logo);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+                    <i class="bi bi-person-fill" style="font-size:2rem;color:#fff;"></i>
+                </div>
+                <h5 style="color:var(--bleu-logo);">@scout.Prenom @scout.Nom</h5>
+                <p class="text-muted-custom small mb-1"><i class="bi bi-hash"></i> @scout.Matricule</p>
+                <p class="text-muted-custom small mb-1"><i class="bi bi-calendar"></i> @scout.DateNaissance.ToString("dd/MM/yyyy")</p>
+                @if (scout.Groupe != null)
+                {
+                    <p class="text-muted-custom small mb-1"><i class="bi bi-building"></i> @scout.Groupe.Nom</p>
+                }
+                @if (scout.Branche != null)
+                {
+                    <span class="badge-3d badge-soumise">@scout.Branche.Nom</span>
+                }
+                @if (!string.IsNullOrEmpty(scout.Fonction))
+                {
+                    <span class="badge-3d badge-validee">@scout.Fonction</span>
+                }
+                <div class="mt-3">
+                    <a asp-action="FicheEnfant" asp-route-id="@scout.Id" class="btn btn-mango btn-sm">
+                        <i class="bi bi-eye"></i> Voir la fiche complète
+                    </a>
+                    <a asp-controller="Formations" asp-action="FormationsEnfant" asp-route-scoutId="@scout.Id" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-mortarboard"></i> Formations
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
+</div>

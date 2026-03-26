@@ -1,0 +1,153 @@
+@model MangoTaika.Data.Entities.ContactMessage
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+@{
+    ViewData["Title"] = "Avis et suggestions";
+    var contactEmail = Configuration["Contact:Email"] ?? "contact@mangotaika.ci";
+}
+
+<section class="feedback-hub">
+    <div class="container">
+        <div class="feedback-hub__hero">
+            <div class="feedback-hub__hero-copy">
+                <span class="feedback-hub__eyebrow"><i class="bi bi-chat-heart"></i> Expression publique</span>
+                <h1 class="feedback-hub__title">Partager un <span>avis, un commentaire ou une suggestion</span></h1>
+                <p class="feedback-hub__text">
+                    Votre retour nous aide a renforcer la qualite de l'accueil, des activites et de l'accompagnement
+                    propose par le District Scout MANGO TAIKA. Vous pouvez nous transmettre ici une appreciation,
+                    une observation utile ou une suggestion d'amelioration.
+                </p>
+
+                <div class="feedback-hub__hero-actions">
+                    <a asp-action="Contact" class="btn btn-mango">
+                        <i class="bi bi-envelope-paper"></i> Nous contacter
+                    </a>
+                    <a asp-action="LivreDor" class="btn btn-outline-or">
+                        <i class="bi bi-book"></i> Voir le livre d'or
+                    </a>
+                </div>
+            </div>
+
+            <div class="feedback-hub__hero-card">
+                <img src="~/images/logo.png" alt="Logo MANGO TAIKA" class="feedback-hub__hero-logo" />
+                <div class="feedback-hub__hero-lines">
+                    <div class="feedback-hub__hero-line">
+                        <span class="feedback-hub__hero-label">Canal email</span>
+                        <strong>@contactEmail</strong>
+                    </div>
+                    <div class="feedback-hub__hero-line">
+                        <span class="feedback-hub__hero-label">Types attendus</span>
+                        <strong>Avis, commentaires, suggestions</strong>
+                    </div>
+                    <div class="feedback-hub__hero-line">
+                        <span class="feedback-hub__hero-label">Finalite</span>
+                        <strong>Amelioration continue du service au public</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mt-1">
+            <div class="col-lg-4">
+                <aside class="feedback-panel feedback-panel--info">
+                    <div class="feedback-panel__head">
+                        <h2 class="feedback-panel__title"><i class="bi bi-stars"></i> Votre retour compte</h2>
+                    </div>
+
+                    <div class="feedback-feature">
+                        <div class="feedback-feature__icon"><i class="bi bi-hand-thumbs-up"></i></div>
+                        <div class="feedback-feature__content">
+                            <span class="feedback-feature__label">Avis</span>
+                            <p class="feedback-feature__text">Partagez une appreciation globale sur votre experience avec le district ou ses services.</p>
+                        </div>
+                    </div>
+
+                    <div class="feedback-feature">
+                        <div class="feedback-feature__icon"><i class="bi bi-chat-left-text"></i></div>
+                        <div class="feedback-feature__content">
+                            <span class="feedback-feature__label">Commentaire</span>
+                            <p class="feedback-feature__text">Ajoutez un retour plus detaille sur un point precis, une interaction ou une situation vecue.</p>
+                        </div>
+                    </div>
+
+                    <div class="feedback-feature">
+                        <div class="feedback-feature__icon"><i class="bi bi-lightbulb"></i></div>
+                        <div class="feedback-feature__content">
+                            <span class="feedback-feature__label">Suggestion</span>
+                            <p class="feedback-feature__text">Proposez une idee utile pour ameliorer l'accueil, les activites, la communication ou l'orientation.</p>
+                        </div>
+                    </div>
+
+                    <div class="feedback-note">
+                        <div class="feedback-note__title">Conseil</div>
+                        <p>
+                            Un message clair, respectueux et precis facilite le traitement de votre retour et nous aide
+                            a mieux comprendre votre besoin ou votre recommandation.
+                        </p>
+                    </div>
+                </aside>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="feedback-panel feedback-panel--form">
+                    <div class="feedback-panel__head">
+                        <h2 class="feedback-panel__title"><i class="bi bi-pencil-square"></i> Soumettre votre retour</h2>
+                        <p class="feedback-panel__subtitle">Choisissez le type de retour puis redigez votre message.</p>
+                    </div>
+
+                    <form asp-action="Avis" method="post" class="form-modern feedback-form">
+                        <div style="position:absolute;left:-9999px;" aria-hidden="true">
+                            <input type="text" name="Website" tabindex="-1" autocomplete="off" />
+                        </div>
+
+                        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label asp-for="Nom" class="form-label">Nom complet</label>
+                                <input asp-for="Nom" class="form-control" placeholder="Votre nom et prenoms" />
+                                <span asp-validation-for="Nom" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Email" class="form-label">Email</label>
+                                <input asp-for="Email" class="form-control" type="email" placeholder="votre@email.com" />
+                                <span asp-validation-for="Email" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-5">
+                                <label asp-for="Sujet" class="form-label">Type de retour</label>
+                                <select asp-for="Sujet" class="form-select">
+                                    <option value="Avis">Avis</option>
+                                    <option value="Commentaire">Commentaire</option>
+                                    <option value="Suggestion">Suggestion</option>
+                                </select>
+                            </div>
+                            <div class="col-md-7">
+                                <label class="form-label">Rappel</label>
+                                <div class="feedback-form__hint">
+                                    Merci de rester precis, constructif et respectueux dans votre message.
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label asp-for="Message" class="form-label">Votre message</label>
+                                <textarea asp-for="Message" class="form-control" rows="7" placeholder="Partagez votre avis, votre commentaire ou votre suggestion..."></textarea>
+                                <span asp-validation-for="Message" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="feedback-form__consent">
+                            <partial name="_ConsentementARTCI" />
+                        </div>
+
+                        <div class="feedback-form__actions">
+                            <button type="submit" class="btn btn-mango">
+                                <i class="bi bi-send-fill"></i> Envoyer
+                            </button>
+                            <a asp-action="WhatsApp" class="btn btn-outline-or">
+                                <i class="bi bi-whatsapp"></i> Preferer WhatsApp
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

@@ -1,0 +1,143 @@
+@model MangoTaika.Data.Entities.ContactMessage
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+@{
+    ViewData["Title"] = "Contactez-nous";
+    var contactEmail = Configuration["Contact:Email"] ?? "contact@mangotaika.ci";
+    var rawWhatsApp = Configuration["Contact:WhatsAppNumber"] ?? "2250759013291";
+    var displayWhatsApp = rawWhatsApp.StartsWith("+") ? rawWhatsApp : $"+{rawWhatsApp}";
+}
+
+<section class="contact-hub">
+    <div class="container">
+        <div class="contact-hub__hero">
+            <div class="contact-hub__hero-copy">
+                <span class="contact-hub__eyebrow"><i class="bi bi-envelope-paper"></i> Contact public</span>
+                <h1 class="contact-hub__title">Entrer en relation avec le <span>District Scout MANGO TAIKA</span></h1>
+                <p class="contact-hub__text">
+                    Pour toute demande d'information, d'orientation, d'inscription ou de partenariat, choisissez
+                    le canal qui vous convient le mieux. Notre equipe vous repondra avec le niveau d'accompagnement
+                    adapte a votre besoin.
+                </p>
+
+                <div class="contact-hub__hero-actions">
+                    <a href="mailto:@contactEmail" class="btn btn-mango">
+                        <i class="bi bi-envelope-fill"></i> Ecrire par email
+                    </a>
+                    <a asp-action="WhatsApp" class="btn btn-outline-or">
+                        <i class="bi bi-whatsapp"></i> Ouvrir WhatsApp
+                    </a>
+                </div>
+            </div>
+
+            <div class="contact-hub__hero-card">
+                <img src="~/images/logo.png" alt="Logo MANGO TAIKA" class="contact-hub__hero-logo" />
+                <div class="contact-hub__hero-lines">
+                    <div class="contact-hub__hero-line">
+                        <span class="contact-hub__hero-label">Email officiel</span>
+                        <strong>@contactEmail</strong>
+                    </div>
+                    <div class="contact-hub__hero-line">
+                        <span class="contact-hub__hero-label">WhatsApp</span>
+                        <strong>@displayWhatsApp</strong>
+                    </div>
+                    <div class="contact-hub__hero-line">
+                        <span class="contact-hub__hero-label">Usages</span>
+                        <strong>Informations, familles, inscriptions</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mt-1">
+            <div class="col-lg-4">
+                <aside class="contact-panel contact-panel--info">
+                    <div class="contact-panel__head">
+                        <h2 class="contact-panel__title"><i class="bi bi-chat-square-dots"></i> Canaux de contact</h2>
+                    </div>
+
+                    <div class="contact-channel">
+                        <div class="contact-channel__icon"><i class="bi bi-envelope-fill"></i></div>
+                        <div class="contact-channel__content">
+                            <span class="contact-channel__label">Email</span>
+                            <a href="mailto:@contactEmail" class="contact-channel__value">@contactEmail</a>
+                            <p class="contact-channel__text">Pour les demandes detaillees, les messages formels et le suivi ecrit.</p>
+                        </div>
+                    </div>
+
+                    <div class="contact-channel">
+                        <div class="contact-channel__icon"><i class="bi bi-whatsapp"></i></div>
+                        <div class="contact-channel__content">
+                            <span class="contact-channel__label">WhatsApp</span>
+                            <span class="contact-channel__value">@displayWhatsApp</span>
+                            <p class="contact-channel__text">Pour un contact plus rapide avec choix du motif avant ouverture de la conversation.</p>
+                            <a asp-action="WhatsApp" class="btn btn-outline-or btn-sm mt-2">
+                                <i class="bi bi-arrow-up-right-circle"></i> Choisir un parcours
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="contact-note">
+                        <div class="contact-note__title">Bon a savoir</div>
+                        <p>
+                            Pour accelerer la reponse, merci de preciser votre sujet, votre commune et, si besoin,
+                            l'age de l'enfant concerne ou la nature de votre demande.
+                        </p>
+                    </div>
+                </aside>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="contact-panel contact-panel--form">
+                    <div class="contact-panel__head">
+                        <h2 class="contact-panel__title"><i class="bi bi-send-fill"></i> Envoyer un message</h2>
+                        <p class="contact-panel__subtitle">Utilisez ce formulaire pour nous transmettre votre demande ou votre suggestion.</p>
+                    </div>
+
+                    <form asp-action="Contact" method="post" class="form-modern contact-form">
+                        <div style="position:absolute;left:-9999px;" aria-hidden="true">
+                            <input type="text" name="Website" tabindex="-1" autocomplete="off" />
+                        </div>
+
+                        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label asp-for="Nom" class="form-label">Nom complet</label>
+                                <input asp-for="Nom" class="form-control" placeholder="Votre nom et prenoms" />
+                                <span asp-validation-for="Nom" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Email" class="form-label">Email</label>
+                                <input asp-for="Email" class="form-control" type="email" placeholder="votre@email.com" />
+                                <span asp-validation-for="Email" class="text-danger small"></span>
+                            </div>
+                            <div class="col-12">
+                                <label asp-for="Sujet" class="form-label">Sujet</label>
+                                <input asp-for="Sujet" class="form-control" placeholder="Objet de votre message" />
+                                <span asp-validation-for="Sujet" class="text-danger small"></span>
+                            </div>
+                            <div class="col-12">
+                                <label asp-for="Message" class="form-label">Message</label>
+                                <textarea asp-for="Message" class="form-control" rows="7" placeholder="Precisez votre demande, votre besoin ou votre suggestion..."></textarea>
+                                <span asp-validation-for="Message" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="contact-form__consent">
+                            <partial name="_ConsentementARTCI" />
+                        </div>
+
+                        <div class="contact-form__actions">
+                            <button type="submit" class="btn btn-mango">
+                                <i class="bi bi-send-fill"></i> Envoyer le message
+                            </button>
+                            <a asp-action="WhatsApp" class="btn btn-outline-or">
+                                <i class="bi bi-whatsapp"></i> Preferer WhatsApp
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

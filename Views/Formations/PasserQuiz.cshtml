@@ -1,0 +1,206 @@
+@model MangoTaika.DTOs.QuizPassagePageDto
+@{
+    ViewData["Title"] = "Quiz : " + Model.Quiz.Titre;
+    Layout = "_LayoutAdmin";
+}
+
+<div class="lms-eval-room">
+    <section class="eval-room-hero">
+        <div class="eval-room-hero__main">
+            <span class="eval-room-hero__eyebrow">
+                <i class="bi bi-patch-check"></i> Salle d'evaluation
+            </span>
+            <h1 class="eval-room-hero__title">@Model.Quiz.Titre</h1>
+            <p class="eval-room-hero__text">
+                Cette evaluation s'inscrit dans votre parcours de formation. Repondez avec attention et gardez le cap sur les consignes du module.
+            </p>
+            <div class="eval-room-hero__facts">
+                <div class="eval-room-fact">
+                    <span>Seuil de reussite</span>
+                    <strong>@Model.Quiz.NoteMinimale%</strong>
+                </div>
+                <div class="eval-room-fact">
+                    <span>Questions</span>
+                    <strong>@Model.Quiz.Questions.Count</strong>
+                </div>
+                <div class="eval-room-fact">
+                    <span>Tentatives</span>
+                    <strong>@Model.NombreTentatives</strong>
+                </div>
+                <div class="eval-room-fact">
+                    <span>Restantes</span>
+                    <strong>@(Model.NombreTentativesRestantes.HasValue ? Model.NombreTentativesRestantes.Value.ToString() : "Illimite")</strong>
+                </div>
+            </div>
+        </div>
+
+        <aside class="eval-room-hero__side">
+            <div class="eval-room-board">
+                <div class="eval-room-board__label">Etat de l'evaluation</div>
+                <strong>@Model.EtatEvaluation</strong>
+                <small>
+                    @if (Model.Quiz.DateOuvertureDisponibilite.HasValue || Model.Quiz.DateFermetureDisponibilite.HasValue)
+                    {
+                        <span>
+                            Fenetre :
+                            @(Model.Quiz.DateOuvertureDisponibilite?.ToString("dd/MM/yyyy HH:mm") ?? "immediate")
+                            -
+                            @(Model.Quiz.DateFermetureDisponibilite?.ToString("dd/MM/yyyy HH:mm") ?? "sans fin")
+                        </span>
+                    }
+                    else
+                    {
+                        <span>Evaluation disponible selon les regles pedagogiques du parcours.</span>
+                    }
+                </small>
+                <a asp-action="Suivre" asp-route-id="@Model.FormationId" class="btn btn-outline-light btn-sm mt-3">
+                    <i class="bi bi-arrow-left"></i> Retour au parcours
+                </a>
+            </div>
+        </aside>
+    </section>
+
+    <div class="eval-room-grid">
+        <div class="eval-room-grid__main">
+            @if (!string.IsNullOrWhiteSpace(Model.MessageAcces))
+            {
+                <div class="alert @(Model.EstLectureSeule ? "alert-warning" : "alert-info") mb-4">
+                    <i class="bi bi-info-circle"></i> @Model.MessageAcces
+                </div>
+            }
+
+            @if (Model.PeutSoumettre)
+            {
+                <form asp-action="SoumettreQuiz" method="post" class="eval-room-form">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="quizId" value="@Model.Quiz.Id" />
+                    <input type="hidden" name="formationId" value="@Model.FormationId" />
+
+                    @foreach (var question in Model.Quiz.Questions.OrderBy(q => q.Ordre))
+                    {
+                        <div class="eval-question">
+                            <div class="eval-question__head">
+                                <span class="eval-question__index">Question @question.Ordre</span>
+                                <h2>@question.Enonce</h2>
+                            </div>
+
+                            <div class="eval-question__options">
+                                @foreach (var reponse in question.Reponses.OrderBy(r => r.Ordre))
+                                {
+                                    <label class="eval-option" for="r-@reponse.Id">
+                                        <input class="form-check-input" type="radio" name="q_@question.Id" value="@reponse.Id" id="r-@reponse.Id" required />
+                                        <span>@reponse.Texte</span>
+                                    </label>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <div class="eval-room-form__actions">
+                        <button type="submit" class="btn btn-mango btn-lg">
+                            <i class="bi bi-send"></i> Soumettre l'evaluation
+                        </button>
+                    </div>
+                </form>
+            }
+            else
+            {
+                <div class="eval-room-preview">
+                    <div class="eval-room-preview__head">
+                        <h2><i class="bi bi-lock"></i> Evaluation visible, soumission en attente</h2>
+                        <p>
+                            Le questionnaire reste consultable pour vous preparer, mais la soumission restera bloquee tant que les conditions du parcours ne sont pas remplies.
+                        </p>
+                    </div>
+
+                    @foreach (var question in Model.Quiz.Questions.OrderBy(q => q.Ordre))
+                    {
+                        <div class="eval-question eval-question--preview">
+                            <div class="eval-question__head">
+                                <span class="eval-question__index">Question @question.Ordre</span>
+                                <h2>@question.Enonce</h2>
+                            </div>
+                            <ul class="eval-question__preview-list">
+                                @foreach (var reponse in question.Reponses.OrderBy(r => r.Ordre))
+                                {
+                                    <li>@reponse.Texte</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <aside class="eval-room-grid__side">
+            <section class="classroom-panel classroom-panel--compact">
+                <div class="classroom-panel__head">
+                    <div>
+                        <span class="classroom-panel__eyebrow">Mon bilan</span>
+                        <h2 class="classroom-panel__title">Suivi de l'evaluation</h2>
+                    </div>
+                </div>
+
+                <div class="classroom-side-stack">
+                    <div class="classroom-side-card">
+                        <span class="classroom-side-card__label">Etat</span>
+                        <strong>@Model.EtatEvaluation</strong>
+                        <small>Meilleur score : @(Model.MeilleurScore.HasValue ? $"{Model.MeilleurScore}%" : "Aucun score disponible")</small>
+                    </div>
+                    @if (Model.Quiz.NombreTentativesMax.HasValue)
+                    {
+                        <div class="classroom-side-card">
+                            <span class="classroom-side-card__label">Tentatives autorisees</span>
+                            <strong>@Model.Quiz.NombreTentativesMax.Value</strong>
+                            <small>Le nombre de soumissions peut etre limite par le parcours.</small>
+                        </div>
+                    }
+                    @if (Model.Quiz.DateOuvertureDisponibilite.HasValue || Model.Quiz.DateFermetureDisponibilite.HasValue)
+                    {
+                        <div class="classroom-side-card">
+                            <span class="classroom-side-card__label">Fenetre d'evaluation</span>
+                            <strong>
+                                @(Model.Quiz.DateOuvertureDisponibilite?.ToString("dd/MM/yyyy HH:mm") ?? "immediate")
+                            </strong>
+                            <small>Jusqu'au @(Model.Quiz.DateFermetureDisponibilite?.ToString("dd/MM/yyyy HH:mm") ?? "sans fin")</small>
+                        </div>
+                    }
+                </div>
+            </section>
+
+            <section class="classroom-panel classroom-panel--compact">
+                <div class="classroom-panel__head">
+                    <div>
+                        <span class="classroom-panel__eyebrow">Historique</span>
+                        <h2 class="classroom-panel__title">Tentatives precedentes</h2>
+                    </div>
+                </div>
+
+                @if (!Model.Tentatives.Any())
+                {
+                    <div class="classroom-side-card">
+                        <span class="classroom-side-card__label">Aucune tentative</span>
+                        <strong>Pas encore d'essai</strong>
+                        <small>Votre premiere soumission apparaitra ici.</small>
+                    </div>
+                }
+                else
+                {
+                    <div class="classroom-notices">
+                        @foreach (var tentative in Model.Tentatives)
+                        {
+                            <div class="classroom-notice is-unread">
+                                <div class="classroom-notice__top">
+                                    <strong>@tentative.Score%</strong>
+                                    <span>@tentative.DateTentative.ToString("dd/MM/yyyy HH:mm")</span>
+                                </div>
+                                <p>@(tentative.Reussi ? "Tentative validee." : "Tentative a retravailler.")</p>
+                                <small>@(tentative.Reussi ? "Validation obtenue" : "Nouvelle tentative possible si autorisee")</small>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+        </aside>
+    </div>
+</div>

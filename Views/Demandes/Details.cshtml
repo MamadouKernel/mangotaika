@@ -1,0 +1,137 @@
+@model DemandeAutorisationDto
+@{
+    ViewData["Title"] = Model.Titre;
+    Layout = "_LayoutAdmin";
+    var canValidate = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+    var canSubmit = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire") || User.IsInRole("Scout");
+    var badgeClass = Model.Statut switch {
+        StatutDemande.Initialisee => "badge-brouillon",
+        StatutDemande.Soumise => "badge-soumise",
+        StatutDemande.EnRevision => "badge-archivee",
+        StatutDemande.Validee => "badge-validee",
+        StatutDemande.Rejetee => "badge-rejetee",
+        _ => "badge-brouillon"
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-file-earmark-check-fill text-or"></i> @Model.Titre</h2>
+    <a asp-action="Index" class="btn btn-outline-or" title="Retour"><i class="bi bi-arrow-left"></i></a>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-8">
+        <div class="card-3d p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="badge-3d @badgeClass" style="font-size:0.85rem;">@Model.Statut</span>
+                <small class="text-muted-custom">Creee le @Model.DateCreation.ToString("dd/MM/yyyy HH:mm")</small>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6"><p><span class="text-muted-custom">Type :</span> @Model.TypeActivite</p></div>
+                <div class="col-md-6"><p><span class="text-muted-custom">Groupe :</span> @(Model.NomGroupe ?? "-")</p></div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-4"><p><span class="text-muted-custom">Date :</span> @Model.DateActivite.ToString("dd/MM/yyyy")@(Model.DateFin.HasValue ? $" - {Model.DateFin:dd/MM/yyyy}" : "")</p></div>
+                <div class="col-md-4"><p><span class="text-muted-custom">Lieu :</span> @(Model.Lieu ?? "-")</p></div>
+                <div class="col-md-4"><p><span class="text-muted-custom">Participants :</span> @Model.NombreParticipants</p></div>
+            </div>
+            @if (!string.IsNullOrEmpty(Model.Description))
+            {
+                <p><span class="text-muted-custom">Description :</span><br/>@Model.Description</p>
+            }
+            @if (!string.IsNullOrEmpty(Model.Objectifs))
+            {
+                <p><span class="text-muted-custom">Objectifs :</span><br/>@Model.Objectifs</p>
+            }
+            @if (!string.IsNullOrEmpty(Model.Budget))
+            {
+                <p><span class="text-muted-custom">Budget :</span> @Model.Budget</p>
+            }
+            @if (!string.IsNullOrEmpty(Model.MotifRejet))
+            {
+                <div class="alert" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:12px;color:#ef4444;">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Motif de rejet : @Model.MotifRejet
+                </div>
+            }
+
+            <hr style="border-color:var(--gris-border);" />
+            <p class="text-muted-custom small mb-1">Demandeur : @(Model.NomDemandeur ?? "-")</p>
+            @if (Model.NomValideur != null)
+            {
+                <p class="text-muted-custom small mb-0">Valide par : @Model.NomValideur le @Model.DateValidation?.ToString("dd/MM/yyyy")</p>
+            }
+
+            <div class="d-flex gap-2 mt-3 flex-wrap">
+                @if (canSubmit && (Model.Statut == StatutDemande.Initialisee || Model.Statut == StatutDemande.EnRevision))
+                {
+                    <form asp-action="Soumettre" asp-route-id="@Model.Id" method="post">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-mango" title="Soumettre"><i class="bi bi-send"></i></button>
+                    </form>
+                }
+                @if (canValidate && Model.Statut == StatutDemande.Soumise)
+                {
+                    <form asp-action="Valider" asp-route-id="@Model.Id" method="post">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-sm" title="Valider" style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:14px;padding:0.5rem 1.2rem;">
+                            <i class="bi bi-check-lg"></i>
+                        </button>
+                    </form>
+                    <form asp-action="Reviser" asp-route-id="@Model.Id" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="commentaire" value="Veuillez reviser votre demande" />
+                        <button type="submit" class="btn btn-sm" title="Reviser" style="background:rgba(234,179,8,0.2);color:#eab308;border:1px solid rgba(234,179,8,0.3);border-radius:14px;padding:0.5rem 1.2rem;">
+                            <i class="bi bi-arrow-repeat"></i>
+                        </button>
+                    </form>
+                    <form asp-action="Rejeter" asp-route-id="@Model.Id" method="post" onsubmit="var m=prompt('Motif du rejet :');if(!m)return false;this.querySelector('[name=motif]').value=m;">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="motif" />
+                        <button type="submit" class="btn btn-sm" title="Rejeter" style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;padding:0.5rem 1.2rem;">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </form>
+                }
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.TdrContenu))
+        {
+            <div class="card-3d p-4 mt-4">
+                <h5 class="text-or mb-3"><i class="bi bi-file-text"></i> Termes de Reference (TDR)</h5>
+                <pre style="white-space:pre-wrap;font-family:'Poppins',sans-serif;font-size:0.85rem;color:var(--texte-secondaire);background:var(--gris-bg);padding:1.5rem;border-radius:12px;">@Model.TdrContenu</pre>
+            </div>
+        }
+    </div>
+
+    <div class="col-md-4">
+        <div class="card-3d p-4">
+            <h5 class="text-or mb-3"><i class="bi bi-clock-history"></i> Suivi de la demande</h5>
+            @if (Model.Suivis.Any())
+            {
+                <div style="position:relative;padding-left:20px;">
+                    <div style="position:absolute;left:8px;top:0;bottom:0;width:2px;background:var(--gris-border);"></div>
+                    @foreach (var s in Model.Suivis)
+                    {
+                        var dotColor = s.NouveauStatut switch {
+                            StatutDemande.Validee => "#34d399",
+                            StatutDemande.Rejetee => "#f87171",
+                            StatutDemande.Soumise => "#597537",
+                            _ => "#94a3b8"
+                        };
+                        <div class="mb-3" style="position:relative;">
+                            <div style="position:absolute;left:-16px;top:4px;width:12px;height:12px;border-radius:50%;background:@dotColor;border:2px solid #fff;box-shadow:0 0 0 2px @dotColor;"></div>
+                            <p class="mb-0" style="font-size:0.8rem;font-weight:600;color:var(--texte);">@s.NouveauStatut</p>
+                            <p class="mb-0 text-muted-custom" style="font-size:0.75rem;">@s.Commentaire</p>
+                            <p class="mb-0" style="font-size:0.7rem;color:var(--gris-clair);">@s.Auteur - @s.Date.ToString("dd/MM/yyyy HH:mm")</p>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="text-muted-custom small">Aucun suivi</p>
+            }
+        </div>
+    </div>
+</div>

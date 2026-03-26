@@ -1,0 +1,81 @@
+@model BrancheDto
+@{
+    ViewData["Title"] = "Modifier la branche";
+    Layout = "_LayoutAdmin";
+    var groupes = ViewBag.Groupes as List<MangoTaika.Data.Entities.Groupe> ?? new();
+}
+
+<h2 class="section-title mb-1"><i class="bi bi-diagram-3-fill text-or"></i> Modifier la <span class="accent">branche</span></h2>
+<div class="section-divider"></div>
+
+<div class="card-3d p-4 mt-3" style="max-width:600px;">
+    <form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="form-modern">
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+        <div class="mb-3">
+            <label class="form-label">Nom de la branche</label>
+            <input name="Nom" class="form-control" value="@Model.Nom" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea name="Description" class="form-control" rows="3">@Model.Description</textarea>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Âge minimum</label>
+                <input name="AgeMin" class="form-control" type="number" value="@Model.AgeMin" />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Âge maximum</label>
+                <input name="AgeMax" class="form-control" type="number" value="@Model.AgeMax" />
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Groupe</label>
+            <select name="GroupeId" id="groupeSelect" class="form-select">
+                <option value="">— Sélectionner un groupe —</option>
+                @foreach (var g in groupes)
+                {
+                    <option value="@g.Id" selected="@(g.Id == Model.GroupeId)">@g.Nom</option>
+                }
+            </select>
+        </div>
+        <div class="mb-4">
+            <label class="form-label">Chef d'unité</label>
+            <select name="ChefUniteId" id="chefSelect" class="form-select" data-current="@Model.ChefUniteId">
+                <option value="">— Chargement... —</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-mango" title="Enregistrer"><i class="bi bi-check-lg"></i></button>
+        <a asp-action="Index" class="btn btn-outline-or ms-2" title="Annuler"><i class="bi bi-x-lg"></i></a>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+    function loadScouts(groupeId, selectedId) {
+        var chefSelect = document.getElementById('chefSelect');
+        if (!groupeId) {
+            chefSelect.innerHTML = '<option value="">— Sélectionner d\'abord un groupe —</option>';
+            return;
+        }
+        chefSelect.innerHTML = '<option value="">Chargement...</option>';
+        fetch('/Branches/GetScoutsByGroupe?groupeId=' + groupeId)
+            .then(r => r.json())
+            .then(data => {
+                var html = '<option value="">— Aucun (pas de chef) —</option>';
+                data.forEach(s => {
+                    var sel = (selectedId && s.id == selectedId) ? ' selected' : '';
+                    html += '<option value="' + s.id + '"' + sel + '>' + s.nom + '</option>';
+                });
+                chefSelect.innerHTML = html;
+            });
+    }
+    document.getElementById('groupeSelect').addEventListener('change', function () {
+        loadScouts(this.value, null);
+    });
+    // Charger au démarrage si un groupe est déjà sélectionné
+    var initGroupe = document.getElementById('groupeSelect').value;
+    var initChef = document.getElementById('chefSelect').dataset.current;
+    if (initGroupe) loadScouts(initGroupe, initChef);
+</script>
+}

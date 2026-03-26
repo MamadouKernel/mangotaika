@@ -1,0 +1,101 @@
+@model IEnumerable<MangoTaika.Data.Entities.SupportKnowledgeArticle>
+@{
+    ViewData["Title"] = "Base de connaissances";
+    Layout = "_LayoutAdmin";
+    var canManage = (bool)(ViewBag.CanManage ?? false);
+    var categories = ViewBag.Categories as IEnumerable<string> ?? Enumerable.Empty<string>();
+    var recherche = ViewBag.Recherche as string;
+    var categorie = ViewBag.Categorie as string;
+}
+
+<div class="support-shell">
+    <section class="support-hero">
+        <div class="support-hero__inner">
+            <div>
+                <span class="support-hero__eyebrow"><i class="bi bi-journal-text"></i> Knowledge</span>
+                <h2 class="support-hero__title">Base de <span class="accent">connaissances</span></h2>
+                <p class="support-hero__text">Bibliothèque de résolutions, procédures et réponses standard pour accélérer le support tout en restant strictement dans les couleurs Mango Taika.</p>
+            </div>
+            @if (canManage)
+            {
+                <div class="support-hero__actions">
+                    <a asp-action="Create" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Nouvel article</a>
+                </div>
+            }
+        </div>
+    </section>
+
+    <div class="support-search-card">
+        <form method="get" class="support-filter-grid form-modern" style="grid-template-columns:2.4fr 1fr auto;">
+            <div>
+                <label class="form-label small text-muted-custom">Recherche</label>
+                <input type="text" name="recherche" value="@recherche" class="form-control form-control-sm" placeholder="Titre, resume, mots-cles..." />
+            </div>
+            <div>
+                <label class="form-label small text-muted-custom">Categorie</label>
+                <select name="categorie" class="form-select form-select-sm">
+                    <option value="">Toutes</option>
+                    @foreach (var cat in categories)
+                    {
+                        <option value="@cat" selected="@(categorie == cat)">@cat</option>
+                    }
+                </select>
+            </div>
+            <button type="submit" class="btn btn-mango btn-sm"><i class="bi bi-search"></i></button>
+        </form>
+    </div>
+
+    <section class="support-ticket-grid">
+        @foreach (var article in Model)
+        {
+            <article class="support-resource-card">
+                <div class="support-resource-card__head">
+                    <div>
+                        <span class="support-resource-card__code"><i class="bi bi-journal-bookmark"></i> @article.Categorie</span>
+                        <h5 class="support-resource-card__title">@article.Titre</h5>
+                    </div>
+                    @if (canManage)
+                    {
+                        <span class="badge-3d @(article.EstPublie ? "badge-validee" : "badge-brouillon")">@(article.EstPublie ? "Publie" : "Brouillon")</span>
+                    }
+                </div>
+                <div class="support-resource-card__body">@article.Resume</div>
+                <div class="support-resource-card__stats">
+                    <div class="support-resource-card__stat">
+                        <span class="support-resource-card__stat-label">Maj</span>
+                        <span class="support-resource-card__stat-value">@((article.DateMiseAJour ?? article.DateCreation).ToString("dd/MM/yy"))</span>
+                    </div>
+                    <div class="support-resource-card__stat">
+                        <span class="support-resource-card__stat-label">Etat</span>
+                        <span class="support-resource-card__stat-value">@(article.EstPublie ? "Public" : "Interne")</span>
+                    </div>
+                    <div class="support-resource-card__stat">
+                        <span class="support-resource-card__stat-label">Mots-cles</span>
+                        <span class="support-resource-card__stat-value">@(string.IsNullOrWhiteSpace(article.MotsCles) ? "-" : article.MotsCles.Split(',').Length.ToString())</span>
+                    </div>
+                </div>
+                <div class="support-resource-card__footer">
+                    <a asp-action="Details" asp-route-id="@article.Id" class="btn btn-sm btn-outline-or"><i class="bi bi-eye"></i></a>
+                    <span class="badge-3d badge-soumise">@article.Categorie</span>
+                    @if (canManage)
+                    {
+                        <a asp-action="Edit" asp-route-id="@article.Id" class="btn btn-sm btn-bleu"><i class="bi bi-pencil"></i></a>
+                        <form asp-action="Toggle" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@article.Id" />
+                            <button type="submit" class="btn btn-sm @(article.EstPublie ? "btn-outline-or" : "btn-mango")">@(article.EstPublie ? "Brouillon" : "Publier")</button>
+                        </form>
+                    }
+                </div>
+            </article>
+        }
+
+        @if (!Model.Any())
+        {
+            <div class="support-empty" style="grid-column:1 / -1;">
+                <i class="bi bi-journal-x" style="font-size:2rem;opacity:0.3;"></i>
+                <div class="mt-2">Aucun article ne correspond aux filtres.</div>
+            </div>
+        }
+    </section>
+</div>

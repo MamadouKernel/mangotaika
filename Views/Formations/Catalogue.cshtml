@@ -1,0 +1,283 @@
+@model List<MangoTaika.DTOs.FormationDto>
+@{
+    ViewData["Title"] = "Catalogue des formations";
+    Layout = "_LayoutAdmin";
+
+    var inscrites = ViewBag.FormationsInscrites as HashSet<Guid> ?? new HashSet<Guid>();
+    var isScout = User.IsInRole("Scout");
+    var totalCertifiantes = Model.Count(f => f.DelivreBadge || f.DelivreAttestation || f.DelivreCertificat);
+    var totalSelfPaced = Model.Count(f => f.EstSessionSelfPaced);
+    var totalAnimees = Model.Count(f => f.NombreDiscussions > 0 || f.NombreAnnoncesPubliees > 0);
+}
+
+<div class="lms-campus">
+    <section class="campus-hero">
+        <div class="campus-hero__main">
+            <span class="campus-hero__eyebrow">
+                <i class="bi bi-buildings"></i> Campus LMS
+            </span>
+            <h1 class="campus-hero__title">Catalogue des formations</h1>
+            <p class="campus-hero__text">
+                Explorez les parcours comme un veritable campus d'apprentissage: sessions, prerequis, activite de cours, jalons a venir et certifications.
+            </p>
+            <div class="campus-hero__stats">
+                <div class="campus-stat">
+                    <span>Parcours publies</span>
+                    <strong>@Model.Count</strong>
+                </div>
+                <div class="campus-stat">
+                    <span>Certifiants</span>
+                    <strong>@totalCertifiantes</strong>
+                </div>
+                <div class="campus-stat">
+                    <span>A votre rythme</span>
+                    <strong>@totalSelfPaced</strong>
+                </div>
+                <div class="campus-stat">
+                    <span>Cours actifs</span>
+                    <strong>@totalAnimees</strong>
+                </div>
+            </div>
+        </div>
+
+        <aside class="campus-hero__side">
+            <div class="campus-hero-card">
+                <div class="campus-hero-card__label">Orientation</div>
+                <strong>@(isScout ? "Choisissez votre prochain parcours" : "Parcourez l'offre de formation")</strong>
+                <small>
+                    @(isScout
+                        ? "Les prerequis, la progression et la vie de classe sont visibles avant l'inscription."
+                        : "Consultez les parcours, leurs sessions et leur dynamique pedagogique.")
+                </small>
+            </div>
+        </aside>
+    </section>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <section class="classroom-panel">
+        <div class="classroom-panel__head">
+            <div>
+                <span class="classroom-panel__eyebrow">Recherche campus</span>
+                <h2 class="classroom-panel__title">Trouver un parcours</h2>
+            </div>
+        </div>
+
+        <form method="get" class="campus-filter-grid">
+            <div>
+                <label class="form-label">Recherche</label>
+                <input type="text" name="q" value="@ViewBag.Recherche" class="form-control" placeholder="Titre, description, auteur..." />
+            </div>
+            <div>
+                <label class="form-label">Niveau</label>
+                <select name="niveau" class="form-select">
+                    <option value="">Tous</option>
+                    @if (string.Equals((string?)ViewBag.Niveau, "Debutant", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <option value="Debutant" selected="selected">Debutant</option>
+                    }
+                    else
+                    {
+                        <option value="Debutant">Debutant</option>
+                    }
+                    @if (string.Equals((string?)ViewBag.Niveau, "Intermediaire", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <option value="Intermediaire" selected="selected">Intermediaire</option>
+                    }
+                    else
+                    {
+                        <option value="Intermediaire">Intermediaire</option>
+                    }
+                    @if (string.Equals((string?)ViewBag.Niveau, "Avance", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <option value="Avance" selected="selected">Avance</option>
+                    }
+                    else
+                    {
+                        <option value="Avance">Avance</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="form-label">Session</label>
+                <select name="session" class="form-select">
+                    <option value="">Toutes</option>
+                    @if (string.Equals((string?)ViewBag.Session, "selfpaced", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <option value="selfpaced" selected="selected">A votre rythme</option>
+                    }
+                    else
+                    {
+                        <option value="selfpaced">A votre rythme</option>
+                    }
+                    @if (string.Equals((string?)ViewBag.Session, "upcoming", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <option value="upcoming" selected="selected">A venir</option>
+                    }
+                    else
+                    {
+                        <option value="upcoming">A venir</option>
+                    }
+                    @if (string.Equals((string?)ViewBag.Session, "open", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <option value="open" selected="selected">Ouverte</option>
+                    }
+                    else
+                    {
+                        <option value="open">Ouverte</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="form-label">Certifiant</label>
+                <select name="certifiant" class="form-select">
+                    <option value="">Tous</option>
+                    @if (ViewBag.Certifiant is true)
+                    {
+                        <option value="true" selected="selected">Oui</option>
+                    }
+                    else
+                    {
+                        <option value="true">Oui</option>
+                    }
+                </select>
+            </div>
+            <div class="campus-filter-actions">
+                <button class="btn btn-mango" type="submit"><i class="bi bi-funnel"></i> Filtrer</button>
+                <a asp-action="@(isScout ? "Catalogue" : "ConsulterCatalogue")" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </section>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">Aucune formation disponible pour le moment.</div>
+    }
+    else
+    {
+        <section class="campus-course-grid">
+            @foreach (var f in Model)
+            {
+                var estInscrit = inscrites.Contains(f.Id);
+                var descriptionCourte = string.IsNullOrWhiteSpace(f.Description)
+                    ? "Parcours structuré pour progresser avec contenus, evaluation et vie de cours."
+                    : (f.Description!.Length > 160 ? f.Description[..160] + "..." : f.Description);
+
+                <article class="campus-course-card">
+                    @if (!string.IsNullOrEmpty(f.ImageUrl))
+                    {
+                        <img src="@f.ImageUrl" class="campus-course-card__image" alt="@f.Titre" />
+                    }
+
+                    <div class="campus-course-card__body">
+                        <div class="campus-course-card__badges">
+                            <span class="badge bg-info">@f.Niveau</span>
+                            <span class="badge bg-secondary">@f.DureeEstimeeHeures h</span>
+                            <span class="badge bg-primary">@f.NombreModules modules</span>
+                            @if (!string.IsNullOrWhiteSpace(f.SessionStatut))
+                            {
+                                <span class="badge @(f.EstSessionSelfPaced ? "bg-success" : "bg-dark")">@f.SessionStatut</span>
+                            }
+                            @if (f.DelivreBadge || f.DelivreAttestation || f.DelivreCertificat)
+                            {
+                                <span class="badge bg-warning text-dark">Certifiant</span>
+                            }
+                        </div>
+
+                        <h2 class="campus-course-card__title">@f.Titre</h2>
+                        <p class="campus-course-card__text">@descriptionCourte</p>
+
+                        <div class="campus-course-card__facts">
+                            <div>
+                                <span>Session</span>
+                                <strong>@(string.IsNullOrWhiteSpace(f.SessionTitre) ? "Session a definir" : f.SessionTitre)</strong>
+                            </div>
+                            <div>
+                                <span>Auteur</span>
+                                <strong>@f.NomAuteur</strong>
+                            </div>
+                        </div>
+
+                        <div class="campus-course-card__meta">
+                            @if (!string.IsNullOrEmpty(f.NomBrancheCible))
+                            {
+                                <div><i class="bi bi-diagram-3"></i> Branche : @f.NomBrancheCible</div>
+                            }
+                            @if (f.NombreAnnoncesPubliees > 0)
+                            {
+                                <div><i class="bi bi-megaphone"></i> @f.NombreAnnoncesPubliees annonce(s) de cours</div>
+                            }
+                            @if (f.NombreDiscussions > 0)
+                            {
+                                <div><i class="bi bi-chat-dots"></i> @f.NombreDiscussions discussion(s) actives</div>
+                            }
+                            @if (f.DateDerniereActiviteForum.HasValue)
+                            {
+                                <div><i class="bi bi-clock-history"></i> Activite recente le @f.DateDerniereActiviteForum.Value.ToString("dd/MM/yyyy")</div>
+                            }
+                            @if (f.ProchainJalonDate.HasValue && !string.IsNullOrWhiteSpace(f.ProchainJalonTitre))
+                            {
+                                <div><i class="bi bi-calendar-event"></i> Prochain jalon : @f.ProchainJalonTitre le @f.ProchainJalonDate.Value.ToString("dd/MM/yyyy HH:mm")</div>
+                            }
+                        </div>
+
+                        @if (f.Prerequis.Any())
+                        {
+                            <div class="campus-course-card__prereq">
+                                <div class="campus-course-card__prereq-label">Prerequis</div>
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach (var prerequis in f.Prerequis)
+                                    {
+                                        <span class="badge @(prerequis.EstValide ? "bg-success-subtle text-success-emphasis" : "bg-secondary")">@prerequis.Titre</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="campus-course-card__footer">
+                        @if (isScout)
+                        {
+                            @if (estInscrit)
+                            {
+                                <a asp-action="Suivre" asp-route-id="@f.Id" class="btn btn-mango w-100">
+                                    <i class="bi bi-play-fill"></i> Continuer la classe
+                                </a>
+                            }
+                            else if (f.PeutSInscrire)
+                            {
+                                <form asp-action="Inscrire" method="post" class="w-100">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="formationId" value="@f.Id" />
+                                    <button class="btn btn-mango w-100"><i class="bi bi-person-plus"></i> Rejoindre ce parcours</button>
+                                </form>
+                            }
+                            else
+                            {
+                                <button class="btn btn-outline-secondary w-100" type="button" disabled><i class="bi bi-lock"></i> Prerequis requis</button>
+                                @if (!string.IsNullOrWhiteSpace(f.MessageInscription))
+                                {
+                                    <small class="d-block mt-2 text-muted">@f.MessageInscription</small>
+                                }
+                            }
+                        }
+                        else
+                        {
+                            <a asp-action="ConsulterFormation" asp-route-id="@f.Id" class="btn btn-outline-info w-100">
+                                <i class="bi bi-eye"></i> Consulter le parcours
+                            </a>
+                        }
+                    </div>
+                </article>
+            }
+        </section>
+    }
+</div>

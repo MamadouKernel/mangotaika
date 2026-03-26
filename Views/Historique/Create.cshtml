@@ -1,0 +1,59 @@
+@model MangoTaika.Data.Entities.MembreHistorique
+@{
+    ViewData["Title"] = "Ajouter un membre historique";
+    Layout = "_LayoutAdmin";
+}
+
+<h2 class="section-title mb-1"><i class="bi bi-plus-lg text-or"></i> Ajouter un <span class="accent">membre historique</span></h2>
+<div class="section-divider"></div>
+
+<div class="card-3d p-4 mt-3" style="max-width:600px;">
+    <form asp-action="Create" method="post" enctype="multipart/form-data" class="form-modern">
+        <div class="mb-3">
+            <label asp-for="Nom" class="form-label">Nom complet</label>
+            <input asp-for="Nom" class="form-control" />
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="Categorie" class="form-label">Catégorie</label>
+                <select asp-for="Categorie" asp-items="Html.GetEnumSelectList<CategorieHistorique>()" class="form-select"></select>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label asp-for="Periode" class="form-label">Période</label>
+                <input asp-for="Periode" class="form-control" placeholder="2015-2020" />
+            </div>
+            <div class="col-md-3 mb-3">
+                <label asp-for="Ordre" class="form-label">Ordre</label>
+                <input asp-for="Ordre" class="form-control" type="number" value="0" />
+            </div>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Description" class="form-label">Description <span class="text-muted-custom small">(optionnel)</span></label>
+            <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+        </div>
+        <div class="mb-4">
+            <label class="form-label">Photo <span class="text-muted-custom small">(optionnel)</span></label>
+            <input type="file" name="Photo" id="photoInput" class="form-control" accept="image/*" />
+            <div id="photoPreview" class="mt-2" style="display:none;">
+                <img id="photoPreviewImg" alt="Aperçu" style="width:100px;height:100px;object-fit:cover;border-radius:50%;border:2px solid var(--vert-pastel);" />
+            </div>
+        </div>
+        <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Enregistrer</button>
+        <a asp-action="Index" class="btn btn-outline-or ms-2">Annuler</a>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('photoInput').addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            var preview = document.getElementById('photoPreview');
+            var img = document.getElementById('photoPreviewImg');
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function(ev) { img.src = ev.target.result; preview.style.display = 'block'; };
+                reader.readAsDataURL(file);
+            } else { preview.style.display = 'none'; }
+        });
+    </script>
+}

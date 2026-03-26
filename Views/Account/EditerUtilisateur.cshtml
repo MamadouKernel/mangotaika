@@ -1,0 +1,76 @@
+@model AdminUtilisateurEditViewModel
+@{
+    ViewData["Title"] = "Modifier l'utilisateur";
+    Layout = "_LayoutAdmin";
+    var roles = ViewBag.RolesDisponibles as IReadOnlyList<string> ?? Array.Empty<string>();
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-pencil-square text-or"></i> Modifier <span class="accent">l'utilisateur</span></h2>
+    <a asp-action="UtilisateurDetails" asp-route-id="@Model.Id" class="btn btn-outline-or btn-sm" title="Fiche"><i class="bi bi-eye"></i></a>
+</div>
+
+<div class="card-3d p-4" style="max-width:640px;">
+    <form asp-action="EditerUtilisateur" asp-route-id="@Model.Id" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+        <div class="mb-3">
+            <label asp-for="Prenom" class="form-label small"></label>
+            <input asp-for="Prenom" class="form-control" />
+            <span asp-validation-for="Prenom" class="text-danger small"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Nom" class="form-label small"></label>
+            <input asp-for="Nom" class="form-control" />
+            <span asp-validation-for="Nom" class="text-danger small"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Email" class="form-label small"></label>
+            <input asp-for="Email" class="form-control" />
+            <span asp-validation-for="Email" class="text-danger small"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Telephone" class="form-label small"></label>
+            <input asp-for="Telephone" class="form-control" />
+            <span asp-validation-for="Telephone" class="text-danger small"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Role" class="form-label small"></label>
+            <select asp-for="Role" class="form-select">
+                @foreach (var r in roles)
+                {
+                    <option value="@r">@(r == "Parent" ? "Parent / Tuteur" : r)</option>
+                }
+            </select>
+            <span asp-validation-for="Role" class="text-danger small"></span>
+        </div>
+        <div class="mb-3 form-check">
+            <input asp-for="IsActive" class="form-check-input" />
+            <label asp-for="IsActive" class="form-check-label"></label>
+            <span asp-validation-for="IsActive" class="text-danger small d-block"></span>
+        </div>
+        <hr class="my-4" style="border-color:var(--gris-border);" />
+        <p class="text-muted-custom small mb-2">Réinitialisation du mot de passe (laisser vide pour ne pas changer)</p>
+        <div class="mb-3">
+            <label asp-for="NouveauMotDePasse" class="form-label small"></label>
+            <input asp-for="NouveauMotDePasse" class="form-control" autocomplete="new-password" />
+            <span asp-validation-for="NouveauMotDePasse" class="text-danger small"></span>
+        </div>
+        <div class="mb-4">
+            <label asp-for="ConfirmationMotDePasse" class="form-label small"></label>
+            <input asp-for="ConfirmationMotDePasse" class="form-control" autocomplete="new-password" />
+            <span asp-validation-for="ConfirmationMotDePasse" class="text-danger small"></span>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-mango" title="Enregistrer"><i class="bi bi-check-lg"></i></button>
+            <a asp-action="UtilisateurDetails" asp-route-id="@Model.Id" class="btn btn-outline-secondary" title="Annuler"><i class="bi bi-x-lg"></i></a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

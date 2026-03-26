@@ -1,0 +1,65 @@
+@model Competence
+@using MangoTaika.Data.Entities
+@{
+    ViewData["Title"] = "Modifier la compétence";
+    Layout = "_LayoutAdmin";
+    var scouts = ViewBag.Scouts as List<Scout> ?? new();
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-pencil text-or"></i> Modifier <span class="accent">la compétence</span></h2>
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-or btn-sm" title="Fiche"><i class="bi bi-eye"></i></a>
+</div>
+
+<div class="card-3d p-4" style="max-width:640px;">
+    <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+        <div class="mb-3">
+            <label class="form-label small" asp-for="ScoutId">Scout</label>
+            <select asp-for="ScoutId" class="form-select">
+                @foreach (var s in scouts)
+                {
+                    <option value="@s.Id">@s.Matricule — @s.Prenom @s.Nom</option>
+                }
+            </select>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Nom" class="form-label small"></label>
+            <input asp-for="Nom" class="form-control" />
+            <span asp-validation-for="Nom" class="text-danger small"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Type" class="form-label small"></label>
+            <select asp-for="Type" class="form-select" asp-items="Html.GetEnumSelectList<TypeCompetence>()"></select>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Niveau" class="form-label small"></label>
+            <select asp-for="Niveau" class="form-select">
+                <option value="Débutant">Débutant</option>
+                <option value="Intermédiaire">Intermédiaire</option>
+                <option value="Avancé">Avancé</option>
+                <option value="Expert">Expert</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label asp-for="DateObtention" class="form-label small"></label>
+            <input asp-for="DateObtention" class="form-control" type="date" />
+        </div>
+        <div class="mb-4">
+            <label asp-for="Description" class="form-label small"></label>
+            <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-mango" title="Enregistrer"><i class="bi bi-check-lg"></i></button>
+            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary" title="Annuler"><i class="bi bi-x-lg"></i></a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

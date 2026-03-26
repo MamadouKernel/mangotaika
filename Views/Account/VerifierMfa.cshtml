@@ -1,0 +1,55 @@
+@model VerifierMfaViewModel
+@{
+    ViewData["Title"] = "Vérification par SMS";
+    var smsEnvoye = TempData["SmsEnvoye"] != null;
+}
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="auth-card text-center">
+                <img src="~/images/logo.png" alt="Logo MANGO TAÏKA" class="auth-logo" />
+                <h3 class="mb-1">Vérification SMS</h3>
+                <p class="text-muted-custom small mb-4">
+                    @if (smsEnvoye)
+                    {
+                        <text>Un code a été envoyé par SMS à votre numéro de téléphone.</text>
+                    }
+                    else
+                    {
+                        <text>Cliquez ci-dessous pour recevoir votre code de connexion par SMS.</text>
+                    }
+                </p>
+
+                @if (!smsEnvoye)
+                {
+                    <form asp-action="EnvoyerCodeLogin" method="post">
+                        <input type="hidden" name="rememberMe" value="@Model.RememberMe" />
+                        <button type="submit" class="btn btn-mango w-100">
+                            <i class="bi bi-send"></i> Envoyer le code SMS
+                        </button>
+                    </form>
+                }
+
+                <form asp-action="VerifierMfa" method="post" class="form-modern text-start @(smsEnvoye ? "" : "mt-3")">
+                    <input type="hidden" asp-for="RememberMe" />
+                    <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+                    <div class="mb-4">
+                        <label asp-for="Code" class="form-label">Code à 6 chiffres</label>
+                        <input asp-for="Code" class="form-control text-center" style="font-size:1.8rem;letter-spacing:10px;" placeholder="000000" maxlength="6" autofocus />
+                        <span asp-validation-for="Code" class="text-danger small"></span>
+                    </div>
+                    <button type="submit" class="btn btn-bleu w-100">
+                        <i class="bi bi-shield-lock"></i> Vérifier
+                    </button>
+                </form>
+
+                <form asp-action="EnvoyerCodeLogin" method="post" class="mt-3">
+                    <button type="submit" class="btn btn-link text-or small p-0">
+                        <i class="bi bi-arrow-clockwise"></i> Renvoyer le code
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

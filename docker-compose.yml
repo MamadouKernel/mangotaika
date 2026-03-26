@@ -1,0 +1,59 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: mangotaika-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-MangoTaikaDb}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      TZ: ${TZ:-Africa/Abidjan}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-MangoTaikaDb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - mangotaika-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mangotaika:latest
+    container_name: mangotaika-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=${POSTGRES_DB:-MangoTaikaDb};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-change-me}
+      AdminSeed__Email: ${ADMIN_SEED_EMAIL:-admin@mangotaika.com}
+      AdminSeed__Phone: ${ADMIN_SEED_PHONE:-0000000000}
+      AdminSeed__Password: ${ADMIN_SEED_PASSWORD:-}
+      Contact__Email: ${CONTACT_EMAIL:-contact@mangotaika.ci}
+      Contact__WhatsAppNumber: ${CONTACT_WHATSAPP_NUMBER:-2250759013291}
+      SeedDemoData: ${SEED_DEMO_DATA:-false}
+      DataProtection__KeysPath: /app/data-protection-keys
+      TZ: ${TZ:-Africa/Abidjan}
+    volumes:
+      - uploads_data:/app/wwwroot/uploads
+      - data_protection_keys:/app/data-protection-keys
+    networks:
+      - mangotaika-network
+
+volumes:
+  postgres_data:
+  uploads_data:
+  data_protection_keys:
+
+networks:
+  mangotaika-network:
+    driver: bridge

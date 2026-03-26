@@ -1,0 +1,105 @@
+@model TransactionFinanciere
+@using MangoTaika.Data.Entities
+@{
+    ViewData["Title"] = "Modifier la transaction";
+    Layout = "_LayoutAdmin";
+    var groupes = ViewBag.Groupes as List<Groupe> ?? new();
+    var scouts = ViewBag.Scouts as List<Scout> ?? new();
+    var activites = ViewBag.Activites as List<Activite> ?? new();
+    var projets = ViewBag.ProjetsAGR as List<ProjetAGR> ?? new();
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-pencil text-or"></i> Modifier <span class="accent">la transaction</span></h2>
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-or btn-sm" title="Détail"><i class="bi bi-eye"></i></a>
+</div>
+
+<div class="card-3d p-4" style="max-width:720px;">
+    <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="CreateurId" />
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+        <div class="mb-3">
+            <label asp-for="Libelle" class="form-label small"></label>
+            <input asp-for="Libelle" class="form-control" />
+            <span asp-validation-for="Libelle" class="text-danger small"></span>
+        </div>
+        <div class="row g-2 mb-3">
+            <div class="col-md-4">
+                <label asp-for="Montant" class="form-label small"></label>
+                <input asp-for="Montant" class="form-control" type="number" min="0" step="100" />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Type" class="form-label small"></label>
+                <select asp-for="Type" class="form-select" asp-items="Html.GetEnumSelectList<TypeTransaction>()"></select>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Categorie" class="form-label small"></label>
+                <select asp-for="Categorie" class="form-select" asp-items="Html.GetEnumSelectList<CategorieFinance>()"></select>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label asp-for="DateTransaction" class="form-label small"></label>
+            <input asp-for="DateTransaction" class="form-control" type="datetime-local" />
+        </div>
+        <div class="mb-3">
+            <label asp-for="Reference" class="form-label small"></label>
+            <input asp-for="Reference" class="form-control" />
+        </div>
+        <div class="mb-3">
+            <label asp-for="Commentaire" class="form-label small"></label>
+            <textarea asp-for="Commentaire" class="form-control" rows="2"></textarea>
+        </div>
+        <div class="mb-3">
+            <label class="form-label small">Groupe</label>
+            <select name="GroupeId" class="form-select">
+                <option value="">—</option>
+                @foreach (var g in groupes)
+                {
+                    <option value="@g.Id" selected="@(Model.GroupeId == g.Id)">@g.Nom</option>
+                }
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label small">Scout</label>
+            <select name="ScoutId" class="form-select">
+                <option value="">—</option>
+                @foreach (var s in scouts)
+                {
+                    <option value="@s.Id" selected="@(Model.ScoutId == s.Id)">@s.Prenom @s.Nom (@s.Matricule)</option>
+                }
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label small">Activité</label>
+            <select name="ActiviteId" class="form-select">
+                <option value="">—</option>
+                @foreach (var a in activites)
+                {
+                    <option value="@a.Id" selected="@(Model.ActiviteId == a.Id)">@a.Titre</option>
+                }
+            </select>
+        </div>
+        <div class="mb-4">
+            <label class="form-label small">Projet AGR</label>
+            <select name="ProjetAGRId" class="form-select">
+                <option value="">—</option>
+                @foreach (var pr in projets)
+                {
+                    <option value="@pr.Id" selected="@(Model.ProjetAGRId == pr.Id)">@pr.Nom</option>
+                }
+            </select>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-mango" title="Enregistrer"><i class="bi bi-check-lg"></i></button>
+            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary" title="Annuler"><i class="bi bi-x-lg"></i></a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

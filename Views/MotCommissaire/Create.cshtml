@@ -1,0 +1,57 @@
+@model MangoTaika.Data.Entities.MotCommissaire
+@{
+    ViewData["Title"] = "Nouveau mot du Commissaire";
+    Layout = "_LayoutAdmin";
+}
+
+<h2 class="section-title mb-1"><i class="bi bi-megaphone-fill text-or"></i> Nouveau mot du <span class="accent">Commissaire</span></h2>
+<div class="section-divider"></div>
+
+<div class="card-3d p-4 mt-3" style="max-width:700px;">
+    <form asp-action="Create" method="post" enctype="multipart/form-data" class="form-modern">
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="Annee" class="form-label">Année</label>
+                <input asp-for="Annee" class="form-control" type="number" value="@DateTime.Now.Year" />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label asp-for="EstActif" class="form-label">Statut</label>
+                <select asp-for="EstActif" class="form-select">
+                    <option value="true">Actif (affiché sur le portail)</option>
+                    <option value="false">Inactif</option>
+                </select>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Contenu" class="form-label">Contenu du message</label>
+            <textarea asp-for="Contenu" class="form-control" rows="6" placeholder="Chers scouts, parents et amis du district..."></textarea>
+        </div>
+        <div class="mb-4">
+            <label class="form-label">Photo du Commissaire <span class="text-muted-custom small">(optionnel)</span></label>
+            <input type="file" name="Photo" id="photoInput" class="form-control" accept="image/*" />
+            <div id="photoPreview" class="mt-2" style="display:none;">
+                <img id="photoPreviewImg" alt="Aperçu" style="width:150px;height:150px;object-fit:cover;border-radius:12px;border:2px solid var(--vert-pastel);box-shadow:var(--shadow-md);" />
+            </div>
+        </div>
+        <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Enregistrer</button>
+        <a asp-action="Index" class="btn btn-outline-or ms-2">Annuler</a>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('photoInput').addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            var preview = document.getElementById('photoPreview');
+            var img = document.getElementById('photoPreviewImg');
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function(ev) { img.src = ev.target.result; preview.style.display = 'block'; };
+                reader.readAsDataURL(file);
+            } else {
+                preview.style.display = 'none';
+            }
+        });
+    </script>
+}

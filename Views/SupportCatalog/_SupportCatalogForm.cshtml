@@ -1,0 +1,85 @@
+@model MangoTaika.Data.Entities.SupportServiceCatalogueItem
+@using MangoTaika.Data.Entities
+@{
+    var agents = ViewBag.SupportAgents as IEnumerable<ApplicationUser> ?? Enumerable.Empty<ApplicationUser>();
+    var groupes = ViewBag.GroupesSupport as IEnumerable<Groupe> ?? Enumerable.Empty<Groupe>();
+}
+
+<div class="card-3d p-4">
+    <form method="post" class="form-modern">
+        @Html.AntiForgeryToken()
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label asp-for="Code" class="form-label">Code</label>
+                <input asp-for="Code" class="form-control" required />
+            </div>
+            <div class="col-md-9 mb-3">
+                <label asp-for="Nom" class="form-label">Nom</label>
+                <input asp-for="Nom" class="form-control" required />
+            </div>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Description" class="form-label">Description</label>
+            <textarea asp-for="Description" class="form-control" rows="4" required></textarea>
+        </div>
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label asp-for="TypeParDefaut" class="form-label">Type</label>
+                <select asp-for="TypeParDefaut" class="form-select" asp-items="Html.GetEnumSelectList<MangoTaika.Data.Entities.TypeTicket>()"></select>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label asp-for="CategorieParDefaut" class="form-label">Categorie</label>
+                <select asp-for="CategorieParDefaut" class="form-select" asp-items="Html.GetEnumSelectList<MangoTaika.Data.Entities.CategorieTicket>()"></select>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label asp-for="ImpactParDefaut" class="form-label">Impact</label>
+                <select asp-for="ImpactParDefaut" class="form-select" asp-items="Html.GetEnumSelectList<MangoTaika.Data.Entities.ImpactTicket>()"></select>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label asp-for="UrgenceParDefaut" class="form-label">Urgence</label>
+                <select asp-for="UrgenceParDefaut" class="form-select" asp-items="Html.GetEnumSelectList<MangoTaika.Data.Entities.UrgenceTicket>()"></select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label asp-for="DelaiSlaHeures" class="form-label">SLA (heures)</label>
+                <input asp-for="DelaiSlaHeures" class="form-control" type="number" min="1" max="720" required />
+            </div>
+            <div class="col-md-4 mb-3">
+                <label asp-for="AssigneParDefautId" class="form-label">Agent par defaut</label>
+                <select asp-for="AssigneParDefautId" class="form-select">
+                    <option value="">Aucun agent</option>
+                    @foreach (var agent in agents)
+                    {
+                        <option value="@agent.Id">@agent.Prenom @agent.Nom</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-5 mb-3">
+                <label asp-for="GroupeParDefautId" class="form-label">Groupe par defaut</label>
+                <select asp-for="GroupeParDefautId" class="form-select">
+                    <option value="">Aucun groupe</option>
+                    @foreach (var groupe in groupes)
+                    {
+                        <option value="@groupe.Id">@groupe.Nom</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3 mb-3 d-flex align-items-end">
+                <div class="form-check">
+                    <input asp-for="EstActif" class="form-check-input" />
+                    <label asp-for="EstActif" class="form-check-label">Actif</label>
+                </div>
+            </div>
+        </div>
+        <div class="alert alert-light border mb-3" style="border-radius:12px;">
+            Si un agent ou un groupe est defini ici, les tickets crees avec ce service seront automatiquement affectes.
+        </div>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-mango">Enregistrer</button>
+            <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
+        </div>
+    </form>
+</div>

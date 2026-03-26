@@ -1,0 +1,249 @@
+@{
+    Layout = "_Layout";
+    ViewData["IsAdminLayout"] = true;
+
+    var isAdmin = User.IsInRole("Administrateur");
+    var isGestionnaire = User.IsInRole("Gestionnaire");
+    var isAgentSupport = User.IsInRole("AgentSupport");
+    var isSuperviseur = User.IsInRole("Superviseur");
+    var isScout = User.IsInRole("Scout");
+    var isParent = User.IsInRole("Parent");
+    var isConsultant = User.IsInRole("Consultant");
+
+    var isAdminOrGest = isAdmin || isGestionnaire;
+    var isSupportAgent = isAdminOrGest || isAgentSupport;
+    var isEncadrement = isAdminOrGest || isSuperviseur || isConsultant;
+
+    var canViewTerritoire = isEncadrement;
+    var canViewActivites = isEncadrement;
+    var canViewDemandes = isAdminOrGest || isSuperviseur || isConsultant;
+    var canViewFinances = isEncadrement;
+    var canManageCommunication = isAdminOrGest;
+    var canManageUtilisateurs = isAdminOrGest;
+    var canManageMessages = isAdminOrGest;
+    var canViewSupportCenter = isEncadrement || isAgentSupport;
+    var canManageSupport = isSupportAgent;
+    var canViewReporting = isEncadrement || isAgentSupport;
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="sidebar-mobile-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+        <nav class="col-md-2 sidebar" id="sidebarNav">
+            <div class="sidebar-logo">
+                <img src="~/images/logo.png" alt="Logo MANGO TAIKA" />
+            </div>
+
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" asp-controller="Dashboard" asp-action="Index">
+                        <i class="bi bi-speedometer2"></i> Tableau de bord
+                    </a>
+                </li>
+
+                @if (isScout)
+                {
+                    <li class="nav-item sidebar-group">
+                        <a class="nav-link sidebar-toggle" href="#" data-target="grp-mon-espace-scout">
+                            <i class="bi bi-person-badge"></i> Mon espace
+                            <i class="bi bi-chevron-down sidebar-chevron"></i>
+                        </a>
+                        <ul class="sidebar-submenu" id="grp-mon-espace-scout">
+                            <li><a class="nav-link" asp-controller="Account" asp-action="MaFiche"><i class="bi bi-person-badge"></i> Ma fiche scout</a></li>
+                            <li><a class="nav-link" asp-controller="Demandes" asp-action="Index"><i class="bi bi-file-earmark-check-fill"></i> Mes demandes</a></li>
+                            <li><a class="nav-link" asp-controller="Formations" asp-action="MesFormations"><i class="bi bi-mortarboard"></i> Mes formations</a></li>
+                            <li><a class="nav-link" asp-controller="Formations" asp-action="Catalogue"><i class="bi bi-book"></i> Catalogue formations</a></li>
+                            <li><a class="nav-link" asp-controller="Certificats" asp-action="MesCertificats"><i class="bi bi-patch-check"></i> Mes certificats</a></li>
+                            <li><a class="nav-link" asp-controller="Tickets" asp-action="MesTickets"><i class="bi bi-headset"></i> Mes tickets</a></li>
+                        </ul>
+                    </li>
+                }
+
+                @if (isParent)
+                {
+                    <li class="nav-item sidebar-group">
+                        <a class="nav-link sidebar-toggle" href="#" data-target="grp-mon-espace-parent">
+                            <i class="bi bi-people-fill"></i> Mon espace
+                            <i class="bi bi-chevron-down sidebar-chevron"></i>
+                        </a>
+                        <ul class="sidebar-submenu" id="grp-mon-espace-parent">
+                            <li><a class="nav-link" asp-controller="Account" asp-action="MesEnfants"><i class="bi bi-people-fill"></i> Mes enfants</a></li>
+                            <li><a class="nav-link" asp-controller="Tickets" asp-action="MesTickets"><i class="bi bi-headset"></i> Mes tickets</a></li>
+                        </ul>
+                    </li>
+                }
+
+                @if (canViewTerritoire)
+                {
+                    <li class="nav-item sidebar-group">
+                        <a class="nav-link sidebar-toggle" href="#" data-target="grp-territoire">
+                            <i class="bi bi-globe-americas"></i> Territoire
+                            <i class="bi bi-chevron-down sidebar-chevron"></i>
+                        </a>
+                        <ul class="sidebar-submenu" id="grp-territoire">
+                            <li><a class="nav-link" asp-controller="Scouts" asp-action="Index"><i class="bi bi-people-fill"></i> Scouts</a></li>
+                            <li><a class="nav-link" asp-controller="Groupes" asp-action="Index"><i class="bi bi-building"></i> Groupes</a></li>
+                            <li><a class="nav-link" asp-controller="Branches" asp-action="Index"><i class="bi bi-diagram-3-fill"></i> Branches</a></li>
+                            <li><a class="nav-link" asp-controller="Groupes" asp-action="Carte"><i class="bi bi-geo-alt-fill"></i> Carte GPS</a></li>
+                        </ul>
+                    </li>
+                }
+
+                @if (canViewActivites)
+                {
+                    <li class="nav-item sidebar-group">
+                        <a class="nav-link sidebar-toggle" href="#" data-target="grp-activites">
+                            <i class="bi bi-calendar-event-fill"></i> Activites & suivi
+                            <i class="bi bi-chevron-down sidebar-chevron"></i>
+                        </a>
+                        <ul class="sidebar-submenu" id="grp-activites">
+                            <li><a class="nav-link" asp-controller="Activites" asp-action="Index"><i class="bi bi-calendar-event-fill"></i> Activites</a></li>
+                            <li><a class="nav-link" asp-controller="Competences" asp-action="Index"><i class="bi bi-award-fill"></i> Competences</a></li>
+                            @if (isAdminOrGest)
+                            {
+                                <li><a class="nav-link" asp-controller="Formations" asp-action="Index"><i class="bi bi-mortarboard-fill"></i> Formations</a></li>
+                                <li><a class="nav-link" asp-controller="Formations" asp-action="Statistiques"><i class="bi bi-graph-up"></i> Statistiques formations</a></li>
+                            }
+                            else
+                            {
+                                <li><a class="nav-link" asp-controller="Formations" asp-action="ConsulterCatalogue"><i class="bi bi-mortarboard-fill"></i> Formations</a></li>
+                            }
+                        </ul>
+                    </li>
+                }
+
+                @if (canViewDemandes)
+                {
+                    <li class="nav-item sidebar-group">
+                        <a class="nav-link sidebar-toggle" href="#" data-target="grp-demandes">
+                            <i class="bi bi-file-earmark-check-fill"></i> Demandes & validations
+                            <i class="bi bi-chevron-down sidebar-chevron"></i>
+                        </a>
+                        <ul class="sidebar-submenu" id="grp-demandes">
+                            <li><a class="nav-link" asp-controller="Demandes" asp-action="Index"><i class="bi bi-file-earmark-check-fill"></i> Demandes administratives</a></li>
+                            <li><a class="nav-link" asp-controller="DemandesGroupe" asp-action="Index"><i class="bi bi-building-add"></i> Demandes de groupe</a></li>
+                        </ul>
+                    </li>
+                }
+
+                @if (canViewFinances)
+                {
+                    <li class="nav-item sidebar-group">
+                        <a class="nav-link sidebar-toggle" href="#" data-target="grp-finances">
+                            <i class="bi bi-wallet2"></i> Finances & AGR
+                            <i class="bi bi-chevron-down sidebar-chevron"></i>
+                        </a>
+                        <ul class="sidebar-submenu" id="grp-finances">
+                            <li><a class="nav-link" asp-controller="Finances" asp-action="Index"><i class="bi bi-wallet2"></i> Finances</a></li>
+                            <li><a class="nav-link" asp-controller="AGR" asp-action="Index"><i class="bi bi-briefcase-fill"></i> Projets AGR</a></li>
+                        </ul>
+                    </li>
+                }
+
+                @if (canManageCommunication)
+                {
+                    <li class="nav-item sidebar-group">
+                        <a class="nav-link sidebar-toggle" href="#" data-target="grp-communication">
+                            <i class="bi bi-megaphone-fill"></i> Communication
+                            <i class="bi bi-chevron-down sidebar-chevron"></i>
+                        </a>
+                        <ul class="sidebar-submenu" id="grp-communication">
+                            <li><a class="nav-link" asp-controller="MotCommissaire" asp-action="Index"><i class="bi bi-megaphone-fill"></i> Mot du Commissaire</a></li>
+                            <li><a class="nav-link" asp-controller="Actualites" asp-action="Admin"><i class="bi bi-newspaper"></i> Actualites</a></li>
+                            <li><a class="nav-link" asp-controller="Galerie" asp-action="Index"><i class="bi bi-images"></i> Galerie</a></li>
+                            <li><a class="nav-link" asp-controller="Partenaires" asp-action="Index"><i class="bi bi-handshake"></i> Partenaires & RS</a></li>
+                        </ul>
+                    </li>
+                }
+
+                @if (canManageUtilisateurs || canManageMessages || isAdmin || isSuperviseur || isConsultant)
+                {
+                    <li class="nav-item sidebar-group">
+                        <a class="nav-link sidebar-toggle" href="#" data-target="grp-admin">
+                            <i class="bi bi-gear-fill"></i> Administration
+                            <i class="bi bi-chevron-down sidebar-chevron"></i>
+                        </a>
+                        <ul class="sidebar-submenu" id="grp-admin">
+                            @if (canManageUtilisateurs)
+                            {
+                                <li><a class="nav-link" asp-controller="Account" asp-action="Utilisateurs"><i class="bi bi-person-check-fill"></i> Utilisateurs</a></li>
+                            }
+                            @if (isAdmin)
+                            {
+                                <li><a class="nav-link" asp-controller="Account" asp-action="CodesInvitation"><i class="bi bi-key-fill"></i> Codes d'invitation</a></li>
+                            }
+                            @if (canManageMessages)
+                            {
+                                <li><a class="nav-link" asp-controller="Messages" asp-action="Index"><i class="bi bi-envelope-fill"></i> Messages & avis</a></li>
+                            }
+                            <li><a class="nav-link" asp-controller="Historique" asp-action="Index"><i class="bi bi-clock-history"></i> Historique</a></li>
+                        </ul>
+                    </li>
+                }
+
+                @if (canViewSupportCenter)
+                {
+                    <li class="nav-item sidebar-group">
+                        <a class="nav-link sidebar-toggle" href="#" data-target="grp-support">
+                            <i class="bi bi-headset"></i> Support
+                            <i class="bi bi-chevron-down sidebar-chevron"></i>
+                        </a>
+                        <ul class="sidebar-submenu" id="grp-support">
+                            <li><a class="nav-link" asp-controller="Tickets" asp-action="Index"><i class="bi bi-headset"></i> Centre de support</a></li>
+                            <li><a class="nav-link" asp-controller="SupportCatalog" asp-action="Index"><i class="bi bi-grid-1x2"></i> Catalogue de services</a></li>
+                            <li><a class="nav-link" asp-controller="KnowledgeBase" asp-action="Index"><i class="bi bi-journal-text"></i> Base de connaissances</a></li>
+                        </ul>
+                    </li>
+                }
+
+                @if (canViewReporting)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="Reporting" asp-action="Index">
+                            <i class="bi bi-bar-chart-fill"></i> Reporting
+                        </a>
+                    </li>
+                }
+
+                <li class="nav-item">
+                    <a class="nav-link" href="https://adhesion.scoutascci.org/" target="_blank" rel="noopener">
+                        <i class="bi bi-shield-check"></i> Adhesion SYGESCA
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <main class="col-md-10 ms-sm-auto px-3 px-md-4 py-4 content-area">
+            @RenderBody()
+        </main>
+    </div>
+</div>
+
+@section Scripts {
+    @await RenderSectionAsync("Scripts", required: false)
+}
+
+<button class="sidebar-mobile-toggle" id="sidebarToggle" aria-label="Ouvrir le menu">
+    <i class="bi bi-list"></i>
+</button>
+
+<script>
+    (function() {
+        var btn = document.getElementById('sidebarToggle');
+        var nav = document.getElementById('sidebarNav');
+        var overlay = document.getElementById('sidebarOverlay');
+        if (btn && nav) {
+            btn.addEventListener('click', function() {
+                nav.classList.toggle('open');
+                overlay.classList.toggle('open');
+            });
+        }
+    })();
+
+    function closeSidebar() {
+        var nav = document.getElementById('sidebarNav');
+        var overlay = document.getElementById('sidebarOverlay');
+        if (nav) nav.classList.remove('open');
+        if (overlay) overlay.classList.remove('open');
+    }
+</script>

@@ -1,0 +1,77 @@
+@model IEnumerable<MangoTaika.Data.Entities.SupportServiceCatalogueItem>
+@{
+    ViewData["Title"] = "Catalogue de services";
+    Layout = "_LayoutAdmin";
+    var canManage = (bool)(ViewBag.CanManage ?? false);
+}
+
+<div class="support-shell">
+    <section class="support-hero">
+        <div class="support-hero__inner">
+            <div>
+                <span class="support-hero__eyebrow"><i class="bi bi-grid-1x2"></i> Service catalog</span>
+                <h2 class="support-hero__title">Catalogue de <span class="accent">services</span></h2>
+                <p class="support-hero__text">Référentiel de services support avec classification standard, priorité implicite et délai SLA associé, présenté dans un rendu plus proche d'une console de traitement.</p>
+            </div>
+            @if (canManage)
+            {
+                <div class="support-hero__actions">
+                    <a asp-action="Create" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Nouveau service</a>
+                </div>
+            }
+        </div>
+    </section>
+
+    <section class="support-ticket-grid">
+        @foreach (var item in Model)
+        {
+            <article class="support-resource-card">
+                <div class="support-resource-card__head">
+                    <div>
+                        <span class="support-resource-card__code"><i class="bi bi-hash"></i> @item.Code</span>
+                        <h5 class="support-resource-card__title">@item.Nom</h5>
+                    </div>
+                    <span class="badge-3d @(item.EstActif ? "badge-validee" : "badge-brouillon")">@(item.EstActif ? "Actif" : "Inactif")</span>
+                </div>
+                <div class="support-resource-card__body">@item.Description</div>
+                <div class="support-resource-card__stats">
+                    <div class="support-resource-card__stat">
+                        <span class="support-resource-card__stat-label">Type</span>
+                        <span class="support-resource-card__stat-value">@item.TypeParDefaut</span>
+                    </div>
+                    <div class="support-resource-card__stat">
+                        <span class="support-resource-card__stat-label">Categorie</span>
+                        <span class="support-resource-card__stat-value">@item.CategorieParDefaut</span>
+                    </div>
+                    <div class="support-resource-card__stat">
+                        <span class="support-resource-card__stat-label">SLA</span>
+                        <span class="support-resource-card__stat-value">@item.DelaiSlaHeures h</span>
+                    </div>
+                </div>
+                <div class="small d-flex flex-column gap-1">
+                    <span><i class="bi bi-layers text-bleu"></i> Impact @item.ImpactParDefaut / Urgence @item.UrgenceParDefaut</span>
+                </div>
+                <div class="support-resource-card__footer">
+                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-or"><i class="bi bi-eye"></i></a>
+                    @if (canManage)
+                    {
+                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-bleu"><i class="bi bi-pencil"></i></a>
+                        <form asp-action="Toggle" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@item.Id" />
+                            <button type="submit" class="btn btn-sm @(item.EstActif ? "btn-outline-or" : "btn-mango")">@(item.EstActif ? "Desactiver" : "Activer")</button>
+                        </form>
+                    }
+                </div>
+            </article>
+        }
+
+        @if (!Model.Any())
+        {
+            <div class="support-empty" style="grid-column:1 / -1;">
+                <i class="bi bi-grid" style="font-size:2rem;opacity:0.3;"></i>
+                <div class="mt-2">Aucun service n'est encore configure.</div>
+            </div>
+        }
+    </section>
+</div>

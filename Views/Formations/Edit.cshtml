@@ -1,0 +1,527 @@
+@model MangoTaika.DTOs.FormationDetailDto
+@{ ViewData["Title"] = "Modifier : " + Model.Titre; Layout = "_LayoutAdmin"; }
+
+<h2><i class="bi bi-pencil"></i> Modifier : @Model.Titre</h2>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+@* ── Infos générales ── *@
+<div class="card mb-4">
+    <div class="card-header"><strong>Informations générales</strong></div>
+    <div class="card-body">
+        <form asp-action="Edit" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label">Titre</label>
+                    <input name="Titre" value="@Model.Titre" class="form-control" required />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Niveau</label>
+                    <select name="Niveau" class="form-select" asp-items="Html.GetEnumSelectList<MangoTaika.Data.Entities.NiveauFormation>()">
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Description</label>
+                    <textarea name="Description" class="form-control" rows="3">@Model.Description</textarea>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Image de couverture</label>
+                    @if (!string.IsNullOrEmpty(Model.ImageUrl))
+                    {
+                        <div class="mb-1"><img src="@Model.ImageUrl" alt="Couverture" style="max-height:60px;" class="rounded" /></div>
+                    }
+                    <input type="file" name="image" class="form-control" accept="image/*" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Durée estimée (h)</label>
+                    <input name="DureeEstimeeHeures" type="number" value="@Model.DureeEstimeeHeures" class="form-control" min="1" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Branche cible</label>
+                    <select name="BrancheCibleId" class="form-select">
+                        <option value="">— Toutes —</option>
+                        @foreach (var b in (List<MangoTaika.Data.Entities.Branche>)ViewBag.Branches)
+                        {
+                            <option value="@b.Id" selected="@(b.Id == Model.BrancheCibleId)">@b.Nom</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Compétence liée (ID)</label>
+                    <input name="CompetenceLieeId" value="@Model.CompetenceLieeId" class="form-control" />
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">Prerequis</label>
+                    <select name="PrerequisFormationIds" class="form-select" multiple size="5">
+                        @foreach (var formation in (List<MangoTaika.DTOs.FormationDto>)ViewBag.FormationOptions)
+                        {
+                            if (Model.Prerequis.Any(p => p.FormationId == formation.Id))
+                            {
+                                <option value="@formation.Id" selected="selected">@formation.Titre</option>
+                            }
+                            else
+                            {
+                                <option value="@formation.Id">@formation.Titre</option>
+                            }
+                        }
+                    </select>
+                    <div class="form-text">Ces formations devront etre terminees avant l'inscription a ce parcours.</div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label d-block">Delivrance</label>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="DelivreBadge" value="true" checked="@Model.DelivreBadge" />
+                        <label class="form-check-label">Badge</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="DelivreAttestation" value="true" checked="@Model.DelivreAttestation" />
+                        <label class="form-check-label">Attestation</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="DelivreCertificat" value="true" checked="@Model.DelivreCertificat" />
+                        <label class="form-check-label">Certificat</label>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary mt-3" title="Enregistrer"><i class="bi bi-check-lg"></i></button>
+        </form>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Calendrier pedagogique</strong>
+        <span class="badge bg-info text-dark">@Model.Jalons.Count</span>
+    </div>
+    <div class="card-body">
+        @if (Model.Jalons.Any())
+        {
+            <div class="list-group mb-3">
+                @foreach (var jalon in Model.Jalons)
+                {
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start gap-3">
+                            <div>
+                                <div class="fw-semibold">@jalon.Titre</div>
+                                <div class="small text-muted">@jalon.Type - @jalon.DateJalon.ToString("dd/MM/yyyy HH:mm")</div>
+                                @if (!string.IsNullOrWhiteSpace(jalon.Description))
+                                {
+                                    <div class="small mt-1">@jalon.Description</div>
+                                }
+                            </div>
+                            <form asp-action="DeleteJalon" method="post" onsubmit="return confirm('Supprimer ce jalon ?')">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="jalonId" value="@jalon.Id" />
+                                <input type="hidden" name="formationId" value="@Model.Id" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="text-muted mb-3">Aucun jalon pedagogique publie pour le moment.</p>
+        }
+
+        <form asp-action="AjouterJalon" method="post" class="row g-2">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="formationId" value="@Model.Id" />
+            <div class="col-md-4">
+                <input name="Titre" class="form-control" placeholder="Titre du jalon" required />
+            </div>
+            <div class="col-md-3">
+                <select name="Type" class="form-select" asp-items="Html.GetEnumSelectList<MangoTaika.Data.Entities.TypeJalonFormation>()"></select>
+            </div>
+            <div class="col-md-3">
+                <input name="DateJalon" type="datetime-local" class="form-control" required />
+            </div>
+            <div class="col-md-2">
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" name="EstPublie" value="true" checked="checked" />
+                    <label class="form-check-label">Publie</label>
+                </div>
+            </div>
+            <div class="col-12">
+                <textarea name="Description" class="form-control" rows="2" placeholder="Objectif, livrable attendu ou rappel logistique"></textarea>
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-outline-info"><i class="bi bi-calendar-plus"></i> Ajouter le jalon</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>Sessions</strong>
+                <span class="badge bg-primary">@Model.Sessions.Count</span>
+            </div>
+            <div class="card-body">
+                @if (Model.Sessions.Any())
+                {
+                    <div class="list-group mb-3">
+                        @foreach (var session in Model.Sessions)
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <div class="fw-semibold">@session.Titre</div>
+                                        <div class="small text-muted">
+                                            @(session.EstSelfPaced ? "A votre rythme" : $"{session.DateOuverture:dd/MM/yyyy} - {session.DateFermeture:dd/MM/yyyy}")
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(session.Description))
+                                        {
+                                            <div class="small text-muted mt-1">@session.Description</div>
+                                        }
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge @(session.EstPubliee ? "bg-success" : "bg-secondary")">@session.StatutAffichage</span>
+                                        <form asp-action="DeleteSession" method="post" class="mt-2" onsubmit="return confirm('Supprimer cette session ?')">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="sessionId" value="@session.Id" />
+                                            <input type="hidden" name="formationId" value="@Model.Id" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted mb-3">Aucune session configuree. Ajoute une session datee ou une session a votre rythme.</p>
+                }
+
+                <form asp-action="AjouterSession" method="post" class="row g-2">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="formationId" value="@Model.Id" />
+                    <div class="col-12">
+                        <input name="Titre" class="form-control" placeholder="Ex: Session Avril 2026" required />
+                    </div>
+                    <div class="col-12">
+                        <textarea name="Description" class="form-control" rows="2" placeholder="Message d'accueil ou objectifs de la session"></textarea>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check mt-2">
+                            <input class="form-check-input session-self-paced-toggle" type="checkbox" name="EstSelfPaced" value="true" id="sessionSelfPaced" />
+                            <label class="form-check-label" for="sessionSelfPaced">A votre rythme</label>
+                        </div>
+                        <input type="hidden" name="EstPubliee" value="true" />
+                    </div>
+                    <div class="col-md-4 session-date-field">
+                        <input name="DateOuverture" type="date" class="form-control" />
+                    </div>
+                    <div class="col-md-4 session-date-field">
+                        <input name="DateFermeture" type="date" class="form-control" />
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-success"><i class="bi bi-plus-lg"></i> Ajouter la session</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>Annonces du cours</strong>
+                <span class="badge bg-warning text-dark">@Model.Annonces.Count</span>
+            </div>
+            <div class="card-body">
+                @if (Model.Annonces.Any())
+                {
+                    <div class="list-group mb-3">
+                        @foreach (var annonce in Model.Annonces)
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <div class="fw-semibold">@annonce.Titre</div>
+                                        <div class="small text-muted">@annonce.DatePublication.ToString("dd/MM/yyyy HH:mm") @(string.IsNullOrWhiteSpace(annonce.NomAuteur) ? "" : $"• {annonce.NomAuteur}")</div>
+                                        <div class="small mt-1">@annonce.Contenu</div>
+                                    </div>
+                                    <form asp-action="DeleteAnnonce" method="post" onsubmit="return confirm('Supprimer cette annonce ?')">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="annonceId" value="@annonce.Id" />
+                                        <input type="hidden" name="formationId" value="@Model.Id" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted mb-3">Aucune annonce publiee pour cette formation.</p>
+                }
+
+                <form asp-action="AjouterAnnonce" method="post" class="row g-2">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="formationId" value="@Model.Id" />
+                    <div class="col-12">
+                        <input name="Titre" class="form-control" placeholder="Titre de l'annonce" required />
+                    </div>
+                    <div class="col-12">
+                        <textarea name="Contenu" class="form-control" rows="4" placeholder="Information importante pour les apprenants" required></textarea>
+                    </div>
+                    <div class="col-12">
+                        <input type="hidden" name="EstPubliee" value="true" />
+                        <button type="submit" class="btn btn-warning text-dark"><i class="bi bi-megaphone"></i> Publier l'annonce</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ── Modules ── *@
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between">
+        <strong>Modules</strong>
+        <button type="button" class="btn btn-sm btn-success" data-bs-toggle="collapse" data-bs-target="#addModule" title="Ajouter"><i class="bi bi-plus-lg"></i></button>
+    </div>
+    <div class="card-body">
+        <div class="collapse mb-3" id="addModule">
+            <form asp-action="AjouterModule" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="formationId" value="@Model.Id" />
+                <div class="row g-2">
+                    <div class="col-md-5">
+                        <input name="Titre" class="form-control" placeholder="Titre du module" required />
+                    </div>
+                    <div class="col-md-5">
+                        <input name="Description" class="form-control" placeholder="Description (optionnel)" />
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-success w-100">Ajouter</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        @foreach (var module in Model.Modules)
+        {
+            <div class="card mb-3 border-start border-primary border-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><strong>Module @module.Ordre :</strong> @module.Titre</span>
+                    <form asp-action="DeleteModule" method="post" class="d-inline" onsubmit="return confirm('Supprimer ce module et tout son contenu ?')">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="moduleId" value="@module.Id" />
+                        <input type="hidden" name="formationId" value="@Model.Id" />
+                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                    </form>
+                </div>
+                <div class="card-body">
+                    @* Leçons *@
+                    <h6>Leçons (@module.Lecons.Count)</h6>
+                    <ul class="list-group list-group-flush mb-2">
+                        @foreach (var lecon in module.Lecons)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>
+                                    @switch (lecon.Type)
+                                    {
+                                        case MangoTaika.Data.Entities.TypeLecon.Texte: <i class="bi bi-file-text text-primary"></i> break;
+                                        case MangoTaika.Data.Entities.TypeLecon.Video: <i class="bi bi-play-circle text-danger"></i> break;
+                                        case MangoTaika.Data.Entities.TypeLecon.Document: <i class="bi bi-file-pdf text-warning"></i> break;
+                                    }
+                                    @lecon.Titre <small class="text-muted">(@lecon.DureeMinutes min)</small>
+                                </span>
+                                <form asp-action="DeleteLecon" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="leconId" value="@lecon.Id" />
+                                    <input type="hidden" name="formationId" value="@Model.Id" />
+                                    <button class="btn btn-sm btn-outline-danger"><i class="bi bi-x"></i></button>
+                                </form>
+                            </li>
+                        }
+                    </ul>
+
+                    @* Ajouter leçon *@
+                    <div class="collapse mb-2" id="addLecon-@module.Id">
+                        <form asp-action="AjouterLecon" method="post" enctype="multipart/form-data">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="moduleId" value="@module.Id" />
+                            <input type="hidden" name="formationId" value="@Model.Id" />
+                            <div class="row g-2">
+                                <div class="col-md-3"><input name="Titre" class="form-control" placeholder="Titre" required /></div>
+                                <div class="col-md-2">
+                                    <select name="Type" class="form-select lecon-type-select" asp-items="Html.GetEnumSelectList<MangoTaika.Data.Entities.TypeLecon>()"></select>
+                                </div>
+                                <div class="col-md-1"><input name="DureeMinutes" type="number" class="form-control" placeholder="Min" min="1" /></div>
+                                <div class="col-md-2 lecon-field-texte"><textarea name="ContenuTexte" class="form-control" placeholder="Contenu texte/HTML" rows="1"></textarea></div>
+                                <div class="col-md-2 lecon-field-video" style="display:none;"><input name="VideoUrl" class="form-control" placeholder="URL YouTube embed" /></div>
+                                <div class="col-md-2 lecon-field-document" style="display:none;"><input type="file" name="document" class="form-control" accept=".pdf,.doc,.docx" /></div>
+                                <div class="col-md-2"><button type="submit" class="btn btn-success w-100">Ajouter</button></div>
+                            </div>
+                        </form>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="collapse" data-bs-target="#addLecon-@module.Id" title="Leçon"><i class="bi bi-plus"></i></button>
+
+                    <hr />
+
+                    @* Quiz *@
+                    @if (module.Quiz != null)
+                    {
+                        <h6>Quiz : @module.Quiz.Titre (Note min : @module.Quiz.NoteMinimale%)</h6>
+                        <form asp-action="UpdateQuiz" method="post" class="row g-2 mb-3">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="quizId" value="@module.Quiz.Id" />
+                            <input type="hidden" name="formationId" value="@Model.Id" />
+                            <div class="col-md-3">
+                                <input name="titre" value="@module.Quiz.Titre" class="form-control" placeholder="Titre du quiz" required />
+                            </div>
+                            <div class="col-md-2">
+                                <input name="noteMinimale" type="number" value="@module.Quiz.NoteMinimale" class="form-control" min="1" max="100" />
+                            </div>
+                            <div class="col-md-2">
+                                <input name="nombreTentativesMax" type="number" value="@module.Quiz.NombreTentativesMax" class="form-control" min="1" placeholder="Tentatives max" />
+                            </div>
+                            <div class="col-md-2">
+                                <input name="dateOuvertureDisponibilite" type="datetime-local" value="@(module.Quiz.DateOuvertureDisponibilite?.ToString("yyyy-MM-ddTHH:mm"))" class="form-control" />
+                            </div>
+                            <div class="col-md-2">
+                                <input name="dateFermetureDisponibilite" type="datetime-local" value="@(module.Quiz.DateFermetureDisponibilite?.ToString("yyyy-MM-ddTHH:mm"))" class="form-control" />
+                            </div>
+                            <div class="col-md-1">
+                                <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-save"></i></button>
+                            </div>
+                        </form>
+                        <div class="small text-muted mb-2">
+                            @if (module.Quiz.NombreTentativesMax.HasValue)
+                            {
+                                <span class="me-2">Tentatives max : @module.Quiz.NombreTentativesMax.Value</span>
+                            }
+                            @if (module.Quiz.DateOuvertureDisponibilite.HasValue || module.Quiz.DateFermetureDisponibilite.HasValue)
+                            {
+                                <span>Fenetre d'evaluation configuree</span>
+                            }
+                        </div>
+                        <ul class="list-group list-group-flush mb-2">
+                            @foreach (var q in module.Quiz.Questions)
+                            {
+                                <li class="list-group-item">
+                                    <div class="d-flex justify-content-between">
+                                        <strong>Q@(q.Ordre) : @q.Enonce</strong>
+                                        <form asp-action="DeleteQuestion" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="questionId" value="@q.Id" />
+                                            <input type="hidden" name="formationId" value="@Model.Id" />
+                                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-x"></i></button>
+                                        </form>
+                                    </div>
+                                    <ul class="mt-1">
+                                        @foreach (var r in q.Reponses)
+                                        {
+                                            <li class="@(r.EstCorrecte ? "text-success fw-bold" : "")">@r.Texte @(r.EstCorrecte ? "✓" : "")</li>
+                                        }
+                                    </ul>
+                                </li>
+                            }
+                        </ul>
+
+                        @* Ajouter question *@
+                        <div class="collapse mb-2" id="addQuestion-@module.Quiz.Id">
+                            <form asp-action="AjouterQuestion" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="quizId" value="@module.Quiz.Id" />
+                                <input type="hidden" name="formationId" value="@Model.Id" />
+                                <div class="mb-2">
+                                    <input name="Enonce" class="form-control" placeholder="Énoncé de la question" required />
+                                </div>
+                                @for (int i = 0; i < 4; i++)
+                                {
+                                    <div class="row g-1 mb-1">
+                                        <div class="col-md-8"><input name="Reponses[@i].Texte" class="form-control form-control-sm" placeholder="Réponse @(i + 1)" /></div>
+                                        <div class="col-md-4">
+                                            <div class="form-check mt-1">
+                                                <input type="checkbox" name="Reponses[@i].EstCorrecte" value="true" class="form-check-input" />
+                                                <label class="form-check-label">Correcte</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                <button type="submit" class="btn btn-sm btn-success mt-1">Ajouter question</button>
+                            </form>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#addQuestion-@module.Quiz.Id" title="Question"><i class="bi bi-plus"></i></button>
+
+                        <form asp-action="DeleteQuiz" method="post" class="d-inline ms-2" onsubmit="return confirm('Supprimer le quiz ?')">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="quizId" value="@module.Quiz.Id" />
+                            <input type="hidden" name="formationId" value="@Model.Id" />
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer quiz"><i class="bi bi-trash"></i></button>
+                        </form>
+                    }
+                    else
+                    {
+                        <div class="collapse mb-2" id="addQuiz-@module.Id">
+                            <form asp-action="CreerQuiz" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="moduleId" value="@module.Id" />
+                                <input type="hidden" name="formationId" value="@Model.Id" />
+                                <div class="row g-2">
+                                    <div class="col-md-4"><input name="titre" class="form-control" placeholder="Titre du quiz" required /></div>
+                                    <div class="col-md-2"><input name="noteMinimale" type="number" class="form-control" value="70" min="1" max="100" /></div>
+                                    <div class="col-md-2"><input name="nombreTentativesMax" type="number" class="form-control" min="1" placeholder="Tentatives max" /></div>
+                                    <div class="col-md-2"><input name="dateOuvertureDisponibilite" type="datetime-local" class="form-control" /></div>
+                                    <div class="col-md-2"><input name="dateFermetureDisponibilite" type="datetime-local" class="form-control" /></div>
+                                    <div class="col-md-3"><button type="submit" class="btn btn-success w-100">Créer quiz</button></div>
+                                </div>
+                            </form>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="collapse" data-bs-target="#addQuiz-@module.Id" title="Ajouter quiz"><i class="bi bi-patch-question"></i></button>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="d-flex gap-2">
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-info" title="Voir"><i class="bi bi-eye"></i></a>
+    <a asp-action="Index" class="btn btn-secondary" title="Retour"><i class="bi bi-arrow-left"></i></a>
+    <form asp-action="Delete" asp-route-id="@Model.Id" method="post" onsubmit="return confirm('Supprimer définitivement cette formation ?')">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn-danger" title="Supprimer"><i class="bi bi-trash"></i></button>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+document.querySelectorAll('.lecon-type-select').forEach(function(sel) {
+    sel.addEventListener('change', function() {
+        var row = this.closest('.row');
+        row.querySelector('.lecon-field-texte').style.display = this.value === '0' ? '' : 'none';
+        row.querySelector('.lecon-field-video').style.display = this.value === '1' ? '' : 'none';
+        row.querySelector('.lecon-field-document').style.display = this.value === '2' ? '' : 'none';
+    });
+});
+
+document.querySelectorAll('.session-self-paced-toggle').forEach(function(toggle) {
+    var sync = function() {
+        var cardBody = toggle.closest('.card-body');
+        cardBody.querySelectorAll('.session-date-field').forEach(function(field) {
+            field.style.display = toggle.checked ? 'none' : '';
+        });
+    };
+    toggle.addEventListener('change', sync);
+    sync();
+});
+</script>
+}

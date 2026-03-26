@@ -1,0 +1,59 @@
+@model DemandeGroupeCreateDto
+@{
+    ViewData["Title"] = "Créer un nouveau groupe";
+}
+
+<div class="container my-5" style="max-width:700px;">
+    <h2 class="section-title text-center mb-1"><i class="bi bi-building-add text-or"></i> Demande de création d'un <span class="accent">nouveau groupe</span></h2>
+    <div class="section-divider mx-auto"></div>
+    <p class="text-center text-muted-custom mb-4">Remplissez ce formulaire pour soumettre une demande de création de groupe scout. L'administration examinera votre demande.</p>
+
+    <div class="card-3d p-4">
+        <form asp-action="Creer" method="post" class="form-modern">
+            <div style="position:absolute;left:-9999px;" aria-hidden="true">
+                <input type="text" name="Website" tabindex="-1" autocomplete="off" />
+            </div>
+            <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+            <div class="mb-3">
+                <label asp-for="NomGroupe" class="form-label">Nom du groupe proposé</label>
+                <input asp-for="NomGroupe" class="form-control" placeholder="Ex: Groupe Saint-Paul" />
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Commune" class="form-label">Commune</label>
+                    <input asp-for="Commune" class="form-control" placeholder="Ex: Cocody" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Quartier" class="form-label">Quartier</label>
+                    <input asp-for="Quartier" class="form-control" placeholder="Ex: Angré" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="NomResponsable" class="form-label">Nom du responsable</label>
+                    <input asp-for="NomResponsable" class="form-control" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="TelephoneResponsable" class="form-label">Téléphone</label>
+                    <input asp-for="TelephoneResponsable" class="form-control" placeholder="Ex: 0701020304" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="EmailResponsable" class="form-label">Email <span class="text-muted-custom small">(optionnel)</span></label>
+                    <input asp-for="EmailResponsable" class="form-control" type="email" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="NombreMembresPrevus" class="form-label">Nombre de membres prévus</label>
+                    <input asp-for="NombreMembresPrevus" class="form-control" type="number" min="1" />
+                </div>
+            </div>
+            <div class="mb-4">
+                <label asp-for="Motivation" class="form-label">Motivation</label>
+                <textarea asp-for="Motivation" class="form-control" rows="3" placeholder="Pourquoi souhaitez-vous créer ce groupe ?"></textarea>
+            </div>
+            <partial name="_ConsentementARTCI" />
+            <button type="submit" class="btn btn-mango w-100"><i class="bi bi-send"></i> Soumettre la demande</button>
+        </form>
+    </div>
+</div>

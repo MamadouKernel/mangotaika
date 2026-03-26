@@ -1,0 +1,198 @@
+@model MangoTaika.Data.Entities.Scout
+@{
+    ViewData["Title"] = "Ma fiche scout";
+    var isParentView = User.IsInRole("Parent");
+    Layout = "_LayoutAdmin";
+    var competences = ViewBag.Competences as List<MangoTaika.Data.Entities.Competence> ?? new();
+    var participations = ViewBag.Participations as List<MangoTaika.Data.Entities.ParticipantActivite> ?? new();
+    var cotisations = ViewBag.Cotisations as List<MangoTaika.Data.Entities.TransactionFinanciere> ?? new();
+    var historique = ViewBag.Historique as List<MangoTaika.Data.Entities.HistoriqueFonction> ?? new();
+}
+
+<h2 class="section-title mb-1">
+    <i class="bi bi-person-badge text-or"></i>
+    @(isParentView ? $"Fiche de {Model.Prenom} {Model.Nom}" : "Ma fiche <span class=\"accent\">scout</span>")
+</h2>
+<div class="section-divider"></div>
+
+<div class="row g-4 mt-2">
+    <!-- Carte identité -->
+    <div class="col-md-4">
+        <div class="card-3d p-4 text-center">
+            <div style="width:100px;height:100px;border-radius:50%;background:var(--vert-logo);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+                <i class="bi bi-person-fill" style="font-size:2.5rem;color:#fff;"></i>
+            </div>
+            <h5 style="color:var(--bleu-logo);">@Model.Prenom @Model.Nom</h5>
+            @if (!string.IsNullOrEmpty(Model.Fonction))
+            {
+                <span class="badge-3d badge-soumise mb-2">@Model.Fonction</span>
+            }
+            <div class="text-muted-custom small mt-2 text-start">
+                <p class="mb-1"><i class="bi bi-hash"></i> Matricule : <strong>@Model.Matricule</strong></p>
+                @if (!string.IsNullOrEmpty(Model.NumeroCarte))
+                {
+                    <p class="mb-1"><i class="bi bi-credit-card"></i> N° Carte : <strong>@Model.NumeroCarte</strong></p>
+                }
+                <p class="mb-1"><i class="bi bi-calendar"></i> Né(e) le @Model.DateNaissance.ToString("dd/MM/yyyy")</p>
+                @if (!string.IsNullOrEmpty(Model.Telephone))
+                {
+                    <p class="mb-1"><i class="bi bi-telephone"></i> @Model.Telephone</p>
+                }
+                @if (!string.IsNullOrEmpty(Model.Email))
+                {
+                    <p class="mb-1"><i class="bi bi-envelope"></i> @Model.Email</p>
+                }
+                <hr style="border-color:var(--gris-border);" />
+                @if (!string.IsNullOrEmpty(Model.RegionScoute))
+                {
+                    <p class="mb-1"><i class="bi bi-geo"></i> Région : @Model.RegionScoute</p>
+                }
+                @if (!string.IsNullOrEmpty(Model.District))
+                {
+                    <p class="mb-1"><i class="bi bi-pin-map"></i> District : @Model.District</p>
+                }
+                @if (Model.Groupe != null)
+                {
+                    <p class="mb-1"><i class="bi bi-building"></i> Groupe : @Model.Groupe.Nom</p>
+                }
+                @if (Model.Branche != null)
+                {
+                    <p class="mb-1"><i class="bi bi-diagram-3"></i> Branche : @Model.Branche.Nom</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <!-- Modifier mes infos (scout uniquement) -->
+        @if (ViewBag.PeutEditer == true)
+        {
+        <div class="card-3d p-4 mb-4">
+            <h6 style="color:var(--bleu-logo);font-weight:700;"><i class="bi bi-pencil"></i> Modifier mes informations</h6>
+            <form asp-controller="Account" asp-action="ModifierMaFiche" method="post" class="form-modern mt-2">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Téléphone</label>
+                        <input type="text" name="Telephone" class="form-control" value="@Model.Telephone" placeholder="Ex: 0701020304" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="Email" class="form-control" value="@Model.Email" placeholder="votre@email.com" />
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-mango btn-sm"><i class="bi bi-check-lg"></i> Enregistrer</button>
+            </form>
+        </div>
+        }
+
+        <!-- Suivi académique -->
+        @if (Model.SuivisAcademiques?.Any() == true)
+        {
+        <div class="card-3d p-4 mb-4">
+            <h6 style="color:var(--bleu-logo);font-weight:700;"><i class="bi bi-mortarboard"></i> Suivi académique</h6>
+            <div class="table-responsive mt-2">
+                <table class="table-modern">
+                    <thead><tr><th>Année</th><th>Établissement</th><th>Niveau</th><th>Classe</th><th>Moyenne</th><th>Mention</th></tr></thead>
+                    <tbody>
+                        @foreach (var s in Model.SuivisAcademiques.OrderByDescending(x => x.AnneeScolaire))
+                        {
+                            <tr>
+                                <td>@s.AnneeScolaire</td>
+                                <td>@s.Etablissement</td>
+                                <td>@s.NiveauScolaire</td>
+                                <td>@s.Classe</td>
+                                <td>@(s.MoyenneGenerale?.ToString("F2") ?? "—")</td>
+                                <td>@(s.Mention ?? "—")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        }
+
+        <!-- Compétences -->
+        @if (competences.Any())
+        {
+        <div class="card-3d p-4 mb-4">
+            <h6 style="color:var(--bleu-logo);font-weight:700;"><i class="bi bi-award"></i> Compétences</h6>
+            <div class="d-flex flex-wrap gap-2 mt-2">
+                @foreach (var c in competences)
+                {
+                    <span class="badge-3d badge-validee">@c.Nom @(!string.IsNullOrEmpty(c.Niveau) ? $"({c.Niveau})" : "")</span>
+                }
+            </div>
+        </div>
+        }
+
+        <!-- Participations aux activités -->
+        @if (participations.Any())
+        {
+        <div class="card-3d p-4 mb-4">
+            <h6 style="color:var(--bleu-logo);font-weight:700;"><i class="bi bi-calendar-event"></i> Activités (@participations.Count)</h6>
+            <div class="table-responsive mt-2">
+                <table class="table-modern">
+                    <thead><tr><th>Activité</th><th>Date</th><th>Lieu</th><th>Présence</th></tr></thead>
+                    <tbody>
+                        @foreach (var p in participations.OrderByDescending(x => x.Activite?.DateDebut))
+                        {
+                            <tr>
+                                <td>@(p.Activite?.Titre ?? "—")</td>
+                                <td>@(p.Activite?.DateDebut.ToString("dd/MM/yyyy") ?? "—")</td>
+                                <td>@(p.Activite?.Lieu ?? "—")</td>
+                                <td><span class="badge-3d @(p.Presence == MangoTaika.Data.Entities.StatutPresence.Present ? "badge-validee" : p.Presence == MangoTaika.Data.Entities.StatutPresence.Absent ? "badge-rejetee" : "badge-soumise")">@p.Presence</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        }
+
+        <!-- Cotisations -->
+        @if (cotisations.Any())
+        {
+        <div class="card-3d p-4 mb-4">
+            <h6 style="color:var(--bleu-logo);font-weight:700;"><i class="bi bi-wallet2"></i> Cotisations</h6>
+            <div class="table-responsive mt-2">
+                <table class="table-modern">
+                    <thead><tr><th>Libellé</th><th>Montant</th><th>Date</th></tr></thead>
+                    <tbody>
+                        @foreach (var c in cotisations)
+                        {
+                            <tr>
+                                <td>@c.Libelle</td>
+                                <td>@c.Montant.ToString("N0") FCFA</td>
+                                <td>@c.DateTransaction.ToString("dd/MM/yyyy")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        }
+
+        <!-- Historique fonctions -->
+        @if (historique.Any())
+        {
+        <div class="card-3d p-4">
+            <h6 style="color:var(--bleu-logo);font-weight:700;"><i class="bi bi-clock-history"></i> Historique des fonctions</h6>
+            <div class="table-responsive mt-2">
+                <table class="table-modern">
+                    <thead><tr><th>Fonction</th><th>Début</th><th>Fin</th></tr></thead>
+                    <tbody>
+                        @foreach (var h in historique)
+                        {
+                            <tr>
+                                <td>@h.Fonction</td>
+                                <td>@h.DateDebut.ToString("dd/MM/yyyy")</td>
+                                <td>@(h.DateFin?.ToString("dd/MM/yyyy") ?? "En cours")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        }
+    </div>
+</div>

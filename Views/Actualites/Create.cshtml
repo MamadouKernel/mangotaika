@@ -1,0 +1,47 @@
+@model ActualiteCreateDto
+@{
+    ViewData["Title"] = "Nouvelle actualité";
+    Layout = "_LayoutAdmin";
+}
+
+<h2 class="section-title mb-1"><i class="bi bi-plus-lg text-or"></i> Nouvelle <span class="accent">actualité</span></h2>
+<div class="section-divider"></div>
+
+<div class="card-3d p-4 mt-3">
+    <form asp-action="Create" method="post" enctype="multipart/form-data" class="form-modern">
+        <div class="mb-3">
+            <label asp-for="Titre" class="form-label">Titre</label>
+            <input asp-for="Titre" class="form-control" required />
+        </div>
+        <div class="mb-3">
+            <label asp-for="Resume" class="form-label">Résumé (optionnel, affiché sur la liste)</label>
+            <input asp-for="Resume" class="form-control" maxlength="300" />
+        </div>
+        <div class="mb-3">
+            <label asp-for="Contenu" class="form-label">Contenu</label>
+            <textarea asp-for="Contenu" class="form-control" rows="10" required></textarea>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Image" class="form-label">Image (optionnel)</label>
+            <input asp-for="Image" class="form-control" type="file" accept="image/*" onchange="previewImg(this)" />
+            <img id="imgPreview" class="mt-2" style="max-height:200px;border-radius:14px;display:none;" alt="Aperçu" />
+        </div>
+        <div class="d-flex gap-2 mt-2">
+            <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Créer</button>
+            <a asp-action="Admin" class="btn btn-outline-or">Annuler</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+function previewImg(input) {
+    const preview = document.getElementById('imgPreview');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
+        reader.readAsDataURL(input.files[0]);
+    } else { preview.style.display = 'none'; }
+}
+</script>
+}

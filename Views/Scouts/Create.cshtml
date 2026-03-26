@@ -1,0 +1,137 @@
+@model ScoutCreateDto
+@{
+    ViewData["Title"] = "Nouveau scout";
+    Layout = "_LayoutAdmin";
+    var groupes = ViewBag.Groupes as List<MangoTaika.Data.Entities.Groupe> ?? new();
+    var branches = ViewBag.Branches as List<MangoTaika.Data.Entities.Branche> ?? new();
+}
+
+<h2 class="section-title mb-1"><i class="bi bi-person-plus-fill text-or"></i> Nouveau <span class="accent">scout</span></h2>
+<div class="section-divider"></div>
+
+<div class="card-3d p-4 mt-3">
+    <form asp-action="Create" method="post" class="form-modern">
+        <div class="mb-3">
+            <label asp-for="Matricule" class="form-label">Matricule</label>
+            <input asp-for="Matricule" class="form-control" placeholder="Ex: CI-2025-001234" />
+            <span asp-validation-for="Matricule" class="text-danger small"></span>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="Nom" class="form-label">Nom</label>
+                <input asp-for="Nom" class="form-control" />
+                <span asp-validation-for="Nom" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label asp-for="Prenom" class="form-label">Prénom</label>
+                <input asp-for="Prenom" class="form-control" />
+                <span asp-validation-for="Prenom" class="text-danger small"></span>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label asp-for="DateNaissance" class="form-label">Date de naissance</label>
+                <input asp-for="DateNaissance" class="form-control" type="date" />
+            </div>
+            <div class="col-md-4 mb-3">
+                <label asp-for="LieuNaissance" class="form-label">Lieu de naissance</label>
+                <input asp-for="LieuNaissance" class="form-control" />
+            </div>
+            <div class="col-md-4 mb-3">
+                <label asp-for="Sexe" class="form-label">Sexe</label>
+                <select asp-for="Sexe" class="form-select">
+                    <option value="">-- Choisir --</option>
+                    <option value="M">Masculin</option>
+                    <option value="F">Féminin</option>
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="Telephone" class="form-label">Téléphone</label>
+                <input asp-for="Telephone" class="form-control" />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label asp-for="Email" class="form-label">Email</label>
+                <input asp-for="Email" class="form-control" type="email" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="RegionScoute" class="form-label">Région Scoute</label>
+                <input asp-for="RegionScoute" class="form-control" placeholder="Ex: ABIDJAN" />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label asp-for="District" class="form-label">District</label>
+                <input asp-for="District" class="form-control" placeholder="Ex: Requin Féroce" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="NumeroCarte" class="form-label">N° Carte</label>
+                <input asp-for="NumeroCarte" class="form-control" placeholder="Ex: 052026-69184" />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label asp-for="Fonction" class="form-label">Fonction</label>
+                <input asp-for="Fonction" class="form-control" placeholder="Ex: LOUVETEAU (8 - 11 ANS)" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="AdresseGeographique" class="form-label">Adresse géographique</label>
+                <input asp-for="AdresseGeographique" class="form-control" placeholder="Ex: Cocody Riviera Palmeraie" />
+            </div>
+            <div class="col-md-6 mb-3 d-flex align-items-center pt-4">
+                <div class="form-check form-switch">
+                    <input asp-for="AssuranceAnnuelle" class="form-check-input" type="checkbox" />
+                    <label asp-for="AssuranceAnnuelle" class="form-check-label">Assurance annuelle à jour</label>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="GroupeId" class="form-label">Groupe</label>
+                <select asp-for="GroupeId" class="form-select">
+                    <option value="">-- Choisir un groupe --</option>
+                    @foreach (var g in groupes)
+                    {
+                        <option value="@g.Id">@g.Nom</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label asp-for="BrancheId" class="form-label">Branche</label>
+                <select asp-for="BrancheId" class="form-select" id="brancheSelect">
+                    <option value="">-- Choisir d'abord un groupe --</option>
+                </select>
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-2">
+            <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Enregistrer</button>
+            <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('GroupeId').addEventListener('change', function () {
+            var brancheSelect = document.getElementById('brancheSelect');
+            brancheSelect.innerHTML = '<option value="">Chargement...</option>';
+            var groupeId = this.value;
+            if (!groupeId) {
+                brancheSelect.innerHTML = '<option value="">-- Choisir d\'abord un groupe --</option>';
+                return;
+            }
+            fetch('/Scouts/GetBranchesByGroupe?groupeId=' + groupeId)
+                .then(r => r.json())
+                .then(data => {
+                    var html = '<option value="">-- Choisir une branche --</option>';
+                    data.forEach(b => {
+                        html += '<option value="' + b.id + '">' + b.nom + ' (' + (b.ageMin || 0) + '-' + (b.ageMax || 99) + ' ans)</option>';
+                    });
+                    brancheSelect.innerHTML = html;
+                });
+        });
+    </script>
+}

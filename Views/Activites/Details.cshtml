@@ -1,0 +1,334 @@
+@model ActiviteDto
+@using MangoTaika.Data.Entities
+@{
+    ViewData["Title"] = Model.Titre;
+    Layout = "_LayoutAdmin";
+    var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+    var scouts = ViewBag.ScoutsGroupe as List<Scout> ?? new();
+    var participantIds = Model.Participants.Select(p => p.ScoutId).ToHashSet();
+    var scoutsDisponibles = scouts.Where(s => !participantIds.Contains(s.Id)).ToList();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2 class="section-title mb-0"><i class="bi bi-calendar-event-fill text-or"></i> <span class="accent">@Model.Titre</span></h2>
+        <small class="text-muted-custom">Créée par @Model.NomCreateur le @Model.DateCreation.ToString("dd/MM/yyyy")</small>
+    </div>
+    <div class="d-flex gap-2">
+        @if (canManage && Model.Statut == StatutActivite.Brouillon)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-or" title="Modifier"><i class="bi bi-pencil"></i></a>
+        }
+        <a asp-action="Index" class="btn btn-outline-or" title="Retour"><i class="bi bi-arrow-left"></i></a>
+    </div>
+</div>
+
+<!-- Barre de statut workflow -->
+<div class="card-3d p-3 mb-4">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge-3d badge-@Model.Statut.ToString().ToLower()" style="font-size:0.85rem;">@Model.Statut</span>
+            <span class="badge bg-secondary bg-opacity-25" style="color:var(--bleu-logo);border-radius:10px;">@Model.Type</span>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            @if (canManage && Model.Statut == StatutActivite.Brouillon)
+            {
+                <form asp-action="Soumettre" asp-route-id="@Model.Id" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-mango btn-sm" title="Soumettre"><i class="bi bi-send"></i></button>
+                </form>
+            }
+            @if (canManage && Model.Statut == StatutActivite.Soumise)
+            {
+                <form asp-action="Valider" asp-route-id="@Model.Id" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-sm" style="background:rgba(16,185,129,0.2);color:#10b981;border:1px solid rgba(16,185,129,0.3);border-radius:14px;" title="Valider"><i class="bi bi-check-lg"></i></button>
+                </form>
+                <button type="button" class="btn btn-sm" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" data-bs-toggle="modal" data-bs-target="#rejetModal" title="Rejeter"><i class="bi bi-x-lg"></i></button>
+            }
+            @if (canManage && Model.Statut == StatutActivite.Validee)
+            {
+                <form asp-action="Demarrer" asp-route-id="@Model.Id" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-mango btn-sm" title="Démarrer"><i class="bi bi-play-fill"></i></button>
+                </form>
+            }
+            @if (canManage && Model.Statut == StatutActivite.EnCours)
+            {
+                <form asp-action="Terminer" asp-route-id="@Model.Id" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-sm" style="background:rgba(16,185,129,0.2);color:#10b981;border:1px solid rgba(16,185,129,0.3);border-radius:14px;" title="Terminer"><i class="bi bi-check-circle"></i></button>
+                </form>
+            }
+            @if (canManage && (Model.Statut == StatutActivite.Terminee || Model.Statut == StatutActivite.Rejetee))
+            {
+                <form asp-action="Archiver" asp-route-id="@Model.Id" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-outline-or" title="Archiver"><i class="bi bi-archive"></i></button>
+                </form>
+            }
+            @if (canManage && Model.Statut == StatutActivite.Rejetee)
+            {
+                <form asp-action="Rebrouillon" asp-route-id="@Model.Id" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-outline-or" title="Corriger"><i class="bi bi-arrow-counterclockwise"></i></button>
+                </form>
+            }
+        </div>
+    </div>
+    @if (!string.IsNullOrEmpty(Model.MotifRejet))
+    {
+        <div class="mt-2 p-2" style="background:rgba(239,68,68,0.1);border-radius:10px;border:1px solid rgba(239,68,68,0.2);">
+            <small style="color:#f87171;"><i class="bi bi-exclamation-triangle"></i> Motif du rejet : @Model.MotifRejet</small>
+        </div>
+    }
+</div>
+
+<!-- Onglets -->
+<ul class="nav nav-tabs mb-3" role="tablist" style="border-color:var(--gris-border);">
+    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#infos" style="color:var(--bleu-logo);"><i class="bi bi-info-circle"></i> Informations</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#participants" style="color:var(--bleu-logo);"><i class="bi bi-people"></i> Participants (@Model.NbParticipants)</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#documents" style="color:var(--bleu-logo);"><i class="bi bi-paperclip"></i> Documents (@Model.NbDocuments)</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#journal" style="color:var(--bleu-logo);"><i class="bi bi-clock-history"></i> Journal (@Model.Commentaires.Count)</a></li>
+</ul>
+
+<div class="tab-content">
+    <!-- ONGLET INFOS -->
+    <div class="tab-pane fade show active" id="infos">
+        <div class="card-3d p-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><span class="text-muted-custom">Type :</span> @Model.Type</p>
+                    <p><span class="text-muted-custom">Date début :</span> @Model.DateDebut.ToString("dd/MM/yyyy")</p>
+                    <p><span class="text-muted-custom">Date fin :</span> @(Model.DateFin?.ToString("dd/MM/yyyy") ?? "—")</p>
+                    <p><span class="text-muted-custom">Lieu :</span> @(Model.Lieu ?? "—")</p>
+                </div>
+                <div class="col-md-6">
+                    <p><span class="text-muted-custom">Groupe :</span> @(Model.NomGroupe ?? "Tout le district")</p>
+                    <p><span class="text-muted-custom">Responsable :</span> @(Model.NomResponsable ?? "—")</p>
+                    <p><span class="text-muted-custom">Budget prévisionnel :</span> @(Model.BudgetPrevisionnel?.ToString("N0") ?? "—") FCFA</p>
+                </div>
+            </div>
+            @if (!string.IsNullOrEmpty(Model.Description))
+            {
+                <hr style="border-color:var(--gris-border);" />
+                <p style="white-space:pre-line;color:var(--texte-secondaire);">@Model.Description</p>
+            }
+        </div>
+    </div>
+
+    <!-- ONGLET PARTICIPANTS -->
+    <div class="tab-pane fade" id="participants">
+        @if (canManage && Model.Statut != StatutActivite.Archivee && scoutsDisponibles.Any())
+        {
+            <div class="card-3d p-3 mb-3">
+                <form asp-action="AjouterParticipant" asp-route-id="@Model.Id" method="post" class="d-flex gap-2 align-items-end">
+                    <div class="flex-grow-1">
+                        <label class="form-label small">Ajouter un scout</label>
+                        <select name="scoutId" class="form-select" required>
+                            <option value="">— Sélectionner —</option>
+                            @foreach (var s in scoutsDisponibles)
+                            {
+                                <option value="@s.Id">@s.Matricule — @s.Prenom @s.Nom @(s.Branche != null ? $"({s.Branche.Nom})" : "")</option>
+                            }
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-mango" title="Ajouter un participant"><i class="bi bi-person-plus"></i></button>
+                </form>
+            </div>
+        }
+
+        @if (Model.Participants.Any())
+        {
+            <div class="card-3d">
+                <div class="table-responsive">
+                    <table class="table-modern">
+                        <thead><tr><th>Matricule</th><th>Nom</th><th>Branche</th><th>Présence</th><th></th></tr></thead>
+                        <tbody>
+                            @foreach (var p in Model.Participants)
+                            {
+                                <tr>
+                                    <td><code>@p.Matricule</code></td>
+                                    <td>@p.NomComplet</td>
+                                    <td>@(p.NomBranche ?? "—")</td>
+                                    <td>
+                                        @if (canManage && (Model.Statut == StatutActivite.EnCours || Model.Statut == StatutActivite.Terminee))
+                                        {
+                                            <form asp-action="MarquerPresence" asp-route-id="@Model.Id" method="post" class="d-inline">
+                                                <input type="hidden" name="participantId" value="@p.Id" />
+                                                <select name="presence" class="form-select form-select-sm" style="width:auto;display:inline;border-radius:10px;" onchange="this.form.submit()">
+                                                    @foreach (var sp in Enum.GetValues<StatutPresence>())
+                                                    {
+                                                        <option value="@sp" selected="@(p.Presence == sp)">@sp</option>
+                                                    }
+                                                </select>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge-3d badge-@(p.Presence == StatutPresence.Present ? "validee" : p.Presence == StatutPresence.Absent ? "rejetee" : "soumise")" style="font-size:0.7rem;">@p.Presence</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (canManage && Model.Statut != StatutActivite.Archivee)
+                                        {
+                                            <form asp-action="RetirerParticipant" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="return confirm('Retirer ce participant ?')">
+                                                <input type="hidden" name="participantId" value="@p.Id" />
+                                                <button type="submit" class="btn btn-sm p-0 px-1" style="color:#f87171;" title="Retirer ce participant"><i class="bi bi-x-circle"></i></button>
+                                            </form>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-4 text-muted-custom"><i class="bi bi-people" style="font-size:2rem;opacity:0.3;"></i><p class="mt-2">Aucun participant inscrit.</p></div>
+        }
+    </div>
+
+    <!-- ONGLET DOCUMENTS -->
+    <div class="tab-pane fade" id="documents">
+        @if (canManage && Model.Statut != StatutActivite.Archivee)
+        {
+            <div class="card-3d p-3 mb-3">
+                <form asp-action="AjouterDocument" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data" class="d-flex gap-2 align-items-end flex-wrap">
+                    <div>
+                        <label class="form-label small">Type</label>
+                        <select name="typeDocument" class="form-select" style="width:auto;">
+                            <option value="Programme">Programme</option>
+                            <option value="Budget">Budget</option>
+                            <option value="Autorisation">Autorisation</option>
+                            <option value="Compte-rendu">Compte-rendu</option>
+                            <option value="Photo">Photo</option>
+                            <option value="Autre">Autre</option>
+                        </select>
+                    </div>
+                    <div class="flex-grow-1">
+                        <label class="form-label small">Fichier</label>
+                        <input type="file" name="fichier" class="form-control" required />
+                    </div>
+                    <button type="submit" class="btn btn-mango" title="Téléverser un document"><i class="bi bi-upload"></i></button>
+                </form>
+            </div>
+        }
+
+        @if (Model.Documents.Any())
+        {
+            <div class="row g-3">
+                @foreach (var doc in Model.Documents)
+                {
+                    <div class="col-md-4">
+                        <div class="card-3d p-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-file-earmark-@(doc.TypeDocument == "Photo" ? "image" : doc.TypeDocument == "Budget" ? "spreadsheet" : "text")" style="font-size:1.5rem;color:var(--vert-logo);"></i>
+                                <div class="flex-grow-1" style="min-width:0;">
+                                    <a href="@doc.CheminFichier" target="_blank" class="text-or small d-block text-truncate" title="@doc.NomFichier">@doc.NomFichier</a>
+                                    <small class="text-muted-custom">@(doc.TypeDocument ?? "Autre") — @doc.DateUpload.ToString("dd/MM/yyyy")</small>
+                                </div>
+                                @if (canManage && Model.Statut != StatutActivite.Archivee)
+                                {
+                                    <form asp-action="SupprimerDocument" asp-route-id="@Model.Id" method="post" onsubmit="return confirm('Supprimer ce document ?')">
+                                        <input type="hidden" name="docId" value="@doc.Id" />
+                                        <button type="submit" class="btn btn-sm p-0" style="color:#f87171;" title="Supprimer le document"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-4 text-muted-custom"><i class="bi bi-paperclip" style="font-size:2rem;opacity:0.3;"></i><p class="mt-2">Aucun document.</p></div>
+        }
+    </div>
+
+    <!-- ONGLET JOURNAL -->
+    <div class="tab-pane fade" id="journal">
+        @if (canManage)
+        {
+            <div class="card-3d p-3 mb-3">
+                <form asp-action="AjouterCommentaire" asp-route-id="@Model.Id" method="post" class="d-flex gap-2">
+                    <input name="contenu" class="form-control" placeholder="Ajouter un commentaire..." required />
+                    <button type="submit" class="btn btn-mango" title="Ajouter un commentaire"><i class="bi bi-chat-dots"></i></button>
+                </form>
+            </div>
+        }
+
+        @if (Model.Commentaires.Any())
+        {
+            <div class="timeline-journal">
+                @foreach (var c in Model.Commentaires)
+                {
+                    var iconClass = c.TypeAction switch
+                    {
+                        "Création" => "bi-plus-circle text-or",
+                        "Soumission" => "bi-send text-or",
+                        "Validation" => "bi-check-circle" ,
+                        "Rejet" => "bi-x-circle",
+                        "Démarrage" => "bi-play-circle text-or",
+                        "Clôture" => "bi-check-circle",
+                        "Archivage" => "bi-archive text-or",
+                        "Document" => "bi-paperclip text-or",
+                        "Correction" => "bi-arrow-counterclockwise text-or",
+                        _ => "bi-chat-dots text-or"
+                    };
+                    var bgColor = c.TypeAction switch
+                    {
+                        "Validation" => "rgba(16,185,129,0.15)",
+                        "Rejet" => "rgba(239,68,68,0.1)",
+                        _ => "transparent"
+                    };
+                    var textColor = c.TypeAction switch
+                    {
+                        "Validation" => "#10b981",
+                        "Rejet" => "#f87171",
+                        _ => "var(--texte-secondaire)"
+                    };
+                    <div class="d-flex gap-3 mb-3 p-2" style="background:@bgColor;border-radius:12px;">
+                        <div style="min-width:30px;text-align:center;padding-top:2px;">
+                            <i class="bi @iconClass" style="font-size:1.2rem;"></i>
+                        </div>
+                        <div>
+                            <p class="mb-0" style="color:@textColor;">@c.Contenu</p>
+                            <small class="text-muted-custom">@c.NomAuteur — @c.DateCreation.ToString("dd/MM/yyyy HH:mm")</small>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-4 text-muted-custom"><i class="bi bi-clock-history" style="font-size:2rem;opacity:0.3;"></i><p class="mt-2">Aucune entrée.</p></div>
+        }
+    </div>
+</div>
+
+<!-- Modal Rejet -->
+@if (canManage)
+{
+<div class="modal fade" id="rejetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius:18px;border:1px solid var(--gris-border);">
+            <form asp-action="Rejeter" asp-route-id="@Model.Id" method="post">
+                <div class="modal-header" style="border-bottom:1px solid var(--gris-border);">
+                    <h5 class="modal-title" style="color:var(--bleu-logo);">Rejeter l'activité</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">Motif du rejet</label>
+                    <textarea name="motif" class="form-control" rows="3" placeholder="Expliquez la raison du rejet..." required></textarea>
+                </div>
+                <div class="modal-footer" style="border-top:1px solid var(--gris-border);">
+                    <button type="button" class="btn btn-outline-or" data-bs-dismiss="modal" title="Annuler">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                    <button type="submit" class="btn" style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Confirmer le rejet">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+}

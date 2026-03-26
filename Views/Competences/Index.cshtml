@@ -1,0 +1,79 @@
+@model List<MangoTaika.Data.Entities.Competence>
+@using MangoTaika.Data.Entities
+@{
+    ViewData["Title"] = "Competences";
+    Layout = "_LayoutAdmin";
+    var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+    var scouts = ViewBag.Scouts as List<Scout> ?? new();
+    var scoutId = ViewBag.ScoutId as Guid?;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-award-fill text-or"></i> <span class="accent">Competences</span></h2>
+</div>
+
+<div class="card-3d p-3 mb-3">
+    <form method="get" class="d-flex gap-2 align-items-end">
+        <div class="flex-grow-1">
+            <label class="form-label small">Filtrer par scout</label>
+            <select name="scoutId" class="form-select">
+                <option value="">- Tous les scouts -</option>
+                @foreach (var s in scouts)
+                {
+                    <option value="@s.Id" selected="@(scoutId == s.Id)">@s.Matricule - @s.Prenom @s.Nom</option>
+                }
+            </select>
+        </div>
+        <button type="submit" class="btn btn-outline-or"><i class="bi bi-funnel"></i> Filtrer</button>
+    </form>
+</div>
+
+@if (canManage)
+{
+    <div class="card-3d p-3 mb-4">
+        <h6 style="color:var(--bleu-logo);"><i class="bi bi-plus-circle"></i> Ajouter une competence</h6>
+        <form asp-action="Create" method="post" class="row g-2 align-items-end mt-2">
+            <div class="col-md-3"><label class="form-label small">Scout</label><select name="ScoutId" class="form-select" required><option value="">- Selectionner -</option>@foreach (var s in scouts){<option value="@s.Id">@s.Matricule - @s.Prenom @s.Nom</option>}</select></div>
+            <div class="col-md-3"><label class="form-label small">Competence</label><input name="Nom" class="form-control" required /></div>
+            <div class="col-md-2"><label class="form-label small">Type</label><select name="Type" class="form-select"><option value="0">Scoute</option><option value="1">Academique</option><option value="2">Autre</option></select></div>
+            <div class="col-md-2"><label class="form-label small">Niveau</label><select name="Niveau" class="form-select"><option value="Debutant">Debutant</option><option value="Intermediaire">Intermediaire</option><option value="Avance">Avance</option><option value="Expert">Expert</option></select></div>
+            <div class="col-md-2"><label class="form-label small">Date obtention</label><input name="DateObtention" class="form-control" type="date" value="@DateTime.Now.ToString("yyyy-MM-dd")" required /></div>
+            <div class="col-auto"><button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i></button></div>
+        </form>
+    </div>
+}
+
+<div class="row g-4">
+    @foreach (var c in Model)
+    {
+        var couleurNiveau = c.Niveau switch { "Expert" => "#10b981", "Avance" => "#3b82f6", "Intermediaire" => "#eab308", _ => "#94a3b8" };
+        <div class="col-lg-4 col-md-6">
+            <div class="card-3d p-4 h-100 d-flex flex-column">
+                <h5 class="text-or mb-2">@c.Nom</h5>
+                <p class="text-muted-custom small mb-2">
+                    <a asp-action="Progression" asp-route-id="@c.ScoutId" class="text-or text-decoration-none">@c.Scout.Prenom @c.Scout.Nom</a>
+                </p>
+                <div class="d-flex flex-column gap-1 mb-3 flex-grow-1" style="font-size:0.85rem;">
+                    <span><i class="bi bi-tag text-bleu"></i> <span class="badge" style="background:var(--vert-pale);color:var(--bleu-logo);border-radius:10px;font-size:0.75rem;">@c.Type</span></span>
+                    <span><i class="bi bi-bar-chart-steps text-or"></i> <span class="badge" style="background:@(couleurNiveau)20;color:@couleurNiveau;border:1px solid @(couleurNiveau)40;border-radius:10px;font-size:0.75rem;">@c.Niveau</span></span>
+                    <span><i class="bi bi-calendar-check text-bleu"></i> @c.DateObtention.ToString("dd/MM/yyyy")</span>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-auto">
+                    <a asp-action="Details" asp-route-id="@c.Id" class="btn btn-sm btn-outline-or" title="Details"><i class="bi bi-eye"></i></a>
+                    @if (canManage)
+                    {
+                        <a asp-action="Edit" asp-route-id="@c.Id" class="btn btn-sm btn-bleu" title="Modifier"><i class="bi bi-pencil"></i></a>
+                        <form asp-action="Delete" asp-route-id="@c.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer ?')">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Supprimer">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<partial name="_ListPagination" />

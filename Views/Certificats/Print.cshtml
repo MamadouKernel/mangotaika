@@ -1,0 +1,166 @@
+@model MangoTaika.DTOs.CertificationFormationDto
+@{
+    Layout = null;
+    var typeLabel = Model.Type.ToString();
+}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <title>@typeLabel - @Model.FormationTitre</title>
+    <style>
+        body {
+            font-family: "Segoe UI", Arial, sans-serif;
+            margin: 0;
+            padding: 32px;
+            color: #24303a;
+            background: #f5f3ec;
+        }
+        .sheet {
+            max-width: 980px;
+            margin: 0 auto;
+            background: white;
+            border: 10px solid #597537;
+            padding: 48px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+        }
+        .topline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #5f7383;
+            font-size: 14px;
+            margin-bottom: 28px;
+        }
+        .title {
+            text-align: center;
+            margin: 24px 0 10px;
+            color: #597537;
+            font-size: 38px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .subtitle {
+            text-align: center;
+            color: #5f7383;
+            font-size: 18px;
+            margin-bottom: 36px;
+        }
+        .recipient {
+            text-align: center;
+            font-size: 32px;
+            font-weight: 700;
+            margin: 26px 0;
+            color: #313e45;
+        }
+        .body-copy {
+            text-align: center;
+            line-height: 1.7;
+            font-size: 18px;
+            color: #334155;
+            max-width: 760px;
+            margin: 0 auto 32px;
+        }
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin-top: 28px;
+        }
+        .meta-card {
+            border: 1px solid #d7e0cf;
+            border-radius: 14px;
+            padding: 18px;
+            background: #fbfcf8;
+        }
+        .meta-card__label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #5f7383;
+            margin-bottom: 6px;
+        }
+        .meta-card__value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #313e45;
+        }
+        .footer {
+            margin-top: 42px;
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+            color: #5f7383;
+            font-size: 14px;
+        }
+        .seal {
+            border: 2px solid #d4a017;
+            color: #d4a017;
+            border-radius: 999px;
+            width: 110px;
+            height: 110px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        .no-print {
+            max-width: 980px;
+            margin: 0 auto 16px;
+        }
+        @@media print {
+            body { background: white; padding: 0; }
+            .sheet { box-shadow: none; margin: 0; max-width: none; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button onclick="window.print()">Imprimer / Enregistrer en PDF</button>
+    </div>
+    <div class="sheet">
+        <div class="topline">
+            <div>District Scout MANGO TAIKA</div>
+            <div>@Model.Code</div>
+        </div>
+
+        <div class="title">@typeLabel</div>
+        <div class="subtitle">Plateforme de formation MANGO TAIKA</div>
+
+        <div class="body-copy">Le District Scout MANGO TAIKA certifie que</div>
+        <div class="recipient">@Model.NomScout</div>
+        <div class="body-copy">
+            a valide avec succes la formation <strong>@Model.FormationTitre</strong> et remplit
+            les conditions de delivrance de cette distinction sur la plateforme.
+        </div>
+
+        <div class="meta-grid">
+            <div class="meta-card">
+                <div class="meta-card__label">Type</div>
+                <div class="meta-card__value">@typeLabel</div>
+            </div>
+            <div class="meta-card">
+                <div class="meta-card__label">Score final</div>
+                <div class="meta-card__value">@Model.ScoreFinal%</div>
+            </div>
+            <div class="meta-card">
+                <div class="meta-card__label">Mention</div>
+                <div class="meta-card__value">@Model.Mention</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div>
+                Emis le @Model.DateEmission.ToString("dd/MM/yyyy")<br />
+                Code de verification: @Model.Code
+            </div>
+            <div class="seal">Mango Taika</div>
+        </div>
+    </div>
+</body>
+</html>

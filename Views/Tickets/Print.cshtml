@@ -1,0 +1,72 @@
+@model List<TicketDto>
+@{
+    Layout = null;
+    var vue = ViewBag.Vue as string ?? "all";
+    var recherche = ViewBag.Recherche as string;
+}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <title>Support - Impression</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 24px; color: #1e293b; }
+        h1 { margin: 0 0 8px; color: #313e45; }
+        .meta { margin-bottom: 18px; color: #64748b; font-size: 13px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; vertical-align: top; }
+        th { background: #313e45; color: white; }
+        .safe { color: #166534; font-weight: 700; }
+        .warn { color: #92400e; font-weight: 700; }
+        .danger { color: #b91c1c; font-weight: 700; }
+        @@media print {
+            body { margin: 10mm; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="margin-bottom:16px;">
+        <button onclick="window.print()">Imprimer / Enregistrer en PDF</button>
+    </div>
+    <h1>Centre de support</h1>
+    <div class="meta">
+        Vue: <strong>@vue</strong>
+        @if (!string.IsNullOrWhiteSpace(recherche))
+        {
+            <span> | Recherche: <strong>@recherche</strong></span>
+        }
+        <span> | Genere le @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</span>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Numero</th>
+                <th>Sujet</th>
+                <th>Service</th>
+                <th>Priorite</th>
+                <th>Statut</th>
+                <th>Demandeur</th>
+                <th>Agent</th>
+                <th>SLA</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var t in Model)
+            {
+                var slaClass = t.EstEnRetard ? "danger" : t.HeuresAvantSla <= 12 ? "warn" : "safe";
+                <tr>
+                    <td>@t.NumeroTicket</td>
+                    <td>@t.Sujet</td>
+                    <td>@(t.NomServiceCatalogue ?? "-")</td>
+                    <td>@t.Priorite</td>
+                    <td>@t.Statut</td>
+                    <td>@(t.NomCreateur ?? "-")</td>
+                    <td>@(t.NomAssigne ?? "-")</td>
+                    <td class="@slaClass">@(t.EstEnRetard ? $"Depasse {Math.Abs(t.HeuresAvantSla):N0} h" : $"{Math.Abs(t.HeuresAvantSla):N0} h")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</body>
+</html>

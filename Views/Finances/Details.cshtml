@@ -1,0 +1,25 @@
+@model TransactionFinanciere
+@using MangoTaika.Data.Entities
+@{
+    ViewData["Title"] = "Detail transaction";
+    Layout = "_LayoutAdmin";
+    var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-wallet2 text-or"></i> Transaction</h2>
+    <div class="d-flex flex-wrap gap-2">
+        @if (canManage)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-bleu btn-sm" title="Modifier"><i class="bi bi-pencil"></i></a>
+        }
+        <a asp-action="Index" asp-route-annee="@Model.DateTransaction.Year" class="btn btn-outline-or btn-sm" title="Liste"><i class="bi bi-arrow-left"></i></a>
+    </div>
+</div>
+
+<div class="card-3d p-4">
+    <h4 class="text-or mb-3">@Model.Libelle</h4>
+    <p style="font-size:1.5rem;font-weight:700;color:@(Model.Type == TypeTransaction.Recette ? "#10b981" : "#f87171");">
+        @(Model.Type == TypeTransaction.Recette ? "+" : "-")@Model.Montant.ToString("N0") <small class="fw-normal">FCFA</small>
+    </p>
+</div>

@@ -1,0 +1,35 @@
+@model CodeInvitation
+@{
+    ViewData["Title"] = "Code d'invitation";
+    Layout = "_LayoutAdmin";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-key-fill text-or"></i> Code <span class="accent">d’invitation</span></h2>
+    <a asp-action="CodesInvitation" class="btn btn-outline-or btn-sm" title="Liste"><i class="bi bi-arrow-left"></i></a>
+</div>
+
+<div class="card-3d p-4" style="max-width:640px;">
+    <code class="d-block mb-4" style="font-size:1.25rem;color:var(--vert-logo);font-weight:700;">@Model.Code</code>
+    <dl class="row mb-0 small">
+        <dt class="col-sm-5 text-muted-custom">Créé par</dt>
+        <dd class="col-sm-7">@Model.Createur.Prenom @Model.Createur.Nom</dd>
+        <dt class="col-sm-5 text-muted-custom">Date de création</dt>
+        <dd class="col-sm-7">@Model.DateCreation.ToString("dd/MM/yyyy HH:mm")</dd>
+        <dt class="col-sm-5 text-muted-custom">Statut</dt>
+        <dd class="col-sm-7">
+            @if (Model.EstUtilise)
+            {<span class="badge-3d badge-rejetee">Utilisé</span>}
+            else
+            {<span class="badge-3d badge-validee">Disponible</span>}
+        </dd>
+        @if (Model.UtilisePar != null)
+        {
+            <dt class="col-sm-5 text-muted-custom">Utilisé par</dt>
+            <dd class="col-sm-7">@Model.UtilisePar.Prenom @Model.UtilisePar.Nom</dd>
+            <dt class="col-sm-5 text-muted-custom">Date d’utilisation</dt>
+            <dd class="col-sm-7">@(Model.DateUtilisation?.ToString("dd/MM/yyyy HH:mm") ?? "—")</dd>
+        }
+    </dl>
+    <p class="text-muted-custom small mt-4 mb-0">Les codes ne sont pas modifiables. Générez un nouveau code si besoin.</p>
+</div>

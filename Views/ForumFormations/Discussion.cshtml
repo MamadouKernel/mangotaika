@@ -1,0 +1,197 @@
+@model MangoTaika.DTOs.DiscussionFormationPageDto
+@{
+    ViewData["Title"] = Model.Discussion.Titre;
+    Layout = "_LayoutAdmin";
+}
+
+<div class="lms-campus">
+    <section class="campus-hero campus-hero--forum">
+        <div class="campus-hero__main">
+            <span class="campus-hero__eyebrow">
+                <i class="bi bi-chat-left-text"></i> Fil de discussion
+            </span>
+            <h1 class="campus-hero__title">@Model.Discussion.Titre</h1>
+            <p class="campus-hero__text">
+                Sujet du forum de @Model.FormationTitre. Ce fil conserve le contexte du cours, les reponses et les interventions de moderation.
+            </p>
+            <div class="campus-hero__stats">
+                <div class="campus-stat">
+                    <span>Auteur</span>
+                    <strong>@Model.Discussion.NomAuteur</strong>
+                </div>
+                <div class="campus-stat">
+                    <span>Reponses</span>
+                    <strong>@Model.Discussion.NombreMessages</strong>
+                </div>
+                <div class="campus-stat">
+                    <span>Etat</span>
+                    <strong>@(Model.Discussion.EstVerrouillee ? "Verrouille" : "Ouvert")</strong>
+                </div>
+                <div class="campus-stat">
+                    <span>Derniere activite</span>
+                    <strong>@Model.Discussion.DateDerniereActivite.ToString("dd/MM HH:mm")</strong>
+                </div>
+            </div>
+        </div>
+
+        <aside class="campus-hero__side">
+            <div class="campus-hero-card">
+                <div class="campus-hero-card__label">Navigation</div>
+                <a asp-action="Index" asp-route-formationId="@Model.FormationId" class="btn btn-outline-light btn-sm mb-2">
+                    <i class="bi bi-arrow-left"></i> Retour au forum
+                </a>
+                @if (Model.PeutModerer)
+                {
+                    <form asp-action="BasculerVerrou" method="post" class="campus-manage-actions mt-2">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="discussionId" value="@Model.Discussion.Id" />
+                        <button type="submit" class="btn @(Model.Discussion.EstVerrouillee ? "btn-outline-success" : "btn-outline-warning") btn-sm">
+                            <i class="bi @(Model.Discussion.EstVerrouillee ? "bi-unlock" : "bi-lock")"></i>
+                            @(Model.Discussion.EstVerrouillee ? "Deverrouiller" : "Verrouiller")
+                        </button>
+                    </form>
+                }
+                <small>
+                    @(Model.Discussion.EstVerrouillee
+                        ? "Le fil est verrouille: il reste consultable mais ne recoit plus de nouvelles reponses."
+                        : "Le fil reste ouvert tant que l'echange doit continuer.")
+                </small>
+            </div>
+        </aside>
+    </section>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    @if (Model.LectureSeule)
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-eye"></i> Lecture seule active pour ce compte.
+        </div>
+    }
+
+    @if (Model.Discussion.EstVerrouillee)
+    {
+        <div class="alert alert-warning">
+            <i class="bi bi-lock"></i> Cette discussion est actuellement verrouillee. Aucune nouvelle reponse ne peut etre ajoutee.
+        </div>
+    }
+
+    <div class="campus-detail-grid">
+        <div class="campus-detail-grid__main">
+            <section class="classroom-panel">
+                <div class="classroom-panel__head">
+                    <div>
+                        <span class="classroom-panel__eyebrow">Message initial</span>
+                        <h2 class="classroom-panel__title">Point de depart de l'echange</h2>
+                    </div>
+                    <span class="classroom-panel__hint">@Model.Discussion.DateCreation.ToString("dd/MM/yyyy HH:mm")</span>
+                </div>
+
+                <article class="forum-thread-card">
+                    <div class="forum-thread-card__author">
+                        <strong>@Model.Discussion.NomAuteur</strong>
+                        <span>Sujet lance pour @Model.FormationTitre</span>
+                    </div>
+                    <div class="forum-thread-card__content">@Model.Discussion.ContenuInitial</div>
+                </article>
+            </section>
+
+            <section class="classroom-panel">
+                <div class="classroom-panel__head">
+                    <div>
+                        <span class="classroom-panel__eyebrow">Fil de classe</span>
+                        <h2 class="classroom-panel__title">Reponses</h2>
+                    </div>
+                    <span class="classroom-panel__hint">@Model.Discussion.NombreMessages intervention(s)</span>
+                </div>
+
+                @if (!Model.Discussion.Messages.Any())
+                {
+                    <div class="campus-empty-state">
+                        <i class="bi bi-chat-left"></i>
+                        <h3>Aucune reponse pour le moment</h3>
+                        <p>Le sujet est ouvert. La prochaine intervention apparaitra dans ce fil.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="forum-message-list">
+                        @foreach (var message in Model.Discussion.Messages)
+                        {
+                            <article class="forum-message-card">
+                                <div class="forum-message-card__top">
+                                    <strong>@message.NomAuteur</strong>
+                                    <span>@message.DateCreation.ToString("dd/MM/yyyy HH:mm")</span>
+                                </div>
+                                <div class="forum-message-card__content">@message.Contenu</div>
+                            </article>
+                        }
+                    </div>
+                }
+            </section>
+        </div>
+
+        <aside class="campus-detail-grid__side">
+            @if (Model.PeutParticiper && !Model.Discussion.EstVerrouillee)
+            {
+                <section class="classroom-panel classroom-panel--compact">
+                    <div class="classroom-panel__head">
+                        <div>
+                            <span class="classroom-panel__eyebrow">Repondre</span>
+                            <h2 class="classroom-panel__title">Ajouter une intervention</h2>
+                        </div>
+                    </div>
+
+                    <form asp-action="AjouterMessage" method="post" class="campus-composer">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="discussionId" value="@Model.Discussion.Id" />
+                        <div>
+                            <label class="form-label">Votre message</label>
+                            <textarea name="Contenu" class="form-control" rows="6" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-mango">
+                            <i class="bi bi-reply-fill"></i> Envoyer la reponse
+                        </button>
+                    </form>
+                </section>
+            }
+            else
+            {
+                <section class="classroom-panel classroom-panel--compact">
+                    <div class="campus-side-note">
+                        <div class="campus-side-note__label">Participation</div>
+                        <strong>@(Model.Discussion.EstVerrouillee ? "Discussion verrouillee" : "Lecture seule")</strong>
+                        <small>
+                            @(Model.Discussion.EstVerrouillee
+                                ? "Le fil reste visible, mais l'equipe pedagogique a suspendu les nouvelles reponses."
+                                : "La publication de messages n'est pas autorisee pour ce compte sur ce fil.")
+                        </small>
+                    </div>
+                </section>
+            }
+
+            <section class="classroom-panel classroom-panel--compact">
+                <div class="classroom-panel__head">
+                    <div>
+                        <span class="classroom-panel__eyebrow">Repere</span>
+                        <h2 class="classroom-panel__title">Cadre d'echange</h2>
+                    </div>
+                </div>
+
+                <div class="campus-side-note">
+                    <div class="campus-side-note__label">Bonne pratique</div>
+                    <strong>Restez clair et utile</strong>
+                    <small>Une bonne reponse reformule le contexte, apporte un element concret et aide aussi les autres apprenants qui liront plus tard.</small>
+                </div>
+            </section>
+        </aside>
+    </div>
+</div>

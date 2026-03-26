@@ -1,0 +1,70 @@
+@model List<MangoTaika.Data.Entities.ApplicationUser>
+@{
+    ViewData["Title"] = "Gestion des utilisateurs";
+    Layout = "_LayoutAdmin";
+    var userRoles = ViewBag.UserRoles as Dictionary<Guid, string> ?? new();
+}
+
+<h2 class="section-title mb-1"><i class="bi bi-people-fill text-or"></i> Gestion des <span class="accent">utilisateurs</span></h2>
+<div class="section-divider"></div>
+
+<div class="row g-4 mt-2">
+    @foreach (var user in Model)
+    {
+        var roleDisplay = userRoles.GetValueOrDefault(user.Id, "—");
+        if (roleDisplay == "Parent") { roleDisplay = "Parent / Tuteur"; }
+        <div class="col-lg-4 col-md-6">
+            <div class="card-3d p-4 h-100 d-flex flex-column">
+                <h5 class="text-or mb-2">@user.Prenom @user.Nom</h5>
+                <p class="text-muted-custom small mb-2"><span class="badge-3d badge-soumise">@roleDisplay</span></p>
+                <div class="d-flex flex-column gap-1 mb-3 flex-grow-1" style="font-size:0.85rem;">
+                    <span><i class="bi bi-telephone text-bleu"></i> @user.PhoneNumber</span>
+                    <span><i class="bi bi-envelope text-or"></i> @(user.Email ?? "—")</span>
+                    <span><i class="bi bi-calendar3 text-bleu"></i> Inscrit le @user.DateCreation.ToString("dd/MM/yyyy")</span>
+                    <span>
+                        @if (user.IsActive)
+                        {
+                            <span class="badge-3d badge-validee">Actif</span>
+                        }
+                        else
+                        {
+                            <span class="badge-3d badge-rejetee">Inactif</span>
+                        }
+                    </span>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-auto">
+                    <a asp-action="UtilisateurDetails" asp-route-id="@user.Id" class="btn btn-sm btn-outline-or" title="Détails">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a asp-action="EditerUtilisateur" asp-route-id="@user.Id" class="btn btn-sm btn-bleu" title="Modifier">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    @if (!user.IsActive)
+                    {
+                        <form asp-action="ActivateUser" asp-route-id="@user.Id" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-mango" title="Activer">
+                                <i class="bi bi-check-circle"></i>
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <form asp-action="DeactivateUser" asp-route-id="@user.Id" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-outline-or" title="Désactiver">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+    @if (!Model.Any())
+    {
+        <div class="col-12 text-center text-muted-custom py-5">Aucun utilisateur</div>
+    }
+</div>
+
+<partial name="_ListPagination" />
