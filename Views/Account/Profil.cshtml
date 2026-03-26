@@ -5,27 +5,37 @@
     Layout = isAdmin ? "_LayoutAdmin" : "_Layout";
 }
 
-<div class="@(isAdmin ? "" : "container my-5")" style="max-width:800px;@(isAdmin ? "" : "margin:0 auto;")">
-    <h2 class="section-title mb-1"><i class="bi bi-person-circle text-or"></i> Mon <span class="accent">profil</span></h2>
+<div class="profile-page @(isAdmin ? "profile-page--admin py-4" : "container profile-page--public py-5")">
+    <div class="profile-page__header">
+        <div>
+            <h2 class="section-title mb-1"><i class="bi bi-person-circle text-or"></i> Mon <span class="accent">profil</span></h2>
+            <p class="profile-page__lead">Gerez vos informations personnelles, la securite du compte et vos droits sur vos donnees depuis un espace unique.</p>
+        </div>
+        <div class="profile-page__header-badge">
+            <i class="bi bi-shield-check"></i>
+            <span>Compte securise</span>
+        </div>
+    </div>
     <div class="section-divider"></div>
 
-    <div class="row g-4 mt-2">
+    <div class="row g-4 mt-2 profile-page__grid">
         <!-- Carte profil -->
-        <div class="col-md-4">
-            <div class="card-3d p-4 text-center">
+        <div class="col-lg-4 profile-page__aside">
+            <div class="profile-page__aside-stack">
+                <div class="card-3d p-4 text-center profile-summary-card">
                 @if (!string.IsNullOrEmpty(Model.PhotoUrl))
                 {
-                    <img src="@Model.PhotoUrl" alt="Photo" style="width:120px;height:120px;object-fit:cover;border-radius:50%;border:3px solid var(--vert-pastel);margin-bottom:1rem;" />
+                    <img src="@Model.PhotoUrl" alt="Photo" class="profile-summary-card__photo" />
                 }
                 else
                 {
-                    <div style="width:120px;height:120px;border-radius:50%;background:var(--vert-logo);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+                    <div class="profile-summary-card__avatar">
                         <i class="bi bi-person-fill" style="font-size:3rem;color:#fff;"></i>
                     </div>
                 }
                 <h5 style="color:var(--bleu-logo);margin-bottom:0.25rem;">@Model.Prenom @Model.Nom</h5>
                 <span class="badge-3d badge-soumise">@(Model.Role ?? "Utilisateur")</span>
-                <div class="mt-3 text-muted-custom small">
+                <div class="mt-3 text-muted-custom small profile-summary-card__meta">
                     <p class="mb-1"><i class="bi bi-telephone"></i> @Model.Telephone</p>
                     @if (!string.IsNullOrEmpty(Model.Email))
                     {
@@ -41,13 +51,30 @@
                     }
                     <p class="mb-0"><i class="bi bi-calendar"></i> Inscrit le @Model.DateCreation.ToString("dd/MM/yyyy")</p>
                 </div>
+                </div>
+
+                @if (!isAdmin)
+                {
+                    <div class="card-3d p-4 profile-quick-card">
+                        <h6 class="profile-quick-card__title"><i class="bi bi-stars"></i> Raccourcis utiles</h6>
+                        <div class="profile-quick-card__actions">
+                            <a class="btn btn-bleu" asp-controller="Dashboard" asp-action="Index">
+                                <i class="bi bi-speedometer2"></i> Vue d'ensemble
+                            </a>
+                            <a class="btn btn-outline-or" asp-controller="Tickets" asp-action="MesTickets">
+                                <i class="bi bi-headset"></i> Centre d'assistance
+                            </a>
+                        </div>
+                        <p class="profile-quick-card__hint">Accedez rapidement a votre suivi personnel et a vos demandes de support.</p>
+                    </div>
+                }
             </div>
         </div>
 
         <!-- Formulaires -->
-        <div class="col-md-8">
+        <div class="col-lg-8 profile-page__content">
             <!-- Modifier les infos -->
-            <div class="card-3d p-4 mb-4">
+            <div class="card-3d p-4 mb-4 profile-panel">
                 <h6 style="color:var(--bleu-logo);font-weight:700;"><i class="bi bi-pencil"></i> Modifier mes informations</h6>
                 <form asp-action="Profil" method="post" enctype="multipart/form-data" class="form-modern mt-3">
                     <div class="row">
@@ -83,7 +110,7 @@
             </div>
 
             <!-- Changer mot de passe -->
-            <div class="card-3d p-4">
+            <div class="card-3d p-4 profile-panel">
                 <h6 style="color:var(--bleu-logo);font-weight:700;"><i class="bi bi-lock"></i> Changer le mot de passe</h6>
                 @if (TempData["ErrorMdp"] != null)
                 {
@@ -109,7 +136,7 @@
             </div>
 
             <!-- Authentification à deux facteurs -->
-            <div class="card-3d p-4 mt-4">
+            <div class="card-3d p-4 mt-4 profile-panel">
                 <h6 style="color:var(--bleu-logo);font-weight:700;"><i class="bi bi-shield-lock"></i> Authentification à deux facteurs (2FA)</h6>
                 <p class="text-muted-custom small mt-2">Renforcez la sécurité de votre compte avec un code envoyé par SMS.</p>
                 @if (ViewBag.MfaActif == true)
@@ -132,7 +159,7 @@
             </div>
 
             <!-- Droits RGPD / ARTCI -->
-            <div class="card-3d p-4 mt-4">
+            <div class="card-3d p-4 mt-4 profile-panel">
                 <h6 style="color:var(--bleu-logo);font-weight:700;"><i class="bi bi-file-earmark-lock"></i> Mes droits sur mes données (ARTCI / Loi n°2013-450)</h6>
                 <p class="text-muted-custom small mt-2">
                     Conformément à la loi ivoirienne relative à la protection des données personnelles, vous disposez d'un droit d'accès,
