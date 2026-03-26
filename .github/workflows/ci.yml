@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+          cache: true
+          cache-dependency-path: |
+            MangoTaika.csproj
+            MangoTaika.Tests/MangoTaika.Tests.csproj
+
+      - name: Restore dependencies
+        run: dotnet restore MangoTaika.Tests/MangoTaika.Tests.csproj
+
+      - name: Build solution
+        run: dotnet build MangoTaika.Tests/MangoTaika.Tests.csproj --configuration Release --no-restore
+
+      - name: Run tests
+        run: >
+          dotnet test MangoTaika.Tests/MangoTaika.Tests.csproj
+          --configuration Release
+          --no-build
+          --logger "trx;LogFileName=test-results.trx"
+          --results-directory artifacts/test-results
+          --collect:"XPlat Code Coverage"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: artifacts/test-results
+          if-no-files-found: warn

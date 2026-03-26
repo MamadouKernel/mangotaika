@@ -4,7 +4,7 @@
 [![ASP.NET Core MVC](https://img.shields.io/badge/ASP.NET%20Core-MVC-5C2D91?logo=dotnet&logoColor=white)](https://learn.microsoft.com/aspnet/core/mvc/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Docker Ready](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
-[![Tests](https://img.shields.io/badge/tests-46%2F46-success)](#tests)
+[![CI](https://github.com/MamadouKernel/mangotaika/actions/workflows/ci.yml/badge.svg)](https://github.com/MamadouKernel/mangotaika/actions/workflows/ci.yml)
 [![Status](https://img.shields.io/badge/status-active%20development-597537)](#roadmap)
 
 Plateforme web ASP.NET Core MVC pour le District Scout MANGO TAIKA.
