@@ -132,19 +132,6 @@
                 <ul class="navbar-nav @(ViewData["IsAdminLayout"] != null ? "ms-auto" : "")">
                     @if (User.Identity?.IsAuthenticated == true)
                     {
-                        @if (ViewData["IsAdminLayout"] == null)
-                        {
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Tickets" asp-action="MesTickets">
-                                <i class="bi bi-headset"></i> Support
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Dashboard" asp-action="Index">
-                                <i class="bi bi-speedometer2"></i> Tableau de bord
-                            </a>
-                        </li>
-                        }
                         <li class="nav-item notification-nav-item">
                             <button type="button" class="nav-link notification-trigger" id="notificationTrigger" aria-expanded="false" aria-controls="notificationPanel">
                                 <span class="notification-trigger__icon">
@@ -173,19 +160,53 @@
                         </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-person-circle"></i> Mon compte
+                                <i class="bi bi-person-circle"></i> Mon espace
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end">
+                            <ul class="dropdown-menu dropdown-menu-end account-dropdown-menu">
+                                @if (ViewData["IsAdminLayout"] == null)
+                                {
+                                    <li class="account-dropdown-menu__intro">
+                                        <span class="account-dropdown-menu__eyebrow">Navigation connectee</span>
+                                        <span class="account-dropdown-menu__title">Acces rapide</span>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item account-dropdown-item" asp-controller="Dashboard" asp-action="Index">
+                                            <i class="bi bi-speedometer2"></i>
+                                            <span>
+                                                <span class="account-dropdown-item__label">Vue d'ensemble</span>
+                                                <span class="account-dropdown-item__hint">Votre tableau de bord personnalise</span>
+                                            </span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item account-dropdown-item" asp-controller="Tickets" asp-action="MesTickets">
+                                            <i class="bi bi-headset"></i>
+                                            <span>
+                                                <span class="account-dropdown-item__label">Centre d'assistance</span>
+                                                <span class="account-dropdown-item__hint">Tickets, echanges et suivi de support</span>
+                                            </span>
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider" /></li>
+                                }
                                 <li>
-                                    <a class="dropdown-item" asp-controller="Account" asp-action="Profil">
-                                        <i class="bi bi-person"></i> Mon profil
+                                    <a class="dropdown-item account-dropdown-item" asp-controller="Account" asp-action="Profil">
+                                        <i class="bi bi-person"></i>
+                                        <span>
+                                            <span class="account-dropdown-item__label">Mon profil</span>
+                                            <span class="account-dropdown-item__hint">Informations personnelles et acces au compte</span>
+                                        </span>
                                     </a>
                                 </li>
                                 <li><hr class="dropdown-divider" /></li>
                                 <li>
                                     <form asp-controller="Account" asp-action="Logout" method="post">
-                                        <button type="submit" class="dropdown-item">
-                                            <i class="bi bi-box-arrow-right"></i> Déconnexion
+                                        <button type="submit" class="dropdown-item account-dropdown-item">
+                                            <i class="bi bi-box-arrow-right"></i>
+                                            <span>
+                                                <span class="account-dropdown-item__label">Deconnexion</span>
+                                                <span class="account-dropdown-item__hint">Fermer la session en toute securite</span>
+                                            </span>
                                         </button>
                                     </form>
                                 </li>
