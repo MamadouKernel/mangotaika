@@ -1,0 +1,127 @@
+name: Deploy VPS
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to deploy
+        required: false
+        default: main
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    permissions:
+      contents: read
+
+    steps:
+      - name: Resolve deployment ref
+        id: ref
+        shell: bash
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            echo "deploy_ref=${{ github.event.inputs.ref }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy_ref=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Resolve deployment settings
+        id: settings
+        shell: bash
+        env:
+          VPS_APP_DIR_VAR: ${{ vars.VPS_APP_DIR }}
+          VPS_SSH_PORT_VAR: ${{ vars.VPS_SSH_PORT }}
+          APP_PORT_VAR: ${{ vars.APP_PORT }}
+          POSTGRES_DB_VAR: ${{ vars.POSTGRES_DB }}
+          POSTGRES_USER_VAR: ${{ vars.POSTGRES_USER }}
+          ADMIN_SEED_EMAIL_VAR: ${{ vars.ADMIN_SEED_EMAIL }}
+          ADMIN_SEED_PHONE_VAR: ${{ vars.ADMIN_SEED_PHONE }}
+          CONTACT_EMAIL_VAR: ${{ vars.CONTACT_EMAIL }}
+          CONTACT_WHATSAPP_NUMBER_VAR: ${{ vars.CONTACT_WHATSAPP_NUMBER }}
+          SEED_DEMO_DATA_VAR: ${{ vars.SEED_DEMO_DATA }}
+          TZ_VAR: ${{ vars.TZ }}
+        run: |
+          echo "app_dir=${VPS_APP_DIR_VAR:-/opt/mangotaika}" >> "$GITHUB_OUTPUT"
+          echo "ssh_port=${VPS_SSH_PORT_VAR:-22}" >> "$GITHUB_OUTPUT"
+          echo "app_port=${APP_PORT_VAR:-8080}" >> "$GITHUB_OUTPUT"
+          echo "postgres_db=${POSTGRES_DB_VAR:-MangoTaikaDb}" >> "$GITHUB_OUTPUT"
+          echo "postgres_user=${POSTGRES_USER_VAR:-postgres}" >> "$GITHUB_OUTPUT"
+          echo "admin_seed_email=${ADMIN_SEED_EMAIL_VAR:-admin@mangotaika.com}" >> "$GITHUB_OUTPUT"
+          echo "admin_seed_phone=${ADMIN_SEED_PHONE_VAR:-0000000000}" >> "$GITHUB_OUTPUT"
+          echo "contact_email=${CONTACT_EMAIL_VAR:-contact@mangotaika.ci}" >> "$GITHUB_OUTPUT"
+          echo "contact_whatsapp_number=${CONTACT_WHATSAPP_NUMBER_VAR:-2250759013291}" >> "$GITHUB_OUTPUT"
+          echo "seed_demo_data=${SEED_DEMO_DATA_VAR:-false}" >> "$GITHUB_OUTPUT"
+          echo "tz=${TZ_VAR:-Africa/Abidjan}" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          APP_DIR: ${{ steps.settings.outputs.app_dir }}
+          DEPLOY_REF: ${{ steps.ref.outputs.deploy_ref }}
+          REPO_URL: https://github.com/${{ github.repository }}.git
+          APP_PORT: ${{ steps.settings.outputs.app_port }}
+          POSTGRES_DB: ${{ steps.settings.outputs.postgres_db }}
+          POSTGRES_USER: ${{ steps.settings.outputs.postgres_user }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          ADMIN_SEED_EMAIL: ${{ steps.settings.outputs.admin_seed_email }}
+          ADMIN_SEED_PHONE: ${{ steps.settings.outputs.admin_seed_phone }}
+          ADMIN_SEED_PASSWORD: ${{ secrets.ADMIN_SEED_PASSWORD }}
+          CONTACT_EMAIL: ${{ steps.settings.outputs.contact_email }}
+          CONTACT_WHATSAPP_NUMBER: ${{ steps.settings.outputs.contact_whatsapp_number }}
+          SEED_DEMO_DATA: ${{ steps.settings.outputs.seed_demo_data }}
+          TZ: ${{ steps.settings.outputs.tz }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ steps.settings.outputs.ssh_port }}
+          script_stop: true
+          envs: APP_DIR,DEPLOY_REF,REPO_URL,APP_PORT,POSTGRES_DB,POSTGRES_USER,POSTGRES_PASSWORD,ADMIN_SEED_EMAIL,ADMIN_SEED_PHONE,ADMIN_SEED_PASSWORD,CONTACT_EMAIL,CONTACT_WHATSAPP_NUMBER,SEED_DEMO_DATA,TZ
+          script: |
+            set -Eeuo pipefail
+
+            mkdir -p "$APP_DIR"
+
+            if [ ! -d "$APP_DIR/.git" ]; then
+              git clone "$REPO_URL" "$APP_DIR"
+            fi
+
+            cd "$APP_DIR"
+            git fetch --all --prune
+            git checkout --force "$DEPLOY_REF"
+            git clean -fd
+
+            cat > .env <<EOF
+            APP_PORT=${APP_PORT}
+            POSTGRES_DB=${POSTGRES_DB}
+            POSTGRES_USER=${POSTGRES_USER}
+            POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            ADMIN_SEED_EMAIL=${ADMIN_SEED_EMAIL}
+            ADMIN_SEED_PHONE=${ADMIN_SEED_PHONE}
+            ADMIN_SEED_PASSWORD=${ADMIN_SEED_PASSWORD}
+            CONTACT_EMAIL=${CONTACT_EMAIL}
+            CONTACT_WHATSAPP_NUMBER=${CONTACT_WHATSAPP_NUMBER}
+            SEED_DEMO_DATA=${SEED_DEMO_DATA}
+            TZ=${TZ}
+            EOF
+
+            chmod 600 .env
+            chmod +x scripts/deploy-vps.sh
+
+            APP_DIR="$APP_DIR" APP_PORT="$APP_PORT" bash scripts/deploy-vps.sh

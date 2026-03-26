@@ -31,6 +31,7 @@ Repository GitHub:
 - [Installation locale](#installation-locale)
 - [Tests](#tests)
 - [Docker](#docker)
+- [CI/CD GitHub Actions](#cicd-github-actions)
 - [Deploiement VPS](#deploiement-vps)
 - [Configuration](#configuration)
 - [Securite](#securite)
@@ -286,6 +287,80 @@ Volumes persistants:
 - uploads
 - cles Data Protection
 
+## CI/CD GitHub Actions
+
+Workflows disponibles:
+- [CI](./.github/workflows/ci.yml)
+- [Deploy VPS](./.github/workflows/deploy-vps.yml)
+
+### CI
+
+Le workflow `CI` s'exécute sur:
+- `push` sur `main`
+- `pull_request` vers `main`
+- lancement manuel
+
+Il effectue:
+- `restore`
+- `build`
+- `test`
+- publication des resultats de tests en artefact
+
+### Deploy VPS
+
+Le workflow `Deploy VPS` s'exécute:
+- automatiquement apres un workflow `CI` reussi sur `main`
+- manuellement via `workflow_dispatch`
+
+Il effectue:
+- connexion SSH au VPS
+- clonage initial ou mise a jour du repository
+- ecriture du fichier `.env` sur le serveur
+- `docker compose up -d --build`
+- verification du endpoint `/health`
+
+### Secrets GitHub requis
+
+Configurer dans `Settings > Secrets and variables > Actions > Secrets`:
+
+- `VPS_HOST`
+- `VPS_USER`
+- `VPS_SSH_KEY`
+- `POSTGRES_PASSWORD`
+- `ADMIN_SEED_PASSWORD`
+
+### Variables GitHub recommandees
+
+Configurer dans `Settings > Secrets and variables > Actions > Variables`:
+
+- `VPS_APP_DIR`
+- `VPS_SSH_PORT`
+- `APP_PORT`
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `ADMIN_SEED_EMAIL`
+- `ADMIN_SEED_PHONE`
+- `CONTACT_EMAIL`
+- `CONTACT_WHATSAPP_NUMBER`
+- `SEED_DEMO_DATA`
+- `TZ`
+
+Valeurs conseillees:
+
+```text
+VPS_APP_DIR=/opt/mangotaika
+VPS_SSH_PORT=22
+APP_PORT=8080
+POSTGRES_DB=MangoTaikaDb
+POSTGRES_USER=postgres
+ADMIN_SEED_EMAIL=admin@mangotaika.com
+ADMIN_SEED_PHONE=0700000000
+CONTACT_EMAIL=contact@mangotaika.ci
+CONTACT_WHATSAPP_NUMBER=2250759013291
+SEED_DEMO_DATA=false
+TZ=Africa/Abidjan
+```
+
 ## Deploiement VPS
 
 ### Recommandation
@@ -315,6 +390,16 @@ docker compose ps
 docker compose logs -f app
 curl http://localhost:8080/health
 ```
+
+### Mode automatique
+
+Avec le workflow [Deploy VPS](./.github/workflows/deploy-vps.yml), le deploiement peut etre totalement automatise apres validation CI.
+
+Prerequis cote serveur:
+- Docker installe
+- Docker Compose disponible
+- Git installe
+- utilisateur SSH autorise a executer Docker
 
 ## Configuration
 
