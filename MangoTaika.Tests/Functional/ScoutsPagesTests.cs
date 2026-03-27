@@ -164,6 +164,38 @@ public sealed class ScoutsPagesTests
     }
 
     [Fact]
+    public async Task Create_Loads_All_Branches_On_First_Render()
+    {
+        await using var factory = new SupportWebApplicationFactory();
+        ApplicationUser gestionnaire = null!;
+
+        await factory.SeedAsync(async db =>
+        {
+            await TestDataSeeder.EnsureRolesAsync(db, "Gestionnaire");
+            gestionnaire = await TestDataSeeder.AddUserAsync(db, "Awa", "Gestion", ["Gestionnaire"]);
+
+            var groupe = new Groupe { Id = Guid.NewGuid(), Nom = "Groupe A" };
+            var branche = new Branche
+            {
+                Id = Guid.NewGuid(),
+                Nom = "Louveteaux",
+                GroupeId = groupe.Id,
+                AgeMin = 8,
+                AgeMax = 11
+            };
+
+            db.Groupes.Add(groupe);
+            db.Branches.Add(branche);
+        });
+
+        using var client = factory.CreateAuthenticatedClient(gestionnaire.Id, "Gestionnaire");
+        var html = await client.GetStringAsync("/Scouts/Create");
+
+        html.Should().Contain("-- Toutes les branches --");
+        html.Should().Contain("Groupe A - Louveteaux (8-11 ans)");
+    }
+
+    [Fact]
     public async Task Edit_Preloads_Current_Branche_For_Selected_Groupe()
     {
         await using var factory = new SupportWebApplicationFactory();
