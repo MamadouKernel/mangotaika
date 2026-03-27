@@ -157,14 +157,66 @@ public class TicketsController(
             .Where(a => a.EstPublie)
             .AsQueryable();
 
+        if (!db.Database.IsNpgsql())
+        {
+            var articles = await query.ToListAsync();
+
+            if (!string.IsNullOrWhiteSpace(q))
+            {
+                var normalizedTerm = DatabaseText.NormalizeSearchKey(q);
+                articles = articles
+                    .Where(a =>
+                        DatabaseText.ContainsNormalized(a.Titre, normalizedTerm) ||
+                        DatabaseText.ContainsNormalized(a.Resume, normalizedTerm) ||
+                        DatabaseText.ContainsNormalized(a.Contenu, normalizedTerm) ||
+                        DatabaseText.ContainsNormalized(a.MotsCles, normalizedTerm))
+                    .ToList();
+            }
+
+            if (serviceId.HasValue)
+            {
+                var service = await db.SupportCatalogueServices
+                    .Where(s => s.Id == serviceId.Value)
+                    .Select(s => new { s.Nom, s.Code, Category = s.CategorieParDefaut.ToString() })
+                    .FirstOrDefaultAsync();
+
+                if (service is not null)
+                {
+                    var normalizedCategory = DatabaseText.NormalizeSearchKey(service.Category);
+                    var normalizedServiceName = DatabaseText.NormalizeSearchKey(service.Nom);
+                    var normalizedServiceCode = DatabaseText.NormalizeSearchKey(service.Code);
+
+                    articles = articles
+                        .Where(a =>
+                            DatabaseText.ContainsNormalized(a.Categorie, normalizedCategory) ||
+                            DatabaseText.ContainsNormalized(a.Titre, normalizedServiceName) ||
+                            DatabaseText.ContainsNormalized(a.Resume, normalizedServiceName) ||
+                            DatabaseText.ContainsNormalized(a.MotsCles, normalizedServiceName) ||
+                            DatabaseText.ContainsNormalized(a.MotsCles, normalizedServiceCode))
+                        .ToList();
+                }
+            }
+
+            var fallbackItems = articles
+                .OrderByDescending(a => a.DateMiseAJour ?? a.DateCreation)
+                .Take(5)
+                .Select(a => new
+                {
+                    id = a.Id,
+                    titre = a.Titre,
+                    resume = a.Resume,
+                    contenu = a.Contenu.Length > 600 ? a.Contenu.Substring(0, 600) + "..." : a.Contenu,
+                    categorie = a.Categorie,
+                    url = Url.Action("Details", "KnowledgeBase", new { id = a.Id })
+                })
+                .ToList();
+
+            return Json(fallbackItems);
+        }
+
         if (!string.IsNullOrWhiteSpace(q))
         {
-            var term = q.Trim();
-            query = query.Where(a =>
-                a.Titre.Contains(term) ||
-                a.Resume.Contains(term) ||
-                a.Contenu.Contains(term) ||
-                (a.MotsCles != null && a.MotsCles.Contains(term)));
+            query = query.ApplyTextSearch(db, q);
         }
 
         if (serviceId.HasValue)
@@ -176,11 +228,7 @@ public class TicketsController(
 
             if (service is not null)
             {
-                query = query.Where(a =>
-                    a.Categorie.Contains(service.Category) ||
-                    a.Titre.Contains(service.Nom) ||
-                    a.Resume.Contains(service.Nom) ||
-                    (a.MotsCles != null && (a.MotsCles.Contains(service.Nom) || a.MotsCles.Contains(service.Code))));
+                query = query.ApplyServiceSuggestion(db, service.Category, service.Nom, service.Code);
             }
         }
 

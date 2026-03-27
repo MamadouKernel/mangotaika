@@ -121,6 +121,44 @@ public sealed class TicketServiceTests
         results.Should().ContainSingle(t => t.Id == ticket.Id);
     }
 
+    [Fact]
+    public async Task GetAllAsync_Filters_Recherche_CaseInsensitively()
+    {
+        await using var db = TestDbContextFactory.CreateDbContext();
+
+        var creator = await TestDataSeeder.AddUserAsync(db, "Awa", "Demandeur", []);
+        var ticket = CreateTicket(creator.Id, null, "INC-SEARCH-1", StatutTicket.Nouveau, DateTime.UtcNow.AddHours(4));
+        ticket.Sujet = "Imprimante reseau";
+        ticket.Description = "L'imprimante principale ne repond plus.";
+        db.Tickets.Add(ticket);
+        await db.SaveChangesAsync();
+
+        var service = new TicketService(db, new TestHubContext<NotificationHub>());
+
+        var results = await service.GetAllAsync(recherche: "imPRIMANTE");
+
+        results.Should().ContainSingle(t => t.Id == ticket.Id);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_Filters_Recherche_Without_Requiring_Accents_Or_Apostrophes()
+    {
+        await using var db = TestDbContextFactory.CreateDbContext();
+
+        var creator = await TestDataSeeder.AddUserAsync(db, "Awa", "Demandeur", []);
+        var ticket = CreateTicket(creator.Id, null, "INC-SEARCH-2", StatutTicket.Nouveau, DateTime.UtcNow.AddHours(4));
+        ticket.Sujet = "Reseau d'ecole";
+        ticket.Description = "Acces cote pedagogique indisponible.";
+        db.Tickets.Add(ticket);
+        await db.SaveChangesAsync();
+
+        var service = new TicketService(db, new TestHubContext<NotificationHub>());
+
+        var results = await service.GetAllAsync(recherche: "réseau decole");
+
+        results.Should().ContainSingle(t => t.Id == ticket.Id);
+    }
+
     private static Ticket CreateTicket(Guid creatorId, Guid? assigneeId, string number, StatutTicket statut, DateTime slaDeadline)
     {
         return new Ticket

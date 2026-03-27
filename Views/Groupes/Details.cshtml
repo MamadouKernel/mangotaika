@@ -17,6 +17,22 @@
 </div>
 
 <div class="card-3d p-4 mb-4">
+    <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+        @if (!string.IsNullOrWhiteSpace(Model.LogoUrl))
+        {
+            <img src="@Model.LogoUrl" alt="Logo du groupe @Model.Nom" style="width:88px;height:88px;object-fit:cover;border-radius:20px;border:1px solid rgba(255,255,255,0.12);" />
+        }
+        else
+        {
+            <div style="width:88px;height:88px;border-radius:20px;background:rgba(138,181,90,0.12);border:1px solid rgba(138,181,90,0.25);display:flex;align-items:center;justify-content:center;">
+                <i class="bi bi-building" style="font-size:2rem;color:var(--vert-logo);"></i>
+            </div>
+        }
+        <div>
+            <h4 class="mb-1">@Model.Nom</h4>
+            <p class="text-muted-custom mb-0">@(Model.Adresse ?? "Adresse non renseignee")</p>
+        </div>
+    </div>
     <p class="text-muted-custom mb-3">@(Model.Description ?? "-")</p>
     <dl class="row mb-0 small">
         <dt class="col-sm-3 text-muted-custom">Adresse</dt>

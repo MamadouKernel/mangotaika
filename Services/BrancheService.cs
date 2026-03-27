@@ -43,6 +43,7 @@ public class BrancheService(AppDbContext db) : IBrancheService
             Id = Guid.NewGuid(),
             Nom = nom,
             Description = description,
+            LogoUrl = NormalizeOptional(dto.LogoUrl),
             AgeMin = dto.AgeMin,
             AgeMax = dto.AgeMax,
             ChefUniteId = chefUnite.Id,
@@ -58,14 +59,17 @@ public class BrancheService(AppDbContext db) : IBrancheService
     {
         var branche = await db.Branches.FindAsync(id);
         if (branche is null) return false;
+
         var nom = NormalizeNom(dto.Nom);
         var description = NormalizeOptional(dto.Description);
         ValidateAges(dto.AgeMin, dto.AgeMax);
         await EnsureActiveGroupeExistsAsync(dto.GroupeId);
         await EnsureUniqueNomAsync(dto.GroupeId, nom, id);
         var chefUnite = await GetChefUniteAsync(dto.GroupeId, dto.ChefUniteId);
+
         branche.Nom = nom;
         branche.Description = description;
+        branche.LogoUrl = NormalizeOptional(dto.LogoUrl);
         branche.AgeMin = dto.AgeMin;
         branche.AgeMax = dto.AgeMax;
         branche.ChefUniteId = chefUnite.Id;
@@ -89,6 +93,7 @@ public class BrancheService(AppDbContext db) : IBrancheService
         Id = b.Id,
         Nom = b.Nom,
         Description = b.Description,
+        LogoUrl = b.LogoUrl,
         AgeMin = b.AgeMin,
         AgeMax = b.AgeMax,
         NomChefUnite = b.ChefUnite != null ? $"{b.ChefUnite.Prenom} {b.ChefUnite.Nom}" : b.NomChefUnite,
@@ -102,7 +107,7 @@ public class BrancheService(AppDbContext db) : IBrancheService
     {
         if (!chefUniteId.HasValue)
         {
-            throw new InvalidOperationException("Le chef d'unité est obligatoire.");
+            throw new InvalidOperationException("Le chef d'unite est obligatoire.");
         }
 
         var chefUnite = await db.Scouts
@@ -110,12 +115,12 @@ public class BrancheService(AppDbContext db) : IBrancheService
 
         if (chefUnite is null)
         {
-            throw new InvalidOperationException("Le chef d'unité sélectionné est introuvable.");
+            throw new InvalidOperationException("Le chef d'unite selectionne est introuvable.");
         }
 
         if (chefUnite.GroupeId != groupeId)
         {
-            throw new InvalidOperationException("Le chef d'unité doit appartenir au groupe sélectionné.");
+            throw new InvalidOperationException("Le chef d'unite doit appartenir au groupe selectionne.");
         }
 
         return chefUnite;
@@ -137,11 +142,18 @@ public class BrancheService(AppDbContext db) : IBrancheService
 
     private async Task EnsureUniqueNomAsync(Guid groupeId, string nom, Guid? currentBrancheId = null)
     {
-        var duplicateExists = await db.Branches.AnyAsync(b =>
-            b.IsActive &&
-            b.GroupeId == groupeId &&
-            b.Id != currentBrancheId &&
-            b.Nom.ToUpper() == nom.ToUpper());
+        var normalizedNom = DatabaseText.NormalizeSearchKey(nom);
+        var duplicateExists = db.Database.IsNpgsql()
+            ? await db.Branches.AnyAsync(b =>
+                b.IsActive &&
+                b.GroupeId == groupeId &&
+                b.Id != currentBrancheId &&
+                b.NomNormalise == normalizedNom)
+            : (await db.Branches
+                .Where(b => b.IsActive && b.GroupeId == groupeId && b.Id != currentBrancheId)
+                .Select(b => b.Nom)
+                .ToListAsync())
+                .Any(existingNom => DatabaseText.NormalizeSearchKey(existingNom) == normalizedNom);
 
         if (duplicateExists)
         {

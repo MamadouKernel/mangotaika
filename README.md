@@ -218,6 +218,7 @@ Variables importantes:
 Important:
 - le compte admin seed n'est cree que si `AdminSeed__Password` est renseigne
 - `SeedDemoData=false` est recommande hors developpement
+- la connexion PostgreSQL doit rester en `Client Encoding=UTF8`; les comparaisons metier insensibles a la casse sont gerees par migrations PostgreSQL et par le code applicatif
 
 ### 3. Appliquer la base
 

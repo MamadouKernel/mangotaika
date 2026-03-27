@@ -110,12 +110,35 @@ public class ScoutService(AppDbContext db) : IScoutService
 
     public async Task<List<ScoutDto>> SearchAsync(string terme)
     {
-        return await db.Scouts
+        var query = db.Scouts
             .Include(s => s.Groupe)
             .Include(s => s.Branche)
-            .Where(s => s.Nom.Contains(terme) || s.Prenom.Contains(terme) || s.Matricule.Contains(terme) || (s.NumeroCarte != null && s.NumeroCarte.Contains(terme)) || (s.District != null && s.District.Contains(terme)))
-            .Select(s => ToDto(s))
-            .ToListAsync();
+            .AsQueryable();
+
+        if (db.Database.IsNpgsql())
+        {
+            var pattern = DatabaseText.ToNormalizedContainsPattern(terme);
+            query = query.Where(s =>
+                EF.Functions.Like(PostgresTextFunctions.NormalizeSearch(s.Nom), pattern) ||
+                EF.Functions.Like(PostgresTextFunctions.NormalizeSearch(s.Prenom), pattern) ||
+                EF.Functions.Like(PostgresTextFunctions.NormalizeSearch(s.Matricule), pattern) ||
+                (s.NumeroCarte != null && EF.Functions.Like(PostgresTextFunctions.NormalizeSearch(s.NumeroCarte), pattern)) ||
+                (s.District != null && EF.Functions.Like(PostgresTextFunctions.NormalizeSearch(s.District), pattern)));
+
+            return await query.Select(s => ToDto(s)).ToListAsync();
+        }
+
+        var normalizedTerm = DatabaseText.NormalizeSearchKey(terme);
+        var scouts = await query.ToListAsync();
+        return scouts
+            .Where(s =>
+                DatabaseText.ContainsNormalized(s.Nom, normalizedTerm) ||
+                DatabaseText.ContainsNormalized(s.Prenom, normalizedTerm) ||
+                DatabaseText.ContainsNormalized(s.Matricule, normalizedTerm) ||
+                DatabaseText.ContainsNormalized(s.NumeroCarte, normalizedTerm) ||
+                DatabaseText.ContainsNormalized(s.District, normalizedTerm))
+            .Select(ToDto)
+            .ToList();
     }
 
     public async Task<ScoutImportResultDto> ImportFromExcelAsync(Stream fileStream)
@@ -157,13 +180,15 @@ public class ScoutService(AppDbContext db) : IScoutService
             .GroupBy(b => NormalizeLookup(b.Nom))
             .ToDictionary(g => g.Key, g => g.First());
 
-        var existingMatricules = await db.Scouts
-            .Select(s => s.Matricule.ToUpper())
-            .ToHashSetAsync();
-        var existingNumeroCartes = await db.Scouts
+        var existingMatricules = new HashSet<string>(
+            await db.Scouts.Select(s => s.Matricule).ToListAsync(),
+            StringComparer.OrdinalIgnoreCase);
+        var existingNumeroCartes = new HashSet<string>(
+            await db.Scouts
             .Where(s => s.NumeroCarte != null)
-            .Select(s => s.NumeroCarte!.ToUpper())
-            .ToHashSetAsync();
+            .Select(s => s.NumeroCarte!)
+            .ToListAsync(),
+            StringComparer.OrdinalIgnoreCase);
 
         var seenMatricules = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var seenNumeroCartes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -458,9 +483,13 @@ public class ScoutService(AppDbContext db) : IScoutService
 
     private async Task EnsureUniqueMatriculeAsync(string matricule, Guid? currentId = null)
     {
-        var exists = await db.Scouts.AnyAsync(s =>
-            s.Id != currentId &&
-            s.Matricule.ToUpper() == matricule.ToUpper());
+        var exists = db.Database.IsNpgsql()
+            ? await db.Scouts.AnyAsync(s =>
+                s.Id != currentId &&
+                s.Matricule == matricule)
+            : await db.Scouts.AnyAsync(s =>
+                s.Id != currentId &&
+                s.Matricule.ToUpper() == DatabaseText.NormalizeCaseInsensitiveKey(matricule));
 
         if (exists)
         {
@@ -475,10 +504,15 @@ public class ScoutService(AppDbContext db) : IScoutService
             return;
         }
 
-        var exists = await db.Scouts.AnyAsync(s =>
-            s.Id != currentId &&
-            s.NumeroCarte != null &&
-            s.NumeroCarte.ToUpper() == numeroCarte.ToUpper());
+        var exists = db.Database.IsNpgsql()
+            ? await db.Scouts.AnyAsync(s =>
+                s.Id != currentId &&
+                s.NumeroCarte != null &&
+                s.NumeroCarte == numeroCarte)
+            : await db.Scouts.AnyAsync(s =>
+                s.Id != currentId &&
+                s.NumeroCarte != null &&
+                s.NumeroCarte.ToUpper() == DatabaseText.NormalizeCaseInsensitiveKey(numeroCarte));
 
         if (exists)
         {

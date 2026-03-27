@@ -64,10 +64,16 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        builder.HasPostgresExtension("citext");
+        builder.HasPostgresExtension("unaccent");
+        builder.HasDbFunction(typeof(PostgresTextFunctions).GetMethod(nameof(PostgresTextFunctions.NormalizeSearch), [typeof(string)])!)
+            .HasName("normalize_text_search");
 
         // Scout - matricule unique
         builder.Entity<Scout>(e =>
         {
+            e.Property(s => s.Matricule).HasColumnType("citext");
+            e.Property(s => s.NumeroCarte).HasColumnType("citext");
             e.HasIndex(s => s.Matricule)
                 .HasDatabaseName(PersistenceConstraints.ScoutsMatricule)
                 .IsUnique();
@@ -86,7 +92,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         {
             e.Property(g => g.NomNormalise)
                 .HasMaxLength(256)
-                .HasComputedColumnSql("upper(btrim(\"Nom\"))", stored: true);
+                .HasComputedColumnSql("left(normalize_text_search(\"Nom\"), 256)", stored: true);
             e.HasIndex(g => g.NomNormalise)
                 .HasDatabaseName(PersistenceConstraints.GroupesNomNormaliseActif)
                 .IsUnique()
@@ -101,7 +107,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         {
             e.Property(b => b.NomNormalise)
                 .HasMaxLength(256)
-                .HasComputedColumnSql("upper(btrim(\"Nom\"))", stored: true);
+                .HasComputedColumnSql("left(normalize_text_search(\"Nom\"), 256)", stored: true);
             e.HasIndex(b => new { b.GroupeId, b.NomNormalise })
                 .HasDatabaseName(PersistenceConstraints.BranchesGroupeNomNormaliseActif)
                 .IsUnique()
@@ -164,6 +170,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         // SupportServiceCatalogueItem
         builder.Entity<SupportServiceCatalogueItem>(e =>
         {
+            e.Property(s => s.Code).HasColumnType("citext");
             e.HasIndex(s => s.Code).IsUnique();
             e.HasOne(s => s.Auteur).WithMany().HasForeignKey(s => s.AuteurId).OnDelete(DeleteBehavior.SetNull);
             e.HasOne(s => s.AssigneParDefaut).WithMany().HasForeignKey(s => s.AssigneParDefautId).OnDelete(DeleteBehavior.SetNull);
@@ -207,6 +214,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         // CodeInvitation
         builder.Entity<CodeInvitation>(e =>
         {
+            e.Property(c => c.Code).HasColumnType("citext");
             e.HasIndex(c => c.Code).IsUnique();
             e.HasOne(c => c.Createur).WithMany().HasForeignKey(c => c.CreateurId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(c => c.UtilisePar).WithMany().HasForeignKey(c => c.UtilisePaId).OnDelete(DeleteBehavior.Restrict);
@@ -316,6 +324,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
 
         builder.Entity<CertificationFormation>(e =>
         {
+            e.Property(c => c.Code).HasColumnType("citext");
             e.HasIndex(c => c.Code).IsUnique();
             e.HasIndex(c => new { c.ScoutId, c.FormationId, c.Type }).IsUnique();
             e.HasOne(c => c.Scout).WithMany().HasForeignKey(c => c.ScoutId).OnDelete(DeleteBehavior.Cascade);

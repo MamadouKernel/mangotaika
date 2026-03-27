@@ -174,4 +174,86 @@ public sealed class SupportKnowledgePagesTests
         html.Should().Contain("Guide brouillon");
         html.Should().Contain("Nouvel article");
     }
+
+    [Fact]
+    public async Task KnowledgeBase_Index_Filters_Recherche_CaseInsensitively()
+    {
+        await using var factory = new SupportWebApplicationFactory();
+        ApplicationUser consultant = null!;
+
+        await factory.SeedAsync(async db =>
+        {
+            await TestDataSeeder.EnsureRolesAsync(db, "Consultant");
+            consultant = await TestDataSeeder.AddUserAsync(db, "Aminata", "Consultant", ["Consultant"]);
+            db.SupportKnowledgeArticles.AddRange(
+                new SupportKnowledgeArticle
+                {
+                    Id = Guid.NewGuid(),
+                    Titre = "Procedure VPN",
+                    Resume = "Connexion distante",
+                    Contenu = "Contenu public",
+                    Categorie = "Reseau",
+                    EstPublie = true
+                },
+                new SupportKnowledgeArticle
+                {
+                    Id = Guid.NewGuid(),
+                    Titre = "Guide imprimante",
+                    Resume = "Support impression",
+                    Contenu = "Contenu public",
+                    Categorie = "Materiel",
+                    EstPublie = true
+                });
+        });
+
+        using var client = factory.CreateAuthenticatedClient(consultant.Id, "Consultant");
+
+        var response = await client.GetAsync("/KnowledgeBase?recherche=vPn");
+        var html = await response.Content.ReadAsStringAsync();
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        html.Should().Contain("Procedure VPN");
+        html.Should().NotContain("Guide imprimante");
+    }
+
+    [Fact]
+    public async Task KnowledgeBase_Index_Filters_Recherche_Without_Requiring_Accents_Or_Apostrophes()
+    {
+        await using var factory = new SupportWebApplicationFactory();
+        ApplicationUser consultant = null!;
+
+        await factory.SeedAsync(async db =>
+        {
+            await TestDataSeeder.EnsureRolesAsync(db, "Consultant");
+            consultant = await TestDataSeeder.AddUserAsync(db, "Aminata", "Consultant", ["Consultant"]);
+            db.SupportKnowledgeArticles.AddRange(
+                new SupportKnowledgeArticle
+                {
+                    Id = Guid.NewGuid(),
+                    Titre = "Procédure d'accès",
+                    Resume = "Connexion externe",
+                    Contenu = "Contenu public",
+                    Categorie = "Réseau",
+                    EstPublie = true
+                },
+                new SupportKnowledgeArticle
+                {
+                    Id = Guid.NewGuid(),
+                    Titre = "Guide imprimante",
+                    Resume = "Support impression",
+                    Contenu = "Contenu public",
+                    Categorie = "Materiel",
+                    EstPublie = true
+                });
+        });
+
+        using var client = factory.CreateAuthenticatedClient(consultant.Id, "Consultant");
+
+        var response = await client.GetAsync("/KnowledgeBase?recherche=procedure dacces");
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        html.Should().Contain("Procédure d'accès");
+        html.Should().NotContain("Guide imprimante");
+    }
 }

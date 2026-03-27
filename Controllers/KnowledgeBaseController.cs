@@ -1,5 +1,6 @@
 using MangoTaika.Data;
 using MangoTaika.Data.Entities;
+using MangoTaika.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -25,8 +26,7 @@ public class KnowledgeBaseController(
 
         if (!string.IsNullOrWhiteSpace(recherche))
         {
-            var term = recherche.Trim();
-            query = query.Where(a => a.Titre.Contains(term) || a.Resume.Contains(term) || a.Contenu.Contains(term) || (a.MotsCles != null && a.MotsCles.Contains(term)));
+            query = query.ApplyTextSearch(db, recherche);
         }
 
         if (!string.IsNullOrWhiteSpace(categorie))
@@ -34,10 +34,35 @@ public class KnowledgeBaseController(
             query = query.Where(a => a.Categorie == categorie);
         }
 
-        var articles = await query
-            .OrderByDescending(a => a.EstPublie)
-            .ThenByDescending(a => a.DateMiseAJour ?? a.DateCreation)
-            .ToListAsync();
+        List<SupportKnowledgeArticle> articles;
+        if (db.Database.IsNpgsql())
+        {
+            articles = await query
+                .OrderByDescending(a => a.EstPublie)
+                .ThenByDescending(a => a.DateMiseAJour ?? a.DateCreation)
+                .ToListAsync();
+        }
+        else
+        {
+            articles = await query.ToListAsync();
+
+            if (!string.IsNullOrWhiteSpace(recherche))
+            {
+                var normalizedTerm = DatabaseText.NormalizeSearchKey(recherche);
+                articles = articles
+                    .Where(a =>
+                        DatabaseText.ContainsNormalized(a.Titre, normalizedTerm) ||
+                        DatabaseText.ContainsNormalized(a.Resume, normalizedTerm) ||
+                        DatabaseText.ContainsNormalized(a.Contenu, normalizedTerm) ||
+                        DatabaseText.ContainsNormalized(a.MotsCles, normalizedTerm))
+                    .ToList();
+            }
+
+            articles = articles
+                .OrderByDescending(a => a.EstPublie)
+                .ThenByDescending(a => a.DateMiseAJour ?? a.DateCreation)
+                .ToList();
+        }
 
         ViewBag.CanManage = CanManage();
         ViewBag.Categories = await db.SupportKnowledgeArticles

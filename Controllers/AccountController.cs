@@ -106,8 +106,14 @@ public class AccountController(
                 ModelState.AddModelError("CodeInvitation", "Un code d'invitation est requis pour s'inscrire en tant que gestionnaire.");
                 return View(model);
             }
-            codeInvitation = await db.CodesInvitation
-                .FirstOrDefaultAsync(c => c.Code == model.CodeInvitation.Trim() && !c.EstUtilise);
+            var invitationCode = model.CodeInvitation.Trim();
+            codeInvitation = db.Database.IsNpgsql()
+                ? await db.CodesInvitation
+                    .FirstOrDefaultAsync(c => c.Code == invitationCode && !c.EstUtilise)
+                : await db.CodesInvitation
+                    .FirstOrDefaultAsync(c =>
+                        c.Code.ToUpper() == DatabaseText.NormalizeCaseInsensitiveKey(invitationCode) &&
+                        !c.EstUtilise);
             if (codeInvitation is null)
             {
                 ModelState.AddModelError("CodeInvitation", "Code d'invitation invalide ou déjà utilisé.");

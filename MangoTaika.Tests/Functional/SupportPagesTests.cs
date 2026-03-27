@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using FluentAssertions;
 using MangoTaika.Data.Entities;
 using MangoTaika.Tests.Infrastructure;
@@ -188,5 +189,67 @@ public sealed class SupportPagesTests
         html.Should().Contain("Discussions actives");
         html.Should().Contain("Mes parcours LMS");
         html.Should().Contain("Parcours Orientation");
+    }
+
+    [Fact]
+    public async Task SuggestKnowledge_Returns_CaseInsensitive_Matches()
+    {
+        await using var factory = new SupportWebApplicationFactory();
+        ApplicationUser scoutUser = null!;
+
+        await factory.SeedAsync(async db =>
+        {
+            await TestDataSeeder.EnsureRolesAsync(db, "Scout");
+            scoutUser = await TestDataSeeder.AddUserAsync(db, "Nadia", "Scout", ["Scout"]);
+            db.SupportKnowledgeArticles.Add(new SupportKnowledgeArticle
+            {
+                Id = Guid.NewGuid(),
+                Titre = "Procedure VPN",
+                Resume = "Connexion distante",
+                Contenu = "Etapes de resolution",
+                Categorie = "Reseau",
+                EstPublie = true
+            });
+        });
+
+        using var client = factory.CreateAuthenticatedClient(scoutUser.Id, "Scout");
+
+        var response = await client.GetAsync("/Tickets/SuggestKnowledge?q=vPn");
+        var payload = await response.Content.ReadAsStringAsync();
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        payload.Should().Contain("Procedure VPN");
+    }
+
+    [Fact]
+    public async Task SuggestKnowledge_Returns_Matches_Without_Requiring_Accents_Or_Apostrophes()
+    {
+        await using var factory = new SupportWebApplicationFactory();
+        ApplicationUser scoutUser = null!;
+
+        await factory.SeedAsync(async db =>
+        {
+            await TestDataSeeder.EnsureRolesAsync(db, "Scout");
+            scoutUser = await TestDataSeeder.AddUserAsync(db, "Nadia", "Scout", ["Scout"]);
+            db.SupportKnowledgeArticles.Add(new SupportKnowledgeArticle
+            {
+                Id = Guid.NewGuid(),
+                Titre = "Procédure d'accès",
+                Resume = "Connexion distante",
+                Contenu = "Etapes de resolution",
+                Categorie = "Réseau",
+                EstPublie = true
+            });
+        });
+
+        using var client = factory.CreateAuthenticatedClient(scoutUser.Id, "Scout");
+
+        var response = await client.GetAsync("/Tickets/SuggestKnowledge?q=procedure dacces");
+        var payload = await response.Content.ReadAsStringAsync();
+        using var document = JsonDocument.Parse(payload);
+        var titre = document.RootElement[0].GetProperty("titre").GetString();
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        titre.Should().Be("Procédure d'accès");
     }
 }

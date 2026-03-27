@@ -36,6 +36,7 @@ public sealed class BrancheServiceIntegrationTests
         {
             Nom = " Louveteaux ",
             Description = " Branche des 8-12 ans ",
+            LogoUrl = "/uploads/branches/louveteaux.png",
             AgeMin = 8,
             AgeMax = 12,
             GroupeId = groupe.Id,
@@ -46,8 +47,10 @@ public sealed class BrancheServiceIntegrationTests
 
         created.Nom.Should().Be("Louveteaux");
         created.NomChefUnite.Should().Be("Alpha Chef");
+        created.LogoUrl.Should().Be("/uploads/branches/louveteaux.png");
         branche.Nom.Should().Be("Louveteaux");
         branche.Description.Should().Be("Branche des 8-12 ans");
+        branche.LogoUrl.Should().Be("/uploads/branches/louveteaux.png");
         branche.GroupeId.Should().Be(groupe.Id);
         branche.ChefUniteId.Should().Be(chef.Id);
         branche.NomChefUnite.Should().Be("Alpha Chef");
@@ -94,5 +97,46 @@ public sealed class BrancheServiceIntegrationTests
             .WithMessage("*Une branche avec ce nom existe deja dans ce groupe.*");
 
         db.Branches.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task CreateAsync_Rejects_Duplicate_Name_When_Accents_And_Apostrophes_Differ()
+    {
+        await using var db = TestDbContextFactory.CreateDbContext();
+
+        var groupe = new Groupe { Id = Guid.NewGuid(), Nom = "Groupe Riviera" };
+        var chef = new Scout
+        {
+            Id = Guid.NewGuid(),
+            Matricule = "0583768X",
+            Nom = "Chef",
+            Prenom = "Gamma",
+            DateNaissance = new DateTime(2010, 1, 1),
+            GroupeId = groupe.Id
+        };
+
+        db.Groupes.Add(groupe);
+        db.Scouts.Add(chef);
+        db.Branches.Add(new Branche
+        {
+            Id = Guid.NewGuid(),
+            Nom = "Aines d'Abidjan",
+            GroupeId = groupe.Id,
+            ChefUniteId = chef.Id,
+            NomChefUnite = "Gamma Chef"
+        });
+        await db.SaveChangesAsync();
+
+        var service = new BrancheService(db);
+
+        Func<Task> act = () => service.CreateAsync(new BrancheCreateDto
+        {
+            Nom = "Ainés d Abidjan",
+            GroupeId = groupe.Id,
+            ChefUniteId = chef.Id
+        });
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*Une branche avec ce nom existe deja dans ce groupe.*");
     }
 }

@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace MangoTaika.Controllers;
 
 [Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant")]
-public class BranchesController(IBrancheService brancheService, AppDbContext db) : Controller
+public class BranchesController(IBrancheService brancheService, AppDbContext db, IFileUploadService fileUploadService) : Controller
 {
     public async Task<IActionResult> Index()
     {
@@ -32,16 +32,26 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db)
     [HttpPost]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(BrancheCreateDto dto)
+    public async Task<IActionResult> Create(BrancheCreateDto dto, IFormFile? Logo)
     {
         if (ModelState.IsValid)
         {
             await ValidateBrancheAsync(dto);
         }
 
-        if (!ModelState.IsValid) { await LoadGroupesAsync(); return View(dto); }
+        if (!ModelState.IsValid)
+        {
+            await LoadGroupesAsync();
+            return View(dto);
+        }
+
         try
         {
+            dto.LogoUrl = await fileUploadService.SaveImageAsync(
+                Logo,
+                dto.LogoUrl,
+                "branches",
+                "Le logo de la branche doit etre une image valide de 5 Mo maximum.");
             await brancheService.CreateAsync(dto);
         }
         catch (InvalidOperationException ex)
@@ -50,7 +60,8 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db)
             this.AddDomainError(ex);
             return View(dto);
         }
-        TempData["Success"] = "Branche créée avec succès.";
+
+        TempData["Success"] = "Branche enregistree avec succes.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -73,18 +84,27 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db)
     [HttpPost]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(Guid id, BrancheCreateDto dto)
+    public async Task<IActionResult> Edit(Guid id, BrancheCreateDto dto, IFormFile? Logo)
     {
         if (ModelState.IsValid)
         {
             await ValidateBrancheAsync(dto, id);
         }
 
-        if (!ModelState.IsValid) { await LoadGroupesAsync(); return View(ToEditDto(id, dto)); }
+        if (!ModelState.IsValid)
+        {
+            await LoadGroupesAsync();
+            return View(ToEditDto(id, dto));
+        }
 
         bool result;
         try
         {
+            dto.LogoUrl = await fileUploadService.SaveImageAsync(
+                Logo,
+                dto.LogoUrl,
+                "branches",
+                "Le logo de la branche doit etre une image valide de 5 Mo maximum.");
             result = await brancheService.UpdateAsync(id, dto);
         }
         catch (InvalidOperationException ex)
@@ -95,7 +115,7 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db)
         }
 
         if (!result) return NotFound();
-        TempData["Success"] = "Branche mise à jour.";
+        TempData["Success"] = "Branche mise a jour.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -105,7 +125,7 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db)
     public async Task<IActionResult> Delete(Guid id)
     {
         await brancheService.DeleteAsync(id);
-        TempData["Success"] = "Branche désactivée.";
+        TempData["Success"] = "Branche desactivee.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -136,20 +156,27 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db)
         var groupeExists = await db.Groupes.AnyAsync(g => g.Id == dto.GroupeId && g.IsActive);
         if (!groupeExists)
         {
-            ModelState.AddModelError(nameof(dto.GroupeId), "Le groupe sélectionné est introuvable ou inactif.");
+            ModelState.AddModelError(nameof(dto.GroupeId), "Le groupe selectionne est introuvable ou inactif.");
             return;
         }
 
         var nom = dto.Nom.Trim();
-        var duplicateExists = await db.Branches.AnyAsync(b =>
-            b.IsActive &&
-            b.GroupeId == dto.GroupeId &&
-            b.Id != currentBrancheId &&
-            b.Nom.ToUpper() == nom.ToUpper());
+        var normalizedNom = DatabaseText.NormalizeSearchKey(nom);
+        var duplicateExists = db.Database.IsNpgsql()
+            ? await db.Branches.AnyAsync(b =>
+                b.IsActive &&
+                b.GroupeId == dto.GroupeId &&
+                b.Id != currentBrancheId &&
+                b.NomNormalise == normalizedNom)
+            : (await db.Branches
+                .Where(b => b.IsActive && b.GroupeId == dto.GroupeId && b.Id != currentBrancheId)
+                .Select(b => b.Nom)
+                .ToListAsync())
+                .Any(existingNom => DatabaseText.NormalizeSearchKey(existingNom) == normalizedNom);
 
         if (duplicateExists)
         {
-            ModelState.AddModelError(nameof(dto.Nom), "Une branche avec ce nom existe déjà dans ce groupe.");
+            ModelState.AddModelError(nameof(dto.Nom), "Une branche avec ce nom existe deja dans ce groupe.");
         }
 
         if (!dto.ChefUniteId.HasValue)
@@ -164,13 +191,13 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db)
 
         if (chef is null)
         {
-            ModelState.AddModelError(nameof(dto.ChefUniteId), "Le chef d'unité sélectionné est introuvable.");
+            ModelState.AddModelError(nameof(dto.ChefUniteId), "Le chef d'unite selectionne est introuvable.");
             return;
         }
 
         if (chef.GroupeId != dto.GroupeId)
         {
-            ModelState.AddModelError(nameof(dto.ChefUniteId), "Le chef d'unité doit appartenir au groupe sélectionné.");
+            ModelState.AddModelError(nameof(dto.ChefUniteId), "Le chef d'unite doit appartenir au groupe selectionne.");
         }
     }
 
@@ -179,6 +206,7 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db)
         Id = id,
         Nom = dto.Nom,
         Description = dto.Description,
+        LogoUrl = dto.LogoUrl,
         AgeMin = dto.AgeMin,
         AgeMax = dto.AgeMax,
         NomChefUnite = null,

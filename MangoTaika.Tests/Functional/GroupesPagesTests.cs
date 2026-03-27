@@ -50,4 +50,32 @@ public sealed class GroupesPagesTests
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Groupes.Count().Should().Be(1);
     }
+
+    [Fact]
+    public async Task Details_Displays_Group_Logo_When_Available()
+    {
+        await using var factory = new SupportWebApplicationFactory();
+        ApplicationUser gestionnaire = null!;
+        Groupe groupe = null!;
+
+        await factory.SeedAsync(async db =>
+        {
+            await TestDataSeeder.EnsureRolesAsync(db, "Gestionnaire");
+            gestionnaire = await TestDataSeeder.AddUserAsync(db, "Awa", "Gestion", ["Gestionnaire"]);
+            groupe = new Groupe
+            {
+                Id = Guid.NewGuid(),
+                Nom = "Groupe Riviera",
+                LogoUrl = "/uploads/groupes/riviera.png"
+            };
+            db.Groupes.Add(groupe);
+        });
+
+        using var client = factory.CreateAuthenticatedClient(gestionnaire.Id, "Gestionnaire");
+
+        var html = await client.GetStringAsync($"/Groupes/Details/{groupe.Id}");
+
+        html.Should().Contain("/uploads/groupes/riviera.png");
+        html.Should().Contain("Logo du groupe");
+    }
 }

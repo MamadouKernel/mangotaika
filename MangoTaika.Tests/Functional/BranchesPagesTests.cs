@@ -222,4 +222,38 @@ public sealed class BranchesPagesTests
         persistedBranche.Should().NotBeNull();
         persistedBranche!.ChefUniteId.Should().Be(chefA.Id);
     }
+
+    [Fact]
+    public async Task Details_Displays_Branche_Logo_When_Available()
+    {
+        await using var factory = new SupportWebApplicationFactory();
+        ApplicationUser gestionnaire = null!;
+        Groupe groupe = null!;
+        Branche branche = null!;
+
+        await factory.SeedAsync(async db =>
+        {
+            await TestDataSeeder.EnsureRolesAsync(db, "Gestionnaire");
+            gestionnaire = await TestDataSeeder.AddUserAsync(db, "Awa", "Gestion", ["Gestionnaire"]);
+
+            groupe = new Groupe { Id = Guid.NewGuid(), Nom = "Groupe A" };
+            branche = new Branche
+            {
+                Id = Guid.NewGuid(),
+                Nom = "Louveteaux",
+                GroupeId = groupe.Id,
+                LogoUrl = "/uploads/branches/louveteaux.png"
+            };
+
+            db.Groupes.Add(groupe);
+            db.Branches.Add(branche);
+        });
+
+        using var client = factory.CreateAuthenticatedClient(gestionnaire.Id, "Gestionnaire");
+
+        var html = await client.GetStringAsync($"/Branches/Details/{branche.Id}");
+
+        html.Should().Contain("/uploads/branches/louveteaux.png");
+        html.Should().Contain("Logo de la branche");
+    }
 }

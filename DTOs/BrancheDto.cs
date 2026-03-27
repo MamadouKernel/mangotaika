@@ -7,6 +7,7 @@ public class BrancheDto
     public Guid Id { get; set; }
     public string Nom { get; set; } = string.Empty;
     public string? Description { get; set; }
+    public string? LogoUrl { get; set; }
     public int? AgeMin { get; set; }
     public int? AgeMax { get; set; }
     public string? NomChefUnite { get; set; }
@@ -21,6 +22,7 @@ public class BrancheCreateDto : IValidatableObject
     [Required(ErrorMessage = "Le nom de la branche est obligatoire.")]
     public string Nom { get; set; } = string.Empty;
     public string? Description { get; set; }
+    public string? LogoUrl { get; set; }
     public int? AgeMin { get; set; }
     public int? AgeMax { get; set; }
     [Required(ErrorMessage = "Le chef d'unité est obligatoire.")]

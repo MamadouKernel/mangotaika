@@ -18,6 +18,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
                 Id = g.Id,
                 Nom = g.Nom,
                 Description = g.Description,
+                LogoUrl = g.LogoUrl,
                 Latitude = g.Latitude,
                 Longitude = g.Longitude,
                 Adresse = g.Adresse,
@@ -48,6 +49,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
             Id = groupe.Id,
             Nom = groupe.Nom,
             Description = groupe.Description,
+            LogoUrl = groupe.LogoUrl,
             Latitude = groupe.Latitude,
             Longitude = groupe.Longitude,
             Adresse = groupe.Adresse,
@@ -80,6 +82,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
             Id = Guid.NewGuid(),
             Nom = nom,
             Description = NormalizeOptional(dto.Description),
+            LogoUrl = NormalizeOptional(dto.LogoUrl),
             Latitude = lat ?? dto.Latitude,
             Longitude = lng ?? dto.Longitude,
             Adresse = adresse,
@@ -105,6 +108,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
 
         groupe.Nom = nom;
         groupe.Description = NormalizeOptional(dto.Description);
+        groupe.LogoUrl = NormalizeOptional(dto.LogoUrl);
         groupe.Latitude = lat ?? dto.Latitude;
         groupe.Longitude = lng ?? dto.Longitude;
         groupe.Adresse = adresse;
@@ -128,6 +132,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
         Id = g.Id,
         Nom = g.Nom,
         Description = g.Description,
+        LogoUrl = g.LogoUrl,
         Latitude = g.Latitude,
         Longitude = g.Longitude,
         Adresse = g.Adresse,
@@ -181,10 +186,17 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
 
     private async Task EnsureUniqueNomAsync(string nom, Guid? currentId = null)
     {
-        var exists = await db.Groupes.AnyAsync(g =>
-            g.IsActive &&
-            g.Id != currentId &&
-            g.Nom.ToUpper() == nom.ToUpper());
+        var normalizedNom = DatabaseText.NormalizeSearchKey(nom);
+        var exists = db.Database.IsNpgsql()
+            ? await db.Groupes.AnyAsync(g =>
+                g.IsActive &&
+                g.Id != currentId &&
+                g.NomNormalise == normalizedNom)
+            : (await db.Groupes
+                .Where(g => g.IsActive && g.Id != currentId)
+                .Select(g => g.Nom)
+                .ToListAsync())
+                .Any(existingNom => DatabaseText.NormalizeSearchKey(existingNom) == normalizedNom);
 
         if (exists)
         {

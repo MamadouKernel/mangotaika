@@ -6,6 +6,7 @@ public class Branche
     public string Nom { get; set; } = string.Empty;
     public string NomNormalise { get; private set; } = string.Empty;
     public string? Description { get; set; }
+    public string? LogoUrl { get; set; }
     public int? AgeMin { get; set; }
     public int? AgeMax { get; set; }
     public string? NomChefUnite { get; set; }

@@ -18,8 +18,22 @@
     {
         <div class="col-md-4">
             <div class="card-3d p-4 h-100">
-                <h5 class="text-or mb-2">@b.Nom</h5>
-                <p class="text-muted-custom small mb-2">@(b.Description ?? "")</p>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    @if (!string.IsNullOrWhiteSpace(b.LogoUrl))
+                    {
+                        <img src="@b.LogoUrl" alt="Logo de la branche @b.Nom" style="width:64px;height:64px;object-fit:cover;border-radius:16px;border:1px solid rgba(255,255,255,0.12);" />
+                    }
+                    else
+                    {
+                        <div style="width:64px;height:64px;border-radius:16px;background:rgba(94,117,188,0.12);border:1px solid rgba(94,117,188,0.25);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i class="bi bi-diagram-3" style="font-size:1.5rem;color:var(--bleu-logo);"></i>
+                        </div>
+                    }
+                    <div class="min-w-0">
+                        <h5 class="text-or mb-1">@b.Nom</h5>
+                        <p class="text-muted-custom small mb-0">@(b.Description ?? "")</p>
+                    </div>
+                </div>
                 <div class="d-flex flex-column gap-1 mb-3" style="font-size:0.85rem;">
                     <span><i class="bi bi-building text-bleu"></i> @(b.NomGroupe ?? "-")</span>
                     <span><i class="bi bi-people-fill text-bleu"></i> @b.NombreScouts scouts</span>

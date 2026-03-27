@@ -20,6 +20,7 @@ public sealed class GroupeServiceIntegrationTests
         {
             Nom = " Groupe Riviera ",
             Description = " Groupe test ",
+            LogoUrl = "/uploads/groupes/riviera.png",
             Commune = "Cocody",
             Quartier = "Riviera 2",
             NomChefGroupe = " Chef Principal ",
@@ -31,9 +32,11 @@ public sealed class GroupeServiceIntegrationTests
 
         created.Nom.Should().Be("Groupe Riviera");
         created.Adresse.Should().Be("Riviera 2, Cocody");
+        created.LogoUrl.Should().Be("/uploads/groupes/riviera.png");
         created.Latitude.Should().Be(5.3364);
         created.Longitude.Should().Be(-4.0267);
         groupe.Description.Should().Be("Groupe test");
+        groupe.LogoUrl.Should().Be("/uploads/groupes/riviera.png");
         groupe.NomChefGroupe.Should().Be("Chef Principal");
     }
 
@@ -54,5 +57,27 @@ public sealed class GroupeServiceIntegrationTests
             .WithMessage("*responsable selectionne est introuvable ou inactif*");
 
         db.Groupes.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CreateAsync_Rejects_Duplicate_Name_When_Accents_And_Apostrophes_Differ()
+    {
+        await using var db = TestDbContextFactory.CreateDbContext();
+        db.Groupes.Add(new Groupe
+        {
+            Id = Guid.NewGuid(),
+            Nom = "Groupe Cote d'Ivoire"
+        });
+        await db.SaveChangesAsync();
+
+        var service = new GroupeService(db, new FakeGeocodingService());
+
+        Func<Task> act = () => service.CreateAsync(new GroupeCreateDto
+        {
+            Nom = "Groupe Côte d Ivoire"
+        });
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*Un groupe avec ce nom existe deja.*");
     }
 }

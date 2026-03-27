@@ -122,6 +122,7 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
                 Id = g.Id,
                 Nom = g.Nom,
                 Description = g.Description,
+                LogoUrl = g.LogoUrl,
                 Latitude = g.Latitude,
                 Longitude = g.Longitude,
                 Adresse = g.Adresse,

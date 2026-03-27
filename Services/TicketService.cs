@@ -1,6 +1,7 @@
 using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
+using MangoTaika.Helpers;
 using MangoTaika.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -48,13 +49,28 @@ public class TicketService(AppDbContext db, IHubContext<NotificationHub> hubCont
         }
         if (!string.IsNullOrWhiteSpace(recherche))
         {
-            var term = recherche.Trim();
-            query = query.Where(t =>
-                t.Sujet.Contains(term) ||
-                t.Description.Contains(term) ||
-                t.NumeroTicket.Contains(term) ||
-                t.Createur.Nom.Contains(term) ||
-                t.Createur.Prenom.Contains(term));
+            if (db.Database.IsNpgsql())
+            {
+                query = ApplySearchFilter(query, recherche);
+            }
+            else
+            {
+                var filteredTickets = await query.ToListAsync();
+                var normalizedTerm = DatabaseText.NormalizeSearchKey(recherche);
+                var filteredDtos = filteredTickets
+                    .Where(t =>
+                        DatabaseText.ContainsNormalized(t.Sujet, normalizedTerm) ||
+                        DatabaseText.ContainsNormalized(t.Description, normalizedTerm) ||
+                        DatabaseText.ContainsNormalized(t.NumeroTicket, normalizedTerm) ||
+                        DatabaseText.ContainsNormalized(t.Createur.Nom, normalizedTerm) ||
+                        DatabaseText.ContainsNormalized(t.Createur.Prenom, normalizedTerm))
+                    .OrderByDescending(t => t.Priorite)
+                    .ThenBy(t => t.DateLimiteSla)
+                    .ThenBy(t => t.DateCreation)
+                    .Select(ToDto)
+                    .ToList();
+                return ApplyQueueView(filteredDtos, vue, agentId);
+            }
         }
 
         var tickets = await query
@@ -434,6 +450,23 @@ public class TicketService(AppDbContext db, IHubContext<NotificationHub> hubCont
             "overdue" => tickets.Where(t => t.EstEnRetard).ToList(),
             _ => tickets
         };
+    }
+
+    private IQueryable<Ticket> ApplySearchFilter(IQueryable<Ticket> query, string recherche)
+    {
+        var trimmedTerm = recherche.Trim();
+        if (db.Database.IsNpgsql())
+        {
+            var pattern = DatabaseText.ToNormalizedContainsPattern(trimmedTerm);
+            return query.Where(t =>
+                EF.Functions.Like(PostgresTextFunctions.NormalizeSearch(t.Sujet), pattern) ||
+                EF.Functions.Like(PostgresTextFunctions.NormalizeSearch(t.Description), pattern) ||
+                EF.Functions.Like(PostgresTextFunctions.NormalizeSearch(t.NumeroTicket), pattern) ||
+                EF.Functions.Like(PostgresTextFunctions.NormalizeSearch(t.Createur.Nom), pattern) ||
+                EF.Functions.Like(PostgresTextFunctions.NormalizeSearch(t.Createur.Prenom), pattern));
+        }
+
+        return query;
     }
 
     private TicketDto ToDto(Ticket ticket)

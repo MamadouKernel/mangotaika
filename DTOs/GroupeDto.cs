@@ -7,6 +7,7 @@ public class GroupeDto
     public Guid Id { get; set; }
     public string Nom { get; set; } = string.Empty;
     public string? Description { get; set; }
+    public string? LogoUrl { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
     public string? Adresse { get; set; }
@@ -30,6 +31,7 @@ public class GroupeCreateDto : IValidatableObject
     public string? Commune { get; set; }
     public string? Quartier { get; set; }
     public string? NomChefGroupe { get; set; }
+    public string? LogoUrl { get; set; }
     public Guid? ResponsableId { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
