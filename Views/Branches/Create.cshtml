@@ -57,11 +57,11 @@
             <span asp-validation-for="GroupeId" class="text-danger small"></span>
         </div>
         <div class="mb-4">
-            <label asp-for="ChefUniteId" class="form-label">Chef d'unité</label>
+            <label asp-for="ChefUniteId" class="form-label">Commissaire de district de branche (CDB)</label>
             <select asp-for="ChefUniteId" class="form-select" id="chefSelect" data-current="@Model?.ChefUniteId">
                 <option value="">— Sélectionner d'abord un groupe —</option>
             </select>
-            <small class="text-muted-custom">Sélectionnez un groupe puis choisissez un chef d'unité appartenant à ce groupe.</small>
+            <small class="text-muted-custom">Sélectionnez un groupe puis choisissez un commissaire de district de branche (CDB) appartenant à ce groupe.</small>
             <span asp-validation-for="ChefUniteId" class="text-danger small d-block"></span>
         </div>
         <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Créer</button>
@@ -81,7 +81,7 @@
         fetch('/Branches/GetScoutsByGroupe?groupeId=' + groupeId)
             .then(r => r.json())
             .then(data => {
-                var html = '<option value="">— Sélectionner un chef d\'unité —</option>';
+                var html = '<option value="">— Sélectionner un commissaire de district de branche (CDB) —</option>';
                 data.forEach(s => {
                     var sel = (selectedId && s.id == selectedId) ? ' selected' : '';
                     html += '<option value="' + s.id + '"' + sel + '>' + s.nom + '</option>';

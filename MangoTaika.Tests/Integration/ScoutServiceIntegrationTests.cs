@@ -1,3 +1,5 @@
+using System.Text;
+using ClosedXML.Excel;
 using FluentAssertions;
 using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
@@ -132,5 +134,65 @@ public sealed class ScoutServiceIntegrationTests
 
         byDistrict.Should().ContainSingle(s => s.Id == scout.Id);
         byPrenom.Should().ContainSingle(s => s.Id == scout.Id);
+    }
+
+    [Fact]
+    public async Task ImportFromExcelAsync_Creates_Valid_Rows_And_Skips_Invalid_Ones()
+    {
+        await using var db = TestDbContextFactory.CreateDbContext();
+
+        db.Scouts.Add(new Scout
+        {
+            Id = Guid.NewGuid(),
+            Matricule = "0583770X",
+            Nom = "Existant",
+            Prenom = "Scout",
+            DateNaissance = new DateTime(2011, 1, 1)
+        });
+        await db.SaveChangesAsync();
+
+        var service = new ScoutService(db);
+        using var workbook = new XLWorkbook();
+        var worksheet = workbook.Worksheets.Add("Scouts");
+
+        worksheet.Cell(1, 1).Value = "Matricule";
+        worksheet.Cell(1, 2).Value = "Nom";
+        worksheet.Cell(1, 3).Value = "Prenom";
+        worksheet.Cell(1, 4).Value = "DateNaissance";
+
+        worksheet.Cell(2, 1).Value = "0583771X";
+        worksheet.Cell(2, 2).Value = "Kone";
+        worksheet.Cell(2, 3).Value = "Awa";
+        worksheet.Cell(2, 4).Value = new DateTime(2012, 5, 14);
+
+        worksheet.Cell(3, 1).Value = "0583770X";
+        worksheet.Cell(3, 2).Value = "Doublon";
+        worksheet.Cell(3, 3).Value = "Scout";
+        worksheet.Cell(3, 4).Value = new DateTime(2012, 6, 1);
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        stream.Position = 0;
+
+        var result = await service.ImportFromExcelAsync(stream);
+
+        result.CreatedCount.Should().Be(1);
+        result.SkippedCount.Should().Be(1);
+        result.Errors.Should().ContainSingle(e => e.LineNumber == 3 && e.Message.Contains("Matricule deja existant"));
+        db.Scouts.Should().HaveCount(2);
+        db.Scouts.Should().Contain(s => s.Matricule == "0583771X" && s.Nom == "Kone" && s.Prenom == "Awa");
+    }
+
+    [Fact]
+    public async Task ImportFromExcelAsync_Rejects_Invalid_Workbook_With_Explicit_Message()
+    {
+        await using var db = TestDbContextFactory.CreateDbContext();
+        var service = new ScoutService(db);
+        await using var stream = new MemoryStream(Encoding.UTF8.GetBytes("ceci n'est pas un vrai fichier xlsx"));
+
+        Func<Task> act = () => service.ImportFromExcelAsync(stream);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*fichier Excel (.xlsx) valide*modele Excel*");
     }
 }

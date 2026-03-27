@@ -10,6 +10,11 @@ namespace MangoTaika.Services;
 
 public class ScoutService(AppDbContext db) : IScoutService
 {
+    private const string InvalidWorkbookMessage =
+        "Le fichier importe n'est pas un fichier Excel (.xlsx) valide ou il est endommage. Telechargez le modele Excel, remplissez-le puis reessayez.";
+    private const string ImportPersistenceErrorMessage =
+        "L'import a rencontre une erreur pendant l'enregistrement en base. Verifiez les doublons de matricule, de numero de carte et la correspondance groupe/branche.";
+
     public async Task<List<ScoutDto>> GetAllAsync()
     {
         return await db.Scouts
@@ -143,200 +148,244 @@ public class ScoutService(AppDbContext db) : IScoutService
 
     public async Task<ScoutImportResultDto> ImportFromExcelAsync(Stream fileStream)
     {
-        using var workbook = new XLWorkbook(fileStream);
-        var worksheet = workbook.Worksheets.First();
-        var result = new ScoutImportResultDto();
-
-        var headerMap = worksheet.Row(1)
-            .CellsUsed()
-            .ToDictionary(
-                cell => NormalizeHeader(cell.GetString()),
-                cell => cell.Address.ColumnNumber,
-                StringComparer.OrdinalIgnoreCase);
-
-        var requiredHeaders = new[] { "matricule", "nom", "prenom", "datenaissance" };
-        var missingHeaders = requiredHeaders.Where(h => !headerMap.ContainsKey(h)).ToList();
-        if (missingHeaders.Count != 0)
+        XLWorkbook workbook;
+        try
         {
-            result.Errors.Add(new ScoutImportErrorDto
-            {
-                LineNumber = 1,
-                Message = $"Colonnes obligatoires manquantes: {string.Join(", ", missingHeaders)}."
-            });
-            return result;
+            workbook = new XLWorkbook(fileStream);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(InvalidWorkbookMessage, ex);
         }
 
-        var groupes = await db.Groupes
-            .Where(g => g.IsActive)
-            .ToListAsync();
-        var branches = await db.Branches
-            .Where(b => b.IsActive)
-            .ToListAsync();
-
-        var groupesByName = groupes
-            .GroupBy(g => NormalizeLookup(g.Nom))
-            .ToDictionary(g => g.Key, g => g.First());
-        var branchesByName = branches
-            .GroupBy(b => NormalizeLookup(b.Nom))
-            .ToDictionary(g => g.Key, g => g.First());
-
-        var existingMatricules = new HashSet<string>(
-            await db.Scouts.Select(s => s.Matricule).ToListAsync(),
-            StringComparer.OrdinalIgnoreCase);
-        var existingNumeroCartes = new HashSet<string>(
-            await db.Scouts
-            .Where(s => s.NumeroCarte != null)
-            .Select(s => s.NumeroCarte!)
-            .ToListAsync(),
-            StringComparer.OrdinalIgnoreCase);
-
-        var seenMatricules = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var seenNumeroCartes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        var lastRow = worksheet.LastRowUsed()?.RowNumber() ?? 1;
-        for (var rowNumber = 2; rowNumber <= lastRow; rowNumber++)
+        using (workbook)
         {
-            var row = worksheet.Row(rowNumber);
-            if (row.CellsUsed().All(c => string.IsNullOrWhiteSpace(c.GetString())))
+            IXLWorksheet worksheet;
+            try
             {
-                continue;
+                worksheet = workbook.Worksheets.First();
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(InvalidWorkbookMessage, ex);
             }
 
-            var rowErrors = new List<string>();
-            var matricule = ScoutMatriculeFormat.Normalize(ReadString(row, headerMap, "matricule"));
-            var nom = ReadString(row, headerMap, "nom");
-            var prenom = ReadString(row, headerMap, "prenom");
-            var lieuNaissance = NormalizeOptional(ReadString(row, headerMap, "lieunaissance"));
-            var sexe = NormalizeOptional(ReadString(row, headerMap, "sexe"));
-            var telephone = NormalizeOptional(ReadString(row, headerMap, "telephone"));
-            var email = NormalizeOptional(ReadString(row, headerMap, "email"));
-            var regionScoute = NormalizeOptional(ReadString(row, headerMap, "regionscoute"));
-            var district = NormalizeOptional(ReadString(row, headerMap, "district"));
-            var numeroCarte = NormalizeOptional(ReadString(row, headerMap, "numerocarte"));
-            var fonction = NormalizeOptional(ReadString(row, headerMap, "fonction"));
-            var adresse = NormalizeOptional(ReadString(row, headerMap, "adressegeographique"));
-            var groupeNom = NormalizeOptional(ReadString(row, headerMap, "groupe"));
-            var brancheNom = NormalizeOptional(ReadString(row, headerMap, "branche"));
+            var result = new ScoutImportResultDto();
 
-            if (string.IsNullOrWhiteSpace(matricule))
-            {
-                rowErrors.Add("Matricule obligatoire.");
-            }
-            else if (!ScoutMatriculeFormat.IsValid(matricule))
-            {
-                rowErrors.Add($"Matricule invalide: {matricule}. Format attendu: {ScoutMatriculeFormat.Example}.");
-            }
-            if (string.IsNullOrWhiteSpace(nom))
-            {
-                rowErrors.Add("Nom obligatoire.");
-            }
-            if (string.IsNullOrWhiteSpace(prenom))
-            {
-                rowErrors.Add("Prenom obligatoire.");
-            }
+            var headerMap = worksheet.Row(1)
+                .CellsUsed()
+                .ToDictionary(
+                    cell => NormalizeHeader(cell.GetString()),
+                    cell => cell.Address.ColumnNumber,
+                    StringComparer.OrdinalIgnoreCase);
 
-            if (!TryReadDate(row, headerMap, "datenaissance", out var dateNaissance))
-            {
-                rowErrors.Add("Date de naissance invalide.");
-            }
-
-            var assurance = TryReadBoolean(row, headerMap, "assuranceannuelle");
-
-            Groupe? groupe = null;
-            if (!string.IsNullOrWhiteSpace(groupeNom))
-            {
-                if (!groupesByName.TryGetValue(NormalizeLookup(groupeNom), out groupe))
-                {
-                    rowErrors.Add($"Groupe introuvable: {groupeNom}.");
-                }
-            }
-
-            Branche? branche = null;
-            if (!string.IsNullOrWhiteSpace(brancheNom))
-            {
-                if (!branchesByName.TryGetValue(NormalizeLookup(brancheNom), out branche))
-                {
-                    rowErrors.Add($"Branche introuvable: {brancheNom}.");
-                }
-            }
-
-            if (groupe != null && branche != null && branche.GroupeId != groupe.Id)
-            {
-                rowErrors.Add("La branche selectionnee n'appartient pas au groupe renseigne.");
-            }
-
-            var matriculeKey = (matricule ?? string.Empty).Trim().ToUpperInvariant();
-            if (!string.IsNullOrWhiteSpace(matriculeKey))
-            {
-                if (existingMatricules.Contains(matriculeKey))
-                {
-                    rowErrors.Add($"Matricule deja existant: {matricule}.");
-                }
-                if (!seenMatricules.Add(matriculeKey))
-                {
-                    rowErrors.Add($"Matricule duplique dans le fichier: {matricule}.");
-                }
-            }
-
-            var numeroCarteKey = (numeroCarte ?? string.Empty).Trim().ToUpperInvariant();
-            if (!string.IsNullOrWhiteSpace(numeroCarteKey))
-            {
-                if (existingNumeroCartes.Contains(numeroCarteKey))
-                {
-                    rowErrors.Add($"Numero de carte deja existant: {numeroCarte}.");
-                }
-                if (!seenNumeroCartes.Add(numeroCarteKey))
-                {
-                    rowErrors.Add($"Numero de carte duplique dans le fichier: {numeroCarte}.");
-                }
-            }
-
-            if (rowErrors.Count != 0)
+            var requiredHeaders = new[] { "matricule", "nom", "prenom", "datenaissance" };
+            var missingHeaders = requiredHeaders.Where(h => !headerMap.ContainsKey(h)).ToList();
+            if (missingHeaders.Count != 0)
             {
                 result.Errors.Add(new ScoutImportErrorDto
                 {
-                    LineNumber = rowNumber,
-                    Message = string.Join(" ", rowErrors)
+                    LineNumber = 1,
+                    Message = $"Colonnes obligatoires manquantes: {string.Join(", ", missingHeaders)}."
                 });
-                result.SkippedCount++;
-                continue;
+                return result;
             }
 
-            db.Scouts.Add(new Scout
-            {
-                Id = Guid.NewGuid(),
-                Matricule = matricule!,
-                Nom = nom!.Trim(),
-                Prenom = prenom!.Trim(),
-                DateNaissance = DateTime.SpecifyKind(dateNaissance, DateTimeKind.Utc),
-                LieuNaissance = lieuNaissance,
-                Sexe = sexe,
-                Telephone = telephone,
-                Email = email,
-                RegionScoute = regionScoute,
-                District = district,
-                NumeroCarte = numeroCarte,
-                Fonction = fonction,
-                AssuranceAnnuelle = assurance,
-                AdresseGeographique = adresse,
-                GroupeId = groupe?.Id,
-                BrancheId = branche?.Id
-            });
+            var groupes = await db.Groupes
+                .Where(g => g.IsActive)
+                .ToListAsync();
+            var branches = await db.Branches
+                .Where(b => b.IsActive)
+                .ToListAsync();
 
-            existingMatricules.Add(matriculeKey);
-            if (!string.IsNullOrWhiteSpace(numeroCarteKey))
+            var groupesByName = groupes
+                .GroupBy(g => NormalizeLookup(g.Nom))
+                .ToDictionary(g => g.Key, g => g.First());
+            var branchesByName = branches
+                .GroupBy(b => NormalizeLookup(b.Nom))
+                .ToDictionary(g => g.Key, g => g.First());
+
+            var existingMatricules = new HashSet<string>(
+                await db.Scouts.Select(s => s.Matricule).ToListAsync(),
+                StringComparer.OrdinalIgnoreCase);
+            var existingNumeroCartes = new HashSet<string>(
+                await db.Scouts
+                    .Where(s => s.NumeroCarte != null)
+                    .Select(s => s.NumeroCarte!)
+                    .ToListAsync(),
+                StringComparer.OrdinalIgnoreCase);
+
+            var seenMatricules = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var seenNumeroCartes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            var lastRow = worksheet.LastRowUsed()?.RowNumber() ?? 1;
+            for (var rowNumber = 2; rowNumber <= lastRow; rowNumber++)
             {
-                existingNumeroCartes.Add(numeroCarteKey);
+                var row = worksheet.Row(rowNumber);
+                if (row.CellsUsed().All(c => string.IsNullOrWhiteSpace(c.GetString())))
+                {
+                    continue;
+                }
+
+                var rowErrors = new List<string>();
+                var matricule = ScoutMatriculeFormat.Normalize(ReadString(row, headerMap, "matricule"));
+                var nom = ReadString(row, headerMap, "nom");
+                var prenom = ReadString(row, headerMap, "prenom");
+                var lieuNaissance = NormalizeOptional(ReadString(row, headerMap, "lieunaissance"));
+                var sexe = NormalizeOptional(ReadString(row, headerMap, "sexe"));
+                var telephone = NormalizeOptional(ReadString(row, headerMap, "telephone"));
+                var email = NormalizeOptional(ReadString(row, headerMap, "email"));
+                var regionScoute = NormalizeOptional(ReadString(row, headerMap, "regionscoute"));
+                var district = NormalizeOptional(ReadString(row, headerMap, "district"));
+                var numeroCarte = NormalizeOptional(ReadString(row, headerMap, "numerocarte"));
+                var fonction = NormalizeOptional(ReadString(row, headerMap, "fonction"));
+                var adresse = NormalizeOptional(ReadString(row, headerMap, "adressegeographique"));
+                var groupeNom = NormalizeOptional(ReadString(row, headerMap, "groupe"));
+                var brancheNom = NormalizeOptional(ReadString(row, headerMap, "branche"));
+
+                if (string.IsNullOrWhiteSpace(matricule))
+                {
+                    rowErrors.Add("Matricule obligatoire.");
+                }
+                else if (!ScoutMatriculeFormat.IsValid(matricule))
+                {
+                    rowErrors.Add($"Matricule invalide: {matricule}. Format attendu: {ScoutMatriculeFormat.Example}.");
+                }
+                if (string.IsNullOrWhiteSpace(nom))
+                {
+                    rowErrors.Add("Nom obligatoire.");
+                }
+                if (string.IsNullOrWhiteSpace(prenom))
+                {
+                    rowErrors.Add("Prenom obligatoire.");
+                }
+
+                if (!TryReadDate(row, headerMap, "datenaissance", out var dateNaissance))
+                {
+                    rowErrors.Add("Date de naissance invalide.");
+                }
+
+                var assurance = TryReadBoolean(row, headerMap, "assuranceannuelle");
+
+                Groupe? groupe = null;
+                if (!string.IsNullOrWhiteSpace(groupeNom))
+                {
+                    if (!groupesByName.TryGetValue(NormalizeLookup(groupeNom), out groupe))
+                    {
+                        rowErrors.Add($"Groupe introuvable: {groupeNom}.");
+                    }
+                }
+
+                Branche? branche = null;
+                if (!string.IsNullOrWhiteSpace(brancheNom))
+                {
+                    if (!branchesByName.TryGetValue(NormalizeLookup(brancheNom), out branche))
+                    {
+                        rowErrors.Add($"Branche introuvable: {brancheNom}.");
+                    }
+                }
+
+                if (groupe != null && branche != null && branche.GroupeId != groupe.Id)
+                {
+                    rowErrors.Add("La branche selectionnee n'appartient pas au groupe renseigne.");
+                }
+
+                var matriculeKey = (matricule ?? string.Empty).Trim().ToUpperInvariant();
+                if (!string.IsNullOrWhiteSpace(matriculeKey))
+                {
+                    if (existingMatricules.Contains(matriculeKey))
+                    {
+                        rowErrors.Add($"Matricule deja existant: {matricule}.");
+                    }
+                    if (!seenMatricules.Add(matriculeKey))
+                    {
+                        rowErrors.Add($"Matricule duplique dans le fichier: {matricule}.");
+                    }
+                }
+
+                var numeroCarteKey = (numeroCarte ?? string.Empty).Trim().ToUpperInvariant();
+                if (!string.IsNullOrWhiteSpace(numeroCarteKey))
+                {
+                    if (existingNumeroCartes.Contains(numeroCarteKey))
+                    {
+                        rowErrors.Add($"Numero de carte deja existant: {numeroCarte}.");
+                    }
+                    if (!seenNumeroCartes.Add(numeroCarteKey))
+                    {
+                        rowErrors.Add($"Numero de carte duplique dans le fichier: {numeroCarte}.");
+                    }
+                }
+
+                if (rowErrors.Count != 0)
+                {
+                    result.Errors.Add(new ScoutImportErrorDto
+                    {
+                        LineNumber = rowNumber,
+                        Message = string.Join(" ", rowErrors)
+                    });
+                    result.SkippedCount++;
+                    continue;
+                }
+
+                var scout = new Scout
+                {
+                    Id = Guid.NewGuid(),
+                    Matricule = matricule!,
+                    Nom = nom!.Trim(),
+                    Prenom = prenom!.Trim(),
+                    DateNaissance = DateTime.SpecifyKind(dateNaissance, DateTimeKind.Utc),
+                    LieuNaissance = lieuNaissance,
+                    Sexe = sexe,
+                    Telephone = telephone,
+                    Email = email,
+                    RegionScoute = regionScoute,
+                    District = district,
+                    NumeroCarte = numeroCarte,
+                    Fonction = fonction,
+                    AssuranceAnnuelle = assurance,
+                    AdresseGeographique = adresse,
+                    GroupeId = groupe?.Id,
+                    BrancheId = branche?.Id
+                };
+
+                db.Scouts.Add(scout);
+
+                try
+                {
+                    await SaveChangesAsync();
+                    existingMatricules.Add(matriculeKey);
+                    if (!string.IsNullOrWhiteSpace(numeroCarteKey))
+                    {
+                        existingNumeroCartes.Add(numeroCarteKey);
+                    }
+
+                    result.CreatedCount++;
+                }
+                catch (InvalidOperationException ex)
+                {
+                    db.Entry(scout).State = EntityState.Detached;
+                    result.Errors.Add(new ScoutImportErrorDto
+                    {
+                        LineNumber = rowNumber,
+                        Message = $"Enregistrement impossible: {ex.Message}"
+                    });
+                    result.SkippedCount++;
+                }
+                catch (DbUpdateException ex)
+                {
+                    db.Entry(scout).State = EntityState.Detached;
+                    result.Errors.Add(new ScoutImportErrorDto
+                    {
+                        LineNumber = rowNumber,
+                        Message = $"Enregistrement impossible: {ImportPersistenceErrorMessage}"
+                    });
+                    result.SkippedCount++;
+                    throw new InvalidOperationException(ImportPersistenceErrorMessage, ex);
+                }
             }
-            result.CreatedCount++;
-        }
 
-        if (result.CreatedCount > 0)
-        {
-            await db.SaveChangesAsync();
+            return result;
         }
-
-        return result;
     }
 
     public byte[] GenerateImportTemplate()

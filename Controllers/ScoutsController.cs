@@ -138,7 +138,21 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db) : Con
         }
 
         await using var stream = fichier.OpenReadStream();
-        var result = await scoutService.ImportFromExcelAsync(stream);
+        ScoutImportResultDto result;
+        try
+        {
+            result = await scoutService.ImportFromExcelAsync(stream);
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ImportError"] = ex.Message;
+            return RedirectToAction(nameof(Index));
+        }
+        catch
+        {
+            TempData["ImportError"] = "Une erreur est survenue pendant l'import du fichier Excel.";
+            return RedirectToAction(nameof(Index));
+        }
 
         if (result.CreatedCount > 0)
         {
@@ -147,7 +161,7 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db) : Con
 
         if (result.CreatedCount == 0 && result.Errors.Count > 0)
         {
-            TempData["ImportError"] = "Aucun scout n'a ete importe. Corrigez le fichier puis recommencez.";
+            TempData["ImportError"] = "Aucun scout n'a pu etre importe. Corrigez les lignes en erreur, verifiez le format du modele Excel, puis recommencez.";
         }
 
         if (result.Errors.Count > 0 || result.SkippedCount > 0)
