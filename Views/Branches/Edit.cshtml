@@ -14,6 +14,7 @@
         <div class="mb-3">
             <label class="form-label">Nom de la branche</label>
             <input name="Nom" class="form-control" value="@Model.Nom" />
+            <span asp-validation-for="Nom" class="text-danger small"></span>
         </div>
         <div class="mb-3">
             <label class="form-label">Description</label>
@@ -23,10 +24,12 @@
             <div class="col-md-6 mb-3">
                 <label class="form-label">Âge minimum</label>
                 <input name="AgeMin" class="form-control" type="number" value="@Model.AgeMin" />
+                <span asp-validation-for="AgeMin" class="text-danger small"></span>
             </div>
             <div class="col-md-6 mb-3">
                 <label class="form-label">Âge maximum</label>
                 <input name="AgeMax" class="form-control" type="number" value="@Model.AgeMax" />
+                <span asp-validation-for="AgeMax" class="text-danger small"></span>
             </div>
         </div>
         <div class="mb-3">
@@ -38,12 +41,15 @@
                     <option value="@g.Id" selected="@(g.Id == Model.GroupeId)">@g.Nom</option>
                 }
             </select>
+            <span asp-validation-for="GroupeId" class="text-danger small"></span>
         </div>
         <div class="mb-4">
             <label class="form-label">Chef d'unité</label>
             <select name="ChefUniteId" id="chefSelect" class="form-select" data-current="@Model.ChefUniteId">
                 <option value="">— Chargement... —</option>
             </select>
+            <small class="text-muted-custom">Le chef d'unité doit appartenir au groupe sélectionné.</small>
+            <span asp-validation-for="ChefUniteId" class="text-danger small d-block"></span>
         </div>
         <button type="submit" class="btn btn-mango" title="Enregistrer"><i class="bi bi-check-lg"></i></button>
         <a asp-action="Index" class="btn btn-outline-or ms-2" title="Annuler"><i class="bi bi-x-lg"></i></a>
@@ -62,7 +68,7 @@
         fetch('/Branches/GetScoutsByGroupe?groupeId=' + groupeId)
             .then(r => r.json())
             .then(data => {
-                var html = '<option value="">— Aucun (pas de chef) —</option>';
+                var html = '<option value="">— Sélectionner un chef d\'unité —</option>';
                 data.forEach(s => {
                     var sel = (selectedId && s.id == selectedId) ? ' selected' : '';
                     html += '<option value="' + s.id + '"' + sel + '>' + s.nom + '</option>';

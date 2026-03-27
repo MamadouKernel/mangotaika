@@ -14,6 +14,7 @@
         <div class="mb-3">
             <label asp-for="Nom" class="form-label">Nom de la branche</label>
             <input asp-for="Nom" class="form-control" placeholder="Ex: Louveteaux" />
+            <span asp-validation-for="Nom" class="text-danger small"></span>
         </div>
         <div class="mb-3">
             <label asp-for="Description" class="form-label">Description</label>
@@ -23,10 +24,12 @@
             <div class="col-md-6 mb-3">
                 <label asp-for="AgeMin" class="form-label">Âge minimum</label>
                 <input asp-for="AgeMin" class="form-control" type="number" placeholder="Ex: 8" />
+                <span asp-validation-for="AgeMin" class="text-danger small"></span>
             </div>
             <div class="col-md-6 mb-3">
                 <label asp-for="AgeMax" class="form-label">Âge maximum</label>
                 <input asp-for="AgeMax" class="form-control" type="number" placeholder="Ex: 12" />
+                <span asp-validation-for="AgeMax" class="text-danger small"></span>
             </div>
         </div>
         <div class="mb-3">
@@ -38,13 +41,15 @@
                     <option value="@g.Id">@g.Nom</option>
                 }
             </select>
+            <span asp-validation-for="GroupeId" class="text-danger small"></span>
         </div>
         <div class="mb-4">
             <label asp-for="ChefUniteId" class="form-label">Chef d'unité</label>
-            <select asp-for="ChefUniteId" class="form-select" id="chefSelect">
+            <select asp-for="ChefUniteId" class="form-select" id="chefSelect" data-current="@Model?.ChefUniteId">
                 <option value="">— Sélectionner d'abord un groupe —</option>
             </select>
-            <small class="text-muted-custom">Sélectionnez un groupe pour voir les scouts disponibles.</small>
+            <small class="text-muted-custom">Sélectionnez un groupe puis choisissez un chef d'unité appartenant à ce groupe.</small>
+            <span asp-validation-for="ChefUniteId" class="text-danger small d-block"></span>
         </div>
         <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Créer</button>
         <a asp-action="Index" class="btn btn-outline-or ms-2">Annuler</a>
@@ -53,9 +58,8 @@
 
 @section Scripts {
 <script>
-    document.getElementById('groupeSelect').addEventListener('change', function () {
+    function loadScouts(groupeId, selectedId) {
         var chefSelect = document.getElementById('chefSelect');
-        var groupeId = this.value;
         if (!groupeId) {
             chefSelect.innerHTML = '<option value="">— Sélectionner d\'abord un groupe —</option>';
             return;
@@ -64,10 +68,19 @@
         fetch('/Branches/GetScoutsByGroupe?groupeId=' + groupeId)
             .then(r => r.json())
             .then(data => {
-                var html = '<option value="">— Aucun (pas de chef) —</option>';
-                data.forEach(s => { html += '<option value="' + s.id + '">' + s.nom + '</option>'; });
+                var html = '<option value="">— Sélectionner un chef d\'unité —</option>';
+                data.forEach(s => {
+                    var sel = (selectedId && s.id == selectedId) ? ' selected' : '';
+                    html += '<option value="' + s.id + '"' + sel + '>' + s.nom + '</option>';
+                });
                 chefSelect.innerHTML = html;
             });
+    }
+    document.getElementById('groupeSelect').addEventListener('change', function () {
+        loadScouts(this.value, null);
     });
+    var initGroupe = document.getElementById('groupeSelect').value;
+    var initChef = document.getElementById('chefSelect').dataset.current;
+    if (initGroupe) loadScouts(initGroupe, initChef);
 </script>
 }

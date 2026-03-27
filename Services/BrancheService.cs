@@ -30,6 +30,8 @@ public class BrancheService(AppDbContext db) : IBrancheService
 
     public async Task<BrancheDto> CreateAsync(BrancheCreateDto dto)
     {
+        var chefUnite = await GetChefUniteAsync(dto.GroupeId, dto.ChefUniteId);
+
         var branche = new Branche
         {
             Id = Guid.NewGuid(),
@@ -37,7 +39,8 @@ public class BrancheService(AppDbContext db) : IBrancheService
             Description = dto.Description,
             AgeMin = dto.AgeMin,
             AgeMax = dto.AgeMax,
-            ChefUniteId = dto.ChefUniteId,
+            ChefUniteId = chefUnite.Id,
+            NomChefUnite = $"{chefUnite.Prenom} {chefUnite.Nom}",
             GroupeId = dto.GroupeId
         };
         db.Branches.Add(branche);
@@ -49,11 +52,13 @@ public class BrancheService(AppDbContext db) : IBrancheService
     {
         var branche = await db.Branches.FindAsync(id);
         if (branche is null) return false;
+        var chefUnite = await GetChefUniteAsync(dto.GroupeId, dto.ChefUniteId);
         branche.Nom = dto.Nom;
         branche.Description = dto.Description;
         branche.AgeMin = dto.AgeMin;
         branche.AgeMax = dto.AgeMax;
-        branche.ChefUniteId = dto.ChefUniteId;
+        branche.ChefUniteId = chefUnite.Id;
+        branche.NomChefUnite = $"{chefUnite.Prenom} {chefUnite.Nom}";
         branche.GroupeId = dto.GroupeId;
         await db.SaveChangesAsync();
         return true;
@@ -81,4 +86,27 @@ public class BrancheService(AppDbContext db) : IBrancheService
         NomGroupe = b.Groupe?.Nom,
         NombreScouts = b.Scouts.Count
     };
+
+    private async Task<Scout> GetChefUniteAsync(Guid groupeId, Guid? chefUniteId)
+    {
+        if (!chefUniteId.HasValue)
+        {
+            throw new InvalidOperationException("Le chef d'unité est obligatoire.");
+        }
+
+        var chefUnite = await db.Scouts
+            .FirstOrDefaultAsync(s => s.Id == chefUniteId.Value && s.IsActive);
+
+        if (chefUnite is null)
+        {
+            throw new InvalidOperationException("Le chef d'unité sélectionné est introuvable.");
+        }
+
+        if (chefUnite.GroupeId != groupeId)
+        {
+            throw new InvalidOperationException("Le chef d'unité doit appartenir au groupe sélectionné.");
+        }
+
+        return chefUnite;
+    }
 }

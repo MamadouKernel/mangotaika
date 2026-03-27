@@ -34,6 +34,11 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db)
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(BrancheCreateDto dto)
     {
+        if (ModelState.IsValid)
+        {
+            await ValidateChefUniteAsync(dto);
+        }
+
         if (!ModelState.IsValid) { await LoadGroupesAsync(); return View(dto); }
         await brancheService.CreateAsync(dto);
         TempData["Success"] = "Branche créée avec succès.";
@@ -61,7 +66,12 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db)
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(Guid id, BrancheCreateDto dto)
     {
-        if (!ModelState.IsValid) { await LoadGroupesAsync(); return View(dto); }
+        if (ModelState.IsValid)
+        {
+            await ValidateChefUniteAsync(dto);
+        }
+
+        if (!ModelState.IsValid) { await LoadGroupesAsync(); return View(ToEditDto(id, dto)); }
         var result = await brancheService.UpdateAsync(id, dto);
         if (!result) return NotFound();
         TempData["Success"] = "Branche mise à jour.";
@@ -93,4 +103,40 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db)
             .ToListAsync();
         return Json(scouts);
     }
+
+    private async Task ValidateChefUniteAsync(BrancheCreateDto dto)
+    {
+        if (!dto.ChefUniteId.HasValue)
+        {
+            return;
+        }
+
+        var chef = await db.Scouts
+            .Where(s => s.Id == dto.ChefUniteId.Value && s.IsActive)
+            .Select(s => new { s.GroupeId })
+            .FirstOrDefaultAsync();
+
+        if (chef is null)
+        {
+            ModelState.AddModelError(nameof(dto.ChefUniteId), "Le chef d'unité sélectionné est introuvable.");
+            return;
+        }
+
+        if (chef.GroupeId != dto.GroupeId)
+        {
+            ModelState.AddModelError(nameof(dto.ChefUniteId), "Le chef d'unité doit appartenir au groupe sélectionné.");
+        }
+    }
+
+    private static BrancheDto ToEditDto(Guid id, BrancheCreateDto dto) => new()
+    {
+        Id = id,
+        Nom = dto.Nom,
+        Description = dto.Description,
+        AgeMin = dto.AgeMin,
+        AgeMax = dto.AgeMax,
+        NomChefUnite = null,
+        ChefUniteId = dto.ChefUniteId,
+        GroupeId = dto.GroupeId
+    };
 }
