@@ -7,6 +7,7 @@
     var importSummary = TempData["ImportSummary"] as string;
     var importError = TempData["ImportError"] as string;
     var importErrorsJson = TempData["ImportErrors"] as string;
+    var importErrorsNotice = TempData["ImportErrorsNotice"] as string;
     var importErrors = string.IsNullOrWhiteSpace(importErrorsJson)
         ? new List<ScoutImportErrorDto>()
         : JsonSerializer.Deserialize<List<ScoutImportErrorDto>>(importErrorsJson) ?? new List<ScoutImportErrorDto>();
@@ -47,6 +48,10 @@
                     <li>@error.DisplayMessage</li>
                 }
             </ul>
+        }
+        @if (!string.IsNullOrWhiteSpace(importErrorsNotice))
+        {
+            <div class="small mt-2">@importErrorsNotice</div>
         }
     </div>
 }

@@ -203,4 +203,61 @@ public sealed class ScoutsPagesTests
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Scouts.Should().ContainSingle(s => s.Matricule == "0583772X" && s.Nom == "Kone" && s.Prenom == "Awa");
     }
+
+    [Fact]
+    public async Task ImportExcel_Limits_Displayed_Errors_To_Avoid_Too_Large_Response_Headers()
+    {
+        await using var factory = new SupportWebApplicationFactory();
+        ApplicationUser gestionnaire = null!;
+
+        await factory.SeedAsync(async db =>
+        {
+            await TestDataSeeder.EnsureRolesAsync(db, "Gestionnaire");
+            gestionnaire = await TestDataSeeder.AddUserAsync(db, "Awa", "Gestion", ["Gestionnaire"]);
+        });
+
+        using var client = factory.CreateAuthenticatedClient(gestionnaire.Id, "Gestionnaire");
+        var indexHtml = await client.GetStringAsync("/Scouts");
+        var token = HtmlTestHelpers.ExtractAntiForgeryToken(indexHtml);
+
+        using var workbook = new XLWorkbook();
+        var worksheet = workbook.Worksheets.Add("Scouts");
+        worksheet.Cell(1, 1).Value = "Matricule";
+        worksheet.Cell(1, 2).Value = "Nom";
+        worksheet.Cell(1, 3).Value = "Prenom";
+        worksheet.Cell(1, 4).Value = "DateNaissance";
+
+        worksheet.Cell(2, 1).Value = "0583773X";
+        worksheet.Cell(2, 2).Value = "Kone";
+        worksheet.Cell(2, 3).Value = "Awa";
+        worksheet.Cell(2, 4).Value = new DateTime(2012, 5, 14);
+
+        for (var row = 3; row <= 7; row++)
+        {
+            worksheet.Cell(row, 1).Value = "0583773X";
+            worksheet.Cell(row, 2).Value = $"Doublon{row}";
+            worksheet.Cell(row, 3).Value = "Scout";
+            worksheet.Cell(row, 4).Value = new DateTime(2012, 6, 1);
+        }
+
+        using var workbookStream = new MemoryStream();
+        workbook.SaveAs(workbookStream);
+        workbookStream.Position = 0;
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/Scouts/ImportExcel");
+        request.Headers.Add("RequestVerificationToken", token);
+
+        var content = new MultipartFormDataContent();
+        content.Add(new StreamContent(workbookStream), "fichier", "import-scouts-erreurs.xlsx");
+        request.Content = content;
+
+        var response = await client.SendAsync(request);
+        response.StatusCode.Should().Be(HttpStatusCode.Found);
+        response.Headers.Location.Should().NotBeNull();
+
+        var html = await client.GetStringAsync(response.Headers.Location);
+
+        html.Should().Contain("1 cree(s), 5 ignore(s), 5 erreur(s).");
+        html.Should().Contain("Affichage limite aux 3 premieres erreurs.");
+    }
 }

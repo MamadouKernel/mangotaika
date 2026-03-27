@@ -12,6 +12,9 @@ namespace MangoTaika.Controllers;
 [Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant")]
 public class ScoutsController(IScoutService scoutService, AppDbContext db) : Controller
 {
+    private const int MaxDisplayedImportErrors = 3;
+    private const int MaxDisplayedImportErrorLength = 120;
+
     private async Task LoadDropdownsAsync()
     {
         ViewBag.Groupes = await db.Groupes.Where(g => g.IsActive).OrderBy(g => g.Nom).ToListAsync();
@@ -167,7 +170,23 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db) : Con
         if (result.Errors.Count > 0 || result.SkippedCount > 0)
         {
             TempData["ImportSummary"] = $"{result.CreatedCount} cree(s), {result.SkippedCount} ignore(s), {result.Errors.Count} erreur(s).";
-            TempData["ImportErrors"] = JsonSerializer.Serialize(result.Errors.Take(15).ToList());
+            var previewErrors = result.Errors
+                .Take(MaxDisplayedImportErrors)
+                .Select(error => new ScoutImportErrorDto
+                {
+                    LineNumber = error.LineNumber,
+                    Message = TruncateImportErrorMessage(error.Message)
+                })
+                .ToList();
+
+            TempData["ImportErrors"] = JsonSerializer.Serialize(previewErrors);
+
+            var omittedCount = Math.Max(0, result.Errors.Count - previewErrors.Count);
+            if (omittedCount > 0)
+            {
+                TempData["ImportErrorsNotice"] =
+                    $"Affichage limite aux {previewErrors.Count} premieres erreurs. {omittedCount} autre(s) erreur(s) ne sont pas affichee(s).";
+            }
         }
 
         return RedirectToAction(nameof(Index));
@@ -242,4 +261,14 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db) : Con
         GroupeId = scout.GroupeId,
         BrancheId = scout.BrancheId
     };
+
+    private static string TruncateImportErrorMessage(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message) || message.Length <= MaxDisplayedImportErrorLength)
+        {
+            return message;
+        }
+
+        return $"{message[..(MaxDisplayedImportErrorLength - 3)].TrimEnd()}...";
+    }
 }
