@@ -1,9 +1,28 @@
 @model ScoutCreateDto
+@using System.Text.Json
 @{
     ViewData["Title"] = "Modifier scout";
     Layout = "_LayoutAdmin";
     var groupes = ViewBag.Groupes as List<MangoTaika.Data.Entities.Groupe> ?? new();
+    var branches = ViewBag.Branches as List<MangoTaika.Data.Entities.Branche> ?? new();
     var routeId = ViewContext.RouteData.Values["id"];
+    var selectedGroupeId = Model?.GroupeId;
+    var selectedBrancheId = Model?.BrancheId;
+    var initialBranches = selectedGroupeId.HasValue
+        ? branches.Where(b => b.GroupeId == selectedGroupeId.Value).OrderBy(b => b.AgeMin).ThenBy(b => b.Nom).ToList()
+        : new List<MangoTaika.Data.Entities.Branche>();
+    var branchesPayload = branches
+        .OrderBy(b => b.AgeMin)
+        .ThenBy(b => b.Nom)
+        .Select(b => new
+        {
+            id = b.Id,
+            nom = b.Nom,
+            ageMin = b.AgeMin,
+            ageMax = b.AgeMax,
+            groupeId = b.GroupeId
+        })
+        .ToList();
 }
 
 <h2 class="section-title mb-1"><i class="bi bi-pencil-fill text-or"></i> Modifier le <span class="accent">scout</span></h2>
@@ -113,8 +132,21 @@
             </div>
             <div class="col-md-6 mb-3">
                 <label asp-for="BrancheId" class="form-label">Branche</label>
-                <select asp-for="BrancheId" id="brancheSelect" class="form-select" data-current="@Model.BrancheId">
-                    <option value="">-- Choisir une branche --</option>
+                <select asp-for="BrancheId" id="brancheSelect" class="form-select" data-current="@selectedBrancheId">
+                    @if (!initialBranches.Any())
+                    {
+                        <option value="">-- Choisir d'abord un groupe --</option>
+                    }
+                    else
+                    {
+                        <option value="">-- Choisir une branche --</option>
+                        @foreach (var branche in initialBranches)
+                        {
+                            <option value="@branche.Id" selected="@(selectedBrancheId == branche.Id ? "selected" : null)">
+                                @branche.Nom (@(branche.AgeMin ?? 0)-@(branche.AgeMax ?? 99) ans)
+                            </option>
+                        }
+                    }
                 </select>
                 <span asp-validation-for="BrancheId" class="text-danger small"></span>
             </div>
@@ -129,24 +161,29 @@
 
 @section Scripts {
     <script>
+        const scoutBranches = @Html.Raw(JsonSerializer.Serialize(branchesPayload));
+
         function loadBranches(groupeId, selectedId) {
             var brancheSelect = document.getElementById('brancheSelect');
             if (!groupeId) {
                 brancheSelect.innerHTML = '<option value="">-- Choisir d\'abord un groupe --</option>';
+                brancheSelect.disabled = true;
                 return;
             }
 
-            brancheSelect.innerHTML = '<option value="">Chargement...</option>';
-            fetch('/Scouts/GetBranchesByGroupe?groupeId=' + groupeId)
-                .then(r => r.json())
-                .then(data => {
-                    var html = '<option value="">-- Choisir une branche --</option>';
-                    data.forEach(b => {
-                        var sel = (selectedId && b.id == selectedId) ? ' selected' : '';
-                        html += '<option value="' + b.id + '"' + sel + '>' + b.nom + ' (' + (b.ageMin || 0) + '-' + (b.ageMax || 99) + ' ans)</option>';
-                    });
-                    brancheSelect.innerHTML = html;
-                });
+            var groupKey = String(groupeId).toLowerCase();
+            var data = scoutBranches.filter(function (branche) {
+                return String(branche.groupeId).toLowerCase() === groupKey;
+            });
+
+            var html = '<option value="">-- Choisir une branche --</option>';
+            data.forEach(function (branche) {
+                var sel = (selectedId && String(branche.id).toLowerCase() === String(selectedId).toLowerCase()) ? ' selected' : '';
+                html += '<option value="' + branche.id + '"' + sel + '>' + branche.nom + ' (' + (branche.ageMin || 0) + '-' + (branche.ageMax || 99) + ' ans)</option>';
+            });
+
+            brancheSelect.innerHTML = html;
+            brancheSelect.disabled = false;
         }
 
         document.getElementById('GroupeId').addEventListener('change', function () {
@@ -157,6 +194,8 @@
         var initBranche = document.getElementById('brancheSelect').dataset.current;
         if (initGroupe) {
             loadBranches(initGroupe, initBranche);
+        } else {
+            document.getElementById('brancheSelect').disabled = true;
         }
     </script>
     <partial name="_ValidationScriptsPartial" />

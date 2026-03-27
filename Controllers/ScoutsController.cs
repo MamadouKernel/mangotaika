@@ -5,15 +5,15 @@ using MangoTaika.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace MangoTaika.Controllers;
 
 [Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant")]
-public class ScoutsController(IScoutService scoutService, AppDbContext db) : Controller
+public class ScoutsController(IScoutService scoutService, AppDbContext db, IMemoryCache memoryCache) : Controller
 {
-    private const int MaxDisplayedImportErrors = 3;
-    private const int MaxDisplayedImportErrorLength = 120;
+    private const string ImportReportCachePrefix = "scouts-import-report:";
+    private static readonly TimeSpan ImportReportLifetime = TimeSpan.FromMinutes(15);
 
     private async Task LoadDropdownsAsync()
     {
@@ -21,7 +21,7 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db) : Con
         ViewBag.Branches = await db.Branches.Where(b => b.IsActive).OrderBy(b => b.Nom).ToListAsync();
     }
 
-    public async Task<IActionResult> Index(string? recherche)
+    public async Task<IActionResult> Index(string? recherche, string? importReportId)
     {
         var (page, ps) = ListPagination.Read(Request);
         var scouts = string.IsNullOrWhiteSpace(recherche)
@@ -31,6 +31,7 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db) : Con
         var (p, pageSize, skip, totalPages) = ListPagination.Normalize(page, ps, total);
         var pageItems = scouts.Skip(skip).Take(pageSize).ToList();
         ViewBag.Recherche = recherche;
+        ViewBag.ImportReport = ResolveImportReport(importReportId);
         ListPagination.SetViewData(ViewData, HttpContext, p, pageSize, total, totalPages);
         return View(pageItems);
     }
@@ -157,41 +158,8 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db) : Con
             return RedirectToAction(nameof(Index));
         }
 
-        if (result.CreatedCount > 0 || result.UpdatedCount > 0)
-        {
-            TempData["Success"] =
-                $"{result.CreatedCount} scout(s) cree(s) et {result.UpdatedCount} scout(s) mis a jour.";
-        }
-
-        if (result.CreatedCount == 0 && result.UpdatedCount == 0 && result.Errors.Count > 0)
-        {
-            TempData["ImportError"] = "Aucun scout n'a pu etre importe. Corrigez les lignes en erreur, verifiez le format du modele Excel, puis recommencez.";
-        }
-
-        if (result.Errors.Count > 0 || result.SkippedCount > 0)
-        {
-            TempData["ImportSummary"] =
-                $"{result.CreatedCount} cree(s), {result.UpdatedCount} mis a jour, {result.SkippedCount} non enregistre(s).";
-            var previewErrors = result.Errors
-                .Take(MaxDisplayedImportErrors)
-                .Select(error => new ScoutImportErrorDto
-                {
-                    LineNumber = error.LineNumber,
-                    Message = TruncateImportErrorMessage(error.Message)
-                })
-                .ToList();
-
-            TempData["ImportErrors"] = JsonSerializer.Serialize(previewErrors);
-
-            var omittedCount = Math.Max(0, result.Errors.Count - previewErrors.Count);
-            if (omittedCount > 0)
-            {
-                TempData["ImportErrorsNotice"] =
-                    $"Affichage limite aux {previewErrors.Count} premieres erreurs. {omittedCount} autre(s) erreur(s) ne sont pas affichee(s).";
-            }
-        }
-
-        return RedirectToAction(nameof(Index));
+        var importReportId = StoreImportReport(result);
+        return RedirectToAction(nameof(Index), new { importReportId });
     }
 
     [HttpGet]
@@ -264,13 +232,22 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db) : Con
         BrancheId = scout.BrancheId
     };
 
-    private static string TruncateImportErrorMessage(string message)
+    private string StoreImportReport(ScoutImportResultDto result)
     {
-        if (string.IsNullOrWhiteSpace(message) || message.Length <= MaxDisplayedImportErrorLength)
+        var reportId = Guid.NewGuid().ToString("N");
+        memoryCache.Set($"{ImportReportCachePrefix}{reportId}", result, ImportReportLifetime);
+        return reportId;
+    }
+
+    private ScoutImportResultDto? ResolveImportReport(string? importReportId)
+    {
+        if (string.IsNullOrWhiteSpace(importReportId))
         {
-            return message;
+            return null;
         }
 
-        return $"{message[..(MaxDisplayedImportErrorLength - 3)].TrimEnd()}...";
+        return memoryCache.TryGetValue($"{ImportReportCachePrefix}{importReportId}", out ScoutImportResultDto? report)
+            ? report
+            : null;
     }
 }

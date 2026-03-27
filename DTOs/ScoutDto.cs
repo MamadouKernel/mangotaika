@@ -84,14 +84,19 @@ public class ScoutImportResultDto
     public int CreatedCount { get; set; }
     public int UpdatedCount { get; set; }
     public int SkippedCount { get; set; }
+    public List<string> CreatedMatricules { get; set; } = [];
+    public List<string> UpdatedMatricules { get; set; } = [];
     public List<ScoutImportErrorDto> Errors { get; set; } = [];
 }
 
 public class ScoutImportErrorDto
 {
     public int LineNumber { get; set; }
+    public string? Matricule { get; set; }
     public string Message { get; set; } = string.Empty;
 
     [JsonIgnore]
-    public string DisplayMessage => $"Ligne {LineNumber}: {Message}";
+    public string DisplayMessage => string.IsNullOrWhiteSpace(Matricule)
+        ? $"Ligne {LineNumber}: {Message}"
+        : $"Ligne {LineNumber} ({Matricule}): {Message}";
 }

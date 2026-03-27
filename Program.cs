@@ -71,6 +71,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 builder.Services.AddHttpClient("Nominatim");
 builder.Services.AddHttpClient("OrangeSMS");
 builder.Services.AddHttpClient("Twilio");
+builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IGeocodingService, GeocodingService>();
 builder.Services.AddScoped<IScoutService, ScoutService>();
 builder.Services.AddScoped<IGroupeService, GroupeService>();

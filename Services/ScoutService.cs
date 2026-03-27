@@ -315,14 +315,15 @@ public class ScoutService(AppDbContext db) : IScoutService
 
                 if (rowErrors.Count != 0)
                 {
-                    result.Errors.Add(new ScoutImportErrorDto
-                    {
-                        LineNumber = rowNumber,
-                        Message = string.Join(" ", rowErrors)
-                    });
-                    result.SkippedCount++;
-                    continue;
-                }
+                result.Errors.Add(new ScoutImportErrorDto
+                {
+                    LineNumber = rowNumber,
+                    Matricule = matricule,
+                    Message = string.Join(" ", rowErrors)
+                });
+                result.SkippedCount++;
+                continue;
+            }
 
                 var isUpdate = existingScout is not null;
                 var scout = existingScout ?? new Scout
@@ -385,10 +386,12 @@ public class ScoutService(AppDbContext db) : IScoutService
 
                     if (isUpdate)
                     {
+                        result.UpdatedMatricules.Add(scout.Matricule);
                         result.UpdatedCount++;
                     }
                     else
                     {
+                        result.CreatedMatricules.Add(scout.Matricule);
                         result.CreatedCount++;
                     }
                 }
@@ -407,6 +410,7 @@ public class ScoutService(AppDbContext db) : IScoutService
                     result.Errors.Add(new ScoutImportErrorDto
                     {
                         LineNumber = rowNumber,
+                        Matricule = matricule,
                         Message = $"Enregistrement impossible: {ex.Message}"
                     });
                     result.SkippedCount++;
@@ -426,6 +430,7 @@ public class ScoutService(AppDbContext db) : IScoutService
                     result.Errors.Add(new ScoutImportErrorDto
                     {
                         LineNumber = rowNumber,
+                        Matricule = matricule,
                         Message = $"Enregistrement impossible: {ImportPersistenceErrorMessage}"
                     });
                     result.SkippedCount++;

@@ -180,6 +180,7 @@ public sealed class ScoutServiceIntegrationTests
         result.CreatedCount.Should().Be(0);
         result.UpdatedCount.Should().Be(1);
         result.SkippedCount.Should().Be(0);
+        result.UpdatedMatricules.Should().ContainSingle().Which.Should().Be("0583770X");
         result.Errors.Should().BeEmpty();
         db.Scouts.Should().HaveCount(1);
 
@@ -238,7 +239,11 @@ public sealed class ScoutServiceIntegrationTests
         result.CreatedCount.Should().Be(1);
         result.UpdatedCount.Should().Be(0);
         result.SkippedCount.Should().Be(1);
-        result.Errors.Should().ContainSingle(e => e.LineNumber == 2 && e.Message.Contains("Numero de carte deja existant"));
+        result.CreatedMatricules.Should().ContainSingle().Which.Should().Be("0583773X");
+        result.Errors.Should().ContainSingle(e =>
+            e.LineNumber == 2 &&
+            e.Matricule == "0583772X" &&
+            e.Message.Contains("Numero de carte deja existant"));
         db.Scouts.Should().HaveCount(2);
         db.Scouts.Should().Contain(s => s.Matricule == "0583773X" && s.NumeroCarte == "ASCCI-002");
     }

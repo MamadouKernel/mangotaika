@@ -113,6 +113,102 @@ public sealed class ScoutsPagesTests
     }
 
     [Fact]
+    public async Task Create_Invalid_Post_Preserves_Branche_Choices_For_Selected_Groupe()
+    {
+        await using var factory = new SupportWebApplicationFactory();
+        ApplicationUser gestionnaire = null!;
+        Groupe groupe = null!;
+        Branche branche = null!;
+
+        await factory.SeedAsync(async db =>
+        {
+            await TestDataSeeder.EnsureRolesAsync(db, "Gestionnaire");
+            gestionnaire = await TestDataSeeder.AddUserAsync(db, "Awa", "Gestion", ["Gestionnaire"]);
+
+            groupe = new Groupe { Id = Guid.NewGuid(), Nom = "Groupe A" };
+            branche = new Branche
+            {
+                Id = Guid.NewGuid(),
+                Nom = "Eclaireurs",
+                GroupeId = groupe.Id,
+                AgeMin = 12,
+                AgeMax = 16
+            };
+
+            db.Groupes.Add(groupe);
+            db.Branches.Add(branche);
+        });
+
+        using var client = factory.CreateAuthenticatedClient(gestionnaire.Id, "Gestionnaire");
+        var createHtml = await client.GetStringAsync("/Scouts/Create");
+        var token = HtmlTestHelpers.ExtractAntiForgeryToken(createHtml);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/Scouts/Create");
+        request.Headers.Add("RequestVerificationToken", token);
+        request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["Matricule"] = "0583780X",
+            ["Nom"] = "",
+            ["Prenom"] = "Awa",
+            ["DateNaissance"] = "2012-05-14",
+            ["GroupeId"] = groupe.Id.ToString(),
+            ["BrancheId"] = branche.Id.ToString()
+        });
+
+        var response = await client.SendAsync(request);
+        var html = await response.Content.ReadAsStringAsync();
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        html.Should().Contain("Eclaireurs (12-16 ans)");
+        html.Should().Contain($"value=\"{branche.Id}\"");
+    }
+
+    [Fact]
+    public async Task Edit_Preloads_Current_Branche_For_Selected_Groupe()
+    {
+        await using var factory = new SupportWebApplicationFactory();
+        ApplicationUser gestionnaire = null!;
+        Scout scout = null!;
+
+        await factory.SeedAsync(async db =>
+        {
+            await TestDataSeeder.EnsureRolesAsync(db, "Gestionnaire");
+            gestionnaire = await TestDataSeeder.AddUserAsync(db, "Awa", "Gestion", ["Gestionnaire"]);
+
+            var groupe = new Groupe { Id = Guid.NewGuid(), Nom = "Groupe A" };
+            var branche = new Branche
+            {
+                Id = Guid.NewGuid(),
+                Nom = "Louveteaux",
+                GroupeId = groupe.Id,
+                AgeMin = 8,
+                AgeMax = 11
+            };
+
+            scout = new Scout
+            {
+                Id = Guid.NewGuid(),
+                Matricule = "0583781X",
+                Nom = "Kone",
+                Prenom = "Awa",
+                DateNaissance = new DateTime(2012, 5, 14),
+                GroupeId = groupe.Id,
+                BrancheId = branche.Id
+            };
+
+            db.Groupes.Add(groupe);
+            db.Branches.Add(branche);
+            db.Scouts.Add(scout);
+        });
+
+        using var client = factory.CreateAuthenticatedClient(gestionnaire.Id, "Gestionnaire");
+        var html = await client.GetStringAsync($"/Scouts/Edit/{scout.Id}");
+
+        html.Should().Contain("Louveteaux (8-11 ans)");
+        html.Should().Contain($"value=\"{scout.BrancheId}\"");
+    }
+
+    [Fact]
     public async Task ImportExcel_Invalid_Workbook_Shows_User_Friendly_Error()
     {
         await using var factory = new SupportWebApplicationFactory();
@@ -195,9 +291,10 @@ public sealed class ScoutsPagesTests
 
         var html = await client.GetStringAsync(response.Headers.Location);
 
-        html.Should().Contain("1 scout(s) cree(s) et 0 scout(s) mis a jour.");
         html.Should().Contain("1 cree(s), 0 mis a jour, 1 non enregistre(s).");
-        html.Should().Contain("Matricule duplique dans le fichier");
+        html.Should().Contain("Scouts crees (1)");
+        html.Should().Contain("0583772X");
+        html.Should().Contain("Ligne 3 (0583772X): Matricule duplique dans le fichier");
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -286,9 +383,12 @@ public sealed class ScoutsPagesTests
 
         var html = await client.GetStringAsync(response.Headers.Location);
 
-        html.Should().Contain("1 scout(s) cree(s) et 1 scout(s) mis a jour.");
         html.Should().Contain("1 cree(s), 1 mis a jour, 1 non enregistre(s).");
-        html.Should().Contain("Numero de carte deja existant");
+        html.Should().Contain("Scouts mis a jour (1)");
+        html.Should().Contain("0583774X");
+        html.Should().Contain("Scouts crees (1)");
+        html.Should().Contain("0583777X");
+        html.Should().Contain("Ligne 3 (0583776X): Numero de carte deja existant");
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -301,7 +401,7 @@ public sealed class ScoutsPagesTests
     }
 
     [Fact]
-    public async Task ImportExcel_Limits_Displayed_Errors_To_Avoid_Too_Large_Response_Headers()
+    public async Task ImportExcel_Displays_All_Error_Details_Without_Header_Overflow()
     {
         await using var factory = new SupportWebApplicationFactory();
         ApplicationUser gestionnaire = null!;
@@ -354,6 +454,8 @@ public sealed class ScoutsPagesTests
         var html = await client.GetStringAsync(response.Headers.Location);
 
         html.Should().Contain("1 cree(s), 0 mis a jour, 5 non enregistre(s).");
-        html.Should().Contain("Affichage limite aux 3 premieres erreurs.");
+        html.Should().Contain("Ligne 3 (0583773X): Matricule duplique dans le fichier");
+        html.Should().Contain("Ligne 7 (0583773X): Matricule duplique dans le fichier");
+        html.Should().NotContain("Affichage limite aux 3 premieres erreurs.");
     }
 }
