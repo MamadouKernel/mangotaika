@@ -11,6 +11,7 @@
 
 <div class="card-3d p-4 mt-3">
     <form asp-action="Create" method="post" class="form-modern">
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
         <div class="mb-3">
             <label asp-for="Matricule" class="form-label">Matricule</label>
             <input asp-for="Matricule" class="form-control" placeholder="Ex: 0583753X" />
@@ -33,6 +34,7 @@
             <div class="col-md-4 mb-3">
                 <label asp-for="DateNaissance" class="form-label">Date de naissance</label>
                 <input asp-for="DateNaissance" class="form-control" type="date" />
+                <span asp-validation-for="DateNaissance" class="text-danger small"></span>
             </div>
             <div class="col-md-4 mb-3">
                 <label asp-for="LieuNaissance" class="form-label">Lieu de naissance</label>
@@ -92,19 +94,21 @@
         <div class="row">
             <div class="col-md-6 mb-3">
                 <label asp-for="GroupeId" class="form-label">Groupe</label>
-                <select asp-for="GroupeId" class="form-select">
+                <select asp-for="GroupeId" class="form-select" id="GroupeId">
                     <option value="">-- Choisir un groupe --</option>
                     @foreach (var g in groupes)
                     {
                         <option value="@g.Id">@g.Nom</option>
                     }
                 </select>
+                <span asp-validation-for="GroupeId" class="text-danger small"></span>
             </div>
             <div class="col-md-6 mb-3">
                 <label asp-for="BrancheId" class="form-label">Branche</label>
-                <select asp-for="BrancheId" class="form-select" id="brancheSelect">
+                <select asp-for="BrancheId" class="form-select" id="brancheSelect" data-current="@Model?.BrancheId">
                     <option value="">-- Choisir d'abord un groupe --</option>
                 </select>
+                <span asp-validation-for="BrancheId" class="text-danger small"></span>
             </div>
         </div>
         <div class="d-flex gap-2 mt-2">
@@ -116,24 +120,35 @@
 
 @section Scripts {
     <script>
-        document.getElementById('GroupeId').addEventListener('change', function () {
+        function loadBranches(groupeId, selectedId) {
             var brancheSelect = document.getElementById('brancheSelect');
-            brancheSelect.innerHTML = '<option value="">Chargement...</option>';
-            var groupeId = this.value;
             if (!groupeId) {
                 brancheSelect.innerHTML = '<option value="">-- Choisir d\'abord un groupe --</option>';
                 return;
             }
+
+            brancheSelect.innerHTML = '<option value="">Chargement...</option>';
             fetch('/Scouts/GetBranchesByGroupe?groupeId=' + groupeId)
                 .then(r => r.json())
                 .then(data => {
                     var html = '<option value="">-- Choisir une branche --</option>';
                     data.forEach(b => {
-                        html += '<option value="' + b.id + '">' + b.nom + ' (' + (b.ageMin || 0) + '-' + (b.ageMax || 99) + ' ans)</option>';
+                        var sel = (selectedId && b.id == selectedId) ? ' selected' : '';
+                        html += '<option value="' + b.id + '"' + sel + '>' + b.nom + ' (' + (b.ageMin || 0) + '-' + (b.ageMax || 99) + ' ans)</option>';
                     });
                     brancheSelect.innerHTML = html;
                 });
+        }
+
+        document.getElementById('GroupeId').addEventListener('change', function () {
+            loadBranches(this.value, null);
         });
+
+        var initGroupe = document.getElementById('GroupeId').value;
+        var initBranche = document.getElementById('brancheSelect').dataset.current;
+        if (initGroupe) {
+            loadBranches(initGroupe, initBranche);
+        }
     </script>
     <partial name="_ValidationScriptsPartial" />
 }

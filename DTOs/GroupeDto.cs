@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace MangoTaika.DTOs;
 
 public class GroupeDto
@@ -20,8 +22,9 @@ public class BrancheScoutCountDto
     public string? NomChefUnite { get; set; }
 }
 
-public class GroupeCreateDto
+public class GroupeCreateDto : IValidatableObject
 {
+    [Required(ErrorMessage = "Le nom du groupe est obligatoire.")]
     public string Nom { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? Commune { get; set; }
@@ -30,4 +33,21 @@ public class GroupeCreateDto
     public Guid? ResponsableId { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (Latitude.HasValue && (Latitude.Value < -90 || Latitude.Value > 90))
+        {
+            yield return new ValidationResult(
+                "La latitude doit etre comprise entre -90 et 90.",
+                [nameof(Latitude)]);
+        }
+
+        if (Longitude.HasValue && (Longitude.Value < -180 || Longitude.Value > 180))
+        {
+            yield return new ValidationResult(
+                "La longitude doit etre comprise entre -180 et 180.",
+                [nameof(Longitude)]);
+        }
+    }
 }

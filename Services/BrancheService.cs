@@ -30,13 +30,18 @@ public class BrancheService(AppDbContext db) : IBrancheService
 
     public async Task<BrancheDto> CreateAsync(BrancheCreateDto dto)
     {
+        var nom = NormalizeNom(dto.Nom);
+        var description = NormalizeOptional(dto.Description);
+        ValidateAges(dto.AgeMin, dto.AgeMax);
+        await EnsureActiveGroupeExistsAsync(dto.GroupeId);
+        await EnsureUniqueNomAsync(dto.GroupeId, nom);
         var chefUnite = await GetChefUniteAsync(dto.GroupeId, dto.ChefUniteId);
 
         var branche = new Branche
         {
             Id = Guid.NewGuid(),
-            Nom = dto.Nom,
-            Description = dto.Description,
+            Nom = nom,
+            Description = description,
             AgeMin = dto.AgeMin,
             AgeMax = dto.AgeMax,
             ChefUniteId = chefUnite.Id,
@@ -52,9 +57,14 @@ public class BrancheService(AppDbContext db) : IBrancheService
     {
         var branche = await db.Branches.FindAsync(id);
         if (branche is null) return false;
+        var nom = NormalizeNom(dto.Nom);
+        var description = NormalizeOptional(dto.Description);
+        ValidateAges(dto.AgeMin, dto.AgeMax);
+        await EnsureActiveGroupeExistsAsync(dto.GroupeId);
+        await EnsureUniqueNomAsync(dto.GroupeId, nom, id);
         var chefUnite = await GetChefUniteAsync(dto.GroupeId, dto.ChefUniteId);
-        branche.Nom = dto.Nom;
-        branche.Description = dto.Description;
+        branche.Nom = nom;
+        branche.Description = description;
         branche.AgeMin = dto.AgeMin;
         branche.AgeMax = dto.AgeMax;
         branche.ChefUniteId = chefUnite.Id;
@@ -108,5 +118,68 @@ public class BrancheService(AppDbContext db) : IBrancheService
         }
 
         return chefUnite;
+    }
+
+    private async Task EnsureActiveGroupeExistsAsync(Guid groupeId)
+    {
+        if (groupeId == Guid.Empty)
+        {
+            throw new InvalidOperationException("Le groupe est obligatoire.");
+        }
+
+        var groupeExists = await db.Groupes.AnyAsync(g => g.Id == groupeId && g.IsActive);
+        if (!groupeExists)
+        {
+            throw new InvalidOperationException("Le groupe selectionne est introuvable ou inactif.");
+        }
+    }
+
+    private async Task EnsureUniqueNomAsync(Guid groupeId, string nom, Guid? currentBrancheId = null)
+    {
+        var duplicateExists = await db.Branches.AnyAsync(b =>
+            b.IsActive &&
+            b.GroupeId == groupeId &&
+            b.Id != currentBrancheId &&
+            b.Nom.ToUpper() == nom.ToUpper());
+
+        if (duplicateExists)
+        {
+            throw new InvalidOperationException("Une branche avec ce nom existe deja dans ce groupe.");
+        }
+    }
+
+    private static string NormalizeNom(string nom)
+    {
+        var normalized = nom?.Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new InvalidOperationException("Le nom de la branche est obligatoire.");
+        }
+
+        return normalized;
+    }
+
+    private static void ValidateAges(int? ageMin, int? ageMax)
+    {
+        if (ageMin.HasValue && ageMin.Value < 0)
+        {
+            throw new InvalidOperationException("L'age minimum ne peut pas etre negatif.");
+        }
+
+        if (ageMax.HasValue && ageMax.Value < 0)
+        {
+            throw new InvalidOperationException("L'age maximum ne peut pas etre negatif.");
+        }
+
+        if (ageMin.HasValue && ageMax.HasValue && ageMin > ageMax)
+        {
+            throw new InvalidOperationException("L'age minimum ne peut pas etre superieur a l'age maximum.");
+        }
+    }
+
+    private static string? NormalizeOptional(string? value)
+    {
+        var normalized = value?.Trim();
+        return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
     }
 }

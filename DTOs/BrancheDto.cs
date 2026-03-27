@@ -18,6 +18,7 @@ public class BrancheDto
 
 public class BrancheCreateDto : IValidatableObject
 {
+    [Required(ErrorMessage = "Le nom de la branche est obligatoire.")]
     public string Nom { get; set; } = string.Empty;
     public string? Description { get; set; }
     public int? AgeMin { get; set; }
@@ -28,6 +29,27 @@ public class BrancheCreateDto : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        if (GroupeId == Guid.Empty)
+        {
+            yield return new ValidationResult(
+                "Le groupe est obligatoire.",
+                [nameof(GroupeId)]);
+        }
+
+        if (AgeMin.HasValue && AgeMin.Value < 0)
+        {
+            yield return new ValidationResult(
+                "L'âge minimum ne peut pas être négatif.",
+                [nameof(AgeMin)]);
+        }
+
+        if (AgeMax.HasValue && AgeMax.Value < 0)
+        {
+            yield return new ValidationResult(
+                "L'âge maximum ne peut pas être négatif.",
+                [nameof(AgeMax)]);
+        }
+
         if (AgeMin.HasValue && AgeMax.HasValue && AgeMin > AgeMax)
         {
             yield return new ValidationResult(

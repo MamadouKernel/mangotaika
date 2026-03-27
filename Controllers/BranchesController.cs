@@ -36,11 +36,20 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db)
     {
         if (ModelState.IsValid)
         {
-            await ValidateChefUniteAsync(dto);
+            await ValidateBrancheAsync(dto);
         }
 
         if (!ModelState.IsValid) { await LoadGroupesAsync(); return View(dto); }
-        await brancheService.CreateAsync(dto);
+        try
+        {
+            await brancheService.CreateAsync(dto);
+        }
+        catch (InvalidOperationException ex)
+        {
+            await LoadGroupesAsync();
+            ModelState.AddModelError(string.Empty, ex.Message);
+            return View(dto);
+        }
         TempData["Success"] = "Branche créée avec succès.";
         return RedirectToAction(nameof(Index));
     }
@@ -68,11 +77,23 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db)
     {
         if (ModelState.IsValid)
         {
-            await ValidateChefUniteAsync(dto);
+            await ValidateBrancheAsync(dto, id);
         }
 
         if (!ModelState.IsValid) { await LoadGroupesAsync(); return View(ToEditDto(id, dto)); }
-        var result = await brancheService.UpdateAsync(id, dto);
+
+        bool result;
+        try
+        {
+            result = await brancheService.UpdateAsync(id, dto);
+        }
+        catch (InvalidOperationException ex)
+        {
+            await LoadGroupesAsync();
+            ModelState.AddModelError(string.Empty, ex.Message);
+            return View(ToEditDto(id, dto));
+        }
+
         if (!result) return NotFound();
         TempData["Success"] = "Branche mise à jour.";
         return RedirectToAction(nameof(Index));
@@ -98,14 +119,39 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db)
     {
         var scouts = await db.Scouts
             .Where(s => s.GroupeId == groupeId && s.IsActive)
-            .OrderBy(s => s.Nom)
+            .OrderBy(s => s.Prenom)
+            .ThenBy(s => s.Nom)
             .Select(s => new { s.Id, Nom = s.Prenom + " " + s.Nom + " (" + s.Matricule + ")" })
             .ToListAsync();
         return Json(scouts);
     }
 
-    private async Task ValidateChefUniteAsync(BrancheCreateDto dto)
+    private async Task ValidateBrancheAsync(BrancheCreateDto dto, Guid? currentBrancheId = null)
     {
+        if (dto.GroupeId == Guid.Empty)
+        {
+            return;
+        }
+
+        var groupeExists = await db.Groupes.AnyAsync(g => g.Id == dto.GroupeId && g.IsActive);
+        if (!groupeExists)
+        {
+            ModelState.AddModelError(nameof(dto.GroupeId), "Le groupe sélectionné est introuvable ou inactif.");
+            return;
+        }
+
+        var nom = dto.Nom.Trim();
+        var duplicateExists = await db.Branches.AnyAsync(b =>
+            b.IsActive &&
+            b.GroupeId == dto.GroupeId &&
+            b.Id != currentBrancheId &&
+            b.Nom.ToUpper() == nom.ToUpper());
+
+        if (duplicateExists)
+        {
+            ModelState.AddModelError(nameof(dto.Nom), "Une branche avec ce nom existe déjà dans ce groupe.");
+        }
+
         if (!dto.ChefUniteId.HasValue)
         {
             return;

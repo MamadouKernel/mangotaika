@@ -43,6 +43,38 @@ public sealed class BrancheValidationTests
     }
 
     [Fact]
+    public void BrancheCreateDto_Rejects_Missing_Groupe()
+    {
+        var model = new BrancheCreateDto
+        {
+            Nom = "Louveteaux",
+            AgeMin = 8,
+            AgeMax = 12,
+            ChefUniteId = Guid.NewGuid()
+        };
+
+        Validate(model)
+            .Should()
+            .Contain(result => result.MemberNames.Contains(nameof(BrancheCreateDto.GroupeId)));
+    }
+
+    [Fact]
+    public void BrancheCreateDto_Rejects_Negative_Age()
+    {
+        var model = new BrancheCreateDto
+        {
+            Nom = "Louveteaux",
+            AgeMin = -1,
+            GroupeId = Guid.NewGuid(),
+            ChefUniteId = Guid.NewGuid()
+        };
+
+        Validate(model)
+            .Should()
+            .Contain(result => result.MemberNames.Contains(nameof(BrancheCreateDto.AgeMin)));
+    }
+
+    [Fact]
     public void BrancheCreateDto_Accepts_Valid_Ages_And_ChefUnite()
     {
         var model = new BrancheCreateDto

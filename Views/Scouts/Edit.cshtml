@@ -109,12 +109,14 @@
                         <option value="@g.Id">@g.Nom</option>
                     }
                 </select>
+                <span asp-validation-for="GroupeId" class="text-danger small"></span>
             </div>
             <div class="col-md-6 mb-3">
                 <label asp-for="BrancheId" class="form-label">Branche</label>
                 <select asp-for="BrancheId" id="brancheSelect" class="form-select" data-current="@Model.BrancheId">
                     <option value="">-- Choisir une branche --</option>
                 </select>
+                <span asp-validation-for="BrancheId" class="text-danger small"></span>
             </div>
         </div>
 

@@ -50,7 +50,17 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db) : Con
             return View(dto);
         }
 
-        var scout = await scoutService.CreateAsync(dto);
+        ScoutDto scout;
+        try
+        {
+            scout = await scoutService.CreateAsync(dto);
+        }
+        catch (InvalidOperationException ex)
+        {
+            await LoadDropdownsAsync();
+            ModelState.AddModelError(string.Empty, ex.Message);
+            return View(dto);
+        }
         TempData["Success"] = $"Scout cree avec succes. Matricule attribue : {scout.Matricule}";
         return RedirectToAction(nameof(Index));
     }
@@ -79,7 +89,17 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db) : Con
             return View(dto);
         }
 
-        var result = await scoutService.UpdateAsync(id, dto);
+        bool result;
+        try
+        {
+            result = await scoutService.UpdateAsync(id, dto);
+        }
+        catch (InvalidOperationException ex)
+        {
+            await LoadDropdownsAsync();
+            ModelState.AddModelError(string.Empty, ex.Message);
+            return View(dto);
+        }
         if (!result)
         {
             return NotFound();

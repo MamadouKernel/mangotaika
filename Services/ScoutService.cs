@@ -32,21 +32,28 @@ public class ScoutService(AppDbContext db) : IScoutService
     public async Task<ScoutDto> CreateAsync(ScoutCreateDto dto)
     {
         var matricule = ScoutMatriculeFormat.Normalize(dto.Matricule);
+        var nom = NormalizeRequired(dto.Nom, "Le nom est requis.");
+        var prenom = NormalizeRequired(dto.Prenom, "Le prenom est requis.");
+        var dateNaissance = NormalizeDateNaissance(dto.DateNaissance);
+        var numeroCarte = NormalizeOptional(dto.NumeroCarte);
+        await EnsureUniqueMatriculeAsync(matricule);
+        await EnsureUniqueNumeroCarteAsync(numeroCarte);
+        await ValidateAffectationAsync(dto.GroupeId, dto.BrancheId);
 
         var scout = new Scout
         {
             Id = Guid.NewGuid(),
             Matricule = matricule,
-            Nom = dto.Nom.Trim(),
-            Prenom = dto.Prenom.Trim(),
-            DateNaissance = DateTime.SpecifyKind(dto.DateNaissance, DateTimeKind.Utc),
+            Nom = nom,
+            Prenom = prenom,
+            DateNaissance = DateTime.SpecifyKind(dateNaissance, DateTimeKind.Utc),
             LieuNaissance = NormalizeOptional(dto.LieuNaissance),
             Sexe = NormalizeOptional(dto.Sexe),
             Telephone = NormalizeOptional(dto.Telephone),
             Email = NormalizeOptional(dto.Email),
             RegionScoute = NormalizeOptional(dto.RegionScoute),
             District = NormalizeOptional(dto.District),
-            NumeroCarte = NormalizeOptional(dto.NumeroCarte),
+            NumeroCarte = numeroCarte,
             Fonction = NormalizeOptional(dto.Fonction),
             AssuranceAnnuelle = dto.AssuranceAnnuelle,
             AdresseGeographique = NormalizeOptional(dto.AdresseGeographique),
@@ -63,17 +70,26 @@ public class ScoutService(AppDbContext db) : IScoutService
         var scout = await db.Scouts.FindAsync(id);
         if (scout is null) return false;
 
-        scout.Matricule = ScoutMatriculeFormat.Normalize(dto.Matricule);
-        scout.Nom = dto.Nom.Trim();
-        scout.Prenom = dto.Prenom.Trim();
-        scout.DateNaissance = DateTime.SpecifyKind(dto.DateNaissance, DateTimeKind.Utc);
+        var matricule = ScoutMatriculeFormat.Normalize(dto.Matricule);
+        var nom = NormalizeRequired(dto.Nom, "Le nom est requis.");
+        var prenom = NormalizeRequired(dto.Prenom, "Le prenom est requis.");
+        var dateNaissance = NormalizeDateNaissance(dto.DateNaissance);
+        var numeroCarte = NormalizeOptional(dto.NumeroCarte);
+        await EnsureUniqueMatriculeAsync(matricule, id);
+        await EnsureUniqueNumeroCarteAsync(numeroCarte, id);
+        await ValidateAffectationAsync(dto.GroupeId, dto.BrancheId);
+
+        scout.Matricule = matricule;
+        scout.Nom = nom;
+        scout.Prenom = prenom;
+        scout.DateNaissance = DateTime.SpecifyKind(dateNaissance, DateTimeKind.Utc);
         scout.LieuNaissance = NormalizeOptional(dto.LieuNaissance);
         scout.Sexe = NormalizeOptional(dto.Sexe);
         scout.Telephone = NormalizeOptional(dto.Telephone);
         scout.Email = NormalizeOptional(dto.Email);
         scout.RegionScoute = NormalizeOptional(dto.RegionScoute);
         scout.District = NormalizeOptional(dto.District);
-        scout.NumeroCarte = NormalizeOptional(dto.NumeroCarte);
+        scout.NumeroCarte = numeroCarte;
         scout.Fonction = NormalizeOptional(dto.Fonction);
         scout.AssuranceAnnuelle = dto.AssuranceAnnuelle;
         scout.AdresseGeographique = NormalizeOptional(dto.AdresseGeographique);
@@ -438,6 +454,99 @@ public class ScoutService(AppDbContext db) : IScoutService
     private static string NormalizeLookup(string? value)
     {
         return (value ?? string.Empty).Trim().ToUpperInvariant();
+    }
+
+    private async Task EnsureUniqueMatriculeAsync(string matricule, Guid? currentId = null)
+    {
+        var exists = await db.Scouts.AnyAsync(s =>
+            s.Id != currentId &&
+            s.Matricule.ToUpper() == matricule.ToUpper());
+
+        if (exists)
+        {
+            throw new InvalidOperationException("Le matricule existe deja.");
+        }
+    }
+
+    private async Task EnsureUniqueNumeroCarteAsync(string? numeroCarte, Guid? currentId = null)
+    {
+        if (string.IsNullOrWhiteSpace(numeroCarte))
+        {
+            return;
+        }
+
+        var exists = await db.Scouts.AnyAsync(s =>
+            s.Id != currentId &&
+            s.NumeroCarte != null &&
+            s.NumeroCarte.ToUpper() == numeroCarte.ToUpper());
+
+        if (exists)
+        {
+            throw new InvalidOperationException("Le numero de carte existe deja.");
+        }
+    }
+
+    private async Task ValidateAffectationAsync(Guid? groupeId, Guid? brancheId)
+    {
+        if (groupeId.HasValue)
+        {
+            var groupeExists = await db.Groupes.AnyAsync(g => g.Id == groupeId.Value && g.IsActive);
+            if (!groupeExists)
+            {
+                throw new InvalidOperationException("Le groupe selectionne est introuvable ou inactif.");
+            }
+        }
+
+        if (!brancheId.HasValue)
+        {
+            return;
+        }
+
+        if (!groupeId.HasValue)
+        {
+            throw new InvalidOperationException("Le groupe est obligatoire lorsqu'une branche est selectionnee.");
+        }
+
+        var branche = await db.Branches
+            .Where(b => b.Id == brancheId.Value && b.IsActive)
+            .Select(b => new { b.GroupeId })
+            .FirstOrDefaultAsync();
+
+        if (branche is null)
+        {
+            throw new InvalidOperationException("La branche selectionnee est introuvable ou inactive.");
+        }
+
+        if (branche.GroupeId != groupeId.Value)
+        {
+            throw new InvalidOperationException("La branche selectionnee doit appartenir au groupe selectionne.");
+        }
+    }
+
+    private static string NormalizeRequired(string value, string errorMessage)
+    {
+        var normalized = value?.Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new InvalidOperationException(errorMessage);
+        }
+
+        return normalized;
+    }
+
+    private static DateTime NormalizeDateNaissance(DateTime value)
+    {
+        if (value == default)
+        {
+            throw new InvalidOperationException("La date de naissance est requise.");
+        }
+
+        if (value.Date > DateTime.UtcNow.Date)
+        {
+            throw new InvalidOperationException("La date de naissance ne peut pas etre dans le futur.");
+        }
+
+        return value.Date;
     }
 
     private static string? NormalizeOptional(string? value)

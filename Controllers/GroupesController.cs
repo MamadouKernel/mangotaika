@@ -29,7 +29,15 @@ public class GroupesController(IGroupeService groupeService) : Controller
     public async Task<IActionResult> Create(GroupeCreateDto dto)
     {
         if (!ModelState.IsValid) return View(dto);
-        await groupeService.CreateAsync(dto);
+        try
+        {
+            await groupeService.CreateAsync(dto);
+        }
+        catch (InvalidOperationException ex)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            return View(dto);
+        }
         TempData["Success"] = "Groupe créé avec succès.";
         return RedirectToAction(nameof(Index));
     }
@@ -55,7 +63,16 @@ public class GroupesController(IGroupeService groupeService) : Controller
     public async Task<IActionResult> Edit(Guid id, GroupeCreateDto dto)
     {
         if (!ModelState.IsValid) return View(ToEditDto(id, dto));
-        var result = await groupeService.UpdateAsync(id, dto);
+        bool result;
+        try
+        {
+            result = await groupeService.UpdateAsync(id, dto);
+        }
+        catch (InvalidOperationException ex)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            return View(ToEditDto(id, dto));
+        }
         if (!result) return NotFound();
         TempData["Success"] = "Groupe mis à jour.";
         return RedirectToAction(nameof(Index));

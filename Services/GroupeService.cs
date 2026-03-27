@@ -67,13 +67,17 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
 
     public async Task<GroupeDto> CreateAsync(GroupeCreateDto dto)
     {
+        var nom = NormalizeNom(dto.Nom);
+        ValidateCoordinates(dto.Latitude, dto.Longitude);
+        await EnsureUniqueNomAsync(nom);
+        await EnsureResponsableExistsAsync(dto.ResponsableId);
         var adresse = BuildAdresse(dto.Commune, dto.Quartier);
         var (lat, lng) = await geocoding.GeocodeAsync(adresse ?? "");
 
         var groupe = new Groupe
         {
             Id = Guid.NewGuid(),
-            Nom = dto.Nom,
+            Nom = nom,
             Description = NormalizeOptional(dto.Description),
             Latitude = lat ?? dto.Latitude,
             Longitude = lng ?? dto.Longitude,
@@ -91,10 +95,14 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
         var groupe = await db.Groupes.FindAsync(id);
         if (groupe is null) return false;
 
+        var nom = NormalizeNom(dto.Nom);
+        ValidateCoordinates(dto.Latitude, dto.Longitude);
+        await EnsureUniqueNomAsync(nom, id);
+        await EnsureResponsableExistsAsync(dto.ResponsableId);
         var adresse = BuildAdresse(dto.Commune, dto.Quartier);
         var (lat, lng) = await geocoding.GeocodeAsync(adresse ?? "");
 
-        groupe.Nom = dto.Nom;
+        groupe.Nom = nom;
         groupe.Description = NormalizeOptional(dto.Description);
         groupe.Latitude = lat ?? dto.Latitude;
         groupe.Longitude = lng ?? dto.Longitude;
@@ -144,5 +152,56 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
     private static string? NormalizeOptional(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private static string NormalizeNom(string nom)
+    {
+        var normalized = nom?.Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new InvalidOperationException("Le nom du groupe est obligatoire.");
+        }
+
+        return normalized;
+    }
+
+    private static void ValidateCoordinates(double? latitude, double? longitude)
+    {
+        if (latitude.HasValue && (latitude.Value < -90 || latitude.Value > 90))
+        {
+            throw new InvalidOperationException("La latitude doit etre comprise entre -90 et 90.");
+        }
+
+        if (longitude.HasValue && (longitude.Value < -180 || longitude.Value > 180))
+        {
+            throw new InvalidOperationException("La longitude doit etre comprise entre -180 et 180.");
+        }
+    }
+
+    private async Task EnsureUniqueNomAsync(string nom, Guid? currentId = null)
+    {
+        var exists = await db.Groupes.AnyAsync(g =>
+            g.IsActive &&
+            g.Id != currentId &&
+            g.Nom.ToUpper() == nom.ToUpper());
+
+        if (exists)
+        {
+            throw new InvalidOperationException("Un groupe avec ce nom existe deja.");
+        }
+    }
+
+    private async Task EnsureResponsableExistsAsync(Guid? responsableId)
+    {
+        if (!responsableId.HasValue)
+        {
+            return;
+        }
+
+        var exists = await db.Users.AnyAsync(u => u.Id == responsableId.Value && u.IsActive);
+        if (!exists)
+        {
+            throw new InvalidOperationException("Le responsable selectionne est introuvable ou inactif.");
+        }
     }
 }

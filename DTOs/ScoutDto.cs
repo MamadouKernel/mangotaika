@@ -28,7 +28,7 @@ public class ScoutDto
     public string? NomBranche { get; set; }
 }
 
-public class ScoutCreateDto
+public class ScoutCreateDto : IValidatableObject
 {
     [Required(ErrorMessage = "Le matricule est requis.")]
     [RegularExpression(ScoutMatriculeFormat.Pattern, ErrorMessage = ScoutMatriculeFormat.ErrorMessage)]
@@ -54,6 +54,29 @@ public class ScoutCreateDto
     public string? AdresseGeographique { get; set; }
     public Guid? GroupeId { get; set; }
     public Guid? BrancheId { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (DateNaissance == default)
+        {
+            yield return new ValidationResult(
+                "La date de naissance est requise.",
+                [nameof(DateNaissance)]);
+        }
+        else if (DateNaissance.Date > DateTime.UtcNow.Date)
+        {
+            yield return new ValidationResult(
+                "La date de naissance ne peut pas etre dans le futur.",
+                [nameof(DateNaissance)]);
+        }
+
+        if (BrancheId.HasValue && !GroupeId.HasValue)
+        {
+            yield return new ValidationResult(
+                "Le groupe est obligatoire lorsqu'une branche est selectionnee.",
+                [nameof(GroupeId), nameof(BrancheId)]);
+        }
+    }
 }
 
 public class ScoutImportResultDto
