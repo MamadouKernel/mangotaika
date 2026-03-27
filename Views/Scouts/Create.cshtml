@@ -13,8 +13,9 @@
     <form asp-action="Create" method="post" class="form-modern">
         <div class="mb-3">
             <label asp-for="Matricule" class="form-label">Matricule</label>
-            <input asp-for="Matricule" class="form-control" placeholder="Ex: CI-2025-001234" />
+            <input asp-for="Matricule" class="form-control" placeholder="Ex: 0583753X" />
             <span asp-validation-for="Matricule" class="text-danger small"></span>
+            <small class="text-muted-custom">Format attendu : 0583753X.</small>
         </div>
         <div class="row">
             <div class="col-md-6 mb-3">
@@ -69,7 +70,7 @@
         <div class="row">
             <div class="col-md-6 mb-3">
                 <label asp-for="NumeroCarte" class="form-label">N° Carte</label>
-                <input asp-for="NumeroCarte" class="form-control" placeholder="Ex: 052026-69184" />
+                <input asp-for="NumeroCarte" class="form-control" placeholder="Ex: ASCCI-001" />
             </div>
             <div class="col-md-6 mb-3">
                 <label asp-for="Fonction" class="form-label">Fonction</label>
@@ -134,4 +135,5 @@
                 });
         });
     </script>
+    <partial name="_ValidationScriptsPartial" />
 }

@@ -23,7 +23,7 @@ public sealed class ForumFormationsPagesTests
             var author = await TestDataSeeder.AddUserAsync(db, "Coach", "Forum", []);
 
             formation = CreateFormation(author.Id, "Forum Orientation");
-            var scout = CreateScout("SC-FRM-001", "Aimee", "Scout", scoutUser.Id);
+            var scout = CreateScout("7000301C", "Aimee", "Scout", scoutUser.Id);
             var discussion = CreateDiscussion(formation.Id, author.Id, "Bienvenue sur le forum");
 
             db.Formations.Add(formation);
@@ -62,7 +62,7 @@ public sealed class ForumFormationsPagesTests
 
             formation = CreateFormation(author.Id, "Forum Reserve");
             db.Formations.Add(formation);
-            db.Scouts.Add(CreateScout("SC-FRM-002", "Mariam", "Scout", scoutUser.Id));
+            db.Scouts.Add(CreateScout("7000302C", "Mariam", "Scout", scoutUser.Id));
         });
 
         using var client = factory.CreateAuthenticatedClient(scoutUser.Id, "Scout");
@@ -86,7 +86,7 @@ public sealed class ForumFormationsPagesTests
             var author = await TestDataSeeder.AddUserAsync(db, "Coach", "Forum", []);
 
             formation = CreateFormation(author.Id, "Forum Creation");
-            var scout = CreateScout("SC-FRM-003", "Yao", "Scout", scoutUser.Id);
+            var scout = CreateScout("7000303C", "Yao", "Scout", scoutUser.Id);
 
             db.Formations.Add(formation);
             db.Scouts.Add(scout);

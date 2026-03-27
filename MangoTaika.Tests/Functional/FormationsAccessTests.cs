@@ -22,7 +22,7 @@ public sealed class FormationsAccessTests
             parentUser.PhoneNumber = "0700001111";
 
             var author = await TestDataSeeder.AddUserAsync(db, "Coach", "Lms", []);
-            childScout = CreateScout("SC-ENF-001", "Nadia", "Yao");
+            childScout = CreateScout("7000401D", "Nadia", "Yao");
             var parent = CreateParent(parentUser.PhoneNumber!, childScout);
             var formation = CreateFormation(author.Id, "Formation Premiers Pas");
 
@@ -61,8 +61,8 @@ public sealed class FormationsAccessTests
             parentUser.PhoneNumber = "0700002222";
 
             var author = await TestDataSeeder.AddUserAsync(db, "Coach", "Lms", []);
-            var linkedScout = CreateScout("SC-LINK-001", "Enfant", "Lie");
-            otherScout = CreateScout("SC-OUT-001", "Autre", "Scout");
+            var linkedScout = CreateScout("7000402D", "Enfant", "Lie");
+            otherScout = CreateScout("7000403D", "Autre", "Scout");
             var parent = CreateParent(parentUser.PhoneNumber!, linkedScout);
             var formation = CreateFormation(author.Id, "Formation Reservee");
 
@@ -96,7 +96,7 @@ public sealed class FormationsAccessTests
             await TestDataSeeder.EnsureRolesAsync(db, "Scout");
             scoutUser = await TestDataSeeder.AddUserAsync(db, "Moussa", "Scout", ["Scout"]);
             var author = await TestDataSeeder.AddUserAsync(db, "Coach", "Lms", []);
-            db.Scouts.Add(CreateScout("SC-LMS-001", "Moussa", "Scout", scoutUser.Id));
+            db.Scouts.Add(CreateScout("7000404D", "Moussa", "Scout", scoutUser.Id));
             formation = CreateFormation(author.Id, "Formation Non Inscrit");
             db.Formations.Add(formation);
         });
@@ -122,7 +122,7 @@ public sealed class FormationsAccessTests
             scoutUser = await TestDataSeeder.AddUserAsync(db, "Aime", "Scout", ["Scout"]);
             var author = await TestDataSeeder.AddUserAsync(db, "Coach", "Lms", []);
 
-            db.Scouts.Add(CreateScout("SC-LMS-002", "Aime", "Scout", scoutUser.Id));
+            db.Scouts.Add(CreateScout("7000405D", "Aime", "Scout", scoutUser.Id));
             formation = CreateFormation(author.Id, "Formation Quiz");
             var module = new ModuleFormation
             {

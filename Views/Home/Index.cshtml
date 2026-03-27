@@ -219,8 +219,7 @@
                     + '<strong style="color:#597537;">' + esc(g.nom) + '</strong>'
                     + '<br/><small>' + esc(g.adresse) + '</small>'
                     + '<hr style="margin:6px 0;"/>'
-                    + '<small><strong>CG :</strong> ' + esc(g.responsable) + '</small>';
-                if (g.adjoints) popupHtml += '<br/><small><strong>Adjoints :</strong> ' + esc(g.adjoints) + '</small>';
+                    + '<small><strong>Chef de groupe :</strong> ' + esc(g.chefGroupe) + '</small>';
                 g.branches.forEach(function(b) {
                     popupHtml += '<br/><small>• ' + esc(b.nom) + ' (' + b.ageMin + '-' + b.ageMax + ' ans)';
                     if (b.chef) popupHtml += ' — Chef : ' + esc(b.chef);

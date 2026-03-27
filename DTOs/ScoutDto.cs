@@ -1,5 +1,7 @@
 namespace MangoTaika.DTOs;
 
+using System.ComponentModel.DataAnnotations;
+using MangoTaika.Helpers;
 using System.Text.Json.Serialization;
 
 public class ScoutDto
@@ -9,6 +11,7 @@ public class ScoutDto
     public string Nom { get; set; } = string.Empty;
     public string Prenom { get; set; } = string.Empty;
     public DateTime DateNaissance { get; set; }
+    public string? LieuNaissance { get; set; }
     public string? Sexe { get; set; }
     public string? Telephone { get; set; }
     public string? Email { get; set; }
@@ -27,9 +30,17 @@ public class ScoutDto
 
 public class ScoutCreateDto
 {
+    [Required(ErrorMessage = "Le matricule est requis.")]
+    [RegularExpression(ScoutMatriculeFormat.Pattern, ErrorMessage = ScoutMatriculeFormat.ErrorMessage)]
     public string Matricule { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Le nom est requis.")]
     public string Nom { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Le prenom est requis.")]
     public string Prenom { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "La date de naissance est requise.")]
     public DateTime DateNaissance { get; set; }
     public string? LieuNaissance { get; set; }
     public string? Sexe { get; set; }

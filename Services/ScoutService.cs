@@ -2,6 +2,7 @@ using ClosedXML.Excel;
 using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
+using MangoTaika.Helpers;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 
@@ -30,23 +31,25 @@ public class ScoutService(AppDbContext db) : IScoutService
 
     public async Task<ScoutDto> CreateAsync(ScoutCreateDto dto)
     {
+        var matricule = ScoutMatriculeFormat.Normalize(dto.Matricule);
+
         var scout = new Scout
         {
             Id = Guid.NewGuid(),
-            Matricule = dto.Matricule,
-            Nom = dto.Nom,
-            Prenom = dto.Prenom,
+            Matricule = matricule,
+            Nom = dto.Nom.Trim(),
+            Prenom = dto.Prenom.Trim(),
             DateNaissance = DateTime.SpecifyKind(dto.DateNaissance, DateTimeKind.Utc),
-            LieuNaissance = dto.LieuNaissance,
-            Sexe = dto.Sexe,
-            Telephone = dto.Telephone,
-            Email = dto.Email,
-            RegionScoute = dto.RegionScoute,
-            District = dto.District,
-            NumeroCarte = dto.NumeroCarte,
-            Fonction = dto.Fonction,
+            LieuNaissance = NormalizeOptional(dto.LieuNaissance),
+            Sexe = NormalizeOptional(dto.Sexe),
+            Telephone = NormalizeOptional(dto.Telephone),
+            Email = NormalizeOptional(dto.Email),
+            RegionScoute = NormalizeOptional(dto.RegionScoute),
+            District = NormalizeOptional(dto.District),
+            NumeroCarte = NormalizeOptional(dto.NumeroCarte),
+            Fonction = NormalizeOptional(dto.Fonction),
             AssuranceAnnuelle = dto.AssuranceAnnuelle,
-            AdresseGeographique = dto.AdresseGeographique,
+            AdresseGeographique = NormalizeOptional(dto.AdresseGeographique),
             GroupeId = dto.GroupeId,
             BrancheId = dto.BrancheId
         };
@@ -60,20 +63,20 @@ public class ScoutService(AppDbContext db) : IScoutService
         var scout = await db.Scouts.FindAsync(id);
         if (scout is null) return false;
 
-        scout.Matricule = dto.Matricule;
-        scout.Nom = dto.Nom;
-        scout.Prenom = dto.Prenom;
+        scout.Matricule = ScoutMatriculeFormat.Normalize(dto.Matricule);
+        scout.Nom = dto.Nom.Trim();
+        scout.Prenom = dto.Prenom.Trim();
         scout.DateNaissance = DateTime.SpecifyKind(dto.DateNaissance, DateTimeKind.Utc);
-        scout.LieuNaissance = dto.LieuNaissance;
-        scout.Sexe = dto.Sexe;
-        scout.Telephone = dto.Telephone;
-        scout.Email = dto.Email;
-        scout.RegionScoute = dto.RegionScoute;
-        scout.District = dto.District;
-        scout.NumeroCarte = dto.NumeroCarte;
-        scout.Fonction = dto.Fonction;
+        scout.LieuNaissance = NormalizeOptional(dto.LieuNaissance);
+        scout.Sexe = NormalizeOptional(dto.Sexe);
+        scout.Telephone = NormalizeOptional(dto.Telephone);
+        scout.Email = NormalizeOptional(dto.Email);
+        scout.RegionScoute = NormalizeOptional(dto.RegionScoute);
+        scout.District = NormalizeOptional(dto.District);
+        scout.NumeroCarte = NormalizeOptional(dto.NumeroCarte);
+        scout.Fonction = NormalizeOptional(dto.Fonction);
         scout.AssuranceAnnuelle = dto.AssuranceAnnuelle;
-        scout.AdresseGeographique = dto.AdresseGeographique;
+        scout.AdresseGeographique = NormalizeOptional(dto.AdresseGeographique);
         scout.GroupeId = dto.GroupeId;
         scout.BrancheId = dto.BrancheId;
         await db.SaveChangesAsync();
@@ -159,24 +162,28 @@ public class ScoutService(AppDbContext db) : IScoutService
             }
 
             var rowErrors = new List<string>();
-            var matricule = ReadString(row, headerMap, "matricule");
+            var matricule = ScoutMatriculeFormat.Normalize(ReadString(row, headerMap, "matricule"));
             var nom = ReadString(row, headerMap, "nom");
             var prenom = ReadString(row, headerMap, "prenom");
-            var lieuNaissance = ReadString(row, headerMap, "lieunaissance");
-            var sexe = ReadString(row, headerMap, "sexe");
-            var telephone = ReadString(row, headerMap, "telephone");
-            var email = ReadString(row, headerMap, "email");
-            var regionScoute = ReadString(row, headerMap, "regionscoute");
-            var district = ReadString(row, headerMap, "district");
-            var numeroCarte = ReadString(row, headerMap, "numerocarte");
-            var fonction = ReadString(row, headerMap, "fonction");
-            var adresse = ReadString(row, headerMap, "adressegeographique");
-            var groupeNom = ReadString(row, headerMap, "groupe");
-            var brancheNom = ReadString(row, headerMap, "branche");
+            var lieuNaissance = NormalizeOptional(ReadString(row, headerMap, "lieunaissance"));
+            var sexe = NormalizeOptional(ReadString(row, headerMap, "sexe"));
+            var telephone = NormalizeOptional(ReadString(row, headerMap, "telephone"));
+            var email = NormalizeOptional(ReadString(row, headerMap, "email"));
+            var regionScoute = NormalizeOptional(ReadString(row, headerMap, "regionscoute"));
+            var district = NormalizeOptional(ReadString(row, headerMap, "district"));
+            var numeroCarte = NormalizeOptional(ReadString(row, headerMap, "numerocarte"));
+            var fonction = NormalizeOptional(ReadString(row, headerMap, "fonction"));
+            var adresse = NormalizeOptional(ReadString(row, headerMap, "adressegeographique"));
+            var groupeNom = NormalizeOptional(ReadString(row, headerMap, "groupe"));
+            var brancheNom = NormalizeOptional(ReadString(row, headerMap, "branche"));
 
             if (string.IsNullOrWhiteSpace(matricule))
             {
                 rowErrors.Add("Matricule obligatoire.");
+            }
+            else if (!ScoutMatriculeFormat.IsValid(matricule))
+            {
+                rowErrors.Add($"Matricule invalide: {matricule}. Format attendu: {ScoutMatriculeFormat.Example}.");
             }
             if (string.IsNullOrWhiteSpace(nom))
             {
@@ -257,7 +264,7 @@ public class ScoutService(AppDbContext db) : IScoutService
             db.Scouts.Add(new Scout
             {
                 Id = Guid.NewGuid(),
-                Matricule = matricule!.Trim(),
+                Matricule = matricule!,
                 Nom = nom!.Trim(),
                 Prenom = prenom!.Trim(),
                 DateNaissance = DateTime.SpecifyKind(dateNaissance, DateTimeKind.Utc),
@@ -310,7 +317,7 @@ public class ScoutService(AppDbContext db) : IScoutService
             worksheet.Cell(1, i + 1).Style.Fill.BackgroundColor = XLColor.FromHtml("#EAF4D7");
         }
 
-        worksheet.Cell(2, 1).Value = "MT-2026-0101";
+        worksheet.Cell(2, 1).Value = ScoutMatriculeFormat.Example;
         worksheet.Cell(2, 2).Value = "Doe";
         worksheet.Cell(2, 3).Value = "Jean";
         worksheet.Cell(2, 4).Value = new DateTime(2012, 5, 14);
@@ -334,9 +341,10 @@ public class ScoutService(AppDbContext db) : IScoutService
         guide.Cell("A1").Value = "Colonnes obligatoires";
         guide.Cell("A2").Value = "Matricule, Nom, Prenom, DateNaissance";
         guide.Cell("A4").Value = "Regles";
-        guide.Cell("A5").Value = "Groupe et Branche doivent correspondre aux noms deja presents dans l'application.";
-        guide.Cell("A6").Value = "AssuranceAnnuelle accepte: Oui, Non, True, False, 1, 0.";
-        guide.Cell("A7").Value = "DateNaissance peut etre au format Excel date ou jj/MM/aaaa.";
+        guide.Cell("A5").Value = $"Le matricule doit respecter le format {ScoutMatriculeFormat.Example}.";
+        guide.Cell("A6").Value = "Groupe et Branche doivent correspondre aux noms deja presents dans l'application.";
+        guide.Cell("A7").Value = "AssuranceAnnuelle accepte: Oui, Non, True, False, 1, 0.";
+        guide.Cell("A8").Value = "DateNaissance peut etre au format Excel date ou jj/MM/aaaa.";
         guide.Columns().AdjustToContents();
 
         using var memoryStream = new MemoryStream();
@@ -351,6 +359,7 @@ public class ScoutService(AppDbContext db) : IScoutService
         Nom = s.Nom,
         Prenom = s.Prenom,
         DateNaissance = s.DateNaissance,
+        LieuNaissance = s.LieuNaissance,
         Sexe = s.Sexe,
         Telephone = s.Telephone,
         Email = s.Email,
@@ -429,5 +438,11 @@ public class ScoutService(AppDbContext db) : IScoutService
     private static string NormalizeLookup(string? value)
     {
         return (value ?? string.Empty).Trim().ToUpperInvariant();
+    }
+
+    private static string? NormalizeOptional(string? value)
+    {
+        var normalized = value?.Trim();
+        return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
     }
 }

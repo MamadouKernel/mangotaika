@@ -353,7 +353,7 @@ public sealed class FormationServiceTests
         {
             Id = Guid.NewGuid(),
             UserId = scoutUser.Id,
-            Matricule = $"SC-{Guid.NewGuid():N}"[..12],
+            Matricule = "7000701G",
             Prenom = "Scout",
             Nom = "Lms",
             DateNaissance = new DateTime(2010, 1, 10),

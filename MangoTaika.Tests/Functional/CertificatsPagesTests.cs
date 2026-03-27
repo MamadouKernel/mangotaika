@@ -24,7 +24,7 @@ public sealed class CertificatsPagesTests
             {
                 Id = Guid.NewGuid(),
                 UserId = scoutUser.Id,
-                Matricule = "SC-CERT-001",
+                Matricule = "7000601F",
                 Prenom = "Mariam",
                 Nom = "Scout",
                 DateNaissance = new DateTime(2010, 2, 15),

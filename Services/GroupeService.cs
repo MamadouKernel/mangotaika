@@ -20,8 +20,9 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
                 Latitude = g.Latitude,
                 Longitude = g.Longitude,
                 Adresse = g.Adresse,
-                NomResponsable = g.Responsable != null ? g.Responsable.Prenom + " " + g.Responsable.Nom : null,
-                NomAdjoints = g.NomAdjoints,
+                NomChefGroupe = g.NomChefGroupe != null && g.NomChefGroupe != string.Empty
+                    ? g.NomChefGroupe
+                    : (g.Responsable != null ? g.Responsable.Prenom + " " + g.Responsable.Nom : null),
                 NombreMembres = db.Scouts.Count(s => s.GroupeId == g.Id && s.IsActive),
                 BranchesScouts = db.Branches
                     .Where(b => b.GroupeId == g.Id && b.IsActive)
@@ -49,8 +50,9 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
             Latitude = groupe.Latitude,
             Longitude = groupe.Longitude,
             Adresse = groupe.Adresse,
-            NomResponsable = groupe.Responsable != null ? $"{groupe.Responsable.Prenom} {groupe.Responsable.Nom}" : null,
-            NomAdjoints = groupe.NomAdjoints,
+            NomChefGroupe = BuildChefGroupeName(
+                groupe.NomChefGroupe,
+                groupe.Responsable != null ? $"{groupe.Responsable.Prenom} {groupe.Responsable.Nom}" : null),
             NombreMembres = await db.Scouts.CountAsync(s => s.GroupeId == groupe.Id && s.IsActive),
             BranchesScouts = await db.Branches
                 .Where(b => b.GroupeId == groupe.Id && b.IsActive)
@@ -72,11 +74,11 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
         {
             Id = Guid.NewGuid(),
             Nom = dto.Nom,
-            Description = dto.Description,
+            Description = NormalizeOptional(dto.Description),
             Latitude = lat ?? dto.Latitude,
             Longitude = lng ?? dto.Longitude,
             Adresse = adresse,
-            NomAdjoints = dto.NomAdjoints,
+            NomChefGroupe = NormalizeOptional(dto.NomChefGroupe),
             ResponsableId = dto.ResponsableId
         };
         db.Groupes.Add(groupe);
@@ -93,11 +95,11 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
         var (lat, lng) = await geocoding.GeocodeAsync(adresse ?? "");
 
         groupe.Nom = dto.Nom;
-        groupe.Description = dto.Description;
+        groupe.Description = NormalizeOptional(dto.Description);
         groupe.Latitude = lat ?? dto.Latitude;
         groupe.Longitude = lng ?? dto.Longitude;
         groupe.Adresse = adresse;
-        groupe.NomAdjoints = dto.NomAdjoints;
+        groupe.NomChefGroupe = NormalizeOptional(dto.NomChefGroupe);
         groupe.ResponsableId = dto.ResponsableId;
         await db.SaveChangesAsync();
         return true;
@@ -120,15 +122,27 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
         Latitude = g.Latitude,
         Longitude = g.Longitude,
         Adresse = g.Adresse,
-        NomResponsable = g.Responsable != null ? $"{g.Responsable.Prenom} {g.Responsable.Nom}" : null,
-        NomAdjoints = g.NomAdjoints,
+        NomChefGroupe = BuildChefGroupeName(
+            g.NomChefGroupe,
+            g.Responsable != null ? $"{g.Responsable.Prenom} {g.Responsable.Nom}" : null),
         NombreMembres = 0
     };
 
     private static string? BuildAdresse(string? commune, string? quartier)
     {
-        var parts = new[] { quartier, commune }.Where(p => !string.IsNullOrWhiteSpace(p));
+        var parts = new[] { NormalizeOptional(quartier), NormalizeOptional(commune) }
+            .Where(p => p is not null);
         var result = string.Join(", ", parts);
         return string.IsNullOrWhiteSpace(result) ? null : result;
+    }
+
+    private static string? BuildChefGroupeName(string? storedName, string? fallbackName)
+    {
+        return NormalizeOptional(storedName) ?? NormalizeOptional(fallbackName);
+    }
+
+    private static string? NormalizeOptional(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 }

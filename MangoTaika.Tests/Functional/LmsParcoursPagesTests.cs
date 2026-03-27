@@ -25,7 +25,7 @@ public sealed class LmsParcoursPagesTests
             {
                 Id = Guid.NewGuid(),
                 UserId = scoutUser.Id,
-                Matricule = "SC-FLTR-001",
+                Matricule = "7000501E",
                 Prenom = "Ysee",
                 Nom = "Scout",
                 DateNaissance = new DateTime(2010, 4, 15),
@@ -81,7 +81,7 @@ public sealed class LmsParcoursPagesTests
             {
                 Id = Guid.NewGuid(),
                 UserId = scoutUser.Id,
-                Matricule = "SC-QZ-001",
+                Matricule = "7000502E",
                 Prenom = "Adja",
                 Nom = "Scout",
                 DateNaissance = new DateTime(2010, 5, 10),
@@ -170,7 +170,7 @@ public sealed class LmsParcoursPagesTests
             {
                 Id = Guid.NewGuid(),
                 UserId = scoutUser.Id,
-                Matricule = "SC-QZ-LOCK",
+                Matricule = "7000503E",
                 Prenom = "Yao",
                 Nom = "Scout",
                 DateNaissance = new DateTime(2010, 8, 10),

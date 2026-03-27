@@ -53,8 +53,9 @@ public class HomeController(AppDbContext db, IConfiguration configuration) : Con
             adresse = g.Adresse ?? "",
             lat = g.Latitude,
             lng = g.Longitude,
-            responsable = g.Responsable != null ? $"{g.Responsable.Prenom} {g.Responsable.Nom}" : "Non renseigné",
-            adjoints = g.NomAdjoints ?? "",
+            chefGroupe = !string.IsNullOrWhiteSpace(g.NomChefGroupe)
+                ? g.NomChefGroupe
+                : (g.Responsable != null ? $"{g.Responsable.Prenom} {g.Responsable.Nom}" : "Non renseigné"),
             branches = g.Branches.Where(b => b.IsActive).Select(b => new
             {
                 nom = b.Nom,

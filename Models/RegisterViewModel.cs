@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using MangoTaika.Helpers;
 
 namespace MangoTaika.Models;
 
@@ -30,12 +31,14 @@ public class RegisterViewModel
     public string ConfirmPassword { get; set; } = string.Empty;
 
     [Display(Name = "Matricule(s) de vos enfants")]
+    [RegularExpression(ScoutMatriculeFormat.ListPattern, ErrorMessage = ScoutMatriculeFormat.ListErrorMessage)]
     public string? Matricules { get; set; }
 
     [Display(Name = "Code d'invitation gestionnaire")]
     public string? CodeInvitation { get; set; }
 
     [Display(Name = "Mon matricule scout")]
+    [RegularExpression(ScoutMatriculeFormat.Pattern, ErrorMessage = ScoutMatriculeFormat.ErrorMessage)]
     public string? MatriculeScout { get; set; }
 
     [Required(ErrorMessage = "Le rôle est requis.")]

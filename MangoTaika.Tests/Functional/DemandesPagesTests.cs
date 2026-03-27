@@ -70,7 +70,7 @@ public sealed class DemandesPagesTests
             {
                 Id = Guid.NewGuid(),
                 UserId = scoutUser.Id,
-                Matricule = "SC-001",
+                Matricule = "7000201B",
                 Nom = "Chef",
                 Prenom = "Moussa",
                 Fonction = "Chef de troupe",

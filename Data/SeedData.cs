@@ -32,9 +32,9 @@ public static class SeedData
         // ============================================================
         var groupes = new[]
         {
-            new Groupe { Id = Guid.NewGuid(), Nom = "Groupe 1er Abidjan", Description = "Premier groupe scout du district d'Abidjan, fondé en 1985.", Adresse = "Cocody, Abidjan", Latitude = 5.3364, Longitude = -3.9628, ResponsableId = gestionnaire.Id, NomAdjoints = "Koné Drissa, Yao Kouassi" },
-            new Groupe { Id = Guid.NewGuid(), Nom = "Groupe Saint-Michel", Description = "Groupe scout rattaché à la paroisse Saint-Michel de Marcory.", Adresse = "Marcory, Abidjan", Latitude = 5.3000, Longitude = -3.9833, ResponsableId = gestionnaire.Id, NomAdjoints = "Traoré Awa" },
-            new Groupe { Id = Guid.NewGuid(), Nom = "Groupe Étoile du Sud", Description = "Groupe scout communautaire du quartier Treichville.", Adresse = "Treichville, Abidjan", Latitude = 5.2950, Longitude = -3.9970, NomAdjoints = "Diallo Mamadou" },
+            new Groupe { Id = Guid.NewGuid(), Nom = "Groupe 1er Abidjan", Description = "Premier groupe scout du district d'Abidjan, fondé en 1985.", Adresse = "Cocody, Abidjan", Latitude = 5.3364, Longitude = -3.9628, ResponsableId = gestionnaire.Id, NomChefGroupe = "Koné Drissa" },
+            new Groupe { Id = Guid.NewGuid(), Nom = "Groupe Saint-Michel", Description = "Groupe scout rattaché à la paroisse Saint-Michel de Marcory.", Adresse = "Marcory, Abidjan", Latitude = 5.3000, Longitude = -3.9833, ResponsableId = gestionnaire.Id, NomChefGroupe = "Traoré Awa" },
+            new Groupe { Id = Guid.NewGuid(), Nom = "Groupe Étoile du Sud", Description = "Groupe scout communautaire du quartier Treichville.", Adresse = "Treichville, Abidjan", Latitude = 5.2950, Longitude = -3.9970, NomChefGroupe = "Diallo Mamadou" },
             new Groupe { Id = Guid.NewGuid(), Nom = "Groupe Les Pionniers", Description = "Groupe scout de Yopougon, actif depuis 2010.", Adresse = "Yopougon, Abidjan", Latitude = 5.3300, Longitude = -4.0700 }
         };
         db.Groupes.AddRange(groupes);
@@ -95,7 +95,7 @@ public static class SeedData
             var scout = new Scout
             {
                 Id = Guid.NewGuid(),
-                Matricule = $"MT-{2024 + (i / 10):D4}-{(i + 1):D4}",
+                Matricule = $"{583753 + i:D7}X",
                 NumeroCarte = $"CI-{(1000 + i):D5}",
                 Nom = nom,
                 Prenom = prenom,
@@ -238,7 +238,7 @@ public static class SeedData
         {
             new Ticket { Id = Guid.NewGuid(), NumeroTicket = "INC-20260325-0001", Sujet = "Impossible de modifier mon profil", Description = "Quand je clique sur 'Enregistrer' dans mon profil, rien ne se passe.", Type = TypeTicket.Incident, Categorie = CategorieTicket.Technique, Impact = ImpactTicket.Moyen, Urgence = UrgenceTicket.Haute, Priorite = PrioriteTicket.Haute, Statut = StatutTicket.EnCours, DateLimiteSla = Sla(PrioriteTicket.Haute), CreateurId = scoutUser1.Id, AssigneAId = gestionnaire.Id, DateAffectation = now.AddHours(-6), GroupeAssigneId = groupes[0].Id },
             new Ticket { Id = Guid.NewGuid(), Sujet = "Demande de changement de groupe", Description = "Je souhaite être transféré du groupe Saint-Michel au groupe 1er Abidjan.", Type = TypeTicket.Requete, Categorie = CategorieTicket.Administrative, Priorite = PrioriteTicket.Normale, Statut = StatutTicket.Ouvert, CreateurId = scoutUser2.Id },
-            new Ticket { Id = Guid.NewGuid(), Sujet = "Erreur sur mon matricule", Description = "Mon matricule affiché est incorrect. Le bon est MT-2024-0001.", Type = TypeTicket.Incident, Categorie = CategorieTicket.Administrative, Priorite = PrioriteTicket.Haute, Statut = StatutTicket.Resolu, CreateurId = scoutUser1.Id, AssigneAId = admin.Id, DateResolution = now.AddDays(-2), NoteSatisfaction = 5, CommentaireSatisfaction = "Résolu rapidement, merci !" },
+            new Ticket { Id = Guid.NewGuid(), Sujet = "Erreur sur mon matricule", Description = "Mon matricule affiché est incorrect. Le bon est 0583753X.", Type = TypeTicket.Incident, Categorie = CategorieTicket.Administrative, Priorite = PrioriteTicket.Haute, Statut = StatutTicket.Resolu, CreateurId = scoutUser1.Id, AssigneAId = admin.Id, DateResolution = now.AddDays(-2), NoteSatisfaction = 5, CommentaireSatisfaction = "Résolu rapidement, merci !" },
             new Ticket { Id = Guid.NewGuid(), Sujet = "Inscription à une activité impossible", Description = "Le bouton d'inscription au camp de Pâques ne fonctionne pas sur mon téléphone.", Type = TypeTicket.Incident, Categorie = CategorieTicket.Activites, Priorite = PrioriteTicket.Normale, Statut = StatutTicket.EnAttente, CreateurId = parentUser.Id, AssigneAId = gestionnaire.Id },
             new Ticket { Id = Guid.NewGuid(), Sujet = "Demande d'adhésion pour mon fils", Description = "Mon fils de 9 ans souhaite rejoindre les louveteaux. Quelle est la procédure ?", Type = TypeTicket.Requete, Categorie = CategorieTicket.Adhesion, Priorite = PrioriteTicket.Basse, Statut = StatutTicket.Resolu, CreateurId = parentUser.Id, DateResolution = now.AddDays(-5), NoteSatisfaction = 4 },
             new Ticket { Id = Guid.NewGuid(), Sujet = "Problème d'accès au tableau de bord", Description = "Je n'arrive pas à voir les statistiques du district.", Type = TypeTicket.Incident, Categorie = CategorieTicket.Technique, Priorite = PrioriteTicket.Urgente, Statut = StatutTicket.Ferme, CreateurId = gestionnaire.Id, AssigneAId = admin.Id, DateResolution = now.AddDays(-1) }

@@ -65,7 +65,7 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db) : Con
         }
 
         await LoadDropdownsAsync();
-        return View(scout);
+        return View(ToCreateDto(scout));
     }
 
     [HttpPost]
@@ -188,4 +188,24 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db) : Con
         TempData["Success"] = $"Statut ASCCI verifie pour {scout.Prenom} {scout.Nom}.";
         return RedirectToAction(nameof(Details), new { id });
     }
+
+    private static ScoutCreateDto ToCreateDto(ScoutDto scout) => new()
+    {
+        Matricule = scout.Matricule,
+        Nom = scout.Nom,
+        Prenom = scout.Prenom,
+        DateNaissance = scout.DateNaissance,
+        LieuNaissance = scout.LieuNaissance,
+        Sexe = scout.Sexe,
+        Telephone = scout.Telephone,
+        Email = scout.Email,
+        RegionScoute = scout.RegionScoute,
+        District = scout.District,
+        NumeroCarte = scout.NumeroCarte,
+        Fonction = scout.Fonction,
+        AssuranceAnnuelle = scout.AssuranceAnnuelle,
+        AdresseGeographique = scout.AdresseGeographique,
+        GroupeId = scout.GroupeId,
+        BrancheId = scout.BrancheId
+    };
 }

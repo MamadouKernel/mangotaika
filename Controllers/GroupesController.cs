@@ -54,7 +54,7 @@ public class GroupesController(IGroupeService groupeService) : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(Guid id, GroupeCreateDto dto)
     {
-        if (!ModelState.IsValid) return View(dto);
+        if (!ModelState.IsValid) return View(ToEditDto(id, dto));
         var result = await groupeService.UpdateAsync(id, dto);
         if (!result) return NotFound();
         TempData["Success"] = "Groupe mis à jour.";
@@ -83,11 +83,27 @@ public class GroupesController(IGroupeService groupeService) : Controller
                 lat = g.Latitude,
                 lng = g.Longitude,
                 membres = g.NombreMembres,
-                cg = g.NomResponsable ?? "",
-                adjoints = g.NomAdjoints ?? "",
+                chefGroupe = g.NomChefGroupe ?? "",
                 branches = g.BranchesScouts.Select(b => new { nom = b.Nom, scouts = b.NombreScouts, cu = b.NomChefUnite ?? "" })
             }));
         return View(groupes);
+    }
+
+    private static GroupeDto ToEditDto(Guid id, GroupeCreateDto dto)
+    {
+        var parts = new[] { dto.Quartier, dto.Commune }.Where(p => !string.IsNullOrWhiteSpace(p));
+        var adresse = string.Join(", ", parts);
+
+        return new GroupeDto
+        {
+            Id = id,
+            Nom = dto.Nom,
+            Description = dto.Description,
+            Adresse = string.IsNullOrWhiteSpace(adresse) ? null : adresse,
+            NomChefGroupe = dto.NomChefGroupe,
+            Latitude = dto.Latitude,
+            Longitude = dto.Longitude
+        };
     }
 
 

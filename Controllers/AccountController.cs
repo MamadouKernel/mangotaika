@@ -124,7 +124,8 @@ public class AccountController(
                 ModelState.AddModelError("MatriculeScout", "Votre matricule scout est requis.");
                 return View(model);
             }
-            scoutLie = await db.Scouts.FirstOrDefaultAsync(s => s.Matricule == model.MatriculeScout.Trim() && s.IsActive);
+            var matriculeScout = ScoutMatriculeFormat.Normalize(model.MatriculeScout);
+            scoutLie = await db.Scouts.FirstOrDefaultAsync(s => s.Matricule == matriculeScout && s.IsActive);
             if (scoutLie is null)
             {
                 ModelState.AddModelError("MatriculeScout", "Matricule introuvable. Vérifiez auprès de votre chef de groupe.");
@@ -141,10 +142,11 @@ public class AccountController(
 
             foreach (var mat in matricules)
             {
-                var scout = await db.Scouts.FirstOrDefaultAsync(s => s.Matricule == mat && s.IsActive);
+                var matricule = ScoutMatriculeFormat.Normalize(mat);
+                var scout = await db.Scouts.FirstOrDefaultAsync(s => s.Matricule == matricule && s.IsActive);
                 if (scout == null)
                 {
-                    ModelState.AddModelError("Matricules", $"Matricule introuvable : {mat}");
+                    ModelState.AddModelError("Matricules", $"Matricule introuvable : {matricule}");
                     return View(model);
                 }
                 scouts.Add(scout);

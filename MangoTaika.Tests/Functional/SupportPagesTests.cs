@@ -115,7 +115,7 @@ public sealed class SupportPagesTests
             {
                 Id = Guid.NewGuid(),
                 UserId = scoutUser.Id,
-                Matricule = "SC-DASH-001",
+                Matricule = "7000101A",
                 Prenom = "Lina",
                 Nom = "Scout",
                 DateNaissance = new DateTime(2010, 2, 10),

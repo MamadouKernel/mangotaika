@@ -52,8 +52,7 @@
         function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
         groupes.forEach(function(g) {
             var detailsHtml = '';
-            if (g.cg) detailsHtml += '<div style="font-size:0.8rem;margin-top:4px;"><strong>👤 CG :</strong> ' + esc(g.cg) + '</div>';
-            if (g.adjoints) detailsHtml += '<div style="font-size:0.8rem;"><strong>👥 Adjoint(s) :</strong> ' + esc(g.adjoints) + '</div>';
+            if (g.chefGroupe) detailsHtml += '<div style="font-size:0.8rem;margin-top:4px;"><strong>Chef de groupe :</strong> ' + esc(g.chefGroupe) + '</div>';
 
             var branchesHtml = '';
             if (g.branches && g.branches.length > 0) {

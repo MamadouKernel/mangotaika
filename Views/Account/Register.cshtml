@@ -7,15 +7,15 @@
     <div class="row justify-content-center">
         <div class="col-md-6">
             <div class="auth-card text-center">
-                <img src="~/images/logo.png" alt="Logo MANGO TAÏKA" class="auth-logo" />
+                <img src="~/images/logo.png" alt="Logo MANGO TAIKA" class="auth-logo" />
                 <h3 class="mb-1">Inscription</h3>
-                <p class="text-muted-custom small mb-4">Rejoignez le district MANGO TAÏKA</p>
+                <p class="text-muted-custom small mb-4">Rejoignez le district MANGO TAIKA</p>
 
                 <form asp-action="Register" method="post" class="form-modern text-start">
                     <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
 
                     <div class="mb-4">
-                        <label asp-for="Role" class="form-label">Vous êtes</label>
+                        <label asp-for="Role" class="form-label">Vous etes</label>
                         <select asp-for="Role" class="form-select" id="roleSelect">
                             <option value="Parent">Parent / Tuteur</option>
                             <option value="Gestionnaire">Gestionnaire</option>
@@ -23,7 +23,7 @@
                         </select>
                         <span asp-validation-for="Role" class="text-danger small"></span>
                         <p class="text-muted-custom small mt-2 mb-0">
-                            <i class="bi bi-info-circle"></i> Le rôle <strong>Administrateur</strong> (vision et gestion globale du district) n’est pas proposé ici : il est attribué uniquement par un administrateur existant, pour des raisons de sécurité.
+                            <i class="bi bi-info-circle"></i> Le role <strong>Administrateur</strong> n'est pas propose ici : il est attribue uniquement par un administrateur existant, pour des raisons de securite.
                         </p>
                     </div>
 
@@ -34,50 +34,49 @@
                             <span asp-validation-for="Nom" class="text-danger small"></span>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label asp-for="Prenom" class="form-label">Prénom</label>
+                            <label asp-for="Prenom" class="form-label">Prenom</label>
                             <input asp-for="Prenom" class="form-control" />
                             <span asp-validation-for="Prenom" class="text-danger small"></span>
                         </div>
                     </div>
+
                     <div class="mb-3">
-                        <label asp-for="Telephone" class="form-label">Numéro de téléphone</label>
+                        <label asp-for="Telephone" class="form-label">Numero de telephone</label>
                         <input asp-for="Telephone" class="form-control" placeholder="Ex: 0701020304" />
                         <span asp-validation-for="Telephone" class="text-danger small"></span>
                     </div>
+
                     <div class="mb-3">
                         <label asp-for="Email" class="form-label">Email <span class="text-muted-custom small">(optionnel)</span></label>
                         <input asp-for="Email" class="form-control" placeholder="votre@@email.com" />
                         <span asp-validation-for="Email" class="text-danger small"></span>
                     </div>
 
-                    @* — Champ matricules (Parent / Tuteur) — *@
                     <div class="mb-3" id="matriculesSection">
                         <label asp-for="Matricules" class="form-label">
                             Matricule(s) de vos enfants <span class="text-danger">*</span>
                         </label>
-                        <input asp-for="Matricules" class="form-control" placeholder="Ex: MT-2026-00001, MT-2026-00002" />
+                        <input asp-for="Matricules" class="form-control" placeholder="Ex: 0583753X, 0583754X" />
                         <span asp-validation-for="Matricules" class="text-danger small"></span>
-                        <small class="text-muted-custom">Saisissez le(s) matricule(s) séparés par des virgules.</small>
+                        <small class="text-muted-custom">Saisissez le(s) matricule(s) separes par des virgules. Format attendu : 0583753X.</small>
                     </div>
 
-                    @* — Champ code invitation (Gestionnaire) — *@
                     <div class="mb-3" id="codeSection" style="display:none;">
                         <label asp-for="CodeInvitation" class="form-label">
                             Code d'invitation <span class="text-danger">*</span>
                         </label>
                         <input asp-for="CodeInvitation" class="form-control" placeholder="Ex: MT-20260321-A1B2C3" />
                         <span asp-validation-for="CodeInvitation" class="text-danger small"></span>
-                        <small class="text-muted-custom">Ce code vous a été transmis par un administrateur du district.</small>
+                        <small class="text-muted-custom">Ce code vous a ete transmis par un administrateur du district.</small>
                     </div>
 
-                    @* — Champ matricule scout (Scout) — *@
                     <div class="mb-3" id="scoutSection" style="display:none;">
                         <label asp-for="MatriculeScout" class="form-label">
                             Mon matricule scout <span class="text-danger">*</span>
                         </label>
-                        <input asp-for="MatriculeScout" class="form-control" placeholder="Ex: MT-2026-00001" />
+                        <input asp-for="MatriculeScout" class="form-control" placeholder="Ex: 0583753X" />
                         <span asp-validation-for="MatriculeScout" class="text-danger small"></span>
-                        <small class="text-muted-custom">Votre matricule vous a été attribué par votre chef de groupe.</small>
+                        <small class="text-muted-custom">Votre matricule vous a ete attribue par votre chef de groupe. Format attendu : 0583753X.</small>
                     </div>
 
                     <div class="mb-3">
@@ -85,6 +84,7 @@
                         <input asp-for="Password" class="form-control" />
                         <span asp-validation-for="Password" class="text-danger small"></span>
                     </div>
+
                     <div class="mb-4">
                         <label asp-for="ConfirmPassword" class="form-label">Confirmer le mot de passe</label>
                         <input asp-for="ConfirmPassword" class="form-control" />
@@ -97,8 +97,9 @@
                         <i class="bi bi-person-plus-fill"></i> S'inscrire
                     </button>
                 </form>
+
                 <div class="mt-3">
-                    <a asp-action="Login" class="text-or small">Déjà un compte ? Connectez-vous</a>
+                    <a asp-action="Login" class="text-or small">Deja un compte ? Connectez-vous</a>
                 </div>
             </div>
         </div>
@@ -106,22 +107,23 @@
 </div>
 
 @section Scripts {
-<script>
-(function() {
-    const roleSelect = document.getElementById('roleSelect');
-    const matriculesSection = document.getElementById('matriculesSection');
-    const codeSection = document.getElementById('codeSection');
-    const scoutSection = document.getElementById('scoutSection');
+    <script>
+        (function () {
+            const roleSelect = document.getElementById('roleSelect');
+            const matriculesSection = document.getElementById('matriculesSection');
+            const codeSection = document.getElementById('codeSection');
+            const scoutSection = document.getElementById('scoutSection');
 
-    function toggleSections() {
-        const role = roleSelect.value;
-        matriculesSection.style.display = role === 'Parent' ? 'block' : 'none';
-        codeSection.style.display = role === 'Gestionnaire' ? 'block' : 'none';
-        scoutSection.style.display = role === 'Scout' ? 'block' : 'none';
-    }
+            function toggleSections() {
+                const role = roleSelect.value;
+                matriculesSection.style.display = role === 'Parent' ? 'block' : 'none';
+                codeSection.style.display = role === 'Gestionnaire' ? 'block' : 'none';
+                scoutSection.style.display = role === 'Scout' ? 'block' : 'none';
+            }
 
-    roleSelect.addEventListener('change', toggleSections);
-    toggleSections();
-})();
-</script>
+            roleSelect.addEventListener('change', toggleSections);
+            toggleSections();
+        })();
+    </script>
+    <partial name="_ValidationScriptsPartial" />
 }

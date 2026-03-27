@@ -8,7 +8,7 @@ public class Groupe
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
     public string? Adresse { get; set; }
-    public string? NomAdjoints { get; set; } // Noms des adjoints, séparés par virgule
+    public string? NomChefGroupe { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime DateCreation { get; set; } = DateTime.UtcNow;
 

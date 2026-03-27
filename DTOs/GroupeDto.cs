@@ -8,8 +8,7 @@ public class GroupeDto
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
     public string? Adresse { get; set; }
-    public string? NomResponsable { get; set; }
-    public string? NomAdjoints { get; set; }
+    public string? NomChefGroupe { get; set; }
     public int NombreMembres { get; set; }
     public List<BrancheScoutCountDto> BranchesScouts { get; set; } = [];
 }
@@ -27,7 +26,7 @@ public class GroupeCreateDto
     public string? Description { get; set; }
     public string? Commune { get; set; }
     public string? Quartier { get; set; }
-    public string? NomAdjoints { get; set; }
+    public string? NomChefGroupe { get; set; }
     public Guid? ResponsableId { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
