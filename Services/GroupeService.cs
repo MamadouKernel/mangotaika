@@ -1,6 +1,7 @@
 using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
+using MangoTaika.Helpers;
 using Microsoft.EntityFrameworkCore;
 
 namespace MangoTaika.Services;
@@ -86,7 +87,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
             ResponsableId = dto.ResponsableId
         };
         db.Groupes.Add(groupe);
-        await db.SaveChangesAsync();
+        await SaveChangesAsync();
         return ToDto(groupe);
     }
 
@@ -109,7 +110,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
         groupe.Adresse = adresse;
         groupe.NomChefGroupe = NormalizeOptional(dto.NomChefGroupe);
         groupe.ResponsableId = dto.ResponsableId;
-        await db.SaveChangesAsync();
+        await SaveChangesAsync();
         return true;
     }
 
@@ -202,6 +203,18 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
         if (!exists)
         {
             throw new InvalidOperationException("Le responsable selectionne est introuvable ou inactif.");
+        }
+    }
+
+    private async Task SaveChangesAsync()
+    {
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.ReferencesConstraint(PersistenceConstraints.GroupesNomNormaliseActif))
+        {
+            throw new InvalidOperationException("Un groupe avec ce nom existe deja.", ex);
         }
     }
 }

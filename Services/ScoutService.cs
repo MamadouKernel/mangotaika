@@ -61,7 +61,7 @@ public class ScoutService(AppDbContext db) : IScoutService
             BrancheId = dto.BrancheId
         };
         db.Scouts.Add(scout);
-        await db.SaveChangesAsync();
+        await SaveChangesAsync();
         return ToDto(scout);
     }
 
@@ -95,7 +95,7 @@ public class ScoutService(AppDbContext db) : IScoutService
         scout.AdresseGeographique = NormalizeOptional(dto.AdresseGeographique);
         scout.GroupeId = dto.GroupeId;
         scout.BrancheId = dto.BrancheId;
-        await db.SaveChangesAsync();
+        await SaveChangesAsync();
         return true;
     }
 
@@ -553,5 +553,21 @@ public class ScoutService(AppDbContext db) : IScoutService
     {
         var normalized = value?.Trim();
         return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
+    }
+
+    private async Task SaveChangesAsync()
+    {
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.ReferencesConstraint(PersistenceConstraints.ScoutsMatricule))
+        {
+            throw new InvalidOperationException("Le matricule existe deja.", ex);
+        }
+        catch (DbUpdateException ex) when (ex.ReferencesConstraint(PersistenceConstraints.ScoutsNumeroCarte))
+        {
+            throw new InvalidOperationException("Le numero de carte existe deja.", ex);
+        }
     }
 }

@@ -4,6 +4,7 @@ public class Groupe
 {
     public Guid Id { get; set; }
     public string Nom { get; set; } = string.Empty;
+    public string NomNormalise { get; private set; } = string.Empty;
     public string? Description { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }

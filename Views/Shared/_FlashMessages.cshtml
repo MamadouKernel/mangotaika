@@ -1,0 +1,29 @@
+@{
+    var success = TempData["Success"] as string;
+    var error = TempData["Error"] as string;
+    var importError = TempData["ImportError"] as string;
+}
+
+@if (!string.IsNullOrWhiteSpace(success))
+{
+    <div class="alert alert-mango alert-dismissible fade show m-3" role="alert">
+        <i class="bi bi-check-circle-fill"></i> @success
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(error))
+{
+    <div class="alert alert-danger alert-dismissible fade show m-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill"></i> @error
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(importError))
+{
+    <div class="alert alert-danger alert-dismissible fade show m-3" role="alert">
+        <i class="bi bi-exclamation-octagon-fill"></i> @importError
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+    </div>
+}

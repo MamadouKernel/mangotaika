@@ -4,6 +4,7 @@ public class Branche
 {
     public Guid Id { get; set; }
     public string Nom { get; set; } = string.Empty;
+    public string NomNormalise { get; private set; } = string.Empty;
     public string? Description { get; set; }
     public int? AgeMin { get; set; }
     public int? AgeMax { get; set; }

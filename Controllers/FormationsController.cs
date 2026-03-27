@@ -390,7 +390,7 @@ public class FormationsController(
         }
         catch (InvalidOperationException ex)
         {
-            TempData["Error"] = ex.Message;
+            this.SetDomainError(ex);
         }
 
         return RedirectToAction(nameof(MesFormations));
@@ -449,7 +449,7 @@ public class FormationsController(
         }
         catch (InvalidOperationException ex)
         {
-            TempData["Error"] = ex.Message;
+            this.SetDomainError(ex);
         }
 
         return RedirectToAction(nameof(Suivre), new { id = formationId });
@@ -506,7 +506,7 @@ public class FormationsController(
         }
         catch (InvalidOperationException ex)
         {
-            TempData["Error"] = ex.Message;
+            this.SetDomainError(ex);
         }
 
         return RedirectToAction(nameof(Suivre), new { id = formationId });

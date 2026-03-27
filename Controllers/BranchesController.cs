@@ -47,7 +47,7 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db)
         catch (InvalidOperationException ex)
         {
             await LoadGroupesAsync();
-            ModelState.AddModelError(string.Empty, ex.Message);
+            this.AddDomainError(ex);
             return View(dto);
         }
         TempData["Success"] = "Branche créée avec succès.";
@@ -90,7 +90,7 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db)
         catch (InvalidOperationException ex)
         {
             await LoadGroupesAsync();
-            ModelState.AddModelError(string.Empty, ex.Message);
+            this.AddDomainError(ex);
             return View(ToEditDto(id, dto));
         }
 

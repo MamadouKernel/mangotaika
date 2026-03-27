@@ -283,11 +283,23 @@ namespace MangoTaika.Migrations
                     b.Property<string>("NomChefUnite")
                         .HasColumnType("text");
 
+                    b.Property<string>("NomNormalise")
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasComputedColumnSql("upper(btrim(\"Nom\"))", true);
+
                     b.HasKey("Id");
 
                     b.HasIndex("ChefUniteId");
 
                     b.HasIndex("GroupeId");
+
+                    b.HasIndex("GroupeId", "NomNormalise")
+                        .HasDatabaseName("IX_Branches_GroupeId_NomNormalise_Actif")
+                        .IsUnique()
+                        .HasFilter("\"IsActive\" = TRUE");
 
                     b.ToTable("Branches");
                 });
@@ -821,10 +833,22 @@ namespace MangoTaika.Migrations
                     b.Property<string>("NomChefGroupe")
                         .HasColumnType("text");
 
+                    b.Property<string>("NomNormalise")
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasComputedColumnSql("upper(btrim(\"Nom\"))", true);
+
                     b.Property<Guid?>("ResponsableId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("NomNormalise")
+                        .HasDatabaseName("IX_Groupes_NomNormalise_Actif")
+                        .IsUnique()
+                        .HasFilter("\"IsActive\" = TRUE");
 
                     b.HasIndex("ResponsableId");
 
@@ -1601,9 +1625,11 @@ namespace MangoTaika.Migrations
                     b.HasIndex("GroupeId");
 
                     b.HasIndex("Matricule")
+                        .HasDatabaseName("IX_Scouts_Matricule")
                         .IsUnique();
 
                     b.HasIndex("NumeroCarte")
+                        .HasDatabaseName("IX_Scouts_NumeroCarte")
                         .IsUnique()
                         .HasFilter("\"NumeroCarte\" IS NOT NULL");
 

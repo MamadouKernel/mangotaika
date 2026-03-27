@@ -443,7 +443,7 @@ public class TicketsController(
         }
         catch (InvalidOperationException ex)
         {
-            TempData["ImportError"] = ex.Message;
+            this.SetDomainError(ex);
         }
 
         return RedirectToAction(nameof(Details), new { id = ticketId });

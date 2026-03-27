@@ -1,4 +1,5 @@
 using MangoTaika.Data.Entities;
+using MangoTaika.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -67,8 +68,13 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         // Scout - matricule unique
         builder.Entity<Scout>(e =>
         {
-            e.HasIndex(s => s.Matricule).IsUnique();
-            e.HasIndex(s => s.NumeroCarte).IsUnique().HasFilter("\"NumeroCarte\" IS NOT NULL");
+            e.HasIndex(s => s.Matricule)
+                .HasDatabaseName(PersistenceConstraints.ScoutsMatricule)
+                .IsUnique();
+            e.HasIndex(s => s.NumeroCarte)
+                .HasDatabaseName(PersistenceConstraints.ScoutsNumeroCarte)
+                .IsUnique()
+                .HasFilter("\"NumeroCarte\" IS NOT NULL");
             e.HasOne(s => s.Groupe).WithMany().HasForeignKey(s => s.GroupeId);
             e.HasOne(s => s.Branche).WithMany(b => b.Scouts).HasForeignKey(s => s.BrancheId);
             e.HasMany(s => s.Parents).WithMany(p => p.Scouts);
@@ -78,6 +84,13 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         // Groupe
         builder.Entity<Groupe>(e =>
         {
+            e.Property(g => g.NomNormalise)
+                .HasMaxLength(256)
+                .HasComputedColumnSql("upper(btrim(\"Nom\"))", stored: true);
+            e.HasIndex(g => g.NomNormalise)
+                .HasDatabaseName(PersistenceConstraints.GroupesNomNormaliseActif)
+                .IsUnique()
+                .HasFilter("\"IsActive\" = TRUE");
             e.HasOne(g => g.Responsable).WithMany().HasForeignKey(g => g.ResponsableId).OnDelete(DeleteBehavior.SetNull);
             e.HasMany(g => g.Membres).WithOne(u => u.Groupe).HasForeignKey(u => u.GroupeId);
             e.HasMany(g => g.Branches).WithOne(b => b.Groupe).HasForeignKey(b => b.GroupeId);
@@ -86,6 +99,13 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         // Branche
         builder.Entity<Branche>(e =>
         {
+            e.Property(b => b.NomNormalise)
+                .HasMaxLength(256)
+                .HasComputedColumnSql("upper(btrim(\"Nom\"))", stored: true);
+            e.HasIndex(b => new { b.GroupeId, b.NomNormalise })
+                .HasDatabaseName(PersistenceConstraints.BranchesGroupeNomNormaliseActif)
+                .IsUnique()
+                .HasFilter("\"IsActive\" = TRUE");
             e.HasOne(b => b.ChefUnite).WithMany().HasForeignKey(b => b.ChefUniteId).OnDelete(DeleteBehavior.SetNull);
         });
 

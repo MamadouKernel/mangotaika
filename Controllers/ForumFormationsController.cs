@@ -1,6 +1,7 @@
 using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
+using MangoTaika.Helpers;
 using MangoTaika.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -138,7 +139,7 @@ public class ForumFormationsController(
         }
         catch (InvalidOperationException ex)
         {
-            TempData["Error"] = ex.Message;
+            this.SetDomainError(ex);
         }
 
         return RedirectToAction(nameof(Discussion), new { id = discussionId });

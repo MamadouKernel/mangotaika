@@ -58,7 +58,7 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db) : Con
         catch (InvalidOperationException ex)
         {
             await LoadDropdownsAsync();
-            ModelState.AddModelError(string.Empty, ex.Message);
+            this.AddDomainError(ex);
             return View(dto);
         }
         TempData["Success"] = $"Scout cree avec succes. Matricule attribue : {scout.Matricule}";
@@ -97,7 +97,7 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db) : Con
         catch (InvalidOperationException ex)
         {
             await LoadDropdownsAsync();
-            ModelState.AddModelError(string.Empty, ex.Message);
+            this.AddDomainError(ex);
             return View(dto);
         }
         if (!result)

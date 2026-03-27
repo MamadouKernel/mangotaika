@@ -1,6 +1,7 @@
 using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
+using MangoTaika.Helpers;
 using Microsoft.EntityFrameworkCore;
 
 namespace MangoTaika.Services;
@@ -49,7 +50,7 @@ public class BrancheService(AppDbContext db) : IBrancheService
             GroupeId = dto.GroupeId
         };
         db.Branches.Add(branche);
-        await db.SaveChangesAsync();
+        await SaveChangesAsync();
         return ToDto(branche);
     }
 
@@ -70,7 +71,7 @@ public class BrancheService(AppDbContext db) : IBrancheService
         branche.ChefUniteId = chefUnite.Id;
         branche.NomChefUnite = $"{chefUnite.Prenom} {chefUnite.Nom}";
         branche.GroupeId = dto.GroupeId;
-        await db.SaveChangesAsync();
+        await SaveChangesAsync();
         return true;
     }
 
@@ -174,6 +175,18 @@ public class BrancheService(AppDbContext db) : IBrancheService
         if (ageMin.HasValue && ageMax.HasValue && ageMin > ageMax)
         {
             throw new InvalidOperationException("L'age minimum ne peut pas etre superieur a l'age maximum.");
+        }
+    }
+
+    private async Task SaveChangesAsync()
+    {
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.ReferencesConstraint(PersistenceConstraints.BranchesGroupeNomNormaliseActif))
+        {
+            throw new InvalidOperationException("Une branche avec ce nom existe deja dans ce groupe.", ex);
         }
     }
 

@@ -35,7 +35,7 @@ public class GroupesController(IGroupeService groupeService) : Controller
         }
         catch (InvalidOperationException ex)
         {
-            ModelState.AddModelError(string.Empty, ex.Message);
+            this.AddDomainError(ex);
             return View(dto);
         }
         TempData["Success"] = "Groupe créé avec succès.";
@@ -70,7 +70,7 @@ public class GroupesController(IGroupeService groupeService) : Controller
         }
         catch (InvalidOperationException ex)
         {
-            ModelState.AddModelError(string.Empty, ex.Message);
+            this.AddDomainError(ex);
             return View(ToEditDto(id, dto));
         }
         if (!result) return NotFound();
