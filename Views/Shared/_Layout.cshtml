@@ -231,6 +231,12 @@
         </div>
     </nav>
 
+    <div class="platform-slogan-bar" role="note" aria-label="Slogan de la plateforme">
+        <div class="container">
+            <span class="platform-slogan-bar__text">@PlatformBranding.Slogan</span>
+        </div>
+    </div>
+
     <partial name="_FlashMessages" />
 
     <main>
@@ -245,6 +251,7 @@
     <footer class="footer-mango mt-5">
         <div class="container text-center">
             <img src="~/images/logo.png" alt="Logo" class="footer-logo" />
+            <p class="footer-slogan mb-3">@PlatformBranding.Slogan</p>
             <p class="mb-1">District Scout MANGO TAÏKA</p>
             @if (footerLiensRS.Any())
             {

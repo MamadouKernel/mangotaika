@@ -143,6 +143,23 @@ body {
     color: var(--vert-logo) !important;
     background: var(--vert-pale); font-weight: 600;
 }
+.platform-slogan-bar {
+    background: linear-gradient(90deg, rgba(49,62,69,0.96) 0%, rgba(89,117,55,0.96) 100%);
+    color: #fff;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.platform-slogan-bar .container {
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+.platform-slogan-bar__text {
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
 .navbar-mango .navbar-nav.ms-auto {
     align-items: center;
     gap: 0.3rem;
@@ -434,6 +451,24 @@ body {
 .hero-subtitle {
     font-size: 1.3rem; color: rgba(255,255,255,0.7);
     font-weight: 300; margin-bottom: 2.5rem; max-width: 600px;
+}
+.hero-slogan {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: min(720px, 100%);
+    margin-bottom: 1rem;
+    padding: 0.85rem 1.35rem;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.22);
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.4;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 }
 .hero-buttons { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
 
@@ -888,6 +923,13 @@ body {
     margin: 1rem auto;
 }
 .footer-mango p { color: rgba(255,255,255,0.6); }
+.footer-mango .footer-slogan {
+    color: rgba(255,255,255,0.86);
+    font-size: 0.95rem;
+    max-width: 620px;
+    margin-left: auto;
+    margin-right: auto;
+}
 
 /* ===== AUTH CARD ===== */
 .auth-card {
@@ -1671,6 +1713,11 @@ main { animation: fadeInUp 0.35s ease-out; }
     .hero-title { font-size: 2rem; }
     .hero-logo { width: 120px; height: 120px; }
     .hero-subtitle { font-size: 0.9rem; }
+    .hero-slogan {
+        border-radius: 24px;
+        font-size: 0.92rem;
+        padding: 0.75rem 1rem;
+    }
     .stat-card-3d h2 { font-size: 1.8rem; }
     .stat-card-3d { padding: 1.2rem; }
     .stat-card-3d .stat-icon { font-size: 1.8rem; }
@@ -1686,6 +1733,7 @@ main { animation: fadeInUp 0.35s ease-out; }
     .navbar-mango .navbar-brand img { height: 40px; width: 40px; }
     .navbar-mango .brand-text .brand-main { font-size: 0.9rem; }
     .navbar-mango .brand-text .brand-sub { font-size: 0.55rem; }
+    .platform-slogan-bar__text { font-size: 0.78rem; }
     .btn-mango, .btn-bleu, .btn-outline-or { padding: 0.6rem 1.2rem; font-size: 0.85rem; }
     #map-groupes { height: 300px; }
     .galerie-item img { height: 150px; }
