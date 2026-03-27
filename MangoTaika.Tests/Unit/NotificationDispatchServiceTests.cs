@@ -1,5 +1,4 @@
 using FluentAssertions;
-using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.Hubs;
 using MangoTaika.Services;
@@ -14,7 +13,7 @@ public sealed class NotificationDispatchServiceTests
     [Fact]
     public async Task SendAsync_PersistsAndPushesNotifications()
     {
-        await using var db = CreateDbContext();
+        await using var db = TestDbContextFactory.CreateDbContext();
         await TestDataSeeder.EnsureRolesAsync(db, "Scout");
         var user = await TestDataSeeder.AddUserAsync(db, "Lms", "Notif", ["Scout"]);
         var hub = new TestHubContext<NotificationHub>();
@@ -27,15 +26,5 @@ public sealed class NotificationDispatchServiceTests
         notification.Categorie.Should().Be("LMS");
         notification.Titre.Should().Be("Annonce");
         hub.TypedClients.SentMessages.Should().Contain(m => m.Method == "RecevoirNotification");
-    }
-
-    private static AppDbContext CreateDbContext()
-    {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
-            .Options;
-        var db = new AppDbContext(options);
-        db.Database.EnsureCreated();
-        return db;
     }
 }

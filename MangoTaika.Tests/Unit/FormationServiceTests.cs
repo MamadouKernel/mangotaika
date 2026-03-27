@@ -13,7 +13,7 @@ public sealed class FormationServiceTests
     [Fact]
     public async Task GetProgressionAsync_ReturnsNull_WhenScoutIsNotEnrolled()
     {
-        await using var db = CreateDbContext();
+        await using var db = TestDbContextFactory.CreateDbContext();
         var data = await SeedFormationGraphAsync(db, enrolled: false);
         var service = new FormationService(db);
 
@@ -25,7 +25,7 @@ public sealed class FormationServiceTests
     [Fact]
     public async Task MarquerLeconTermineeAsync_Throws_WhenScoutIsNotEnrolled()
     {
-        await using var db = CreateDbContext();
+        await using var db = TestDbContextFactory.CreateDbContext();
         var data = await SeedFormationGraphAsync(db, enrolled: false);
         var service = new FormationService(db);
 
@@ -38,7 +38,7 @@ public sealed class FormationServiceTests
     [Fact]
     public async Task SoumettreQuizAsync_Throws_WhenScoutIsNotEnrolled()
     {
-        await using var db = CreateDbContext();
+        await using var db = TestDbContextFactory.CreateDbContext();
         var data = await SeedFormationGraphAsync(db, enrolled: false);
         var service = new FormationService(db);
 
@@ -54,7 +54,7 @@ public sealed class FormationServiceTests
     [Fact]
     public async Task MarquerLeconTermineeAsync_CreatesProgression_WhenScoutIsEnrolled()
     {
-        await using var db = CreateDbContext();
+        await using var db = TestDbContextFactory.CreateDbContext();
         var data = await SeedFormationGraphAsync(db, enrolled: true);
         var service = new FormationService(db);
 
@@ -71,7 +71,7 @@ public sealed class FormationServiceTests
     [Fact]
     public async Task InscrireScoutAsync_AssignsSelfPacedSession_WhenAvailable()
     {
-        await using var db = CreateDbContext();
+        await using var db = TestDbContextFactory.CreateDbContext();
         var data = await SeedFormationGraphAsync(db, enrolled: false);
         var service = new FormationService(db);
 
@@ -104,7 +104,7 @@ public sealed class FormationServiceTests
     [Fact]
     public async Task GetDetailAsync_ReturnsPublishedSessionsAndAnnouncements()
     {
-        await using var db = CreateDbContext();
+        await using var db = TestDbContextFactory.CreateDbContext();
         var data = await SeedFormationGraphAsync(db, enrolled: false);
         var service = new FormationService(db);
         var author = await db.Users.FirstAsync(u => u.Id == data.Formation.AuteurId);
@@ -140,7 +140,7 @@ public sealed class FormationServiceTests
     [Fact]
     public async Task MarquerLeconTermineeAsync_CreatesCertifications_WhenFormationIsCompleted()
     {
-        await using var db = CreateDbContext();
+        await using var db = TestDbContextFactory.CreateDbContext();
         var data = await SeedFormationGraphAsync(db, enrolled: true, includeQuiz: false);
         var service = new FormationService(db);
 
@@ -157,7 +157,7 @@ public sealed class FormationServiceTests
     [Fact]
     public async Task MarquerLeconTermineeAsync_DoesNotDuplicateCertifications_WhenFormationAlreadyCompleted()
     {
-        await using var db = CreateDbContext();
+        await using var db = TestDbContextFactory.CreateDbContext();
         var data = await SeedFormationGraphAsync(db, enrolled: true, includeQuiz: false);
         var service = new FormationService(db);
 
@@ -174,7 +174,7 @@ public sealed class FormationServiceTests
     [Fact]
     public async Task GetParcoursScoutsAsync_ReturnsHighLevelMoocIndicators()
     {
-        await using var db = CreateDbContext();
+        await using var db = TestDbContextFactory.CreateDbContext();
         var data = await SeedFormationGraphAsync(db, enrolled: true);
         var service = new FormationService(db);
 
@@ -224,7 +224,7 @@ public sealed class FormationServiceTests
     [Fact]
     public async Task GetQuizPassageAsync_ReturnsAttemptHistoryOrdered()
     {
-        await using var db = CreateDbContext();
+        await using var db = TestDbContextFactory.CreateDbContext();
         var data = await SeedFormationGraphAsync(db, enrolled: true);
         var service = new FormationService(db);
 
@@ -263,7 +263,7 @@ public sealed class FormationServiceTests
     [Fact]
     public async Task GetProgressionAsync_ReturnsReadOnly_WhenSessionIsUpcoming()
     {
-        await using var db = CreateDbContext();
+        await using var db = TestDbContextFactory.CreateDbContext();
         var data = await SeedFormationGraphAsync(db, enrolled: true);
         var service = new FormationService(db);
 
@@ -294,7 +294,7 @@ public sealed class FormationServiceTests
     [Fact]
     public async Task MarquerLeconTermineeAsync_Throws_WhenPreviousLessonIsNotCompleted()
     {
-        await using var db = CreateDbContext();
+        await using var db = TestDbContextFactory.CreateDbContext();
         var data = await SeedFormationGraphAsync(db, enrolled: true, includeQuiz: false);
         var service = new FormationService(db);
 
@@ -320,7 +320,7 @@ public sealed class FormationServiceTests
     [Fact]
     public async Task SoumettreQuizAsync_Throws_WhenModuleLessonsAreNotCompleted()
     {
-        await using var db = CreateDbContext();
+        await using var db = TestDbContextFactory.CreateDbContext();
         var data = await SeedFormationGraphAsync(db, enrolled: true);
         var service = new FormationService(db);
 
@@ -331,16 +331,6 @@ public sealed class FormationServiceTests
 
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*Terminez toutes les lecons du module*");
-    }
-
-    private static AppDbContext CreateDbContext()
-    {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
-            .Options;
-        var db = new AppDbContext(options);
-        db.Database.EnsureCreated();
-        return db;
     }
 
     private static async Task<FormationGraphData> SeedFormationGraphAsync(AppDbContext db, bool enrolled, bool includeQuiz = true)

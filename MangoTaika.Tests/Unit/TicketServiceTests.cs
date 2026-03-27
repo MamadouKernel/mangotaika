@@ -1,5 +1,4 @@
 using FluentAssertions;
-using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
 using MangoTaika.Hubs;
@@ -15,7 +14,7 @@ public sealed class TicketServiceTests
     [Fact]
     public async Task CreateAsync_AssignsLeastLoadedActiveAgent_WhenDefaultAgentIsInactive()
     {
-        await using var db = CreateDbContext();
+        await using var db = TestDbContextFactory.CreateDbContext();
         await TestDataSeeder.EnsureRolesAsync(db, "AgentSupport");
 
         var supportGroup = new Groupe { Id = Guid.NewGuid(), Nom = "Support L1" };
@@ -62,7 +61,7 @@ public sealed class TicketServiceTests
     [Fact]
     public async Task GetByIdAsync_EscalatesOverdueTicket_AndPersistsNotifications()
     {
-        await using var db = CreateDbContext();
+        await using var db = TestDbContextFactory.CreateDbContext();
         await TestDataSeeder.EnsureRolesAsync(db, "AgentSupport", "Superviseur");
 
         var creator = await TestDataSeeder.AddUserAsync(db, "Mariam", "Scout", []);
@@ -104,7 +103,7 @@ public sealed class TicketServiceTests
     [Fact]
     public async Task GetByUserAsync_ReturnsUserTickets_WhenEscalationRulesRun()
     {
-        await using var db = CreateDbContext();
+        await using var db = TestDbContextFactory.CreateDbContext();
         await TestDataSeeder.EnsureRolesAsync(db, "AgentSupport");
 
         var creator = await TestDataSeeder.AddUserAsync(db, "Koffi", "Parent", []);
@@ -120,16 +119,6 @@ public sealed class TicketServiceTests
         var results = await service.GetByUserAsync(creator.Id);
 
         results.Should().ContainSingle(t => t.Id == ticket.Id);
-    }
-
-    private static AppDbContext CreateDbContext()
-    {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
-            .Options;
-        var db = new AppDbContext(options);
-        db.Database.EnsureCreated();
-        return db;
     }
 
     private static Ticket CreateTicket(Guid creatorId, Guid? assigneeId, string number, StatutTicket statut, DateTime slaDeadline)
