@@ -82,6 +82,7 @@ public class ScoutCreateDto : IValidatableObject
 public class ScoutImportResultDto
 {
     public int CreatedCount { get; set; }
+    public int UpdatedCount { get; set; }
     public int SkippedCount { get; set; }
     public List<ScoutImportErrorDto> Errors { get; set; } = [];
 }

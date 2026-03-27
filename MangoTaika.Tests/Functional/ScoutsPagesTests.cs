@@ -195,13 +195,109 @@ public sealed class ScoutsPagesTests
 
         var html = await client.GetStringAsync(response.Headers.Location);
 
-        html.Should().Contain("1 scout(s) importe(s) avec succes.");
-        html.Should().Contain("1 cree(s), 1 ignore(s), 1 erreur(s).");
+        html.Should().Contain("1 scout(s) cree(s) et 0 scout(s) mis a jour.");
+        html.Should().Contain("1 cree(s), 0 mis a jour, 1 non enregistre(s).");
         html.Should().Contain("Matricule duplique dans le fichier");
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Scouts.Should().ContainSingle(s => s.Matricule == "0583772X" && s.Nom == "Kone" && s.Prenom == "Awa");
+    }
+
+    [Fact]
+    public async Task ImportExcel_Updates_Existing_Scout_And_Continues_On_NumeroCarte_Conflict()
+    {
+        await using var factory = new SupportWebApplicationFactory();
+        ApplicationUser gestionnaire = null!;
+        Guid existingScoutId = Guid.Empty;
+
+        await factory.SeedAsync(async db =>
+        {
+            await TestDataSeeder.EnsureRolesAsync(db, "Gestionnaire");
+            gestionnaire = await TestDataSeeder.AddUserAsync(db, "Awa", "Gestion", ["Gestionnaire"]);
+
+            var existingScout = new Scout
+            {
+                Id = Guid.NewGuid(),
+                Matricule = "0583774X",
+                Nom = "Ancien",
+                Prenom = "Scout",
+                DateNaissance = new DateTime(2011, 1, 1),
+                District = "District historique"
+            };
+
+            db.Scouts.Add(existingScout);
+            db.Scouts.Add(new Scout
+            {
+                Id = Guid.NewGuid(),
+                Matricule = "0583775X",
+                Nom = "Reserve",
+                Prenom = "Carte",
+                DateNaissance = new DateTime(2010, 2, 2),
+                NumeroCarte = "ASCCI-999"
+            });
+
+            existingScoutId = existingScout.Id;
+        });
+
+        using var client = factory.CreateAuthenticatedClient(gestionnaire.Id, "Gestionnaire");
+        var indexHtml = await client.GetStringAsync("/Scouts");
+        var token = HtmlTestHelpers.ExtractAntiForgeryToken(indexHtml);
+
+        using var workbook = new XLWorkbook();
+        var worksheet = workbook.Worksheets.Add("Scouts");
+        worksheet.Cell(1, 1).Value = "Matricule";
+        worksheet.Cell(1, 2).Value = "Nom";
+        worksheet.Cell(1, 3).Value = "Prenom";
+        worksheet.Cell(1, 4).Value = "DateNaissance";
+        worksheet.Cell(1, 5).Value = "NumeroCarte";
+
+        worksheet.Cell(2, 1).Value = "0583774X";
+        worksheet.Cell(2, 2).Value = "Kone";
+        worksheet.Cell(2, 3).Value = "Awa";
+        worksheet.Cell(2, 4).Value = new DateTime(2012, 5, 14);
+
+        worksheet.Cell(3, 1).Value = "0583776X";
+        worksheet.Cell(3, 2).Value = "Doumbia";
+        worksheet.Cell(3, 3).Value = "Lina";
+        worksheet.Cell(3, 4).Value = new DateTime(2013, 6, 10);
+        worksheet.Cell(3, 5).Value = "ASCCI-999";
+
+        worksheet.Cell(4, 1).Value = "0583777X";
+        worksheet.Cell(4, 2).Value = "Yao";
+        worksheet.Cell(4, 3).Value = "Kevin";
+        worksheet.Cell(4, 4).Value = new DateTime(2014, 7, 11);
+        worksheet.Cell(4, 5).Value = "ASCCI-777";
+
+        using var workbookStream = new MemoryStream();
+        workbook.SaveAs(workbookStream);
+        workbookStream.Position = 0;
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/Scouts/ImportExcel");
+        request.Headers.Add("RequestVerificationToken", token);
+
+        var content = new MultipartFormDataContent();
+        content.Add(new StreamContent(workbookStream), "fichier", "import-scouts-upsert.xlsx");
+        request.Content = content;
+
+        var response = await client.SendAsync(request);
+        response.StatusCode.Should().Be(HttpStatusCode.Found);
+        response.Headers.Location.Should().NotBeNull();
+
+        var html = await client.GetStringAsync(response.Headers.Location);
+
+        html.Should().Contain("1 scout(s) cree(s) et 1 scout(s) mis a jour.");
+        html.Should().Contain("1 cree(s), 1 mis a jour, 1 non enregistre(s).");
+        html.Should().Contain("Numero de carte deja existant");
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Scouts.Should().Contain(s => s.Matricule == "0583777X" && s.NumeroCarte == "ASCCI-777");
+        db.Scouts.Should().Contain(s =>
+            s.Id == existingScoutId &&
+            s.Nom == "Kone" &&
+            s.Prenom == "Awa" &&
+            s.District == "District historique");
     }
 
     [Fact]
@@ -257,7 +353,7 @@ public sealed class ScoutsPagesTests
 
         var html = await client.GetStringAsync(response.Headers.Location);
 
-        html.Should().Contain("1 cree(s), 5 ignore(s), 5 erreur(s).");
+        html.Should().Contain("1 cree(s), 0 mis a jour, 5 non enregistre(s).");
         html.Should().Contain("Affichage limite aux 3 premieres erreurs.");
     }
 }

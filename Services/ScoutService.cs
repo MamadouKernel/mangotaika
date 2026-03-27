@@ -200,20 +200,21 @@ public class ScoutService(AppDbContext db) : IScoutService
 
             var groupesByName = groupes
                 .GroupBy(g => NormalizeLookup(g.Nom))
-                .ToDictionary(g => g.Key, g => g.First());
-            var branchesByName = branches
-                .GroupBy(b => NormalizeLookup(b.Nom))
-                .ToDictionary(g => g.Key, g => g.First());
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+            var branchesByGroupAndName = branches
+                .GroupBy(b => BuildBranchLookupKey(b.GroupeId, b.Nom))
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+            var branchesById = branches.ToDictionary(b => b.Id);
 
-            var existingMatricules = new HashSet<string>(
-                await db.Scouts.Select(s => s.Matricule).ToListAsync(),
-                StringComparer.OrdinalIgnoreCase);
-            var existingNumeroCartes = new HashSet<string>(
-                await db.Scouts
-                    .Where(s => s.NumeroCarte != null)
-                    .Select(s => s.NumeroCarte!)
-                    .ToListAsync(),
-                StringComparer.OrdinalIgnoreCase);
+            var existingScouts = await db.Scouts.ToListAsync();
+            var existingScoutsByMatricule = existingScouts
+                .Where(s => !string.IsNullOrWhiteSpace(s.Matricule))
+                .GroupBy(s => NormalizeLookup(s.Matricule))
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+            var existingScoutsByNumeroCarte = existingScouts
+                .Where(s => !string.IsNullOrWhiteSpace(s.NumeroCarte))
+                .GroupBy(s => NormalizeLookup(s.NumeroCarte))
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
             var seenMatricules = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var seenNumeroCartes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -242,6 +243,10 @@ public class ScoutService(AppDbContext db) : IScoutService
                 var adresse = NormalizeOptional(ReadString(row, headerMap, "adressegeographique"));
                 var groupeNom = NormalizeOptional(ReadString(row, headerMap, "groupe"));
                 var brancheNom = NormalizeOptional(ReadString(row, headerMap, "branche"));
+                var assurance = ReadOptionalBoolean(row, headerMap, "assuranceannuelle");
+
+                Scout? existingScout = null;
+                var matriculeKey = NormalizeLookup(matricule);
 
                 if (string.IsNullOrWhiteSpace(matricule))
                 {
@@ -251,6 +256,16 @@ public class ScoutService(AppDbContext db) : IScoutService
                 {
                     rowErrors.Add($"Matricule invalide: {matricule}. Format attendu: {ScoutMatriculeFormat.Example}.");
                 }
+                else
+                {
+                    if (!seenMatricules.Add(matriculeKey))
+                    {
+                        rowErrors.Add($"Matricule duplique dans le fichier: {matricule}.");
+                    }
+
+                    existingScoutsByMatricule.TryGetValue(matriculeKey, out existingScout);
+                }
+
                 if (string.IsNullOrWhiteSpace(nom))
                 {
                     rowErrors.Add("Nom obligatoire.");
@@ -265,54 +280,36 @@ public class ScoutService(AppDbContext db) : IScoutService
                     rowErrors.Add("Date de naissance invalide.");
                 }
 
-                var assurance = TryReadBoolean(row, headerMap, "assuranceannuelle");
-
-                Groupe? groupe = null;
+                Groupe? providedGroupe = null;
                 if (!string.IsNullOrWhiteSpace(groupeNom))
                 {
-                    if (!groupesByName.TryGetValue(NormalizeLookup(groupeNom), out groupe))
+                    if (!groupesByName.TryGetValue(NormalizeLookup(groupeNom), out providedGroupe))
                     {
                         rowErrors.Add($"Groupe introuvable: {groupeNom}.");
                     }
                 }
 
-                Branche? branche = null;
-                if (!string.IsNullOrWhiteSpace(brancheNom))
-                {
-                    if (!branchesByName.TryGetValue(NormalizeLookup(brancheNom), out branche))
-                    {
-                        rowErrors.Add($"Branche introuvable: {brancheNom}.");
-                    }
-                }
+                var effectiveGroupe = ResolveImportGroupe(existingScout, providedGroupe);
+                var effectiveBranche = ResolveImportBranche(
+                    brancheNom,
+                    effectiveGroupe,
+                    existingScout,
+                    branchesByGroupAndName,
+                    branchesById,
+                    rowErrors);
 
-                if (groupe != null && branche != null && branche.GroupeId != groupe.Id)
-                {
-                    rowErrors.Add("La branche selectionnee n'appartient pas au groupe renseigne.");
-                }
-
-                var matriculeKey = (matricule ?? string.Empty).Trim().ToUpperInvariant();
-                if (!string.IsNullOrWhiteSpace(matriculeKey))
-                {
-                    if (existingMatricules.Contains(matriculeKey))
-                    {
-                        rowErrors.Add($"Matricule deja existant: {matricule}.");
-                    }
-                    if (!seenMatricules.Add(matriculeKey))
-                    {
-                        rowErrors.Add($"Matricule duplique dans le fichier: {matricule}.");
-                    }
-                }
-
-                var numeroCarteKey = (numeroCarte ?? string.Empty).Trim().ToUpperInvariant();
+                var numeroCarteKey = NormalizeLookup(numeroCarte);
                 if (!string.IsNullOrWhiteSpace(numeroCarteKey))
                 {
-                    if (existingNumeroCartes.Contains(numeroCarteKey))
-                    {
-                        rowErrors.Add($"Numero de carte deja existant: {numeroCarte}.");
-                    }
                     if (!seenNumeroCartes.Add(numeroCarteKey))
                     {
                         rowErrors.Add($"Numero de carte duplique dans le fichier: {numeroCarte}.");
+                    }
+
+                    if (existingScoutsByNumeroCarte.TryGetValue(numeroCarteKey, out var scoutAvecNumeroCarte)
+                        && scoutAvecNumeroCarte.Id != existingScout?.Id)
+                    {
+                        rowErrors.Add($"Numero de carte deja existant: {numeroCarte}.");
                     }
                 }
 
@@ -327,43 +324,86 @@ public class ScoutService(AppDbContext db) : IScoutService
                     continue;
                 }
 
-                var scout = new Scout
+                var isUpdate = existingScout is not null;
+                var scout = existingScout ?? new Scout
                 {
-                    Id = Guid.NewGuid(),
-                    Matricule = matricule!,
-                    Nom = nom!.Trim(),
-                    Prenom = prenom!.Trim(),
-                    DateNaissance = DateTime.SpecifyKind(dateNaissance, DateTimeKind.Utc),
-                    LieuNaissance = lieuNaissance,
-                    Sexe = sexe,
-                    Telephone = telephone,
-                    Email = email,
-                    RegionScoute = regionScoute,
-                    District = district,
-                    NumeroCarte = numeroCarte,
-                    Fonction = fonction,
-                    AssuranceAnnuelle = assurance,
-                    AdresseGeographique = adresse,
-                    GroupeId = groupe?.Id,
-                    BrancheId = branche?.Id
+                    Id = Guid.NewGuid()
                 };
+                var previousNumeroCarteKey = NormalizeLookup(scout.NumeroCarte);
+                var snapshot = isUpdate ? CaptureImportSnapshot(scout) : null;
 
-                db.Scouts.Add(scout);
+                ApplyImportValuesToScout(
+                    scout,
+                    new ScoutImportValues
+                    {
+                        Matricule = matricule!,
+                        Nom = nom!.Trim(),
+                        Prenom = prenom!.Trim(),
+                        DateNaissance = DateTime.SpecifyKind(dateNaissance, DateTimeKind.Utc),
+                        LieuNaissance = lieuNaissance,
+                        Sexe = sexe,
+                        Telephone = telephone,
+                        Email = email,
+                        RegionScoute = regionScoute,
+                        District = district,
+                        NumeroCarte = numeroCarte,
+                        Fonction = fonction,
+                        AssuranceAnnuelle = assurance,
+                        AdresseGeographique = adresse,
+                        GroupeId = effectiveGroupe?.Id,
+                        BrancheId = effectiveBranche?.Id
+                    },
+                    preserveExistingOptionalValues: isUpdate);
 
+                if (isUpdate)
+                {
+                    scout.IsActive = true;
+                }
+                else
+                {
+                    db.Scouts.Add(scout);
+                }
+
+                var currentNumeroCarteKey = NormalizeLookup(scout.NumeroCarte);
                 try
                 {
                     await SaveChangesAsync();
-                    existingMatricules.Add(matriculeKey);
-                    if (!string.IsNullOrWhiteSpace(numeroCarteKey))
+                    existingScoutsByMatricule[matriculeKey] = scout;
+
+                    if (!string.IsNullOrWhiteSpace(previousNumeroCarteKey)
+                        && !string.Equals(previousNumeroCarteKey, currentNumeroCarteKey, StringComparison.OrdinalIgnoreCase)
+                        && existingScoutsByNumeroCarte.TryGetValue(previousNumeroCarteKey, out var previousOwner)
+                        && previousOwner.Id == scout.Id)
                     {
-                        existingNumeroCartes.Add(numeroCarteKey);
+                        existingScoutsByNumeroCarte.Remove(previousNumeroCarteKey);
                     }
 
-                    result.CreatedCount++;
+                    if (!string.IsNullOrWhiteSpace(currentNumeroCarteKey))
+                    {
+                        existingScoutsByNumeroCarte[currentNumeroCarteKey] = scout;
+                    }
+
+                    if (isUpdate)
+                    {
+                        result.UpdatedCount++;
+                    }
+                    else
+                    {
+                        result.CreatedCount++;
+                    }
                 }
                 catch (InvalidOperationException ex)
                 {
-                    db.Entry(scout).State = EntityState.Detached;
+                    if (isUpdate)
+                    {
+                        RestoreImportSnapshot(scout, snapshot!);
+                        db.Entry(scout).State = EntityState.Unchanged;
+                    }
+                    else
+                    {
+                        db.Entry(scout).State = EntityState.Detached;
+                    }
+
                     result.Errors.Add(new ScoutImportErrorDto
                     {
                         LineNumber = rowNumber,
@@ -371,16 +411,24 @@ public class ScoutService(AppDbContext db) : IScoutService
                     });
                     result.SkippedCount++;
                 }
-                catch (DbUpdateException ex)
+                catch (DbUpdateException)
                 {
-                    db.Entry(scout).State = EntityState.Detached;
+                    if (isUpdate)
+                    {
+                        RestoreImportSnapshot(scout, snapshot!);
+                        db.Entry(scout).State = EntityState.Unchanged;
+                    }
+                    else
+                    {
+                        db.Entry(scout).State = EntityState.Detached;
+                    }
+
                     result.Errors.Add(new ScoutImportErrorDto
                     {
                         LineNumber = rowNumber,
                         Message = $"Enregistrement impossible: {ImportPersistenceErrorMessage}"
                     });
                     result.SkippedCount++;
-                    throw new InvalidOperationException(ImportPersistenceErrorMessage, ex);
                 }
             }
 
@@ -498,12 +546,12 @@ public class ScoutService(AppDbContext db) : IScoutService
             || DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
     }
 
-    private static bool TryReadBoolean(IXLRow row, IDictionary<string, int> headerMap, string header)
+    private static bool? ReadOptionalBoolean(IXLRow row, IDictionary<string, int> headerMap, string header)
     {
         var raw = ReadString(row, headerMap, header);
         if (string.IsNullOrWhiteSpace(raw))
         {
-            return false;
+            return null;
         }
 
         return raw.Trim().ToLowerInvariant() switch
@@ -513,6 +561,10 @@ public class ScoutService(AppDbContext db) : IScoutService
             "1" => true,
             "x" => true,
             "yes" => true,
+            "non" => false,
+            "false" => false,
+            "0" => false,
+            "no" => false,
             _ => false
         };
     }
@@ -528,6 +580,126 @@ public class ScoutService(AppDbContext db) : IScoutService
     private static string NormalizeLookup(string? value)
     {
         return (value ?? string.Empty).Trim().ToUpperInvariant();
+    }
+
+    private static string BuildBranchLookupKey(Guid groupeId, string? brancheNom)
+    {
+        return $"{groupeId:N}:{NormalizeLookup(brancheNom)}";
+    }
+
+    private static Groupe? ResolveImportGroupe(Scout? existingScout, Groupe? providedGroupe)
+    {
+        return providedGroupe ?? (existingScout?.GroupeId is Guid existingGroupeId
+            ? new Groupe { Id = existingGroupeId }
+            : null);
+    }
+
+    private static Branche? ResolveImportBranche(
+        string? brancheNom,
+        Groupe? effectiveGroupe,
+        Scout? existingScout,
+        IReadOnlyDictionary<string, Branche> branchesByGroupAndName,
+        IReadOnlyDictionary<Guid, Branche> branchesById,
+        ICollection<string> rowErrors)
+    {
+        if (!string.IsNullOrWhiteSpace(brancheNom))
+        {
+            if (effectiveGroupe is null)
+            {
+                rowErrors.Add("Le groupe est obligatoire lorsqu'une branche est renseignee.");
+                return null;
+            }
+
+            var branchKey = BuildBranchLookupKey(effectiveGroupe.Id, brancheNom);
+            if (!branchesByGroupAndName.TryGetValue(branchKey, out var branche))
+            {
+                rowErrors.Add($"Branche introuvable pour le groupe renseigne: {brancheNom}.");
+                return null;
+            }
+
+            return branche;
+        }
+
+        if (existingScout?.BrancheId is not Guid existingBrancheId)
+        {
+            return null;
+        }
+
+        if (!branchesById.TryGetValue(existingBrancheId, out var existingBranche))
+        {
+            return null;
+        }
+
+        if (effectiveGroupe is null || existingBranche.GroupeId == effectiveGroupe.Id)
+        {
+            return existingBranche;
+        }
+
+        rowErrors.Add("La branche existante du scout n'appartient pas au groupe renseigne. Precisez une branche compatible.");
+        return null;
+    }
+
+    private static ScoutImportSnapshot CaptureImportSnapshot(Scout scout) => new(
+        scout.Matricule,
+        scout.Nom,
+        scout.Prenom,
+        scout.DateNaissance,
+        scout.LieuNaissance,
+        scout.Sexe,
+        scout.Telephone,
+        scout.Email,
+        scout.RegionScoute,
+        scout.District,
+        scout.NumeroCarte,
+        scout.Fonction,
+        scout.AssuranceAnnuelle,
+        scout.AdresseGeographique,
+        scout.GroupeId,
+        scout.BrancheId,
+        scout.IsActive);
+
+    private static void RestoreImportSnapshot(Scout scout, ScoutImportSnapshot snapshot)
+    {
+        scout.Matricule = snapshot.Matricule;
+        scout.Nom = snapshot.Nom;
+        scout.Prenom = snapshot.Prenom;
+        scout.DateNaissance = snapshot.DateNaissance;
+        scout.LieuNaissance = snapshot.LieuNaissance;
+        scout.Sexe = snapshot.Sexe;
+        scout.Telephone = snapshot.Telephone;
+        scout.Email = snapshot.Email;
+        scout.RegionScoute = snapshot.RegionScoute;
+        scout.District = snapshot.District;
+        scout.NumeroCarte = snapshot.NumeroCarte;
+        scout.Fonction = snapshot.Fonction;
+        scout.AssuranceAnnuelle = snapshot.AssuranceAnnuelle;
+        scout.AdresseGeographique = snapshot.AdresseGeographique;
+        scout.GroupeId = snapshot.GroupeId;
+        scout.BrancheId = snapshot.BrancheId;
+        scout.IsActive = snapshot.IsActive;
+    }
+
+    private static void ApplyImportValuesToScout(
+        Scout scout,
+        ScoutImportValues values,
+        bool preserveExistingOptionalValues)
+    {
+        scout.Matricule = values.Matricule;
+        scout.Nom = values.Nom;
+        scout.Prenom = values.Prenom;
+        scout.DateNaissance = values.DateNaissance;
+        scout.LieuNaissance = preserveExistingOptionalValues ? values.LieuNaissance ?? scout.LieuNaissance : values.LieuNaissance;
+        scout.Sexe = preserveExistingOptionalValues ? values.Sexe ?? scout.Sexe : values.Sexe;
+        scout.Telephone = preserveExistingOptionalValues ? values.Telephone ?? scout.Telephone : values.Telephone;
+        scout.Email = preserveExistingOptionalValues ? values.Email ?? scout.Email : values.Email;
+        scout.RegionScoute = preserveExistingOptionalValues ? values.RegionScoute ?? scout.RegionScoute : values.RegionScoute;
+        scout.District = preserveExistingOptionalValues ? values.District ?? scout.District : values.District;
+        scout.NumeroCarte = preserveExistingOptionalValues ? values.NumeroCarte ?? scout.NumeroCarte : values.NumeroCarte;
+        scout.Fonction = preserveExistingOptionalValues ? values.Fonction ?? scout.Fonction : values.Fonction;
+        scout.AssuranceAnnuelle = values.AssuranceAnnuelle ?? (preserveExistingOptionalValues ? scout.AssuranceAnnuelle : false);
+        scout.AdresseGeographique = preserveExistingOptionalValues ? values.AdresseGeographique ?? scout.AdresseGeographique : values.AdresseGeographique;
+        scout.GroupeId = values.GroupeId ?? (preserveExistingOptionalValues ? scout.GroupeId : null);
+        scout.BrancheId = values.BrancheId ?? (preserveExistingOptionalValues ? scout.BrancheId : null);
     }
 
     private async Task EnsureUniqueMatriculeAsync(string matricule, Guid? currentId = null)
@@ -653,4 +825,43 @@ public class ScoutService(AppDbContext db) : IScoutService
             throw new InvalidOperationException("Le numero de carte existe deja.", ex);
         }
     }
+
+    private sealed record ScoutImportValues
+    {
+        public string Matricule { get; init; } = string.Empty;
+        public string Nom { get; init; } = string.Empty;
+        public string Prenom { get; init; } = string.Empty;
+        public DateTime DateNaissance { get; init; }
+        public string? LieuNaissance { get; init; }
+        public string? Sexe { get; init; }
+        public string? Telephone { get; init; }
+        public string? Email { get; init; }
+        public string? RegionScoute { get; init; }
+        public string? District { get; init; }
+        public string? NumeroCarte { get; init; }
+        public string? Fonction { get; init; }
+        public bool? AssuranceAnnuelle { get; init; }
+        public string? AdresseGeographique { get; init; }
+        public Guid? GroupeId { get; init; }
+        public Guid? BrancheId { get; init; }
+    }
+
+    private sealed record ScoutImportSnapshot(
+        string Matricule,
+        string Nom,
+        string Prenom,
+        DateTime DateNaissance,
+        string? LieuNaissance,
+        string? Sexe,
+        string? Telephone,
+        string? Email,
+        string? RegionScoute,
+        string? District,
+        string? NumeroCarte,
+        string? Fonction,
+        bool AssuranceAnnuelle,
+        string? AdresseGeographique,
+        Guid? GroupeId,
+        Guid? BrancheId,
+        bool IsActive);
 }

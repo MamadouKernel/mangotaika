@@ -137,18 +137,21 @@ public sealed class ScoutServiceIntegrationTests
     }
 
     [Fact]
-    public async Task ImportFromExcelAsync_Creates_Valid_Rows_And_Skips_Invalid_Ones()
+    public async Task ImportFromExcelAsync_Updates_Existing_Scout_When_Matricule_Exists()
     {
         await using var db = TestDbContextFactory.CreateDbContext();
 
-        db.Scouts.Add(new Scout
+        var existingScout = new Scout
         {
             Id = Guid.NewGuid(),
             Matricule = "0583770X",
             Nom = "Existant",
             Prenom = "Scout",
-            DateNaissance = new DateTime(2011, 1, 1)
-        });
+            DateNaissance = new DateTime(2011, 1, 1),
+            District = "Abidjan Nord",
+            NumeroCarte = "ASCCI-001"
+        };
+        db.Scouts.Add(existingScout);
         await db.SaveChangesAsync();
 
         var service = new ScoutService(db);
@@ -160,15 +163,71 @@ public sealed class ScoutServiceIntegrationTests
         worksheet.Cell(1, 3).Value = "Prenom";
         worksheet.Cell(1, 4).Value = "DateNaissance";
 
-        worksheet.Cell(2, 1).Value = "0583771X";
+        worksheet.Cell(1, 5).Value = "NumeroCarte";
+
+        worksheet.Cell(2, 1).Value = "0583770X";
         worksheet.Cell(2, 2).Value = "Kone";
         worksheet.Cell(2, 3).Value = "Awa";
         worksheet.Cell(2, 4).Value = new DateTime(2012, 5, 14);
+        worksheet.Cell(2, 5).Value = "ASCCI-002";
 
-        worksheet.Cell(3, 1).Value = "0583770X";
-        worksheet.Cell(3, 2).Value = "Doublon";
-        worksheet.Cell(3, 3).Value = "Scout";
-        worksheet.Cell(3, 4).Value = new DateTime(2012, 6, 1);
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        stream.Position = 0;
+
+        var result = await service.ImportFromExcelAsync(stream);
+
+        result.CreatedCount.Should().Be(0);
+        result.UpdatedCount.Should().Be(1);
+        result.SkippedCount.Should().Be(0);
+        result.Errors.Should().BeEmpty();
+        db.Scouts.Should().HaveCount(1);
+
+        var updatedScout = await db.Scouts.SingleAsync(s => s.Id == existingScout.Id);
+        updatedScout.Nom.Should().Be("Kone");
+        updatedScout.Prenom.Should().Be("Awa");
+        updatedScout.DateNaissance.Should().Be(new DateTime(2012, 5, 14));
+        updatedScout.NumeroCarte.Should().Be("ASCCI-002");
+        updatedScout.District.Should().Be("Abidjan Nord");
+    }
+
+    [Fact]
+    public async Task ImportFromExcelAsync_Skips_NumeroCarte_Conflict_And_Continues()
+    {
+        await using var db = TestDbContextFactory.CreateDbContext();
+
+        db.Scouts.Add(new Scout
+        {
+            Id = Guid.NewGuid(),
+            Matricule = "0583771X",
+            Nom = "Premier",
+            Prenom = "Scout",
+            DateNaissance = new DateTime(2011, 1, 1),
+            NumeroCarte = "ASCCI-001"
+        });
+        await db.SaveChangesAsync();
+
+        var service = new ScoutService(db);
+        using var workbook = new XLWorkbook();
+        var worksheet = workbook.Worksheets.Add("Scouts");
+
+        worksheet.Cell(1, 1).Value = "Matricule";
+        worksheet.Cell(1, 2).Value = "Nom";
+        worksheet.Cell(1, 3).Value = "Prenom";
+        worksheet.Cell(1, 4).Value = "DateNaissance";
+        worksheet.Cell(1, 5).Value = "NumeroCarte";
+
+        worksheet.Cell(2, 1).Value = "0583772X";
+        worksheet.Cell(2, 2).Value = "Kone";
+        worksheet.Cell(2, 3).Value = "Awa";
+        worksheet.Cell(2, 4).Value = new DateTime(2012, 5, 14);
+        worksheet.Cell(2, 5).Value = "ASCCI-001";
+
+        worksheet.Cell(3, 1).Value = "0583773X";
+        worksheet.Cell(3, 2).Value = "Yao";
+        worksheet.Cell(3, 3).Value = "Kevin";
+        worksheet.Cell(3, 4).Value = new DateTime(2013, 6, 10);
+        worksheet.Cell(3, 5).Value = "ASCCI-002";
 
         using var stream = new MemoryStream();
         workbook.SaveAs(stream);
@@ -177,10 +236,11 @@ public sealed class ScoutServiceIntegrationTests
         var result = await service.ImportFromExcelAsync(stream);
 
         result.CreatedCount.Should().Be(1);
+        result.UpdatedCount.Should().Be(0);
         result.SkippedCount.Should().Be(1);
-        result.Errors.Should().ContainSingle(e => e.LineNumber == 3 && e.Message.Contains("Matricule deja existant"));
+        result.Errors.Should().ContainSingle(e => e.LineNumber == 2 && e.Message.Contains("Numero de carte deja existant"));
         db.Scouts.Should().HaveCount(2);
-        db.Scouts.Should().Contain(s => s.Matricule == "0583771X" && s.Nom == "Kone" && s.Prenom == "Awa");
+        db.Scouts.Should().Contain(s => s.Matricule == "0583773X" && s.NumeroCarte == "ASCCI-002");
     }
 
     [Fact]

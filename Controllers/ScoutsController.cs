@@ -157,19 +157,21 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db) : Con
             return RedirectToAction(nameof(Index));
         }
 
-        if (result.CreatedCount > 0)
+        if (result.CreatedCount > 0 || result.UpdatedCount > 0)
         {
-            TempData["Success"] = $"{result.CreatedCount} scout(s) importe(s) avec succes.";
+            TempData["Success"] =
+                $"{result.CreatedCount} scout(s) cree(s) et {result.UpdatedCount} scout(s) mis a jour.";
         }
 
-        if (result.CreatedCount == 0 && result.Errors.Count > 0)
+        if (result.CreatedCount == 0 && result.UpdatedCount == 0 && result.Errors.Count > 0)
         {
             TempData["ImportError"] = "Aucun scout n'a pu etre importe. Corrigez les lignes en erreur, verifiez le format du modele Excel, puis recommencez.";
         }
 
         if (result.Errors.Count > 0 || result.SkippedCount > 0)
         {
-            TempData["ImportSummary"] = $"{result.CreatedCount} cree(s), {result.SkippedCount} ignore(s), {result.Errors.Count} erreur(s).";
+            TempData["ImportSummary"] =
+                $"{result.CreatedCount} cree(s), {result.UpdatedCount} mis a jour, {result.SkippedCount} non enregistre(s).";
             var previewErrors = result.Errors
                 .Take(MaxDisplayedImportErrors)
                 .Select(error => new ScoutImportErrorDto
