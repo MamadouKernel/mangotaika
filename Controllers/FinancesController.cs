@@ -18,6 +18,11 @@ public class FinancesController(AppDbContext db, UserManager<ApplicationUser> us
         var year = annee ?? DateTime.Now.Year;
         var (page, ps) = ListPagination.Read(Request);
 
+        var previousYearBalance = await db.TransactionsFinancieres.AsNoTracking()
+            .Where(t => !t.EstSupprime && t.DateTransaction.Year == year - 1)
+            .Select(t => t.Type == TypeTransaction.Recette ? t.Montant : -t.Montant)
+            .SumAsync();
+
         var baseQuery = db.TransactionsFinancieres.AsNoTracking()
             .Where(t => !t.EstSupprime && t.DateTransaction.Year == year);
 
@@ -50,6 +55,7 @@ public class FinancesController(AppDbContext db, UserManager<ApplicationUser> us
             .ToList();
 
         ViewBag.Annee = year;
+        ViewBag.ReportANouveau = previousYearBalance;
         ViewBag.TotalRecettes = totalRecettes;
         ViewBag.TotalDepenses = totalDepenses;
         ViewBag.Groupes = await db.Groupes.Where(g => g.IsActive).OrderBy(g => g.Nom).ToListAsync();

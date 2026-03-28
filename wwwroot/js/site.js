@@ -272,6 +272,67 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 
+document.addEventListener('DOMContentLoaded', function () {
+    function normalizeSearchValue(value) {
+        return String(value || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+    }
+
+    document.querySelectorAll('[data-searchable-select]').forEach(function (select) {
+        var wrapper = select.closest('[data-searchable-select-wrapper]');
+        if (!wrapper) return;
+
+        var searchInput = wrapper.querySelector('[data-select-search-input]');
+        if (!searchInput) return;
+
+        var emptyState = wrapper.querySelector('[data-select-search-empty]');
+        var groupSelectId = select.getAttribute('data-filter-group-select');
+        var groupSelect = groupSelectId ? document.getElementById(groupSelectId) : null;
+        var options = Array.prototype.slice.call(select.options || []);
+
+        function syncOptions() {
+            var query = normalizeSearchValue(searchInput.value);
+            var selectedGroup = groupSelect ? (groupSelect.value || '') : '';
+            var visibleCount = 0;
+
+            options.forEach(function (option) {
+                if (!option.value) {
+                    option.hidden = false;
+                    option.disabled = false;
+                    return;
+                }
+
+                var optionGroup = option.getAttribute('data-group') || '';
+                var searchLabel = option.getAttribute('data-search-label') || option.textContent || '';
+                var matchesGroup = !selectedGroup || optionGroup === selectedGroup;
+                var matchesQuery = !query || normalizeSearchValue(searchLabel).indexOf(query) !== -1;
+                var shouldShow = option.selected || (matchesGroup && matchesQuery);
+
+                option.hidden = !shouldShow;
+                option.disabled = !shouldShow;
+
+                if (shouldShow) {
+                    visibleCount += 1;
+                }
+            });
+
+            if (emptyState) {
+                emptyState.hidden = visibleCount !== 0;
+            }
+        }
+
+        searchInput.addEventListener('input', syncOptions);
+
+        if (groupSelect) {
+            groupSelect.addEventListener('change', syncOptions);
+        }
+
+        syncOptions();
+    });
+});
+
 // Sidebar dropdown toggle
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.sidebar-toggle').forEach(function (toggle) {

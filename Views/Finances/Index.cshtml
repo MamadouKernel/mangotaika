@@ -5,9 +5,11 @@
     Layout = "_LayoutAdmin";
     var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
     var annee = (int)ViewBag.Annee;
+    var reportANouveau = (decimal)ViewBag.ReportANouveau;
     var totalR = (decimal)ViewBag.TotalRecettes;
     var totalD = (decimal)ViewBag.TotalDepenses;
     var solde = totalR - totalD;
+    var soldeDisponible = reportANouveau + solde;
     var groupes = ViewBag.Groupes as List<Groupe> ?? new();
     var scouts = ViewBag.Scouts as List<Scout> ?? new();
 }
@@ -27,6 +29,25 @@
     <div class="col-md-4"><div class="card-3d p-3 text-center"><small class="text-muted-custom">Solde</small><h3 style="color:@(solde >= 0 ? "#10b981" : "#f87171");">@solde.ToString("N0") FCFA</h3></div></div>
 </div>
 
+<div class="card-3d p-3 mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <div class="small text-muted-custom text-uppercase">Report a nouveau</div>
+            <div style="font-size:1.35rem;font-weight:700;color:@(reportANouveau >= 0 ? "#10b981" : "#f87171");">
+                @reportANouveau.ToString("N0") FCFA
+            </div>
+            <div class="small text-muted-custom">Solde reporte depuis @(annee - 1). Ligne figee pour l'exercice @annee.</div>
+        </div>
+        <div class="text-md-end">
+            <div class="small text-muted-custom text-uppercase">Solde disponible</div>
+            <div style="font-size:1.1rem;font-weight:700;color:@(soldeDisponible >= 0 ? "#10b981" : "#f87171");">
+                @soldeDisponible.ToString("N0") FCFA
+            </div>
+            <div class="small text-muted-custom">Report a nouveau + solde de l'exercice</div>
+        </div>
+    </div>
+</div>
+
 @if (canManage)
 {
     <div class="card-3d p-3 mb-4">
@@ -37,9 +58,24 @@
             <div class="col-md-1"><label class="form-label small">Type</label><select name="Type" class="form-select"><option value="Recette">Recette</option><option value="Depense">Depense</option></select></div>
             <div class="col-md-2"><label class="form-label small">Categorie</label><select name="Categorie" class="form-select">@foreach(var c in Enum.GetValues<CategorieFinance>()){<option value="@c">@c</option>}</select></div>
             <div class="col-md-2"><label class="form-label small">Date</label><input name="DateTransaction" class="form-control" type="date" value="@DateTime.Now.ToString("yyyy-MM-dd")" required /></div>
-            <div class="col-md-2"><label class="form-label small">Groupe</label><select name="GroupeId" class="form-select"><option value="">-</option>@foreach(var g in groupes){<option value="@g.Id">@g.Nom</option>}</select></div>
+            <div class="col-md-2"><label class="form-label small">Groupe</label><select id="financeGroupeSelect" name="GroupeId" class="form-select"><option value="">-</option>@foreach(var g in groupes){<option value="@g.Id">@g.Nom</option>}</select></div>
             <div class="col-md-2"><label class="form-label small">Reference</label><input name="Reference" class="form-control" /></div>
-            <div class="col-md-2"><label class="form-label small">Scout</label><select name="ScoutId" class="form-select"><option value="">-</option>@foreach(var s in scouts){<option value="@s.Id">@s.Nom @s.Prenom (@s.Matricule)</option>}</select></div>
+            <div class="col-md-3" data-searchable-select-wrapper>
+                <label class="form-label small">Scout</label>
+                <input type="search" class="form-control form-control-sm mb-2" placeholder="Rechercher un scout..." data-select-search-input />
+                <select name="ScoutId" class="form-select" data-searchable-select data-filter-group-select="financeGroupeSelect">
+                    <option value="">-</option>
+                    @foreach (var s in scouts)
+                    {
+                        <option value="@s.Id"
+                                data-group="@(s.GroupeId?.ToString() ?? string.Empty)"
+                                data-search-label="@($"{s.Prenom} {s.Nom} {s.Matricule}")">
+                            @s.Prenom @s.Nom (@s.Matricule)
+                        </option>
+                    }
+                </select>
+                <small class="text-muted-custom" data-select-search-empty hidden>Aucun scout correspondant.</small>
+            </div>
             <div class="col-auto"><button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i></button></div>
         </form>
     </div>

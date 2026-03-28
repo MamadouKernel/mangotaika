@@ -54,7 +54,7 @@
         </div>
         <div class="mb-3">
             <label class="form-label small">Groupe</label>
-            <select name="GroupeId" class="form-select">
+            <select id="financeEditGroupeSelect" name="GroupeId" class="form-select">
                 <option value="">—</option>
                 @foreach (var g in groupes)
                 {
@@ -62,15 +62,22 @@
                 }
             </select>
         </div>
-        <div class="mb-3">
+        <div class="mb-3" data-searchable-select-wrapper>
             <label class="form-label small">Scout</label>
-            <select name="ScoutId" class="form-select">
+            <input type="search" class="form-control form-control-sm mb-2" placeholder="Rechercher un scout..." data-select-search-input />
+            <select name="ScoutId" class="form-select" data-searchable-select data-filter-group-select="financeEditGroupeSelect">
                 <option value="">—</option>
                 @foreach (var s in scouts)
                 {
-                    <option value="@s.Id" selected="@(Model.ScoutId == s.Id)">@s.Prenom @s.Nom (@s.Matricule)</option>
+                    <option value="@s.Id"
+                            selected="@(Model.ScoutId == s.Id)"
+                            data-group="@(s.GroupeId?.ToString() ?? string.Empty)"
+                            data-search-label="@($"{s.Prenom} {s.Nom} {s.Matricule}")">
+                        @s.Prenom @s.Nom (@s.Matricule)
+                    </option>
                 }
             </select>
+            <small class="text-muted-custom" data-select-search-empty hidden>Aucun scout correspondant.</small>
         </div>
         <div class="mb-3">
             <label class="form-label small">Activité</label>

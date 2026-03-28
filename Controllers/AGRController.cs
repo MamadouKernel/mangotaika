@@ -25,6 +25,7 @@ public class AGRController(AppDbContext db, UserManager<ApplicationUser> userMan
         var (p, pageSize, skip, totalPages) = ListPagination.Normalize(page, ps, total);
         var projets = all.Skip(skip).Take(pageSize).ToList();
         ViewBag.Groupes = await db.Groupes.Where(g => g.IsActive).OrderBy(g => g.Nom).ToListAsync();
+        ViewBag.Scouts = await db.Scouts.Where(s => s.IsActive).OrderBy(s => s.Nom).ThenBy(s => s.Prenom).ToListAsync();
         ListPagination.SetViewData(ViewData, HttpContext, p, pageSize, total, totalPages);
         return View(projets);
     }
@@ -57,6 +58,7 @@ public class AGRController(AppDbContext db, UserManager<ApplicationUser> userMan
         var projet = await db.ProjetsAGR.Include(p => p.Groupe).FirstOrDefaultAsync(p => p.Id == id && !p.EstSupprime);
         if (projet is null) return NotFound();
         ViewBag.Groupes = await db.Groupes.Where(g => g.IsActive).OrderBy(g => g.Nom).ToListAsync();
+        ViewBag.Scouts = await db.Scouts.Where(s => s.IsActive).OrderBy(s => s.Nom).ThenBy(s => s.Prenom).ToListAsync();
         return View(projet);
     }
 

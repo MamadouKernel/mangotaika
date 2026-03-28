@@ -5,6 +5,7 @@
     Layout = "_LayoutAdmin";
     var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
     var groupes = ViewBag.Groupes as List<Groupe> ?? new();
+    var scouts = ViewBag.Scouts as List<Scout> ?? new();
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -19,8 +20,23 @@
             <div class="col-md-3"><label class="form-label small">Nom du projet</label><input name="Nom" class="form-control" required /></div>
             <div class="col-md-2"><label class="form-label small">Budget initial (FCFA)</label><input name="BudgetInitial" class="form-control" type="number" min="0" step="100" required /></div>
             <div class="col-md-2"><label class="form-label small">Date debut</label><input name="DateDebut" class="form-control" type="date" value="@DateTime.Now.ToString("yyyy-MM-dd")" required /></div>
-            <div class="col-md-2"><label class="form-label small">Responsable</label><input name="Responsable" class="form-control" /></div>
-            <div class="col-md-2"><label class="form-label small">Groupe</label><select name="GroupeId" class="form-select"><option value="">- District -</option>@foreach(var g in groupes){<option value="@g.Id">@g.Nom</option>}</select></div>
+            <div class="col-md-2" data-searchable-select-wrapper>
+                <label class="form-label small">Responsable</label>
+                <input type="search" class="form-control form-control-sm mb-2" placeholder="Rechercher un responsable..." data-select-search-input />
+                <select name="Responsable" class="form-select" data-searchable-select data-filter-group-select="agrGroupeSelect">
+                    <option value="">-</option>
+                    @foreach (var s in scouts)
+                    {
+                        <option value="@($"{s.Prenom} {s.Nom}")"
+                                data-group="@(s.GroupeId?.ToString() ?? string.Empty)"
+                                data-search-label="@($"{s.Prenom} {s.Nom} {s.Matricule}")">
+                            @s.Prenom @s.Nom (@s.Matricule)
+                        </option>
+                    }
+                </select>
+                <small class="text-muted-custom" data-select-search-empty hidden>Aucun responsable correspondant.</small>
+            </div>
+            <div class="col-md-2"><label class="form-label small">Groupe</label><select id="agrGroupeSelect" name="GroupeId" class="form-select"><option value="">- District -</option>@foreach(var g in groupes){<option value="@g.Id">@g.Nom</option>}</select></div>
             <div class="col-auto"><button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i></button></div>
         </form>
     </div>
