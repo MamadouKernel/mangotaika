@@ -243,7 +243,7 @@ public class ScoutService(AppDbContext db) : IScoutService
                 var adresse = NormalizeOptional(ReadString(row, headerMap, "adressegeographique"));
                 var groupeNom = NormalizeOptional(ReadString(row, headerMap, "groupe"));
                 var brancheNom = NormalizeOptional(ReadString(row, headerMap, "branche"));
-                var assurance = ReadOptionalBoolean(row, headerMap, "assuranceannuelle");
+                var assurance = ReadOptionalBoolean(row, headerMap, "cotisationnationale", "assuranceannuelle");
 
                 Scout? existingScout = null;
                 var matriculeKey = NormalizeLookup(matricule);
@@ -450,7 +450,7 @@ public class ScoutService(AppDbContext db) : IScoutService
         {
             "Matricule", "Nom", "Prenom", "DateNaissance", "LieuNaissance", "Sexe",
             "Telephone", "Email", "RegionScoute", "District", "NumeroCarte",
-            "Fonction", "AssuranceAnnuelle", "AdresseGeographique", "Groupe", "Branche"
+            "Fonction", "CotisationNationale", "AdresseGeographique", "Groupe", "Branche"
         };
 
         for (var i = 0; i < headers.Length; i++)
@@ -486,8 +486,9 @@ public class ScoutService(AppDbContext db) : IScoutService
         guide.Cell("A4").Value = "Regles";
         guide.Cell("A5").Value = $"Le matricule doit respecter le format {ScoutMatriculeFormat.Example}.";
         guide.Cell("A6").Value = "Groupe et Branche doivent correspondre aux noms deja presents dans l'application.";
-        guide.Cell("A7").Value = "AssuranceAnnuelle accepte: Oui, Non, True, False, 1, 0.";
-        guide.Cell("A8").Value = "DateNaissance peut etre au format Excel date ou jj/MM/aaaa.";
+        guide.Cell("A7").Value = "CotisationNationale accepte: Oui, Non, True, False, 1, 0.";
+        guide.Cell("A8").Value = "La colonne Fonction du fichier renseigne directement le champ Fonction du scout.";
+        guide.Cell("A9").Value = "DateNaissance peut etre au format Excel date ou jj/MM/aaaa.";
         guide.Columns().AdjustToContents();
 
         using var memoryStream = new MemoryStream();
@@ -551,9 +552,9 @@ public class ScoutService(AppDbContext db) : IScoutService
             || DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
     }
 
-    private static bool? ReadOptionalBoolean(IXLRow row, IDictionary<string, int> headerMap, string header)
+    private static bool? ReadOptionalBoolean(IXLRow row, IDictionary<string, int> headerMap, params string[] headers)
     {
-        var raw = ReadString(row, headerMap, header);
+        var raw = ReadString(row, headerMap, headers);
         if (string.IsNullOrWhiteSpace(raw))
         {
             return null;
@@ -572,6 +573,19 @@ public class ScoutService(AppDbContext db) : IScoutService
             "no" => false,
             _ => false
         };
+    }
+
+    private static string ReadString(IXLRow row, IDictionary<string, int> headerMap, params string[] headers)
+    {
+        foreach (var header in headers)
+        {
+            if (headerMap.TryGetValue(header, out var column))
+            {
+                return row.Cell(column).GetString().Trim();
+            }
+        }
+
+        return string.Empty;
     }
 
     private static string NormalizeHeader(string value)

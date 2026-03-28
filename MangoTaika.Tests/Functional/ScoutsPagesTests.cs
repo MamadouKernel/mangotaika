@@ -196,6 +196,28 @@ public sealed class ScoutsPagesTests
     }
 
     [Fact]
+    public async Task Create_Shows_Cotisation_Nationale_Label_And_Import_Help_For_Fonction()
+    {
+        await using var factory = new SupportWebApplicationFactory();
+        ApplicationUser gestionnaire = null!;
+
+        await factory.SeedAsync(async db =>
+        {
+            await TestDataSeeder.EnsureRolesAsync(db, "Gestionnaire");
+            gestionnaire = await TestDataSeeder.AddUserAsync(db, "Awa", "Gestion", ["Gestionnaire"]);
+        });
+
+        using var client = factory.CreateAuthenticatedClient(gestionnaire.Id, "Gestionnaire");
+
+        var createHtml = await client.GetStringAsync("/Scouts/Create");
+        var indexHtml = await client.GetStringAsync("/Scouts");
+
+        createHtml.Should().Contain("Cotisation nationale a jour");
+        indexHtml.Should().Contain("Fonction");
+        indexHtml.Should().Contain("alimente directement le champ `Fonction` du scout");
+    }
+
+    [Fact]
     public async Task Edit_Preloads_Current_Branche_For_Selected_Groupe()
     {
         await using var factory = new SupportWebApplicationFactory();
