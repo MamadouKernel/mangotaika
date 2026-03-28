@@ -75,6 +75,7 @@ builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IGeocodingService, GeocodingService>();
 builder.Services.AddScoped<IScoutService, ScoutService>();
 builder.Services.AddScoped<IGroupeService, GroupeService>();
+builder.Services.AddScoped<DistrictBranchInheritanceService>();
 builder.Services.AddScoped<IActiviteService, ActiviteService>();
 builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
@@ -149,6 +150,7 @@ using (var scope = app.Services.CreateScope())
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var districtBranchInheritance = scope.ServiceProvider.GetRequiredService<DistrictBranchInheritanceService>();
 
     if (!app.Environment.IsEnvironment("Testing"))
     {
@@ -216,6 +218,8 @@ using (var scope = app.Services.CreateScope())
     {
         await SeedData.InitializeAsync(scope.ServiceProvider);
     }
+
+    await districtBranchInheritance.EnsureInheritedBranchesAsync();
 
     const string oldFacebookUrl = "https://www.facebook.com/mangotaika";
     const string newFacebookUrl = "https://www.facebook.com/share/1BAtkMx8sd/";

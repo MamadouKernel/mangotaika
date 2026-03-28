@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MangoTaika.Services;
 
-public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGroupeService
+public class GroupeService(AppDbContext db, IGeocodingService geocoding, DistrictBranchInheritanceService districtBranchInheritance) : IGroupeService
 {
     public async Task<List<GroupeDto>> GetAllAsync()
     {
@@ -113,6 +113,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
         };
         db.Groupes.Add(groupe);
         await SaveChangesAsync();
+        await districtBranchInheritance.InheritDistrictBranchesForGroupAsync(groupe);
         return ToDto(groupe);
     }
 

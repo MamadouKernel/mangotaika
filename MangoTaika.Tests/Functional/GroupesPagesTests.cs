@@ -4,6 +4,7 @@ using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.Tests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace MangoTaika.Tests.Functional;
@@ -162,5 +163,71 @@ public sealed class GroupesPagesTests
         html.Should().Contain("Routier");
         html.Should().Contain("Jeunes");
         html.Should().Contain("Adultes");
+    }
+
+    [Fact]
+    public async Task Create_New_Group_Inherits_Branches_From_District_Group()
+    {
+        await using var factory = new SupportWebApplicationFactory();
+        ApplicationUser gestionnaire = null!;
+
+        await factory.SeedAsync(async db =>
+        {
+            await TestDataSeeder.EnsureRolesAsync(db, "Gestionnaire");
+            gestionnaire = await TestDataSeeder.AddUserAsync(db, "Awa", "Gestion", ["Gestionnaire"]);
+
+            var districtGroup = new Groupe
+            {
+                Id = Guid.NewGuid(),
+                Nom = "Equipe de District Mango Taika"
+            };
+
+            db.Groupes.Add(districtGroup);
+            db.Branches.AddRange(
+                new Branche
+                {
+                    Id = Guid.NewGuid(),
+                    Nom = "Louveteau",
+                    GroupeId = districtGroup.Id,
+                    AgeMin = 8,
+                    AgeMax = 12
+                },
+                new Branche
+                {
+                    Id = Guid.NewGuid(),
+                    Nom = "Eclaireur",
+                    GroupeId = districtGroup.Id,
+                    AgeMin = 12,
+                    AgeMax = 14
+                });
+        });
+
+        using var client = factory.CreateAuthenticatedClient(gestionnaire.Id, "Gestionnaire");
+        var createHtml = await client.GetStringAsync("/Groupes/Create");
+        var token = HtmlTestHelpers.ExtractAntiForgeryToken(createHtml);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/Groupes/Create");
+        request.Headers.Add("RequestVerificationToken", token);
+        request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["Nom"] = "LES PITIKAS",
+            ["Commune"] = "Cocody",
+            ["Quartier"] = "Riviera"
+        });
+
+        var response = await client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var groupe = await db.Groupes.SingleAsync(g => g.Nom == "LES PITIKAS");
+        var branches = await db.Branches
+            .Where(b => b.GroupeId == groupe.Id && b.IsActive)
+            .OrderBy(b => b.Nom)
+            .ToListAsync();
+
+        branches.Should().HaveCount(2);
+        branches.Select(b => b.Nom).Should().BeEquivalentTo(["Eclaireur", "Louveteau"]);
     }
 }

@@ -4,6 +4,7 @@ using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.Tests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace MangoTaika.Tests.Functional;
@@ -311,5 +312,66 @@ public sealed class BranchesPagesTests
         html.Should().Contain("Liste des scouts et adultes de la branche");
         html.Should().Contain("Matricule");
         html.Should().Contain("Fonction");
+    }
+
+    [Fact]
+    public async Task Create_In_District_Group_Propagates_Branche_To_Other_Groups()
+    {
+        await using var factory = new SupportWebApplicationFactory();
+        ApplicationUser gestionnaire = null!;
+        Groupe districtGroup = null!;
+        Groupe groupeA = null!;
+        Groupe groupeB = null!;
+        Scout chefDistrict = null!;
+
+        await factory.SeedAsync(async db =>
+        {
+            await TestDataSeeder.EnsureRolesAsync(db, "Gestionnaire");
+            gestionnaire = await TestDataSeeder.AddUserAsync(db, "Awa", "Gestion", ["Gestionnaire"]);
+
+            districtGroup = new Groupe { Id = Guid.NewGuid(), Nom = "Equipe de District Mango Taika" };
+            groupeA = new Groupe { Id = Guid.NewGuid(), Nom = "LES AIHES" };
+            groupeB = new Groupe { Id = Guid.NewGuid(), Nom = "HAPUU RERU" };
+            db.Groupes.AddRange(districtGroup, groupeA, groupeB);
+
+            chefDistrict = new Scout
+            {
+                Id = Guid.NewGuid(),
+                Matricule = "0583994X",
+                Nom = "Edgar",
+                Prenom = "Yann",
+                DateNaissance = new DateTime(2000, 1, 1),
+                GroupeId = districtGroup.Id
+            };
+            db.Scouts.Add(chefDistrict);
+        });
+
+        using var client = factory.CreateAuthenticatedClient(gestionnaire.Id, "Gestionnaire");
+        var createHtml = await client.GetStringAsync("/Branches/Create");
+        var token = HtmlTestHelpers.ExtractAntiForgeryToken(createHtml);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/Branches/Create");
+        request.Headers.Add("RequestVerificationToken", token);
+        request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["Nom"] = "Eclaireur",
+            ["Description"] = "12-14 ans",
+            ["AgeMin"] = "12",
+            ["AgeMax"] = "14",
+            ["GroupeId"] = districtGroup.Id.ToString(),
+            ["ChefUniteId"] = chefDistrict.Id.ToString()
+        });
+
+        var response = await client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var branches = await db.Branches.Where(b => b.IsActive && b.Nom == "Eclaireur").ToListAsync();
+        branches.Should().HaveCount(3);
+        branches.Should().Contain(b => b.GroupeId == districtGroup.Id && b.ChefUniteId == chefDistrict.Id);
+        branches.Should().Contain(b => b.GroupeId == groupeA.Id && b.ChefUniteId == null);
+        branches.Should().Contain(b => b.GroupeId == groupeB.Id && b.ChefUniteId == null);
     }
 }

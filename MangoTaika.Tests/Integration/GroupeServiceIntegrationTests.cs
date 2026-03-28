@@ -14,7 +14,8 @@ public sealed class GroupeServiceIntegrationTests
     public async Task CreateAsync_Builds_Address_And_Uses_Geocoding_Result()
     {
         await using var db = TestDbContextFactory.CreateDbContext();
-        var service = new GroupeService(db, new FakeGeocodingService());
+        var inheritance = new DistrictBranchInheritanceService(db);
+        var service = new GroupeService(db, new FakeGeocodingService(), inheritance);
 
         var created = await service.CreateAsync(new GroupeCreateDto
         {
@@ -45,7 +46,8 @@ public sealed class GroupeServiceIntegrationTests
     {
         await using var db = TestDbContextFactory.CreateDbContext();
         var responsable = await TestDataSeeder.AddUserAsync(db, "Awa", "Responsable", [], isActive: false);
-        var service = new GroupeService(db, new FakeGeocodingService());
+        var inheritance = new DistrictBranchInheritanceService(db);
+        var service = new GroupeService(db, new FakeGeocodingService(), inheritance);
 
         Func<Task> act = () => service.CreateAsync(new GroupeCreateDto
         {
@@ -70,7 +72,8 @@ public sealed class GroupeServiceIntegrationTests
         });
         await db.SaveChangesAsync();
 
-        var service = new GroupeService(db, new FakeGeocodingService());
+        var inheritance = new DistrictBranchInheritanceService(db);
+        var service = new GroupeService(db, new FakeGeocodingService(), inheritance);
 
         Func<Task> act = () => service.CreateAsync(new GroupeCreateDto
         {
@@ -120,7 +123,8 @@ public sealed class GroupeServiceIntegrationTests
             CreateScout(groupe.Id, routiers.Id, "0583004D", DateTime.UtcNow.AddYears(-30), "Masculin"));
         await db.SaveChangesAsync();
 
-        var service = new GroupeService(db, new FakeGeocodingService());
+        var inheritance = new DistrictBranchInheritanceService(db);
+        var service = new GroupeService(db, new FakeGeocodingService(), inheritance);
 
         var dto = await service.GetByIdAsync(groupe.Id);
 
@@ -164,5 +168,57 @@ public sealed class GroupeServiceIntegrationTests
             Sexe = sexe,
             IsActive = true
         };
+    }
+
+    [Fact]
+    public async Task CreateAsync_New_Group_Inherits_District_Branches()
+    {
+        await using var db = TestDbContextFactory.CreateDbContext();
+        var districtGroup = new Groupe
+        {
+            Id = Guid.NewGuid(),
+            Nom = "Equipe de District Mango Taika"
+        };
+
+        db.Groupes.Add(districtGroup);
+        db.Branches.AddRange(
+            new Branche
+            {
+                Id = Guid.NewGuid(),
+                Nom = "Louveteau",
+                Description = "8-12 ans",
+                AgeMin = 8,
+                AgeMax = 12,
+                GroupeId = districtGroup.Id
+            },
+            new Branche
+            {
+                Id = Guid.NewGuid(),
+                Nom = "Eclaireur",
+                Description = "12-14 ans",
+                AgeMin = 12,
+                AgeMax = 14,
+                GroupeId = districtGroup.Id
+            });
+        await db.SaveChangesAsync();
+
+        var inheritance = new DistrictBranchInheritanceService(db);
+        var service = new GroupeService(db, new FakeGeocodingService(), inheritance);
+
+        var created = await service.CreateAsync(new GroupeCreateDto
+        {
+            Nom = "LES PITIKAS",
+            Commune = "Cocody"
+        });
+
+        created.Nom.Should().Be("LES PITIKAS");
+        var inheritedBranches = await db.Branches
+            .Where(b => b.GroupeId == created.Id && b.IsActive)
+            .OrderBy(b => b.Nom)
+            .ToListAsync();
+
+        inheritedBranches.Should().HaveCount(2);
+        inheritedBranches.Select(b => b.Nom).Should().BeEquivalentTo(["Eclaireur", "Louveteau"]);
+        inheritedBranches.Should().OnlyContain(b => b.ChefUniteId == null && b.NomChefUnite == null);
     }
 }

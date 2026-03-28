@@ -14,6 +14,7 @@ public sealed class BrancheServiceIntegrationTests
     public async Task CreateAsync_Persists_Normalized_Branche_And_ChefUnite()
     {
         await using var db = TestDbContextFactory.CreateDbContext();
+        var inheritance = new DistrictBranchInheritanceService(db);
 
         var groupe = new Groupe { Id = Guid.NewGuid(), Nom = "Groupe Riviera" };
         var chef = new Scout
@@ -30,7 +31,7 @@ public sealed class BrancheServiceIntegrationTests
         db.Scouts.Add(chef);
         await db.SaveChangesAsync();
 
-        var service = new BrancheService(db);
+        var service = new BrancheService(db, inheritance);
 
         var created = await service.CreateAsync(new BrancheCreateDto
         {
@@ -60,6 +61,7 @@ public sealed class BrancheServiceIntegrationTests
     public async Task CreateAsync_Rejects_Duplicate_Name_In_Same_Groupe()
     {
         await using var db = TestDbContextFactory.CreateDbContext();
+        var inheritance = new DistrictBranchInheritanceService(db);
 
         var groupe = new Groupe { Id = Guid.NewGuid(), Nom = "Groupe Riviera" };
         var chef = new Scout
@@ -84,7 +86,7 @@ public sealed class BrancheServiceIntegrationTests
         });
         await db.SaveChangesAsync();
 
-        var service = new BrancheService(db);
+        var service = new BrancheService(db, inheritance);
 
         Func<Task> act = () => service.CreateAsync(new BrancheCreateDto
         {
@@ -103,6 +105,7 @@ public sealed class BrancheServiceIntegrationTests
     public async Task CreateAsync_Rejects_Duplicate_Name_When_Accents_And_Apostrophes_Differ()
     {
         await using var db = TestDbContextFactory.CreateDbContext();
+        var inheritance = new DistrictBranchInheritanceService(db);
 
         var groupe = new Groupe { Id = Guid.NewGuid(), Nom = "Groupe Riviera" };
         var chef = new Scout
@@ -127,7 +130,7 @@ public sealed class BrancheServiceIntegrationTests
         });
         await db.SaveChangesAsync();
 
-        var service = new BrancheService(db);
+        var service = new BrancheService(db, inheritance);
 
         Func<Task> act = () => service.CreateAsync(new BrancheCreateDto
         {
@@ -217,7 +220,8 @@ public sealed class BrancheServiceIntegrationTests
             CreateScout(groupeA.Id, brancheOther.Id, "0583908H", "Autre", "Branche", DateTime.UtcNow.AddYears(-10), "Feminin", null));
         await db.SaveChangesAsync();
 
-        var service = new BrancheService(db);
+        var inheritance = new DistrictBranchInheritanceService(db);
+        var service = new BrancheService(db, inheritance);
 
         var dto = await service.GetByIdAsync(brancheA.Id);
 
@@ -259,5 +263,86 @@ public sealed class BrancheServiceIntegrationTests
             Fonction = fonction,
             IsActive = true
         };
+    }
+
+    [Fact]
+    public async Task CreateAsync_District_Branch_Is_Propagated_To_All_Other_Groups()
+    {
+        await using var db = TestDbContextFactory.CreateDbContext();
+        var inheritance = new DistrictBranchInheritanceService(db);
+
+        var districtGroup = new Groupe { Id = Guid.NewGuid(), Nom = "Equipe de District Mango Taika" };
+        var groupeA = new Groupe { Id = Guid.NewGuid(), Nom = "LES AIHES" };
+        var groupeB = new Groupe { Id = Guid.NewGuid(), Nom = "HAPUU RERU" };
+        var chefDistrict = new Scout
+        {
+            Id = Guid.NewGuid(),
+            Matricule = "0583998X",
+            Nom = "Edgar",
+            Prenom = "Yann",
+            DateNaissance = new DateTime(2000, 1, 1),
+            GroupeId = districtGroup.Id
+        };
+
+        db.Groupes.AddRange(districtGroup, groupeA, groupeB);
+        db.Scouts.Add(chefDistrict);
+        await db.SaveChangesAsync();
+
+        var service = new BrancheService(db, inheritance);
+
+        var created = await service.CreateAsync(new BrancheCreateDto
+        {
+            Nom = "Eclaireur",
+            Description = "12-14 ans",
+            AgeMin = 12,
+            AgeMax = 14,
+            GroupeId = districtGroup.Id,
+            ChefUniteId = chefDistrict.Id
+        });
+
+        created.Nom.Should().Be("Eclaireur");
+
+        var allBranches = await db.Branches
+            .Where(b => b.IsActive)
+            .OrderBy(b => b.GroupeId)
+            .ToListAsync();
+
+        allBranches.Should().HaveCount(3);
+        allBranches.Should().ContainSingle(b => b.GroupeId == districtGroup.Id && b.ChefUniteId == chefDistrict.Id);
+        allBranches.Should().ContainSingle(b => b.GroupeId == groupeA.Id && b.ChefUniteId == null && b.NomChefUnite == null);
+        allBranches.Should().ContainSingle(b => b.GroupeId == groupeB.Id && b.ChefUniteId == null && b.NomChefUnite == null);
+    }
+
+    [Fact]
+    public async Task EnsureInheritedBranchesAsync_Backfills_Existing_Groups_From_District_Group()
+    {
+        await using var db = TestDbContextFactory.CreateDbContext();
+        var districtGroup = new Groupe { Id = Guid.NewGuid(), Nom = "Equipe de District Mango Taika" };
+        var groupeA = new Groupe { Id = Guid.NewGuid(), Nom = "LES AIHES" };
+        var groupeB = new Groupe { Id = Guid.NewGuid(), Nom = "HAPUU RERU" };
+
+        db.Groupes.AddRange(districtGroup, groupeA, groupeB);
+        db.Branches.Add(new Branche
+        {
+            Id = Guid.NewGuid(),
+            Nom = "Routier",
+            Description = "17-25 ans",
+            AgeMin = 17,
+            AgeMax = 25,
+            GroupeId = districtGroup.Id
+        });
+        await db.SaveChangesAsync();
+
+        var inheritance = new DistrictBranchInheritanceService(db);
+
+        await inheritance.EnsureInheritedBranchesAsync();
+
+        var propagatedBranches = await db.Branches
+            .Where(b => b.IsActive && b.Nom == "Routier")
+            .ToListAsync();
+
+        propagatedBranches.Should().HaveCount(3);
+        propagatedBranches.Should().Contain(b => b.GroupeId == groupeA.Id);
+        propagatedBranches.Should().Contain(b => b.GroupeId == groupeB.Id);
     }
 }

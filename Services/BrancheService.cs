@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MangoTaika.Services;
 
-public class BrancheService(AppDbContext db) : IBrancheService
+public class BrancheService(AppDbContext db, DistrictBranchInheritanceService districtBranchInheritance) : IBrancheService
 {
     public async Task<List<BrancheDto>> GetAllAsync()
     {
@@ -70,6 +70,7 @@ public class BrancheService(AppDbContext db) : IBrancheService
         };
         db.Branches.Add(branche);
         await SaveChangesAsync();
+        await districtBranchInheritance.PropagateDistrictBranchAsync(branche);
         return ToDto(branche);
     }
 
