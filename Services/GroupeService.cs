@@ -25,6 +25,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
                 NomChefGroupe = g.NomChefGroupe != null && g.NomChefGroupe != string.Empty
                     ? g.NomChefGroupe
                     : (g.Responsable != null ? g.Responsable.Prenom + " " + g.Responsable.Nom : null),
+                ContactChefGroupe = NormalizeOptional(g.Responsable != null ? g.Responsable.PhoneNumber : null),
                 NombreMembres = db.Scouts.Count(s => s.GroupeId == g.Id && s.IsActive),
                 BranchesScouts = db.Branches
                     .Where(b => b.GroupeId == g.Id && b.IsActive)
@@ -56,6 +57,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
             NomChefGroupe = BuildChefGroupeName(
                 groupe.NomChefGroupe,
                 groupe.Responsable != null ? $"{groupe.Responsable.Prenom} {groupe.Responsable.Nom}" : null),
+            ContactChefGroupe = NormalizeOptional(groupe.Responsable?.PhoneNumber),
             NombreMembres = await db.Scouts.CountAsync(s => s.GroupeId == groupe.Id && s.IsActive),
             BranchesScouts = await db.Branches
                 .Where(b => b.GroupeId == groupe.Id && b.IsActive)
@@ -139,6 +141,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
         NomChefGroupe = BuildChefGroupeName(
             g.NomChefGroupe,
             g.Responsable != null ? $"{g.Responsable.Prenom} {g.Responsable.Nom}" : null),
+        ContactChefGroupe = NormalizeOptional(g.Responsable?.PhoneNumber),
         NombreMembres = 0
     };
 

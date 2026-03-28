@@ -11,6 +11,39 @@ namespace MangoTaika.Tests.Functional;
 public sealed class GroupesPagesTests
 {
     [Fact]
+    public async Task Index_Displays_Entities_Title_And_Chef_Contact()
+    {
+        await using var factory = new SupportWebApplicationFactory();
+        ApplicationUser gestionnaire = null!;
+        ApplicationUser responsable = null!;
+
+        await factory.SeedAsync(async db =>
+        {
+            await TestDataSeeder.EnsureRolesAsync(db, "Gestionnaire");
+            gestionnaire = await TestDataSeeder.AddUserAsync(db, "Awa", "Gestion", ["Gestionnaire"]);
+            responsable = await TestDataSeeder.AddUserAsync(db, "Lucette", "Ossuh", []);
+            responsable.PhoneNumber = "0701020304";
+
+            db.Groupes.Add(new Groupe
+            {
+                Id = Guid.NewGuid(),
+                Nom = "LES AIHES",
+                NomChefGroupe = "OSSUH Lucette",
+                ResponsableId = responsable.Id
+            });
+        });
+
+        using var client = factory.CreateAuthenticatedClient(gestionnaire.Id, "Gestionnaire");
+
+        var html = await client.GetStringAsync("/Groupes");
+
+        html.Should().Contain("Entit&eacute;s");
+        html.Should().Contain("Scouts du District");
+        html.Should().Contain("Chef de groupe : OSSUH Lucette");
+        html.Should().Contain("Contact : 0701020304");
+    }
+
+    [Fact]
     public async Task Create_Rejects_Duplicate_Name()
     {
         await using var factory = new SupportWebApplicationFactory();

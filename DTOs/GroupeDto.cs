@@ -12,6 +12,7 @@ public class GroupeDto
     public double? Longitude { get; set; }
     public string? Adresse { get; set; }
     public string? NomChefGroupe { get; set; }
+    public string? ContactChefGroupe { get; set; }
     public int NombreMembres { get; set; }
     public List<BrancheScoutCountDto> BranchesScouts { get; set; } = [];
 }
