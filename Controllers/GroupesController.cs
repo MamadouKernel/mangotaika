@@ -1,13 +1,15 @@
+using MangoTaika.Data;
 using MangoTaika.DTOs;
 using MangoTaika.Helpers;
 using MangoTaika.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace MangoTaika.Controllers;
 
 [Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant")]
-public class GroupesController(IGroupeService groupeService, IFileUploadService fileUploadService) : Controller
+public class GroupesController(IGroupeService groupeService, IFileUploadService fileUploadService, AppDbContext db) : Controller
 {
     public async Task<IActionResult> Index()
     {
@@ -21,14 +23,23 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
     }
 
     [Authorize(Roles = "Administrateur,Gestionnaire")]
-    public IActionResult Create() => View();
+    public async Task<IActionResult> Create()
+    {
+        await LoadResponsablesAsync();
+        return View();
+    }
 
     [HttpPost]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(GroupeCreateDto dto, IFormFile? Logo)
     {
-        if (!ModelState.IsValid) return View(dto);
+        if (!ModelState.IsValid)
+        {
+            await LoadResponsablesAsync();
+            return View(dto);
+        }
+
         try
         {
             dto.LogoUrl = await fileUploadService.SaveImageAsync(
@@ -41,16 +52,22 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
         catch (InvalidOperationException ex)
         {
             this.AddDomainError(ex);
+            await LoadResponsablesAsync();
             return View(dto);
         }
-        TempData["Success"] = "Groupe créé avec succès.";
+
+        TempData["Success"] = "Groupe cree avec succes.";
         return RedirectToAction(nameof(Index));
     }
 
     public async Task<IActionResult> Details(Guid id)
     {
         var groupe = await groupeService.GetByIdAsync(id);
-        if (groupe is null) return NotFound();
+        if (groupe is null)
+        {
+            return NotFound();
+        }
+
         return View(groupe);
     }
 
@@ -58,7 +75,12 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
     public async Task<IActionResult> Edit(Guid id)
     {
         var groupe = await groupeService.GetByIdAsync(id);
-        if (groupe is null) return NotFound();
+        if (groupe is null)
+        {
+            return NotFound();
+        }
+
+        await LoadResponsablesAsync();
         return View(groupe);
     }
 
@@ -67,7 +89,12 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(Guid id, GroupeCreateDto dto, IFormFile? Logo)
     {
-        if (!ModelState.IsValid) return View(ToEditDto(id, dto));
+        if (!ModelState.IsValid)
+        {
+            await LoadResponsablesAsync();
+            return View(ToEditDto(id, dto));
+        }
+
         bool result;
         try
         {
@@ -81,10 +108,16 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
         catch (InvalidOperationException ex)
         {
             this.AddDomainError(ex);
+            await LoadResponsablesAsync();
             return View(ToEditDto(id, dto));
         }
-        if (!result) return NotFound();
-        TempData["Success"] = "Groupe mis à jour.";
+
+        if (!result)
+        {
+            return NotFound();
+        }
+
+        TempData["Success"] = "Groupe mis a jour.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -94,7 +127,7 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
     public async Task<IActionResult> Delete(Guid id)
     {
         await groupeService.DeleteAsync(id);
-        TempData["Success"] = "Groupe désactivé.";
+        TempData["Success"] = "Groupe desactive.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -129,10 +162,18 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
             LogoUrl = dto.LogoUrl,
             Adresse = string.IsNullOrWhiteSpace(adresse) ? null : adresse,
             NomChefGroupe = dto.NomChefGroupe,
+            ResponsableId = dto.ResponsableId,
             Latitude = dto.Latitude,
             Longitude = dto.Longitude
         };
     }
 
-
+    private async Task LoadResponsablesAsync()
+    {
+        ViewBag.Responsables = await db.Users
+            .Where(u => u.IsActive)
+            .OrderBy(u => u.Prenom)
+            .ThenBy(u => u.Nom)
+            .ToListAsync();
+    }
 }

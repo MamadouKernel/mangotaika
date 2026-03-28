@@ -12,6 +12,57 @@ namespace MangoTaika.Tests.Functional;
 public sealed class BranchesPagesTests
 {
     [Fact]
+    public async Task Create_And_Edit_Display_Responsable_De_Branche_Wording()
+    {
+        await using var factory = new SupportWebApplicationFactory();
+        ApplicationUser gestionnaire = null!;
+        Groupe groupe = null!;
+        Scout responsable = null!;
+        Branche branche = null!;
+
+        await factory.SeedAsync(async db =>
+        {
+            await TestDataSeeder.EnsureRolesAsync(db, "Gestionnaire");
+            gestionnaire = await TestDataSeeder.AddUserAsync(db, "Awa", "Gestion", ["Gestionnaire"]);
+
+            groupe = new Groupe { Id = Guid.NewGuid(), Nom = "Groupe A" };
+            responsable = new Scout
+            {
+                Id = Guid.NewGuid(),
+                Matricule = "0583752X",
+                Nom = "Kone",
+                Prenom = "Moussa",
+                DateNaissance = new DateTime(2000, 1, 1),
+                GroupeId = groupe.Id
+            };
+            branche = new Branche
+            {
+                Id = Guid.NewGuid(),
+                Nom = "Louveteaux",
+                GroupeId = groupe.Id,
+                ChefUniteId = responsable.Id,
+                NomChefUnite = "Moussa Kone"
+            };
+
+            db.Groupes.Add(groupe);
+            db.Scouts.Add(responsable);
+            db.Branches.Add(branche);
+        });
+
+        using var client = factory.CreateAuthenticatedClient(gestionnaire.Id, "Gestionnaire");
+
+        var createHtml = await client.GetStringAsync("/Branches/Create");
+        createHtml.Should().Contain("Responsable de branche");
+        createHtml.Should().Contain("Le responsable de branche doit appartenir au groupe selectionne.");
+        createHtml.Should().Contain("Selectionner un responsable de branche");
+
+        var editHtml = await client.GetStringAsync($"/Branches/Edit/{branche.Id}");
+        editHtml.Should().Contain("Responsable de branche");
+        editHtml.Should().Contain("Le responsable de branche doit appartenir au groupe selectionne.");
+        editHtml.Should().Contain("Selectionner un responsable de branche");
+    }
+
+    [Fact]
     public async Task Create_Rejects_ChefUnite_From_Another_Groupe()
     {
         await using var factory = new SupportWebApplicationFactory();
@@ -309,6 +360,10 @@ public sealed class BranchesPagesTests
         html.Should().Contain("Total par groupe");
         html.Should().Contain("Groupe A");
         html.Should().Contain("Groupe B");
+        html.Should().Contain("1 filles | 0 garcons");
+        html.Should().Contain("0 filles | 1 garcons");
+        html.Should().Contain("F 1 / G 0");
+        html.Should().Contain("F 0 / G 1");
         html.Should().Contain("Liste des scouts et adultes de la branche");
         html.Should().Contain("Matricule");
         html.Should().Contain("Fonction");

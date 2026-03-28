@@ -30,8 +30,12 @@ public class BrancheGroupeSummaryDto
     public string NomGroupe { get; set; } = string.Empty;
     public string? LogoGroupeUrl { get; set; }
     public int NombreScouts { get; set; }
+    public int NombreFilles { get; set; }
+    public int NombreGarcons { get; set; }
     public int NombreJeunes { get; set; }
     public int NombreAdultes { get; set; }
+    public RepartitionMembresDto Jeunes { get; set; } = new();
+    public RepartitionMembresDto Adultes { get; set; } = new();
 }
 
 public class BrancheMembreDto
@@ -51,8 +55,10 @@ public class BrancheCreateDto : IValidatableObject
     public string? LogoUrl { get; set; }
     public int? AgeMin { get; set; }
     public int? AgeMax { get; set; }
-    [Required(ErrorMessage = "Le chef d'unité est obligatoire.")]
+
+    [Required(ErrorMessage = "Le responsable de branche est obligatoire.")]
     public Guid? ChefUniteId { get; set; }
+
     public Guid GroupeId { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
@@ -67,21 +73,21 @@ public class BrancheCreateDto : IValidatableObject
         if (AgeMin.HasValue && AgeMin.Value < 0)
         {
             yield return new ValidationResult(
-                "L'âge minimum ne peut pas être négatif.",
+                "L'age minimum ne peut pas etre negatif.",
                 [nameof(AgeMin)]);
         }
 
         if (AgeMax.HasValue && AgeMax.Value < 0)
         {
             yield return new ValidationResult(
-                "L'âge maximum ne peut pas être négatif.",
+                "L'age maximum ne peut pas etre negatif.",
                 [nameof(AgeMax)]);
         }
 
         if (AgeMin.HasValue && AgeMax.HasValue && AgeMin > AgeMax)
         {
             yield return new ValidationResult(
-                "L'âge minimum ne peut pas être supérieur à l'âge maximum.",
+                "L'age minimum ne peut pas etre superieur a l'age maximum.",
                 [nameof(AgeMin), nameof(AgeMax)]);
         }
     }

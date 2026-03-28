@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.RegularExpressions;
 using FluentAssertions;
 using MangoTaika.Data;
 using MangoTaika.Data.Entities;
@@ -40,8 +41,48 @@ public sealed class GroupesPagesTests
 
         html.Should().Contain("Entit&eacute;s");
         html.Should().Contain("Scouts du District");
+        html.Should().Contain("Entites scouts");
         html.Should().Contain("Chef de groupe : OSSUH Lucette");
         html.Should().Contain("Contact : 0701020304");
+    }
+
+    [Fact]
+    public async Task Create_And_Edit_Display_Responsable_Field_And_Current_Selection()
+    {
+        await using var factory = new SupportWebApplicationFactory();
+        ApplicationUser gestionnaire = null!;
+        ApplicationUser responsable = null!;
+        Groupe groupe = null!;
+
+        await factory.SeedAsync(async db =>
+        {
+            await TestDataSeeder.EnsureRolesAsync(db, "Gestionnaire");
+            gestionnaire = await TestDataSeeder.AddUserAsync(db, "Awa", "Gestion", ["Gestionnaire"]);
+            responsable = await TestDataSeeder.AddUserAsync(db, "Lucette", "Ossuh", []);
+            responsable.PhoneNumber = "0701020304";
+
+            groupe = new Groupe
+            {
+                Id = Guid.NewGuid(),
+                Nom = "Groupe Riviera",
+                ResponsableId = responsable.Id
+            };
+
+            db.Groupes.Add(groupe);
+        });
+
+        using var client = factory.CreateAuthenticatedClient(gestionnaire.Id, "Gestionnaire");
+
+        var createHtml = await client.GetStringAsync("/Groupes/Create");
+        createHtml.Should().Contain("Responsable rattache");
+        createHtml.Should().Contain("Le contact et la photo du responsable sur la fiche detail proviennent de cet utilisateur.");
+        createHtml.Should().Contain("Lucette Ossuh");
+        createHtml.Should().Contain("0701020304");
+
+        var editHtml = await client.GetStringAsync($"/Groupes/Edit/{groupe.Id}");
+        editHtml.Should().Contain("Responsable rattache");
+        editHtml.Should().Contain("Lucette Ossuh");
+        editHtml.Should().MatchRegex($"<option value=\"{Regex.Escape(responsable.Id.ToString())}\" selected=\"selected\">");
     }
 
     [Fact]
@@ -161,8 +202,13 @@ public sealed class GroupesPagesTests
         html.Should().Contain("Totaux par branche");
         html.Should().Contain("Oisillons");
         html.Should().Contain("Routier");
+        html.Should().Contain("Scouts");
         html.Should().Contain("Jeunes");
         html.Should().Contain("Adultes");
+        html.Should().Contain("1 filles | 0 garcons");
+        html.Should().Contain("0 filles | 1 garcons");
+        html.Should().Contain("F 1 / G 0");
+        html.Should().Contain("F 0 / G 1");
     }
 
     [Fact]

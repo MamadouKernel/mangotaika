@@ -236,13 +236,25 @@ public sealed class BrancheServiceIntegrationTests
         dto.TotauxParGroupes.Should().ContainSingle(g =>
             g.NomGroupe == "LES AHES" &&
             g.NombreScouts == 3 &&
+            g.NombreFilles == 2 &&
+            g.NombreGarcons == 1 &&
             g.NombreJeunes == 2 &&
-            g.NombreAdultes == 1);
+            g.NombreAdultes == 1 &&
+            g.Jeunes.NombreFeminin == 1 &&
+            g.Jeunes.NombreMasculin == 1 &&
+            g.Adultes.NombreFeminin == 1 &&
+            g.Adultes.NombreMasculin == 0);
         dto.TotauxParGroupes.Should().ContainSingle(g =>
             g.NomGroupe == "HAPUU RERU" &&
             g.NombreScouts == 2 &&
+            g.NombreFilles == 1 &&
+            g.NombreGarcons == 1 &&
             g.NombreJeunes == 1 &&
-            g.NombreAdultes == 1);
+            g.NombreAdultes == 1 &&
+            g.Jeunes.NombreFeminin == 0 &&
+            g.Jeunes.NombreMasculin == 1 &&
+            g.Adultes.NombreFeminin == 1 &&
+            g.Adultes.NombreMasculin == 0);
         dto.Membres.Should().HaveCount(5);
         dto.Membres.Should().Contain(m => m.Matricule == "0583905E" && m.Groupe == "LES AHES" && m.Fonction == "Animatrice");
         dto.Membres.Should().NotContain(m => m.Matricule == "0583908H");

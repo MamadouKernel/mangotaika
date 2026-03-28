@@ -81,14 +81,14 @@
                 <dt class="col-sm-4 text-muted-custom">Adultes</dt>
                 <dd class="col-sm-8">@Model.Adultes.Total | Femmes @Model.Adultes.NombreFeminin / Hommes @Model.Adultes.NombreMasculin</dd>
 
-                <dt class="col-sm-4 text-muted-custom">Chef d'unite</dt>
+                <dt class="col-sm-4 text-muted-custom">Responsable de branche</dt>
                 <dd class="col-sm-8">@(Model.NomChefUnite ?? "-")</dd>
             </dl>
         </div>
 
         <div class="col-xl-3 col-lg-3">
             <div class="branche-responsable-card">
-                <span class="branche-responsable-card__label">Responsable de branche</span>
+                <span class="branche-responsable-card__label">Responsable</span>
                 @if (!string.IsNullOrWhiteSpace(Model.ResponsablePhotoUrl))
                 {
                     <img src="@Model.ResponsablePhotoUrl"
@@ -135,6 +135,7 @@
                     }
                     <span class="branche-groupe-card__name">@groupe.NomGroupe</span>
                     <strong class="branche-groupe-card__total">@groupe.NombreScouts</strong>
+                    <small>@groupe.NombreFilles filles | @groupe.NombreGarcons garcons</small>
                 </div>
             }
         </div>
@@ -152,17 +153,39 @@
                 </thead>
                 <tbody>
                     <tr>
+                        <th scope="row">Scouts</th>
+                        @foreach (var groupe in Model.TotauxParGroupes)
+                        {
+                            <td>
+                                <strong>@groupe.NombreScouts</strong>
+                                <div class="small text-muted-custom">
+                                    F @groupe.NombreFilles / G @groupe.NombreGarcons
+                                </div>
+                            </td>
+                        }
+                    </tr>
+                    <tr>
                         <th scope="row">Jeunes</th>
                         @foreach (var groupe in Model.TotauxParGroupes)
                         {
-                            <td><strong>@groupe.NombreJeunes</strong></td>
+                            <td>
+                                <strong>@groupe.NombreJeunes</strong>
+                                <div class="small text-muted-custom">
+                                    F @groupe.Jeunes.NombreFeminin / G @groupe.Jeunes.NombreMasculin
+                                </div>
+                            </td>
                         }
                     </tr>
                     <tr>
                         <th scope="row">Adultes</th>
                         @foreach (var groupe in Model.TotauxParGroupes)
                         {
-                            <td><strong>@groupe.NombreAdultes</strong></td>
+                            <td>
+                                <strong>@groupe.NombreAdultes</strong>
+                                <div class="small text-muted-custom">
+                                    F @groupe.Adultes.NombreFeminin / G @groupe.Adultes.NombreMasculin
+                                </div>
+                            </td>
                         }
                     </tr>
                 </tbody>
@@ -356,6 +379,10 @@
     .branche-groupe-card__total {
         font-size: 1.8rem;
         line-height: 1;
+    }
+
+    .branche-groupe-card small {
+        opacity: 0.92;
     }
 
     .branche-groupes-table thead th,

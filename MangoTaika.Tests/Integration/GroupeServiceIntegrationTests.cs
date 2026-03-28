@@ -145,11 +145,15 @@ public sealed class GroupeServiceIntegrationTests
         dto.BranchesScouts.Should().ContainSingle(b =>
             b.Nom == "Oisillons" &&
             b.NombreScouts == 2 &&
+            b.NombreFilles == 1 &&
+            b.NombreGarcons == 1 &&
             b.Jeunes.Total == 2 &&
             b.Adultes.Total == 0);
         dto.BranchesScouts.Should().ContainSingle(b =>
             b.Nom == "Routier" &&
             b.NombreScouts == 2 &&
+            b.NombreFilles == 1 &&
+            b.NombreGarcons == 1 &&
             b.Jeunes.Total == 0 &&
             b.Adultes.Total == 2);
     }

@@ -1,6 +1,6 @@
 @model GroupeDto
 @{
-    ViewData["Title"] = "Detail du groupe";
+    ViewData["Title"] = "Detail de l'entite";
     Layout = "_LayoutAdmin";
     var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
 
@@ -119,8 +119,8 @@
 <div class="card-3d p-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
         <div>
-            <h4 class="mb-1">R&eacute;partition par branche</h4>
-            <p class="text-muted-custom mb-0">Totaux par branche avec le d&eacute;tail jeunes et adultes.</p>
+            <h4 class="mb-1">Totaux par branche</h4>
+            <p class="text-muted-custom mb-0">Totaux par branche avec le detail scouts, jeunes et adultes.</p>
         </div>
     </div>
 
@@ -132,6 +132,7 @@
                 <div class="branche-summary-card" style="--branch-accent:@GetBranchAccent(branche.Nom)">
                     <span class="branche-summary-card__name">@branche.Nom</span>
                     <strong class="branche-summary-card__total">@branche.NombreScouts</strong>
+                    <small class="branche-summary-card__meta">@branche.NombreFilles filles | @branche.NombreGarcons garcons</small>
                     <small class="branche-summary-card__meta">Jeunes @branche.Jeunes.Total | Adultes @branche.Adultes.Total</small>
                 </div>
             }
@@ -149,6 +150,18 @@
                     </tr>
                 </thead>
                 <tbody>
+                    <tr>
+                        <th scope="row">Scouts</th>
+                        @foreach (var branche in Model.BranchesScouts)
+                        {
+                            <td>
+                                <strong>@branche.NombreScouts</strong>
+                                <div class="small text-muted-custom">
+                                    F @branche.NombreFilles / G @branche.NombreGarcons
+                                </div>
+                            </td>
+                        }
+                    </tr>
                     <tr>
                         <th scope="row">Jeunes</th>
                         @foreach (var branche in Model.BranchesScouts)

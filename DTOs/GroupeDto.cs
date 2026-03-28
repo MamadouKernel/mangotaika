@@ -12,6 +12,7 @@ public class GroupeDto
     public double? Longitude { get; set; }
     public string? Adresse { get; set; }
     public string? NomChefGroupe { get; set; }
+    public Guid? ResponsableId { get; set; }
     public string? ContactChefGroupe { get; set; }
     public string? ResponsablePhotoUrl { get; set; }
     public int NombreMembres { get; set; }
@@ -26,6 +27,8 @@ public class BrancheScoutCountDto
 {
     public string Nom { get; set; } = string.Empty;
     public int NombreScouts { get; set; }
+    public int NombreFilles { get; set; }
+    public int NombreGarcons { get; set; }
     public string? NomChefUnite { get; set; }
     public RepartitionMembresDto Jeunes { get; set; } = new();
     public RepartitionMembresDto Adultes { get; set; } = new();

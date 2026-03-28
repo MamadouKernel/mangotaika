@@ -25,6 +25,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
                 NomChefGroupe = g.NomChefGroupe != null && g.NomChefGroupe != string.Empty
                     ? g.NomChefGroupe
                     : (g.Responsable != null ? g.Responsable.Prenom + " " + g.Responsable.Nom : null),
+                ResponsableId = g.ResponsableId,
                 ContactChefGroupe = NormalizeOptional(g.Responsable != null ? g.Responsable.PhoneNumber : null),
                 ResponsablePhotoUrl = NormalizeOptional(g.Responsable != null ? g.Responsable.PhotoUrl : null),
                 NombreMembres = db.Scouts.Count(s => s.GroupeId == g.Id && s.IsActive),
@@ -34,6 +35,10 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
                     {
                         Nom = b.Nom,
                         NombreScouts = db.Scouts.Count(s => s.BrancheId == b.Id && s.IsActive),
+                        NombreFilles = db.Scouts.Count(s => s.BrancheId == b.Id && s.IsActive && (
+                            s.Sexe == "F" || s.Sexe == "Feminin" || s.Sexe == "Fille")),
+                        NombreGarcons = db.Scouts.Count(s => s.BrancheId == b.Id && s.IsActive && (
+                            s.Sexe == "M" || s.Sexe == "Masculin" || s.Sexe == "Garcon")),
                         NomChefUnite = b.NomChefUnite
                     }).ToList()
             })
@@ -68,6 +73,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
             NomChefGroupe = BuildChefGroupeName(
                 groupe.NomChefGroupe,
                 groupe.Responsable != null ? $"{groupe.Responsable.Prenom} {groupe.Responsable.Nom}" : null),
+            ResponsableId = groupe.ResponsableId,
             ContactChefGroupe = NormalizeOptional(groupe.Responsable?.PhoneNumber),
             ResponsablePhotoUrl = NormalizeOptional(groupe.Responsable?.PhotoUrl),
             NombreMembres = scouts.Count,
@@ -82,6 +88,8 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
                 {
                     Nom = b.Nom,
                     NombreScouts = branchScouts.Count,
+                    NombreFilles = branchScouts.Count(s => ClassifySexe(s.Sexe) == SexeCategory.Feminin),
+                    NombreGarcons = branchScouts.Count(s => ClassifySexe(s.Sexe) == SexeCategory.Masculin),
                     NomChefUnite = b.NomChefUnite,
                     Jeunes = BuildRepartition(branchScouts.Where(IsJeune)),
                     Adultes = BuildRepartition(branchScouts.Where(s => !IsJeune(s)))
@@ -162,6 +170,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
         NomChefGroupe = BuildChefGroupeName(
             g.NomChefGroupe,
             g.Responsable != null ? $"{g.Responsable.Prenom} {g.Responsable.Nom}" : null),
+        ResponsableId = g.ResponsableId,
         ContactChefGroupe = NormalizeOptional(g.Responsable?.PhoneNumber),
         ResponsablePhotoUrl = NormalizeOptional(g.Responsable?.PhotoUrl),
         NombreMembres = 0

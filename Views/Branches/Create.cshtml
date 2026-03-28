@@ -35,12 +35,12 @@
         </div>
         <div class="row">
             <div class="col-md-6 mb-3">
-                <label asp-for="AgeMin" class="form-label">Âge minimum</label>
+                <label asp-for="AgeMin" class="form-label">Age minimum</label>
                 <input asp-for="AgeMin" class="form-control" type="number" placeholder="Ex: 8" />
                 <span asp-validation-for="AgeMin" class="text-danger small"></span>
             </div>
             <div class="col-md-6 mb-3">
-                <label asp-for="AgeMax" class="form-label">Âge maximum</label>
+                <label asp-for="AgeMax" class="form-label">Age maximum</label>
                 <input asp-for="AgeMax" class="form-control" type="number" placeholder="Ex: 12" />
                 <span asp-validation-for="AgeMax" class="text-danger small"></span>
             </div>
@@ -48,7 +48,7 @@
         <div class="mb-3">
             <label asp-for="GroupeId" class="form-label">Groupe</label>
             <select asp-for="GroupeId" class="form-select" id="groupeSelect">
-                <option value="">— Sélectionner un groupe —</option>
+                <option value="">-- Selectionner un groupe --</option>
                 @foreach (var g in groupes)
                 {
                     <option value="@g.Id">@g.Nom</option>
@@ -57,14 +57,14 @@
             <span asp-validation-for="GroupeId" class="text-danger small"></span>
         </div>
         <div class="mb-4">
-            <label asp-for="ChefUniteId" class="form-label">Commissaire de district de branche (CDB)</label>
+            <label asp-for="ChefUniteId" class="form-label">Responsable de branche</label>
             <select asp-for="ChefUniteId" class="form-select" id="chefSelect" data-current="@Model?.ChefUniteId">
-                <option value="">— Sélectionner d'abord un groupe —</option>
+                <option value="">-- Selectionner d'abord un groupe --</option>
             </select>
-            <small class="text-muted-custom">Sélectionnez un groupe puis choisissez un commissaire de district de branche (CDB) appartenant à ce groupe.</small>
+            <small class="text-muted-custom">Le responsable de branche doit appartenir au groupe selectionne.</small>
             <span asp-validation-for="ChefUniteId" class="text-danger small d-block"></span>
         </div>
-        <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Créer</button>
+        <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Creer</button>
         <a asp-action="Index" class="btn btn-outline-or ms-2">Annuler</a>
     </form>
 </div>
@@ -74,14 +74,14 @@
     function loadScouts(groupeId, selectedId) {
         var chefSelect = document.getElementById('chefSelect');
         if (!groupeId) {
-            chefSelect.innerHTML = '<option value="">— Sélectionner d\'abord un groupe —</option>';
+            chefSelect.innerHTML = '<option value="">-- Selectionner d\\'abord un groupe --</option>';
             return;
         }
         chefSelect.innerHTML = '<option value="">Chargement...</option>';
         fetch('/Branches/GetScoutsByGroupe?groupeId=' + groupeId)
             .then(r => r.json())
             .then(data => {
-                var html = '<option value="">— Sélectionner un commissaire de district de branche (CDB) —</option>';
+                var html = '<option value="">-- Selectionner un responsable de branche --</option>';
                 data.forEach(s => {
                     var sel = (selectedId && s.id == selectedId) ? ' selected' : '';
                     html += '<option value="' + s.id + '"' + sel + '>' + s.nom + '</option>';

@@ -191,13 +191,13 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
 
         if (chef is null)
         {
-            ModelState.AddModelError(nameof(dto.ChefUniteId), "Le chef d'unite selectionne est introuvable.");
+            ModelState.AddModelError(nameof(dto.ChefUniteId), "Le responsable de branche selectionne est introuvable.");
             return;
         }
 
         if (chef.GroupeId != dto.GroupeId)
         {
-            ModelState.AddModelError(nameof(dto.ChefUniteId), "Le chef d'unite doit appartenir au groupe selectionne.");
+            ModelState.AddModelError(nameof(dto.ChefUniteId), "Le responsable de branche doit appartenir au groupe selectionne.");
         }
     }
 

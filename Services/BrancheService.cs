@@ -150,8 +150,12 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
                     NomGroupe = referenceBranche.Groupe?.Nom ?? "-",
                     LogoGroupeUrl = NormalizeOptional(referenceBranche.Groupe?.LogoUrl),
                     NombreScouts = groupScouts.Count,
+                    NombreFilles = groupScouts.Count(s => ClassifySexe(s.Sexe) == SexeCategory.Feminin),
+                    NombreGarcons = groupScouts.Count(s => ClassifySexe(s.Sexe) == SexeCategory.Masculin),
                     NombreJeunes = groupScouts.Count(IsJeune),
-                    NombreAdultes = groupScouts.Count(s => !IsJeune(s))
+                    NombreAdultes = groupScouts.Count(s => !IsJeune(s)),
+                    Jeunes = BuildRepartition(groupScouts.Where(IsJeune)),
+                    Adultes = BuildRepartition(groupScouts.Where(s => !IsJeune(s)))
                 };
             })
             .OrderBy(summary => summary.NomGroupe)
@@ -182,7 +186,7 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
     {
         if (!chefUniteId.HasValue)
         {
-            throw new InvalidOperationException("Le chef d'unite est obligatoire.");
+            throw new InvalidOperationException("Le responsable de branche est obligatoire.");
         }
 
         var chefUnite = await db.Scouts
@@ -190,12 +194,12 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
 
         if (chefUnite is null)
         {
-            throw new InvalidOperationException("Le chef d'unite selectionne est introuvable.");
+            throw new InvalidOperationException("Le responsable de branche selectionne est introuvable.");
         }
 
         if (chefUnite.GroupeId != groupeId)
         {
-            throw new InvalidOperationException("Le chef d'unite doit appartenir au groupe selectionne.");
+            throw new InvalidOperationException("Le responsable de branche doit appartenir au groupe selectionne.");
         }
 
         return chefUnite;
