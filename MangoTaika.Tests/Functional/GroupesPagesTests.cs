@@ -89,19 +89,63 @@ public sealed class GroupesPagesTests
     {
         await using var factory = new SupportWebApplicationFactory();
         ApplicationUser gestionnaire = null!;
+        ApplicationUser responsable = null!;
         Groupe groupe = null!;
+        Branche brancheJeunes = null!;
+        Branche brancheAdultes = null!;
 
         await factory.SeedAsync(async db =>
         {
             await TestDataSeeder.EnsureRolesAsync(db, "Gestionnaire");
             gestionnaire = await TestDataSeeder.AddUserAsync(db, "Awa", "Gestion", ["Gestionnaire"]);
+            responsable = await TestDataSeeder.AddUserAsync(db, "Lucette", "Ossuh", []);
+            responsable.PhoneNumber = "0701020304";
+            responsable.PhotoUrl = "/uploads/users/lucette.png";
             groupe = new Groupe
             {
                 Id = Guid.NewGuid(),
                 Nom = "Groupe Riviera",
-                LogoUrl = "/uploads/groupes/riviera.png"
+                LogoUrl = "/uploads/groupes/riviera.png",
+                NomChefGroupe = "OSSUH Lucette",
+                ResponsableId = responsable.Id
+            };
+            brancheJeunes = new Branche
+            {
+                Id = Guid.NewGuid(),
+                Nom = "Oisillons",
+                GroupeId = groupe.Id
+            };
+            brancheAdultes = new Branche
+            {
+                Id = Guid.NewGuid(),
+                Nom = "Routier",
+                GroupeId = groupe.Id
             };
             db.Groupes.Add(groupe);
+            db.Branches.AddRange(brancheJeunes, brancheAdultes);
+            db.Scouts.AddRange(
+                new Scout
+                {
+                    Id = Guid.NewGuid(),
+                    GroupeId = groupe.Id,
+                    BrancheId = brancheJeunes.Id,
+                    Matricule = "0583001A",
+                    Nom = "Aka",
+                    Prenom = "JeuneF",
+                    DateNaissance = DateTime.UtcNow.AddYears(-12),
+                    Sexe = "Feminin"
+                },
+                new Scout
+                {
+                    Id = Guid.NewGuid(),
+                    GroupeId = groupe.Id,
+                    BrancheId = brancheAdultes.Id,
+                    Matricule = "0583002B",
+                    Nom = "Kouame",
+                    Prenom = "AdulteM",
+                    DateNaissance = DateTime.UtcNow.AddYears(-28),
+                    Sexe = "Masculin"
+                });
         });
 
         using var client = factory.CreateAuthenticatedClient(gestionnaire.Id, "Gestionnaire");
@@ -110,5 +154,13 @@ public sealed class GroupesPagesTests
 
         html.Should().Contain("/uploads/groupes/riviera.png");
         html.Should().Contain("Logo du groupe");
+        html.Should().Contain("Responsable");
+        html.Should().Contain("/uploads/users/lucette.png");
+        html.Should().Contain("0701020304");
+        html.Should().Contain("Totaux par branche");
+        html.Should().Contain("Oisillons");
+        html.Should().Contain("Routier");
+        html.Should().Contain("Jeunes");
+        html.Should().Contain("Adultes");
     }
 }

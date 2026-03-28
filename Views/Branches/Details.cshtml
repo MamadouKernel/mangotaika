@@ -3,6 +3,16 @@
     ViewData["Title"] = "Detail de la branche";
     Layout = "_LayoutAdmin";
     var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+
+    var groupPalette = new[]
+    {
+        "#6a7f43",
+        "#eab308",
+        "#8b5cf6",
+        "#0ea5e9",
+        "#ec4899",
+        "#ef4444"
+    };
 }
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
@@ -16,30 +26,353 @@
     </div>
 </div>
 
-<div class="card-3d p-4">
-    <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
-        @if (!string.IsNullOrWhiteSpace(Model.LogoUrl))
-        {
-            <img src="@Model.LogoUrl" alt="Logo de la branche @Model.Nom" style="width:88px;height:88px;object-fit:cover;border-radius:20px;border:1px solid rgba(255,255,255,0.12);" />
-        }
-        else
-        {
-            <div style="width:88px;height:88px;border-radius:20px;background:rgba(94,117,188,0.12);border:1px solid rgba(94,117,188,0.25);display:flex;align-items:center;justify-content:center;">
-                <i class="bi bi-diagram-3" style="font-size:2rem;color:var(--bleu-logo);"></i>
+<div class="card-3d p-4 mb-4">
+    <div class="row g-4 align-items-start">
+        <div class="col-xl-2 col-lg-3">
+            @if (!string.IsNullOrWhiteSpace(Model.LogoUrl))
+            {
+                <img src="@Model.LogoUrl"
+                     alt="Logo de la branche @Model.Nom"
+                     class="branche-details-logo" />
+            }
+            else
+            {
+                <div class="branche-details-logo branche-details-logo--placeholder">
+                    <i class="bi bi-diagram-3"></i>
+                </div>
+            }
+        </div>
+
+        <div class="col-xl-7 col-lg-6">
+            <div class="mb-3">
+                <h4 class="mb-1">@Model.Nom</h4>
+                <p class="text-muted-custom mb-2">@(Model.NomGroupe ?? "Groupe non renseigne")</p>
+                <p class="text-muted-custom mb-0">@(Model.Description ?? "-")</p>
             </div>
-        }
-        <div>
-            <h4 class="mb-1">@Model.Nom</h4>
-            <p class="text-muted-custom mb-0">@(Model.NomGroupe ?? "Groupe non renseigne")</p>
+
+            <div class="branche-kpi-grid mb-3">
+                <div class="branche-kpi-card">
+                    <span class="branche-kpi-label">Scouts</span>
+                    <strong>@Model.NombreScouts</strong>
+                    <small>@Model.NombreFilles filles | @Model.NombreGarcons garcons</small>
+                </div>
+                <div class="branche-kpi-card">
+                    <span class="branche-kpi-label">Jeunes</span>
+                    <strong>@Model.Jeunes.Total</strong>
+                    <small>@Model.Jeunes.NombreFeminin filles | @Model.Jeunes.NombreMasculin garcons</small>
+                </div>
+                <div class="branche-kpi-card">
+                    <span class="branche-kpi-label">Adultes</span>
+                    <strong>@Model.Adultes.Total</strong>
+                    <small>@Model.Adultes.NombreFeminin femmes | @Model.Adultes.NombreMasculin hommes</small>
+                </div>
+            </div>
+
+            <dl class="row mb-0 small">
+                <dt class="col-sm-4 text-muted-custom">Groupe</dt>
+                <dd class="col-sm-8">@(Model.NomGroupe ?? "-")</dd>
+
+                <dt class="col-sm-4 text-muted-custom">Scouts</dt>
+                <dd class="col-sm-8">@Model.NombreScouts | @Model.NombreFilles filles | @Model.NombreGarcons garcons</dd>
+
+                <dt class="col-sm-4 text-muted-custom">Jeunes</dt>
+                <dd class="col-sm-8">@Model.Jeunes.Total | Filles @Model.Jeunes.NombreFeminin / Garcons @Model.Jeunes.NombreMasculin</dd>
+
+                <dt class="col-sm-4 text-muted-custom">Adultes</dt>
+                <dd class="col-sm-8">@Model.Adultes.Total | Femmes @Model.Adultes.NombreFeminin / Hommes @Model.Adultes.NombreMasculin</dd>
+
+                <dt class="col-sm-4 text-muted-custom">Chef d'unite</dt>
+                <dd class="col-sm-8">@(Model.NomChefUnite ?? "-")</dd>
+            </dl>
+        </div>
+
+        <div class="col-xl-3 col-lg-3">
+            <div class="branche-responsable-card">
+                <span class="branche-responsable-card__label">Responsable de branche</span>
+                @if (!string.IsNullOrWhiteSpace(Model.ResponsablePhotoUrl))
+                {
+                    <img src="@Model.ResponsablePhotoUrl"
+                         alt="Photo du responsable @Model.NomChefUnite"
+                         class="branche-responsable-card__photo" />
+                }
+                else
+                {
+                    <div class="branche-responsable-card__photo branche-responsable-card__photo--placeholder">
+                        <i class="bi bi-person-circle"></i>
+                    </div>
+                }
+                <strong class="branche-responsable-card__name">@(Model.NomChefUnite ?? "Non renseigne")</strong>
+            </div>
         </div>
     </div>
-    <p class="text-muted-custom mb-3">@(Model.Description ?? "-")</p>
-    <dl class="row mb-0 small">
-        <dt class="col-sm-4 text-muted-custom">Groupe</dt>
-        <dd class="col-sm-8">@(Model.NomGroupe ?? "-")</dd>
-        <dt class="col-sm-4 text-muted-custom">Scouts</dt>
-        <dd class="col-sm-8">@Model.NombreScouts</dd>
-        <dt class="col-sm-4 text-muted-custom">Chef d'unite</dt>
-        <dd class="col-sm-8">@(Model.NomChefUnite ?? "-")</dd>
-    </dl>
 </div>
+
+<div class="card-3d p-4 mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div>
+            <h4 class="mb-1">Total par groupe</h4>
+            <p class="text-muted-custom mb-0">Vue d'ensemble district de cette branche par groupe rattache.</p>
+        </div>
+    </div>
+
+    @if (Model.TotauxParGroupes.Any())
+    {
+        <div class="branche-groupes-grid mb-4">
+            @for (var i = 0; i < Model.TotauxParGroupes.Count; i++)
+            {
+                var groupe = Model.TotauxParGroupes[i];
+                var accent = groupPalette[i % groupPalette.Length];
+                <div class="branche-groupe-card" style="--group-accent:@accent">
+                    @if (!string.IsNullOrWhiteSpace(groupe.LogoGroupeUrl))
+                    {
+                        <img src="@groupe.LogoGroupeUrl" alt="Logo du groupe @groupe.NomGroupe" class="branche-groupe-card__logo" />
+                    }
+                    else
+                    {
+                        <div class="branche-groupe-card__logo branche-groupe-card__logo--placeholder">
+                            <i class="bi bi-building"></i>
+                        </div>
+                    }
+                    <span class="branche-groupe-card__name">@groupe.NomGroupe</span>
+                    <strong class="branche-groupe-card__total">@groupe.NombreScouts</strong>
+                </div>
+            }
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm align-middle branche-groupes-table mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Categorie</th>
+                        @foreach (var groupe in Model.TotauxParGroupes)
+                        {
+                            <th scope="col">@groupe.NomGroupe</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th scope="row">Jeunes</th>
+                        @foreach (var groupe in Model.TotauxParGroupes)
+                        {
+                            <td><strong>@groupe.NombreJeunes</strong></td>
+                        }
+                    </tr>
+                    <tr>
+                        <th scope="row">Adultes</th>
+                        @foreach (var groupe in Model.TotauxParGroupes)
+                        {
+                            <td><strong>@groupe.NombreAdultes</strong></td>
+                        }
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="text-muted-custom">Aucun groupe rattache pour cette branche.</div>
+    }
+</div>
+
+<div class="card-3d p-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h4 class="mb-1">Liste des scouts et adultes de la branche</h4>
+            <p class="text-muted-custom mb-0">Matricules, identite, groupe et fonction de tous les membres rattaches.</p>
+        </div>
+    </div>
+
+    @if (Model.Membres.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-sm align-middle branche-membres-table mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Matricule</th>
+                        <th scope="col">Nom</th>
+                        <th scope="col">Prenoms</th>
+                        <th scope="col">Groupe</th>
+                        <th scope="col">Fonction</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var membre in Model.Membres)
+                    {
+                        <tr>
+                            <td>@membre.Matricule</td>
+                            <td>@membre.Nom</td>
+                            <td>@membre.Prenoms</td>
+                            <td>@membre.Groupe</td>
+                            <td>@membre.Fonction</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="text-muted-custom">Aucun membre actif rattache a cette branche.</div>
+    }
+</div>
+
+<style>
+    .branche-details-logo {
+        width: 100%;
+        max-width: 120px;
+        aspect-ratio: 1;
+        object-fit: cover;
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .branche-details-logo--placeholder {
+        background: rgba(94, 117, 188, 0.12);
+        border: 1px solid rgba(94, 117, 188, 0.25);
+        color: var(--bleu-logo);
+        font-size: 2rem;
+    }
+
+    .branche-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+    }
+
+    .branche-kpi-card {
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.55);
+        border: 1px solid rgba(94, 117, 188, 0.14);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .branche-kpi-card strong {
+        font-size: 1.4rem;
+        color: var(--bleu-logo);
+        line-height: 1;
+    }
+
+    .branche-kpi-card small {
+        color: #546173;
+    }
+
+    .branche-kpi-label {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #7b8a9b;
+    }
+
+    .branche-responsable-card {
+        border-radius: 24px;
+        background: linear-gradient(180deg, rgba(94, 117, 188, 0.12), rgba(255, 255, 255, 0.8));
+        border: 1px solid rgba(94, 117, 188, 0.18);
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 10px;
+        min-height: 100%;
+    }
+
+    .branche-responsable-card__label {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #7b8a9b;
+    }
+
+    .branche-responsable-card__photo {
+        width: 120px;
+        height: 120px;
+        border-radius: 28px;
+        object-fit: cover;
+        border: 1px solid rgba(94, 117, 188, 0.18);
+        background: rgba(255, 255, 255, 0.75);
+    }
+
+    .branche-responsable-card__photo--placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--bleu-logo);
+        font-size: 3rem;
+    }
+
+    .branche-responsable-card__name {
+        color: #213547;
+    }
+
+    .branche-groupes-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 14px;
+    }
+
+    .branche-groupe-card {
+        border-radius: 22px;
+        padding: 16px 14px;
+        color: #fff;
+        background: linear-gradient(135deg, var(--group-accent), color-mix(in srgb, var(--group-accent) 78%, #111 22%));
+        box-shadow: 0 16px 28px rgba(18, 24, 33, 0.16);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        min-height: 146px;
+        text-align: center;
+    }
+
+    .branche-groupe-card__logo {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        object-fit: cover;
+        background: rgba(255, 255, 255, 0.88);
+        padding: 4px;
+    }
+
+    .branche-groupe-card__logo--placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(255, 255, 255, 0.92);
+        font-size: 1.5rem;
+    }
+
+    .branche-groupe-card__name {
+        font-size: 0.88rem;
+        font-weight: 700;
+    }
+
+    .branche-groupe-card__total {
+        font-size: 1.8rem;
+        line-height: 1;
+    }
+
+    .branche-groupes-table thead th,
+    .branche-membres-table thead th {
+        border-bottom-width: 1px;
+        color: #546173;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .branche-groupes-table tbody th {
+        color: #213547;
+        white-space: nowrap;
+    }
+
+    .branche-groupes-table td strong {
+        color: var(--bleu-logo);
+    }
+</style>

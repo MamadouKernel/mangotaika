@@ -26,6 +26,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
                     ? g.NomChefGroupe
                     : (g.Responsable != null ? g.Responsable.Prenom + " " + g.Responsable.Nom : null),
                 ContactChefGroupe = NormalizeOptional(g.Responsable != null ? g.Responsable.PhoneNumber : null),
+                ResponsablePhotoUrl = NormalizeOptional(g.Responsable != null ? g.Responsable.PhotoUrl : null),
                 NombreMembres = db.Scouts.Count(s => s.GroupeId == g.Id && s.IsActive),
                 BranchesScouts = db.Branches
                     .Where(b => b.GroupeId == g.Id && b.IsActive)
@@ -45,6 +46,16 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
             .Include(g => g.Responsable)
             .FirstOrDefaultAsync(g => g.Id == id);
         if (groupe is null) return null;
+
+        var scouts = await db.Scouts
+            .Where(s => s.GroupeId == groupe.Id && s.IsActive)
+            .ToListAsync();
+
+        var branches = await db.Branches
+            .Where(b => b.GroupeId == groupe.Id && b.IsActive)
+            .OrderBy(b => b.Nom)
+            .ToListAsync();
+
         return new GroupeDto
         {
             Id = groupe.Id,
@@ -58,15 +69,24 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
                 groupe.NomChefGroupe,
                 groupe.Responsable != null ? $"{groupe.Responsable.Prenom} {groupe.Responsable.Nom}" : null),
             ContactChefGroupe = NormalizeOptional(groupe.Responsable?.PhoneNumber),
-            NombreMembres = await db.Scouts.CountAsync(s => s.GroupeId == groupe.Id && s.IsActive),
-            BranchesScouts = await db.Branches
-                .Where(b => b.GroupeId == groupe.Id && b.IsActive)
-                .Select(b => new BrancheScoutCountDto
+            ResponsablePhotoUrl = NormalizeOptional(groupe.Responsable?.PhotoUrl),
+            NombreMembres = scouts.Count,
+            NombreFilles = scouts.Count(s => ClassifySexe(s.Sexe) == SexeCategory.Feminin),
+            NombreGarcons = scouts.Count(s => ClassifySexe(s.Sexe) == SexeCategory.Masculin),
+            Jeunes = BuildRepartition(scouts.Where(IsJeune)),
+            Adultes = BuildRepartition(scouts.Where(s => !IsJeune(s))),
+            BranchesScouts = branches.Select(b =>
+            {
+                var branchScouts = scouts.Where(s => s.BrancheId == b.Id).ToList();
+                return new BrancheScoutCountDto
                 {
                     Nom = b.Nom,
-                    NombreScouts = db.Scouts.Count(s => s.BrancheId == b.Id && s.IsActive),
-                    NomChefUnite = b.NomChefUnite
-                }).ToListAsync()
+                    NombreScouts = branchScouts.Count,
+                    NomChefUnite = b.NomChefUnite,
+                    Jeunes = BuildRepartition(branchScouts.Where(IsJeune)),
+                    Adultes = BuildRepartition(branchScouts.Where(s => !IsJeune(s)))
+                };
+            }).ToList()
         };
     }
 
@@ -142,6 +162,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
             g.NomChefGroupe,
             g.Responsable != null ? $"{g.Responsable.Prenom} {g.Responsable.Nom}" : null),
         ContactChefGroupe = NormalizeOptional(g.Responsable?.PhoneNumber),
+        ResponsablePhotoUrl = NormalizeOptional(g.Responsable?.PhotoUrl),
         NombreMembres = 0
     };
 
@@ -161,6 +182,29 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
     private static string? NormalizeOptional(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private static RepartitionMembresDto BuildRepartition(IEnumerable<Scout> scouts)
+    {
+        var repartition = new RepartitionMembresDto();
+
+        foreach (var scout in scouts)
+        {
+            switch (ClassifySexe(scout.Sexe))
+            {
+                case SexeCategory.Feminin:
+                    repartition.NombreFeminin++;
+                    break;
+                case SexeCategory.Masculin:
+                    repartition.NombreMasculin++;
+                    break;
+                default:
+                    repartition.NombreNonRenseigne++;
+                    break;
+            }
+        }
+
+        return repartition;
     }
 
     private static string NormalizeNom(string nom)
@@ -231,5 +275,38 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding) : IGrou
         {
             throw new InvalidOperationException("Un groupe avec ce nom existe deja.", ex);
         }
+    }
+
+    private static bool IsJeune(Scout scout)
+    {
+        var today = DateTime.UtcNow.Date;
+        var birthDate = scout.DateNaissance.Date;
+        var age = today.Year - birthDate.Year;
+
+        if (birthDate > today.AddYears(-age))
+        {
+            age--;
+        }
+
+        return age < 18;
+    }
+
+    private static SexeCategory ClassifySexe(string? sexe)
+    {
+        var normalized = DatabaseText.NormalizeSearchKey(sexe ?? string.Empty);
+
+        return normalized switch
+        {
+            "F" or "FEMININ" or "FILLE" => SexeCategory.Feminin,
+            "M" or "MASCULIN" or "GARCON" => SexeCategory.Masculin,
+            _ => SexeCategory.NonRenseigne
+        };
+    }
+
+    private enum SexeCategory
+    {
+        NonRenseigne,
+        Feminin,
+        Masculin
     }
 }

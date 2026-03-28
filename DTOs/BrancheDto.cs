@@ -14,7 +14,33 @@ public class BrancheDto
     public Guid? ChefUniteId { get; set; }
     public Guid GroupeId { get; set; }
     public string? NomGroupe { get; set; }
+    public string? ResponsablePhotoUrl { get; set; }
     public int NombreScouts { get; set; }
+    public int NombreFilles { get; set; }
+    public int NombreGarcons { get; set; }
+    public RepartitionMembresDto Jeunes { get; set; } = new();
+    public RepartitionMembresDto Adultes { get; set; } = new();
+    public List<BrancheGroupeSummaryDto> TotauxParGroupes { get; set; } = [];
+    public List<BrancheMembreDto> Membres { get; set; } = [];
+}
+
+public class BrancheGroupeSummaryDto
+{
+    public Guid GroupeId { get; set; }
+    public string NomGroupe { get; set; } = string.Empty;
+    public string? LogoGroupeUrl { get; set; }
+    public int NombreScouts { get; set; }
+    public int NombreJeunes { get; set; }
+    public int NombreAdultes { get; set; }
+}
+
+public class BrancheMembreDto
+{
+    public string Matricule { get; set; } = string.Empty;
+    public string Nom { get; set; } = string.Empty;
+    public string Prenoms { get; set; } = string.Empty;
+    public string Groupe { get; set; } = string.Empty;
+    public string Fonction { get; set; } = "-";
 }
 
 public class BrancheCreateDto : IValidatableObject

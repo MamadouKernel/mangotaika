@@ -139,4 +139,125 @@ public sealed class BrancheServiceIntegrationTests
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*Une branche avec ce nom existe deja dans ce groupe.*");
     }
+
+    [Fact]
+    public async Task GetByIdAsync_Returns_District_Wide_Branche_Details_By_Groupe()
+    {
+        await using var db = TestDbContextFactory.CreateDbContext();
+
+        var groupeA = new Groupe
+        {
+            Id = Guid.NewGuid(),
+            Nom = "LES AHES",
+            LogoUrl = "/uploads/groupes/ahes.png"
+        };
+        var groupeB = new Groupe
+        {
+            Id = Guid.NewGuid(),
+            Nom = "HAPUU RERU",
+            LogoUrl = "/uploads/groupes/hapuu.png"
+        };
+
+        var chefA = new Scout
+        {
+            Id = Guid.NewGuid(),
+            Matricule = "0583901A",
+            Nom = "Edgar",
+            Prenom = "Yann",
+            PhotoUrl = "/uploads/scouts/yann.png",
+            DateNaissance = DateTime.UtcNow.AddYears(-24),
+            GroupeId = groupeA.Id
+        };
+
+        var chefB = new Scout
+        {
+            Id = Guid.NewGuid(),
+            Matricule = "0583902B",
+            Nom = "Luc",
+            Prenom = "Kouassi",
+            DateNaissance = DateTime.UtcNow.AddYears(-26),
+            GroupeId = groupeB.Id
+        };
+
+        var brancheA = new Branche
+        {
+            Id = Guid.NewGuid(),
+            Nom = "Eclaireur",
+            GroupeId = groupeA.Id,
+            ChefUniteId = chefA.Id,
+            NomChefUnite = "Yann Edgar",
+            LogoUrl = "/uploads/branches/eclaireur.png"
+        };
+
+        var brancheB = new Branche
+        {
+            Id = Guid.NewGuid(),
+            Nom = "Eclaireur",
+            GroupeId = groupeB.Id,
+            ChefUniteId = chefB.Id,
+            NomChefUnite = "Kouassi Luc"
+        };
+
+        var brancheOther = new Branche
+        {
+            Id = Guid.NewGuid(),
+            Nom = "Louveteau",
+            GroupeId = groupeA.Id
+        };
+
+        db.Groupes.AddRange(groupeA, groupeB);
+        db.Scouts.AddRange(chefA, chefB);
+        db.Branches.AddRange(brancheA, brancheB, brancheOther);
+        db.Scouts.AddRange(
+            CreateScout(groupeA.Id, brancheA.Id, "0583903C", "Aka", "Awa", DateTime.UtcNow.AddYears(-13), "Feminin", "CP"),
+            CreateScout(groupeA.Id, brancheA.Id, "0583904D", "Yao", "Koffi", DateTime.UtcNow.AddYears(-14), "Masculin", null),
+            CreateScout(groupeA.Id, brancheA.Id, "0583905E", "Kone", "Mariam", DateTime.UtcNow.AddYears(-21), "Feminin", "Animatrice"),
+            CreateScout(groupeB.Id, brancheB.Id, "0583906F", "Kouame", "Jean", DateTime.UtcNow.AddYears(-12), "Masculin", "CP"),
+            CreateScout(groupeB.Id, brancheB.Id, "0583907G", "Soro", "Lea", DateTime.UtcNow.AddYears(-20), "Feminin", "Cheffe"),
+            CreateScout(groupeA.Id, brancheOther.Id, "0583908H", "Autre", "Branche", DateTime.UtcNow.AddYears(-10), "Feminin", null));
+        await db.SaveChangesAsync();
+
+        var service = new BrancheService(db);
+
+        var dto = await service.GetByIdAsync(brancheA.Id);
+
+        dto.Should().NotBeNull();
+        dto!.ResponsablePhotoUrl.Should().Be("/uploads/scouts/yann.png");
+        dto.NombreScouts.Should().Be(5);
+        dto.NombreFilles.Should().Be(3);
+        dto.NombreGarcons.Should().Be(2);
+        dto.Jeunes.Total.Should().Be(3);
+        dto.Adultes.Total.Should().Be(2);
+        dto.TotauxParGroupes.Should().HaveCount(2);
+        dto.TotauxParGroupes.Should().ContainSingle(g =>
+            g.NomGroupe == "LES AHES" &&
+            g.NombreScouts == 3 &&
+            g.NombreJeunes == 2 &&
+            g.NombreAdultes == 1);
+        dto.TotauxParGroupes.Should().ContainSingle(g =>
+            g.NomGroupe == "HAPUU RERU" &&
+            g.NombreScouts == 2 &&
+            g.NombreJeunes == 1 &&
+            g.NombreAdultes == 1);
+        dto.Membres.Should().HaveCount(5);
+        dto.Membres.Should().Contain(m => m.Matricule == "0583905E" && m.Groupe == "LES AHES" && m.Fonction == "Animatrice");
+        dto.Membres.Should().NotContain(m => m.Matricule == "0583908H");
+    }
+
+    private static Scout CreateScout(Guid groupeId, Guid brancheId, string matricule, string nom, string prenom, DateTime dateNaissance, string sexe, string? fonction)
+    {
+        return new Scout
+        {
+            Id = Guid.NewGuid(),
+            GroupeId = groupeId,
+            BrancheId = brancheId,
+            Matricule = matricule,
+            Nom = nom,
+            Prenom = prenom,
+            DateNaissance = dateNaissance,
+            Sexe = sexe,
+            Fonction = fonction,
+            IsActive = true
+        };
+    }
 }

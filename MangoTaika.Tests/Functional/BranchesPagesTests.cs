@@ -229,31 +229,87 @@ public sealed class BranchesPagesTests
         await using var factory = new SupportWebApplicationFactory();
         ApplicationUser gestionnaire = null!;
         Groupe groupe = null!;
+        Groupe otherGroupe = null!;
         Branche branche = null!;
+        Branche otherBranche = null!;
+        Scout chef = null!;
 
         await factory.SeedAsync(async db =>
         {
             await TestDataSeeder.EnsureRolesAsync(db, "Gestionnaire");
             gestionnaire = await TestDataSeeder.AddUserAsync(db, "Awa", "Gestion", ["Gestionnaire"]);
 
-            groupe = new Groupe { Id = Guid.NewGuid(), Nom = "Groupe A" };
+            groupe = new Groupe { Id = Guid.NewGuid(), Nom = "Groupe A", LogoUrl = "/uploads/groupes/a.png" };
+            otherGroupe = new Groupe { Id = Guid.NewGuid(), Nom = "Groupe B", LogoUrl = "/uploads/groupes/b.png" };
+            chef = new Scout
+            {
+                Id = Guid.NewGuid(),
+                Matricule = "0583991X",
+                Nom = "Yao",
+                Prenom = "Edgar",
+                PhotoUrl = "/uploads/scouts/edgar.png",
+                DateNaissance = DateTime.UtcNow.AddYears(-25),
+                GroupeId = groupe.Id
+            };
             branche = new Branche
             {
                 Id = Guid.NewGuid(),
-                Nom = "Louveteaux",
+                Nom = "Eclaireur",
                 GroupeId = groupe.Id,
-                LogoUrl = "/uploads/branches/louveteaux.png"
+                LogoUrl = "/uploads/branches/eclaireur.png",
+                ChefUniteId = chef.Id,
+                NomChefUnite = "Edgar Yao"
+            };
+            otherBranche = new Branche
+            {
+                Id = Guid.NewGuid(),
+                Nom = "Eclaireur",
+                GroupeId = otherGroupe.Id
             };
 
-            db.Groupes.Add(groupe);
-            db.Branches.Add(branche);
+            db.Groupes.AddRange(groupe, otherGroupe);
+            db.Scouts.Add(chef);
+            db.Branches.AddRange(branche, otherBranche);
+            db.Scouts.AddRange(
+                new Scout
+                {
+                    Id = Guid.NewGuid(),
+                    GroupeId = groupe.Id,
+                    BrancheId = branche.Id,
+                    Matricule = "0583992X",
+                    Nom = "Awa",
+                    Prenom = "Jeune",
+                    DateNaissance = DateTime.UtcNow.AddYears(-13),
+                    Sexe = "Feminin",
+                    Fonction = "CP"
+                },
+                new Scout
+                {
+                    Id = Guid.NewGuid(),
+                    GroupeId = otherGroupe.Id,
+                    BrancheId = otherBranche.Id,
+                    Matricule = "0583993X",
+                    Nom = "Jean",
+                    Prenom = "Adulte",
+                    DateNaissance = DateTime.UtcNow.AddYears(-20),
+                    Sexe = "Masculin",
+                    Fonction = "Assistant"
+                });
         });
 
         using var client = factory.CreateAuthenticatedClient(gestionnaire.Id, "Gestionnaire");
 
         var html = await client.GetStringAsync($"/Branches/Details/{branche.Id}");
 
-        html.Should().Contain("/uploads/branches/louveteaux.png");
+        html.Should().Contain("/uploads/branches/eclaireur.png");
         html.Should().Contain("Logo de la branche");
+        html.Should().Contain("Responsable de branche");
+        html.Should().Contain("/uploads/scouts/edgar.png");
+        html.Should().Contain("Total par groupe");
+        html.Should().Contain("Groupe A");
+        html.Should().Contain("Groupe B");
+        html.Should().Contain("Liste des scouts et adultes de la branche");
+        html.Should().Contain("Matricule");
+        html.Should().Contain("Fonction");
     }
 }

@@ -23,10 +23,28 @@ public class BrancheService(AppDbContext db) : IBrancheService
     {
         var branche = await db.Branches
             .Include(b => b.Groupe)
-            .Include(b => b.Scouts)
             .Include(b => b.ChefUnite)
             .FirstOrDefaultAsync(b => b.Id == id);
-        return branche is null ? null : ToDto(branche);
+        if (branche is null)
+        {
+            return null;
+        }
+
+        var normalizedNom = DatabaseText.NormalizeSearchKey(branche.Nom);
+        var relatedBranches = (await db.Branches
+                .Include(b => b.Groupe)
+                .Include(b => b.ChefUnite)
+                .Where(b => b.IsActive)
+                .ToListAsync())
+            .Where(b => DatabaseText.NormalizeSearchKey(b.Nom) == normalizedNom)
+            .ToList();
+
+        var relatedBranchIds = relatedBranches.Select(b => b.Id).ToList();
+        var scouts = await db.Scouts
+            .Where(s => s.IsActive && s.BrancheId.HasValue && relatedBranchIds.Contains(s.BrancheId.Value))
+            .ToListAsync();
+
+        return BuildDetailedDto(branche, relatedBranches, scouts);
     }
 
     public async Task<BrancheDto> CreateAsync(BrancheCreateDto dto)
@@ -100,8 +118,64 @@ public class BrancheService(AppDbContext db) : IBrancheService
         ChefUniteId = b.ChefUniteId,
         GroupeId = b.GroupeId,
         NomGroupe = b.Groupe?.Nom,
-        NombreScouts = b.Scouts.Count
+        ResponsablePhotoUrl = NormalizeOptional(b.ChefUnite?.PhotoUrl),
+        NombreScouts = b.Scouts.Count(s => s.IsActive)
     };
+
+    private static BrancheDto BuildDetailedDto(Branche selectedBranche, IReadOnlyCollection<Branche> relatedBranches, IReadOnlyCollection<Scout> scouts)
+    {
+        var dto = ToDto(selectedBranche);
+        dto.NombreScouts = scouts.Count;
+        dto.NombreFilles = scouts.Count(s => ClassifySexe(s.Sexe) == SexeCategory.Feminin);
+        dto.NombreGarcons = scouts.Count(s => ClassifySexe(s.Sexe) == SexeCategory.Masculin);
+        dto.Jeunes = BuildRepartition(scouts.Where(IsJeune));
+        dto.Adultes = BuildRepartition(scouts.Where(s => !IsJeune(s)));
+
+        var relatedBranchesById = relatedBranches.ToDictionary(b => b.Id);
+
+        dto.TotauxParGroupes = relatedBranches
+            .GroupBy(b => b.GroupeId)
+            .Select(group =>
+            {
+                var referenceBranche = group.First();
+                var groupBranchIds = group.Select(b => b.Id).ToHashSet();
+                var groupScouts = scouts
+                    .Where(s => s.BrancheId.HasValue && groupBranchIds.Contains(s.BrancheId.Value))
+                    .ToList();
+
+                return new BrancheGroupeSummaryDto
+                {
+                    GroupeId = group.Key,
+                    NomGroupe = referenceBranche.Groupe?.Nom ?? "-",
+                    LogoGroupeUrl = NormalizeOptional(referenceBranche.Groupe?.LogoUrl),
+                    NombreScouts = groupScouts.Count,
+                    NombreJeunes = groupScouts.Count(IsJeune),
+                    NombreAdultes = groupScouts.Count(s => !IsJeune(s))
+                };
+            })
+            .OrderBy(summary => summary.NomGroupe)
+            .ToList();
+
+        dto.Membres = scouts
+            .OrderBy(s => relatedBranchesById.TryGetValue(s.BrancheId!.Value, out var branche) ? branche.Groupe?.Nom : string.Empty)
+            .ThenBy(s => s.Nom)
+            .ThenBy(s => s.Prenom)
+            .Select(s =>
+            {
+                var branche = relatedBranchesById[s.BrancheId!.Value];
+                return new BrancheMembreDto
+                {
+                    Matricule = s.Matricule,
+                    Nom = s.Nom,
+                    Prenoms = s.Prenom,
+                    Groupe = branche.Groupe?.Nom ?? "-",
+                    Fonction = NormalizeOptional(s.Fonction) ?? "-"
+                };
+            })
+            .ToList();
+
+        return dto;
+    }
 
     private async Task<Scout> GetChefUniteAsync(Guid groupeId, Guid? chefUniteId)
     {
@@ -206,5 +280,61 @@ public class BrancheService(AppDbContext db) : IBrancheService
     {
         var normalized = value?.Trim();
         return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
+    }
+
+    private static RepartitionMembresDto BuildRepartition(IEnumerable<Scout> scouts)
+    {
+        var repartition = new RepartitionMembresDto();
+
+        foreach (var scout in scouts)
+        {
+            switch (ClassifySexe(scout.Sexe))
+            {
+                case SexeCategory.Feminin:
+                    repartition.NombreFeminin++;
+                    break;
+                case SexeCategory.Masculin:
+                    repartition.NombreMasculin++;
+                    break;
+                default:
+                    repartition.NombreNonRenseigne++;
+                    break;
+            }
+        }
+
+        return repartition;
+    }
+
+    private static bool IsJeune(Scout scout)
+    {
+        var today = DateTime.UtcNow.Date;
+        var birthDate = scout.DateNaissance.Date;
+        var age = today.Year - birthDate.Year;
+
+        if (birthDate > today.AddYears(-age))
+        {
+            age--;
+        }
+
+        return age < 18;
+    }
+
+    private static SexeCategory ClassifySexe(string? sexe)
+    {
+        var normalized = DatabaseText.NormalizeSearchKey(sexe ?? string.Empty);
+
+        return normalized switch
+        {
+            "F" or "FEMININ" or "FILLE" => SexeCategory.Feminin,
+            "M" or "MASCULIN" or "GARCON" => SexeCategory.Masculin,
+            _ => SexeCategory.NonRenseigne
+        };
+    }
+
+    private enum SexeCategory
+    {
+        NonRenseigne,
+        Feminin,
+        Masculin
     }
 }

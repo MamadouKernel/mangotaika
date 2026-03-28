@@ -13,7 +13,12 @@ public class GroupeDto
     public string? Adresse { get; set; }
     public string? NomChefGroupe { get; set; }
     public string? ContactChefGroupe { get; set; }
+    public string? ResponsablePhotoUrl { get; set; }
     public int NombreMembres { get; set; }
+    public int NombreFilles { get; set; }
+    public int NombreGarcons { get; set; }
+    public RepartitionMembresDto Jeunes { get; set; } = new();
+    public RepartitionMembresDto Adultes { get; set; } = new();
     public List<BrancheScoutCountDto> BranchesScouts { get; set; } = [];
 }
 
@@ -22,6 +27,16 @@ public class BrancheScoutCountDto
     public string Nom { get; set; } = string.Empty;
     public int NombreScouts { get; set; }
     public string? NomChefUnite { get; set; }
+    public RepartitionMembresDto Jeunes { get; set; } = new();
+    public RepartitionMembresDto Adultes { get; set; } = new();
+}
+
+public class RepartitionMembresDto
+{
+    public int NombreFeminin { get; set; }
+    public int NombreMasculin { get; set; }
+    public int NombreNonRenseigne { get; set; }
+    public int Total => NombreFeminin + NombreMasculin + NombreNonRenseigne;
 }
 
 public class GroupeCreateDto : IValidatableObject
