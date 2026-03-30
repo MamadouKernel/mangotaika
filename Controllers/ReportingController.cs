@@ -73,7 +73,7 @@ public class ReportingController(AppDbContext db) : Controller
             .ToListAsync();
         ViewBag.FinancesMensuellesJson = System.Text.Json.JsonSerializer.Serialize(financesMensuelles, jsonOpts);
 
-        // ActivitÃ©s par type
+        // Activités par type
         var activitesParType = await db.Activites
             .Where(a => !a.EstSupprime)
             .GroupBy(a => a.Type)
@@ -89,7 +89,7 @@ public class ReportingController(AppDbContext db) : Controller
             .ToListAsync();
         ViewBag.TicketsParStatutJson = System.Text.Json.JsonSerializer.Serialize(ticketsParStatut, jsonOpts);
 
-        // Ã‰volution inscriptions par mois
+        // Évolution inscriptions par mois
         var inscriptionsParMois = await db.Scouts
             .Where(s => s.IsActive && s.DateInscription.Year == year)
             .GroupBy(s => s.DateInscription.Month)
@@ -145,15 +145,15 @@ public class ReportingController(AppDbContext db) : Controller
         ws.Cell(1, 1).Value = "Matricule";
         ws.Cell(1, 2).Value = "NÂ° Carte";
         ws.Cell(1, 3).Value = "Nom";
-        ws.Cell(1, 4).Value = "PrÃ©nom";
+        ws.Cell(1, 4).Value = "Prénom";
         ws.Cell(1, 5).Value = "Date Naissance";
         ws.Cell(1, 6).Value = "Sexe";
-        ws.Cell(1, 7).Value = "RÃ©gion Scoute";
+        ws.Cell(1, 7).Value = "Région Scoute";
         ws.Cell(1, 8).Value = "District";
         ws.Cell(1, 9).Value = "Groupe";
         ws.Cell(1, 10).Value = "Branche";
         ws.Cell(1, 11).Value = "Fonction";
-        ws.Cell(1, 12).Value = "TÃ©lÃ©phone";
+        ws.Cell(1, 12).Value = "Téléphone";
         ws.Cell(1, 13).Value = "Email";
         ws.Row(1).Style.Font.Bold = true;
         ws.Row(1).Style.Fill.BackgroundColor = XLColor.FromHtml("#597537");
@@ -196,13 +196,13 @@ public class ReportingController(AppDbContext db) : Controller
         using var wb = new XLWorkbook();
         var ws = wb.Worksheets.Add($"Finances {year}");
         ws.Cell(1, 1).Value = "Date";
-        ws.Cell(1, 2).Value = "LibellÃ©";
+        ws.Cell(1, 2).Value = "Libellé";
         ws.Cell(1, 3).Value = "Type";
-        ws.Cell(1, 4).Value = "CatÃ©gorie";
+        ws.Cell(1, 4).Value = "Catégorie";
         ws.Cell(1, 5).Value = "Montant (FCFA)";
         ws.Cell(1, 6).Value = "Groupe";
         ws.Cell(1, 7).Value = "Scout";
-        ws.Cell(1, 8).Value = "RÃ©fÃ©rence";
+        ws.Cell(1, 8).Value = "Référence";
         ws.Row(1).Style.Font.Bold = true;
         ws.Row(1).Style.Fill.BackgroundColor = XLColor.FromHtml("#597537");
         ws.Row(1).Style.Font.FontColor = XLColor.White;
@@ -228,7 +228,7 @@ public class ReportingController(AppDbContext db) : Controller
         ws.Cell(lastRow, 5).Value = transactions.Where(t => t.Type == TypeTransaction.Recette).Sum(t => t.Montant);
         ws.Cell(lastRow, 5).Style.Font.FontColor = XLColor.Green;
         ws.Cell(lastRow, 5).Style.Font.Bold = true;
-        ws.Cell(lastRow + 1, 4).Value = "TOTAL DÃ‰PENSES";
+        ws.Cell(lastRow + 1, 4).Value = "TOTAL DÉPENSES";
         ws.Cell(lastRow + 1, 4).Style.Font.Bold = true;
         ws.Cell(lastRow + 1, 5).Value = transactions.Where(t => t.Type == TypeTransaction.Depense).Sum(t => t.Montant);
         ws.Cell(lastRow + 1, 5).Style.Font.FontColor = XLColor.Red;
@@ -249,10 +249,10 @@ public class ReportingController(AppDbContext db) : Controller
             .ToListAsync();
 
         using var wb = new XLWorkbook();
-        var ws = wb.Worksheets.Add("ActivitÃ©s");
+        var ws = wb.Worksheets.Add("Activités");
         ws.Cell(1, 1).Value = "Titre";
         ws.Cell(1, 2).Value = "Type";
-        ws.Cell(1, 3).Value = "Date DÃ©but";
+        ws.Cell(1, 3).Value = "Date Début";
         ws.Cell(1, 4).Value = "Date Fin";
         ws.Cell(1, 5).Value = "Lieu";
         ws.Cell(1, 6).Value = "Groupe";
@@ -284,5 +284,6 @@ public class ReportingController(AppDbContext db) : Controller
         return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Activites_{DateTime.Now:yyyyMMdd}.xlsx");
     }
 }
+
 
 

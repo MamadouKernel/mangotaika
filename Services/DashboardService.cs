@@ -1,4 +1,4 @@
-using MangoTaika.Data;
+﻿using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
 using Microsoft.EntityFrameworkCore;
@@ -113,7 +113,6 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
         dto.SoldeFinancier = dto.TotalRecettes - dto.TotalDepenses;
 
         dto.DerniersGroupes = await db.Groupes
-            .Include(g => g.Membres)
             .Where(g => g.IsActive)
             .OrderByDescending(g => g.DateCreation)
             .Take(5)
@@ -126,7 +125,7 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
                 Latitude = g.Latitude,
                 Longitude = g.Longitude,
                 Adresse = g.Adresse,
-                NombreMembres = g.Membres.Count
+                NombreMembres = db.Scouts.Count(s => s.GroupeId == g.Id && s.IsActive)
             })
             .ToListAsync();
 
@@ -396,3 +395,5 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
     }
 
 }
+
+

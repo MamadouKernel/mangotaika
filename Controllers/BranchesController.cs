@@ -12,15 +12,18 @@ namespace MangoTaika.Controllers;
 [Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant")]
 public class BranchesController(IBrancheService brancheService, AppDbContext db, IFileUploadService fileUploadService) : Controller
 {
-    public async Task<IActionResult> Index(Guid? groupeId, string? nomBranche)
+    public async Task<IActionResult> Index(Guid? entiteId, Guid? groupeId, string? nomBranche)
     {
         var (page, ps) = ListPagination.Read(Request);
         var allBranches = await brancheService.GetAllAsync();
         var filteredBranches = allBranches.AsEnumerable();
+        var selectedEntiteId = entiteId.HasValue && entiteId.Value != Guid.Empty
+            ? entiteId
+            : (groupeId.HasValue && groupeId.Value != Guid.Empty ? groupeId : null);
 
-        if (groupeId.HasValue && groupeId.Value != Guid.Empty)
+        if (selectedEntiteId.HasValue)
         {
-            filteredBranches = filteredBranches.Where(b => b.GroupeId == groupeId.Value);
+            filteredBranches = filteredBranches.Where(b => b.GroupeId == selectedEntiteId.Value);
         }
 
         var normalizedNomBranche = string.IsNullOrWhiteSpace(nomBranche)
@@ -42,7 +45,7 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
         var pageItems = filteredList.Skip(skip).Take(pageSize).ToList();
         ListPagination.SetViewData(ViewData, HttpContext, p, pageSize, total, totalPages);
 
-        var groupes = await db.Groupes
+        var entites = await db.Groupes
             .Where(g => g.IsActive)
             .OrderBy(g => g.Nom)
             .Select(g => new SelectListItem
@@ -68,9 +71,9 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
         var vm = new BranchesIndexViewModel
         {
             Branches = pageItems,
-            GroupeId = groupeId,
+            EntiteId = selectedEntiteId,
             NomBranche = string.IsNullOrWhiteSpace(nomBranche) ? null : nomBranche.Trim(),
-            Groupes = groupes,
+            Entites = entites,
             NomsBranches = nomsBranches
         };
 
@@ -269,3 +272,5 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
         GroupeId = dto.GroupeId
     };
 }
+
+

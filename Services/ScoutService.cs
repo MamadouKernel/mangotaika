@@ -1,4 +1,4 @@
-using ClosedXML.Excel;
+﻿using ClosedXML.Excel;
 using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
@@ -590,15 +590,12 @@ public class ScoutService(AppDbContext db) : IScoutService
 
     private static string NormalizeHeader(string value)
     {
-        return new string(value
-            .Where(char.IsLetterOrDigit)
-            .Select(char.ToLowerInvariant)
-            .ToArray());
+        return DatabaseText.NormalizeSearchKey(value);
     }
 
     private static string NormalizeLookup(string? value)
     {
-        return (value ?? string.Empty).Trim().ToUpperInvariant();
+        return DatabaseText.NormalizeSearchKey(value);
     }
 
     private static string BuildBranchLookupKey(Guid groupeId, string? brancheNom)
@@ -884,3 +881,4 @@ public class ScoutService(AppDbContext db) : IScoutService
         Guid? BrancheId,
         bool IsActive);
 }
+
