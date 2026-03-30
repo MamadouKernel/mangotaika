@@ -1,6 +1,7 @@
-using ClosedXML.Excel;
+﻿using ClosedXML.Excel;
 using MangoTaika.Data;
 using MangoTaika.Data.Entities;
+using MangoTaika.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,14 +18,38 @@ public class ReportingController(AppDbContext db) : Controller
         {
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
-
-        // Scouts par branche
-        var scoutsParBranche = await db.Branches
+        // Scouts par branche (cumul sur les 6 branches canoniques)
+        var scoutsParBrancheRaw = await db.Branches
             .Where(b => b.IsActive)
-            .Select(b => new { Nom = b.Nom, Count = db.Scouts.Count(s => s.BrancheId == b.Id && s.IsActive) })
-            .Where(x => x.Count > 0)
+            .Select(b => new
+            {
+                b.Nom,
+                Count = db.Scouts.Count(s => s.BrancheId == b.Id && s.IsActive)
+            })
             .ToListAsync();
-        ViewBag.ScoutsParBrancheJson = System.Text.Json.JsonSerializer.Serialize(scoutsParBranche, jsonOpts);
+
+        var ordreBranches = new[]
+        {
+            BrancheReportingLabels.Oisillon,
+            BrancheReportingLabels.Louveteau,
+            BrancheReportingLabels.Eclaireur,
+            BrancheReportingLabels.Cheminot,
+            BrancheReportingLabels.Route,
+            BrancheReportingLabels.Ads
+        };
+
+        var scoutsParBranche = scoutsParBrancheRaw
+            .GroupBy(x => NormalizeReportingBranchLabel(x.Nom))
+            .ToDictionary(group => group.Key, group => group.Sum(item => item.Count));
+
+        var scoutsParBrancheOrdered = ordreBranches
+            .Select(label => new
+            {
+                Nom = label,
+                Count = scoutsParBranche.TryGetValue(label, out var total) ? total : 0
+            })
+            .ToList();
+        ViewBag.ScoutsParBrancheJson = System.Text.Json.JsonSerializer.Serialize(scoutsParBrancheOrdered, jsonOpts);
 
         // Scouts par groupe
         var scoutsParGroupe = await db.Groupes
@@ -48,7 +73,7 @@ public class ReportingController(AppDbContext db) : Controller
             .ToListAsync();
         ViewBag.FinancesMensuellesJson = System.Text.Json.JsonSerializer.Serialize(financesMensuelles, jsonOpts);
 
-        // Activités par type
+        // ActivitÃ©s par type
         var activitesParType = await db.Activites
             .Where(a => !a.EstSupprime)
             .GroupBy(a => a.Type)
@@ -64,7 +89,7 @@ public class ReportingController(AppDbContext db) : Controller
             .ToListAsync();
         ViewBag.TicketsParStatutJson = System.Text.Json.JsonSerializer.Serialize(ticketsParStatut, jsonOpts);
 
-        // Évolution inscriptions par mois
+        // Ã‰volution inscriptions par mois
         var inscriptionsParMois = await db.Scouts
             .Where(s => s.IsActive && s.DateInscription.Year == year)
             .GroupBy(s => s.DateInscription.Month)
@@ -76,7 +101,37 @@ public class ReportingController(AppDbContext db) : Controller
         ViewBag.Annee = year;
         return View();
     }
+    private static string NormalizeReportingBranchLabel(string? brancheNom)
+    {
+        var normalized = DatabaseText.NormalizeSearchKey(brancheNom ?? string.Empty);
 
+        return normalized switch
+        {
+            var value when value.Contains("OISILLON") || value.Contains("COLONIE")
+                => BrancheReportingLabels.Oisillon,
+            var value when value.Contains("LOUVETEAU") || value.Contains("LOUVETEAUX") || value.Contains("MEUTE")
+                => BrancheReportingLabels.Louveteau,
+            var value when value.Contains("ECLAIREUR") || value.Contains("ECLAIREURS") || value.Contains("TROUPE")
+                => BrancheReportingLabels.Eclaireur,
+            var value when value.Contains("CHEMINOT") || value.Contains("GENERATION")
+                => BrancheReportingLabels.Cheminot,
+            var value when value.Contains("ROUTE") || value.Contains("ROUTIER") || value.Contains("ROUTIERS") || value.Contains("COMMUNAUTE")
+                => BrancheReportingLabels.Route,
+            var value when value.Contains("ADS") || value.Contains("ADULTE") || value.Contains("BENEVOLE")
+                => BrancheReportingLabels.Ads,
+            _ => BrancheReportingLabels.Ads
+        };
+    }
+
+    private static class BrancheReportingLabels
+    {
+        public const string Oisillon = "BRANCHE OISILLON (4 - 7 ANS) - LA COLONIE";
+        public const string Louveteau = "BRANCHE LOUVETEAU (8 - 11 ANS) - LA MEUTE";
+        public const string Eclaireur = "BRANCHE ECLAIREUR (12 - 14 ANS) - LA TROUPE";
+        public const string Cheminot = "BRANCHE CHEMINOT (15 - 17 ANS) - LA GENERATION";
+        public const string Route = "BRANCHE ROUTE (18 - 21 ANS) - LA COMMUNAUTE";
+        public const string Ads = "LES BENEVOLES - Adultes Dans le Scoutisme (ADS)";
+    }
     public async Task<IActionResult> ExportScouts()
     {
         var scouts = await db.Scouts
@@ -88,17 +143,17 @@ public class ReportingController(AppDbContext db) : Controller
         using var wb = new XLWorkbook();
         var ws = wb.Worksheets.Add("Scouts");
         ws.Cell(1, 1).Value = "Matricule";
-        ws.Cell(1, 2).Value = "N° Carte";
+        ws.Cell(1, 2).Value = "NÂ° Carte";
         ws.Cell(1, 3).Value = "Nom";
-        ws.Cell(1, 4).Value = "Prénom";
+        ws.Cell(1, 4).Value = "PrÃ©nom";
         ws.Cell(1, 5).Value = "Date Naissance";
         ws.Cell(1, 6).Value = "Sexe";
-        ws.Cell(1, 7).Value = "Région Scoute";
+        ws.Cell(1, 7).Value = "RÃ©gion Scoute";
         ws.Cell(1, 8).Value = "District";
         ws.Cell(1, 9).Value = "Groupe";
         ws.Cell(1, 10).Value = "Branche";
         ws.Cell(1, 11).Value = "Fonction";
-        ws.Cell(1, 12).Value = "Téléphone";
+        ws.Cell(1, 12).Value = "TÃ©lÃ©phone";
         ws.Cell(1, 13).Value = "Email";
         ws.Row(1).Style.Font.Bold = true;
         ws.Row(1).Style.Fill.BackgroundColor = XLColor.FromHtml("#597537");
@@ -141,13 +196,13 @@ public class ReportingController(AppDbContext db) : Controller
         using var wb = new XLWorkbook();
         var ws = wb.Worksheets.Add($"Finances {year}");
         ws.Cell(1, 1).Value = "Date";
-        ws.Cell(1, 2).Value = "Libellé";
+        ws.Cell(1, 2).Value = "LibellÃ©";
         ws.Cell(1, 3).Value = "Type";
-        ws.Cell(1, 4).Value = "Catégorie";
+        ws.Cell(1, 4).Value = "CatÃ©gorie";
         ws.Cell(1, 5).Value = "Montant (FCFA)";
         ws.Cell(1, 6).Value = "Groupe";
         ws.Cell(1, 7).Value = "Scout";
-        ws.Cell(1, 8).Value = "Référence";
+        ws.Cell(1, 8).Value = "RÃ©fÃ©rence";
         ws.Row(1).Style.Font.Bold = true;
         ws.Row(1).Style.Fill.BackgroundColor = XLColor.FromHtml("#597537");
         ws.Row(1).Style.Font.FontColor = XLColor.White;
@@ -173,7 +228,7 @@ public class ReportingController(AppDbContext db) : Controller
         ws.Cell(lastRow, 5).Value = transactions.Where(t => t.Type == TypeTransaction.Recette).Sum(t => t.Montant);
         ws.Cell(lastRow, 5).Style.Font.FontColor = XLColor.Green;
         ws.Cell(lastRow, 5).Style.Font.Bold = true;
-        ws.Cell(lastRow + 1, 4).Value = "TOTAL DÉPENSES";
+        ws.Cell(lastRow + 1, 4).Value = "TOTAL DÃ‰PENSES";
         ws.Cell(lastRow + 1, 4).Style.Font.Bold = true;
         ws.Cell(lastRow + 1, 5).Value = transactions.Where(t => t.Type == TypeTransaction.Depense).Sum(t => t.Montant);
         ws.Cell(lastRow + 1, 5).Style.Font.FontColor = XLColor.Red;
@@ -194,10 +249,10 @@ public class ReportingController(AppDbContext db) : Controller
             .ToListAsync();
 
         using var wb = new XLWorkbook();
-        var ws = wb.Worksheets.Add("Activités");
+        var ws = wb.Worksheets.Add("ActivitÃ©s");
         ws.Cell(1, 1).Value = "Titre";
         ws.Cell(1, 2).Value = "Type";
-        ws.Cell(1, 3).Value = "Date Début";
+        ws.Cell(1, 3).Value = "Date DÃ©but";
         ws.Cell(1, 4).Value = "Date Fin";
         ws.Cell(1, 5).Value = "Lieu";
         ws.Cell(1, 6).Value = "Groupe";
@@ -229,3 +284,5 @@ public class ReportingController(AppDbContext db) : Controller
         return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Activites_{DateTime.Now:yyyyMMdd}.xlsx");
     }
 }
+
+

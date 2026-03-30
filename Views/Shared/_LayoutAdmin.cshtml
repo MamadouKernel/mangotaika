@@ -1,4 +1,4 @@
-@{
+﻿@{
     Layout = "_Layout";
     ViewData["IsAdminLayout"] = true;
 
@@ -220,6 +220,9 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
+    <script src="~/js/list-export.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 }
 
@@ -247,3 +250,4 @@
         if (overlay) overlay.classList.remove('open');
     }
 </script>
+

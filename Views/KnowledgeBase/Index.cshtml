@@ -1,4 +1,4 @@
-@model IEnumerable<MangoTaika.Data.Entities.SupportKnowledgeArticle>
+﻿@model IEnumerable<MangoTaika.Data.Entities.SupportKnowledgeArticle>
 @{
     ViewData["Title"] = "Base de connaissances";
     Layout = "_LayoutAdmin";
@@ -14,7 +14,7 @@
             <div>
                 <span class="support-hero__eyebrow"><i class="bi bi-journal-text"></i> Knowledge</span>
                 <h2 class="support-hero__title">Base de <span class="accent">connaissances</span></h2>
-                <p class="support-hero__text">Bibliothèque de résolutions, procédures et réponses standard pour accélérer le support tout en restant strictement dans les couleurs Mango Taika.</p>
+                <p class="support-hero__text">BibliothÃ¨que de rÃ©solutions, procÃ©dures et rÃ©ponses standard pour accÃ©lÃ©rer le support tout en restant strictement dans les couleurs Mango Taika.</p>
             </div>
             @if (canManage)
             {
@@ -98,4 +98,7 @@
             </div>
         }
     </section>
+
+    <partial name="_ListExportActions" />
 </div>
+

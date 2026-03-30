@@ -1,4 +1,4 @@
-@model MangoTaika.DTOs.ForumFormationPageDto
+﻿@model MangoTaika.DTOs.ForumFormationPageDto
 @{
     ViewData["Title"] = $"Forum - {Model.FormationTitre}";
     Layout = "_LayoutAdmin";
@@ -123,7 +123,7 @@
                                     </div>
                                 </div>
                                 <div class="campus-discussion-card__meta">
-                                    Par @discussion.NomAuteur · @discussion.DateCreation.ToString("dd/MM/yyyy HH:mm")
+                                    Par @discussion.NomAuteur Â· @discussion.DateCreation.ToString("dd/MM/yyyy HH:mm")
                                 </div>
                                 <p class="campus-discussion-card__text">
                                     @(discussion.ContenuInitial.Length > 220 ? discussion.ContenuInitial[..220] + "..." : discussion.ContenuInitial)
@@ -133,6 +133,8 @@
                     </div>
                 }
             </section>
+
+            <partial name="_ListExportActions" />
         </div>
 
         <aside class="campus-detail-grid__side">
@@ -189,3 +191,4 @@
         </aside>
     </div>
 </div>
+

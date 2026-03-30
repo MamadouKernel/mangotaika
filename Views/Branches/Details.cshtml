@@ -1,4 +1,4 @@
-@model BrancheDto
+﻿@model BrancheDto
 @{
     ViewData["Title"] = "Detail de la branche";
     Layout = "_LayoutAdmin";
@@ -24,6 +24,109 @@
         }
         <a asp-action="Index" class="btn btn-outline-or btn-sm" title="Liste"><i class="bi bi-arrow-left"></i></a>
     </div>
+</div>
+
+<div class="d-flex justify-content-end mb-3">
+    <div class="js-list-export-toolbar d-flex flex-wrap gap-2"
+         data-export-title="Detail branche - @Model.Nom"
+         data-export-target="#branch-details-export-table"
+         data-export-mode="table">
+        <button type="button" class="btn btn-outline-or btn-sm" data-export-format="pdf">
+            <i class="bi bi-file-earmark-pdf"></i> PDF
+        </button>
+        <button type="button" class="btn btn-outline-or btn-sm" data-export-format="excel">
+            <i class="bi bi-file-earmark-excel"></i> Excel
+        </button>
+    </div>
+</div>
+
+<div class="branch-export-source" aria-hidden="true">
+    <table id="branch-details-export-table" class="table table-sm align-middle mb-0">
+        <thead>
+            <tr>
+                <th scope="col">Section</th>
+                <th scope="col">Categorie</th>
+                <th scope="col">Reference</th>
+                <th scope="col">Valeur</th>
+                <th scope="col">Detail 1</th>
+                <th scope="col">Detail 2</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Synthese</td>
+                <td>Branche</td>
+                <td>@Model.Nom</td>
+                <td>@(Model.NomGroupe ?? "-")</td>
+                <td>@(Model.NomChefUnite ?? "-")</td>
+                <td>@(Model.Description ?? "-")</td>
+            </tr>
+            <tr>
+                <td>Effectifs</td>
+                <td>Scouts</td>
+                <td>Total</td>
+                <td>@Model.NombreScouts</td>
+                <td>Filles @Model.NombreFilles</td>
+                <td>Garcons @Model.NombreGarcons</td>
+            </tr>
+            <tr>
+                <td>Effectifs</td>
+                <td>Jeunes</td>
+                <td>Total</td>
+                <td>@Model.Jeunes.Total</td>
+                <td>Filles @Model.Jeunes.NombreFeminin</td>
+                <td>Garcons @Model.Jeunes.NombreMasculin</td>
+            </tr>
+            <tr>
+                <td>Effectifs</td>
+                <td>Adultes</td>
+                <td>Total</td>
+                <td>@Model.Adultes.Total</td>
+                <td>Femmes @Model.Adultes.NombreFeminin</td>
+                <td>Hommes @Model.Adultes.NombreMasculin</td>
+            </tr>
+
+            @foreach (var groupe in Model.TotauxParGroupes)
+            {
+                <tr>
+                    <td>Totaux par groupe</td>
+                    <td>Scouts</td>
+                    <td>@groupe.NomGroupe</td>
+                    <td>@groupe.NombreScouts</td>
+                    <td>Filles @groupe.NombreFilles</td>
+                    <td>Garcons @groupe.NombreGarcons</td>
+                </tr>
+                <tr>
+                    <td>Totaux par groupe</td>
+                    <td>Jeunes</td>
+                    <td>@groupe.NomGroupe</td>
+                    <td>@groupe.NombreJeunes</td>
+                    <td>Filles @groupe.Jeunes.NombreFeminin</td>
+                    <td>Garcons @groupe.Jeunes.NombreMasculin</td>
+                </tr>
+                <tr>
+                    <td>Totaux par groupe</td>
+                    <td>Adultes</td>
+                    <td>@groupe.NomGroupe</td>
+                    <td>@groupe.NombreAdultes</td>
+                    <td>Femmes @groupe.Adultes.NombreFeminin</td>
+                    <td>Hommes @groupe.Adultes.NombreMasculin</td>
+                </tr>
+            }
+
+            @foreach (var membre in Model.Membres)
+            {
+                <tr>
+                    <td>Membres</td>
+                    <td>Membre</td>
+                    <td>@membre.Matricule</td>
+                    <td>@($"{membre.Nom} {membre.Prenoms}".Trim())</td>
+                    <td>@(membre.Groupe ?? "-")</td>
+                    <td>@(membre.Fonction ?? "-")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
 </div>
 
 <div class="card-3d p-4 mb-4">
@@ -241,6 +344,17 @@
 </div>
 
 <style>
+    .branch-export-source {
+        position: absolute;
+        left: -100000px;
+        top: 0;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        opacity: 0;
+        pointer-events: none;
+    }
+
     .branche-details-logo {
         width: 100%;
         max-width: 120px;

@@ -1,9 +1,10 @@
-using MangoTaika.Data;
+﻿using MangoTaika.Data;
 using MangoTaika.DTOs;
 using MangoTaika.Helpers;
 using MangoTaika.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 namespace MangoTaika.Controllers;
@@ -11,15 +12,69 @@ namespace MangoTaika.Controllers;
 [Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant")]
 public class BranchesController(IBrancheService brancheService, AppDbContext db, IFileUploadService fileUploadService) : Controller
 {
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(Guid? groupeId, string? nomBranche)
     {
         var (page, ps) = ListPagination.Read(Request);
-        var all = await brancheService.GetAllAsync();
-        var total = all.Count;
+        var allBranches = await brancheService.GetAllAsync();
+        var filteredBranches = allBranches.AsEnumerable();
+
+        if (groupeId.HasValue && groupeId.Value != Guid.Empty)
+        {
+            filteredBranches = filteredBranches.Where(b => b.GroupeId == groupeId.Value);
+        }
+
+        var normalizedNomBranche = string.IsNullOrWhiteSpace(nomBranche)
+            ? null
+            : DatabaseText.NormalizeSearchKey(nomBranche);
+
+        if (!string.IsNullOrEmpty(normalizedNomBranche))
+        {
+            filteredBranches = filteredBranches.Where(b => DatabaseText.NormalizeSearchKey(b.Nom) == normalizedNomBranche);
+        }
+
+        var filteredList = filteredBranches
+            .OrderBy(b => b.NomGroupe)
+            .ThenBy(b => b.Nom)
+            .ToList();
+
+        var total = filteredList.Count;
         var (p, pageSize, skip, totalPages) = ListPagination.Normalize(page, ps, total);
-        var pageItems = all.Skip(skip).Take(pageSize).ToList();
+        var pageItems = filteredList.Skip(skip).Take(pageSize).ToList();
         ListPagination.SetViewData(ViewData, HttpContext, p, pageSize, total, totalPages);
-        return View(pageItems);
+
+        var groupes = await db.Groupes
+            .Where(g => g.IsActive)
+            .OrderBy(g => g.Nom)
+            .Select(g => new SelectListItem
+            {
+                Value = g.Id.ToString(),
+                Text = g.Nom
+            })
+            .ToListAsync();
+
+        var nomsBranches = allBranches
+            .GroupBy(b => DatabaseText.NormalizeSearchKey(b.Nom))
+            .Select(group => group
+                .OrderBy(b => b.Nom, StringComparer.CurrentCultureIgnoreCase)
+                .First())
+            .OrderBy(b => b.Nom, StringComparer.CurrentCultureIgnoreCase)
+            .Select(b => new SelectListItem
+            {
+                Value = b.Nom,
+                Text = b.Nom
+            })
+            .ToList();
+
+        var vm = new BranchesIndexViewModel
+        {
+            Branches = pageItems,
+            GroupeId = groupeId,
+            NomBranche = string.IsNullOrWhiteSpace(nomBranche) ? null : nomBranche.Trim(),
+            Groupes = groupes,
+            NomsBranches = nomsBranches
+        };
+
+        return View(vm);
     }
 
     [Authorize(Roles = "Administrateur,Gestionnaire")]

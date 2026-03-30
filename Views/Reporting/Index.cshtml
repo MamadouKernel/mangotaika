@@ -1,4 +1,4 @@
-@{
+﻿@{
     ViewData["Title"] = "Reporting & Statistiques";
     Layout = "_LayoutAdmin";
     var annee = (int)ViewBag.Annee;
@@ -63,22 +63,81 @@
     <script>
         var colors = ['#597537','#8ab55a','#3b82f6','#eab308','#f87171','#8b5cf6','#06b6d4','#f59e0b','#10b981','#ec4899'];
         var moisNoms = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+        var brancheShortLabels = {
+            'BRANCHE OISILLON (4 - 7 ANS) - LA COLONIE': 'Oisillons (4 - 7 ans)',
+            'BRANCHE LOUVETEAU (8 - 11 ANS) - LA MEUTE': 'Louveteaux (8 - 11 ans)',
+            'BRANCHE ECLAIREUR (12 - 14 ANS) - LA TROUPE': 'Eclaireurs (12 - 14 ans)',
+            'BRANCHE CHEMINOT (15 - 17 ANS) - LA GENERATION': 'Cheminots (15 - 17 ans)',
+            'BRANCHE ROUTE (18 - 21 ANS) - LA COMMUNAUTE': 'Route (18 - 21 ans)',
+            'LES BENEVOLES - Adultes Dans le Scoutisme (ADS)': 'Adultes (ADS)'
+        };
 
-        // Données sérialisées côté serveur (JSON sûr, pas de Html.Raw avec des chaînes utilisateur)
         var brancheData = JSON.parse('@Html.Raw(ViewBag.ScoutsParBrancheJson)');
         var groupeData = JSON.parse('@Html.Raw(ViewBag.ScoutsParGroupeJson)');
         var finData = JSON.parse('@Html.Raw(ViewBag.FinancesMensuellesJson)');
         var typeData = JSON.parse('@Html.Raw(ViewBag.ActivitesParTypeJson)');
         var statutData = JSON.parse('@Html.Raw(ViewBag.TicketsParStatutJson)');
         var insData = JSON.parse('@Html.Raw(ViewBag.InscriptionsParMoisJson)');
+        var brancheChartData = brancheData.map(function (entry) {
+            return {
+                Nom: entry.Nom,
+                NomCourt: brancheShortLabels[entry.Nom] || entry.Nom,
+                Count: entry.Count
+            };
+        });
+        var totalBrancheScouts = brancheChartData.reduce(function (sum, entry) { return sum + entry.Count; }, 0);
 
         new Chart(document.getElementById('chartBranche'), {
             type: 'doughnut',
             data: {
-                labels: brancheData.map(x => x.Nom),
-                datasets: [{ data: brancheData.map(x => x.Count), backgroundColor: colors }]
+                labels: brancheChartData.map(x => x.NomCourt),
+                datasets: [{
+                    data: brancheChartData.map(x => x.Count),
+                    backgroundColor: colors.slice(0, brancheChartData.length),
+                    borderColor: '#ffffff',
+                    borderWidth: 2,
+                    hoverOffset: 10
+                }]
             },
-            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+            options: {
+                responsive: true,
+                cutout: '60%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 14,
+                            boxHeight: 14,
+                            padding: 16,
+                            font: { size: 12 },
+                            generateLabels: function (chart) {
+                                var dataset = chart.data.datasets[0];
+                                return chart.data.labels.map(function (label, index) {
+                                    return {
+                                        text: label + ' (' + dataset.data[index] + ')',
+                                        fillStyle: dataset.backgroundColor[index],
+                                        strokeStyle: dataset.borderColor,
+                                        lineWidth: dataset.borderWidth,
+                                        hidden: !chart.getDataVisibility(index),
+                                        index: index
+                                    };
+                                });
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                var entry = brancheChartData[context.dataIndex];
+                                var percent = totalBrancheScouts === 0
+                                    ? 0
+                                    : Math.round((entry.Count / totalBrancheScouts) * 100);
+                                return entry.Nom + ' : ' + entry.Count + ' scouts (' + percent + '%)';
+                            }
+                        }
+                    }
+                }
+            }
         });
 
         new Chart(document.getElementById('chartGroupe'), {

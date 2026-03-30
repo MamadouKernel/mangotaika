@@ -1,4 +1,4 @@
-@model List<BrancheDto>
+﻿@model BranchesIndexViewModel
 @{
     ViewData["Title"] = "Branches";
     Layout = "_LayoutAdmin";
@@ -13,8 +13,33 @@
     }
 </div>
 
+<div class="card-3d p-3 mb-4">
+    <form asp-action="Index" method="get" class="row g-3 align-items-end">
+        <div class="col-md-5">
+            <label asp-for="GroupeId" class="form-label small">Filtrer par groupe</label>
+            <select asp-for="GroupeId" asp-items="Model.Groupes" class="form-select">
+                <option value="">Tous les groupes</option>
+            </select>
+        </div>
+        <div class="col-md-5">
+            <label asp-for="NomBranche" class="form-label small">Filtrer par branche</label>
+            <select asp-for="NomBranche" asp-items="Model.NomsBranches" class="form-select">
+                <option value="">Toutes les branches</option>
+            </select>
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+            <button type="submit" class="btn btn-mango flex-fill">
+                <i class="bi bi-funnel"></i> Filtrer
+            </button>
+            <a asp-action="Index" class="btn btn-outline-secondary" title="Reinitialiser les filtres">
+                <i class="bi bi-arrow-counterclockwise"></i>
+            </a>
+        </div>
+    </form>
+</div>
+
 <div class="row g-4">
-    @foreach (var b in Model)
+    @foreach (var b in Model.Branches)
     {
         <div class="col-md-4">
             <div class="card-3d p-4 h-100">
@@ -47,7 +72,7 @@
                     }
                 </div>
                 <div class="d-flex flex-wrap gap-2">
-                    <a asp-action="Details" asp-route-id="@b.Id" class="btn btn-sm btn-outline-or" title="Détails">
+                    <a asp-action="Details" asp-route-id="@b.Id" class="btn btn-sm btn-outline-or" title="DÃ©tails">
                         <i class="bi bi-eye"></i>
                     </a>
                     @if (canManage)
@@ -56,7 +81,7 @@
                             <i class="bi bi-pencil"></i>
                         </a>
                         <form asp-action="Delete" asp-route-id="@b.Id" method="post"
-                              onsubmit="return confirm('Confirmer la désactivation ?')">
+                              onsubmit="return confirm('Confirmer la dÃ©sactivation ?')">
                             @Html.AntiForgeryToken()
                             <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Supprimer">
                                 <i class="bi bi-trash"></i>
@@ -67,9 +92,9 @@
             </div>
         </div>
     }
-    @if (!Model.Any())
+    @if (!Model.Branches.Any())
     {
-        <div class="col-12 text-center text-muted-custom py-5">Aucune branche enregistrée</div>
+        <div class="col-12 text-center text-muted-custom py-5">Aucune branche enregistrÃ©e</div>
     }
 </div>
 

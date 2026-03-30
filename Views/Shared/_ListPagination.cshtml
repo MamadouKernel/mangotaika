@@ -1,4 +1,4 @@
-@using MangoTaika.Helpers
+﻿@using MangoTaika.Helpers
 @{
     ListPagination.PaginationState? pState =
         Context.Items.TryGetValue(ListPagination.PaginationItemsKey, out var item) && item is ListPagination.PaginationState ps
@@ -19,6 +19,9 @@
     var sizes = ListPagination.AllowedPageSizes;
     var path = Context.Request.PathBase + Context.Request.Path;
 }
+
+<partial name="_ListExportActions" />
+
 @if (hasPaging)
 {
     <nav class="pagination-clean" aria-label="Pagination des résultats">

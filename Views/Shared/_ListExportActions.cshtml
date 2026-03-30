@@ -1,0 +1,17 @@
+﻿@{
+    var exportTitle = (ViewData["Title"] as string)
+        ?? Context.Request.Path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries).LastOrDefault()
+        ?? "Liste";
+}
+
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-4 js-list-export-toolbar" data-export-title="@exportTitle">
+    <div class="small text-muted-custom">Exporter la liste visible</div>
+    <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-sm btn-outline-or" data-export-format="pdf">
+            <i class="bi bi-file-earmark-pdf"></i> PDF
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-or" data-export-format="excel">
+            <i class="bi bi-file-earmark-excel"></i> Excel
+        </button>
+    </div>
+</div>
