@@ -3,6 +3,13 @@
     ViewData["Title"] = "Entites scouts";
     Layout = "_LayoutAdmin";
     var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+
+    static string GetResponsableLabel(string groupeNom)
+    {
+        return string.Equals((groupeNom ?? string.Empty).Trim(), "Equipe de District Mango Taika", StringComparison.OrdinalIgnoreCase)
+            ? "Commissaire de district"
+            : "Chef de groupe";
+    }
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -39,7 +46,7 @@
                     <span><i class="bi bi-geo-alt-fill text-or"></i> @(g.Adresse ?? "Adresse non renseignee")</span>
                     @if (g.NomChefGroupe != null)
                     {
-                        <span><i class="bi bi-person-fill text-bleu"></i> Chef de groupe : @g.NomChefGroupe</span>
+                        <span><i class="bi bi-person-fill text-bleu"></i> @GetResponsableLabel(g.Nom) : @g.NomChefGroupe</span>
                     }
                     @if (!string.IsNullOrWhiteSpace(g.ContactChefGroupe))
                     {
@@ -73,3 +80,4 @@
 </div>
 
 <partial name="_ListPagination" />
+
