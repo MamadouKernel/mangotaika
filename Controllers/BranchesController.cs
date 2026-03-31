@@ -195,6 +195,13 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
     [HttpGet]
     public async Task<IActionResult> GetScoutsByGroupe(Guid groupeId)
     {
+        var groupeNom = await db.Groupes
+            .Where(g => g.Id == groupeId && g.IsActive)
+            .Select(g => g.Nom)
+            .FirstOrDefaultAsync();
+
+        var isDistrictEquipe = IsDistrictEquipe(groupeNom);
+
         var scouts = await db.Scouts
             .Include(s => s.Branche)
             .Where(s => s.GroupeId == groupeId
@@ -204,13 +211,13 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
             .ToListAsync();
 
         var items = scouts
-            .Where(s => IsChefUniteFunction(s.Fonction))
+            .Where(s => IsEligibleResponsableFunction(s.Fonction, isDistrictEquipe))
             .Select(s => new
             {
                 s.Id,
                 Nom = s.Prenom + " " + s.Nom + " (" + s.Matricule + ")"
                     + (s.Branche != null ? " - " + s.Branche.Nom : string.Empty)
-                    + " - " + GetChefUniteRoleLabel(s.Fonction)
+                    + " - " + GetResponsableRoleLabel(s.Fonction)
             })
             .ToList();
 
@@ -224,12 +231,18 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
             return;
         }
 
-        var groupeExists = await db.Groupes.AnyAsync(g => g.Id == dto.GroupeId && g.IsActive);
-        if (!groupeExists)
+        var groupeNom = await db.Groupes
+            .Where(g => g.Id == dto.GroupeId && g.IsActive)
+            .Select(g => g.Nom)
+            .FirstOrDefaultAsync();
+
+        if (string.IsNullOrWhiteSpace(groupeNom))
         {
             ModelState.AddModelError(nameof(dto.GroupeId), "Le groupe selectionne est introuvable ou inactif.");
             return;
         }
+
+        var isDistrictEquipe = IsDistrictEquipe(groupeNom);
 
         var nom = dto.Nom.Trim();
         var normalizedNom = DatabaseText.NormalizeSearchKey(nom);
@@ -276,25 +289,50 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
             ModelState.AddModelError(nameof(dto.ChefUniteId), "Le responsable de branche doit appartenir au groupe selectionne.");
         }
 
-        if (!IsChefUniteFunction(chef.Fonction))
+        if (!IsEligibleResponsableFunction(chef.Fonction, isDistrictEquipe))
         {
-            ModelState.AddModelError(nameof(dto.ChefUniteId), "Le responsable de branche doit avoir la fonction CHEF D'UNITE (CU) ou CHEF D'UNITE ADJOINT (CUA).");
+            ModelState.AddModelError(nameof(dto.ChefUniteId), GetResponsableSelectionMessage(isDistrictEquipe));
         }
     }
 
-    private static bool IsChefUniteFunction(string? fonction)
+    private static bool IsDistrictEquipe(string? groupeNom)
+    {
+        return DatabaseText.NormalizeSearchKey(groupeNom ?? string.Empty)
+            == DatabaseText.NormalizeSearchKey("Equipe de District Mango Taika");
+    }
+
+    private static bool IsEligibleResponsableFunction(string? fonction, bool isDistrictEquipe)
     {
         var normalizedFunction = DatabaseText.NormalizeSearchKey(fonction ?? string.Empty);
+
+        if (isDistrictEquipe)
+        {
+            return normalizedFunction == DatabaseText.NormalizeSearchKey("ASSISTANT COMMISSAIRE DE DISTRICT (ACD)");
+        }
+
         return normalizedFunction == DatabaseText.NormalizeSearchKey("CHEF D'UNITE (CU)")
             || normalizedFunction == DatabaseText.NormalizeSearchKey("CHEF D'UNITE ADJOINT (CUA)");
     }
 
-    private static string GetChefUniteRoleLabel(string? fonction)
+    private static string GetResponsableRoleLabel(string? fonction)
     {
         var normalizedFunction = DatabaseText.NormalizeSearchKey(fonction ?? string.Empty);
+
+        if (normalizedFunction == DatabaseText.NormalizeSearchKey("ASSISTANT COMMISSAIRE DE DISTRICT (ACD)"))
+        {
+            return "ACD";
+        }
+
         return normalizedFunction == DatabaseText.NormalizeSearchKey("CHEF D'UNITE ADJOINT (CUA)")
             ? "CUA"
             : "CU";
+    }
+
+    private static string GetResponsableSelectionMessage(bool isDistrictEquipe)
+    {
+        return isDistrictEquipe
+            ? "Pour les branches du groupe Equipe de District Mango Taika, le responsable de branche doit avoir la fonction ASSISTANT COMMISSAIRE DE DISTRICT (ACD)."
+            : "Le responsable de branche doit avoir la fonction CHEF D'UNITE (CU) ou CHEF D'UNITE ADJOINT (CUA).";
     }
 
     private static BrancheDto ToEditDto(Guid id, BrancheCreateDto dto) => new()
@@ -310,6 +348,8 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
         GroupeId = dto.GroupeId
     };
 }
+
+
 
 
 

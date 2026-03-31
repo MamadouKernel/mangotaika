@@ -213,9 +213,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
     private static bool HasDistrictEquipeFunction(string? fonction)
     {
         var normalizedFunction = DatabaseText.NormalizeSearchKey(fonction ?? string.Empty);
-        return normalizedFunction == DatabaseText.NormalizeSearchKey("COMMISSAIRE DE DISTRICT (CD)")
-            || normalizedFunction == DatabaseText.NormalizeSearchKey("COMMISSAIRE DE DISTRICT ADJOINT (CDA)")
-            || normalizedFunction == DatabaseText.NormalizeSearchKey("ASSISTANT COMMISSAIRE DE DISTRICT (ACD)");
+        return normalizedFunction == DatabaseText.NormalizeSearchKey("COMMISSAIRE DE DISTRICT (CD)");
     }
 
     private static bool IsChefGroupeScout(Scout scout, Groupe groupe)
@@ -239,7 +237,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
     private static string GetChefGroupeSelectionMessage(Groupe groupe)
     {
         return IsDistrictEquipe(groupe)
-            ? "Pour l'Equipe de District Mango Taika, le chef de groupe selectionne doit etre un scout actif de cette entite avec la fonction COMMISSAIRE DE DISTRICT (CD), COMMISSAIRE DE DISTRICT ADJOINT (CDA) ou ASSISTANT COMMISSAIRE DE DISTRICT (ACD)."
+            ? "Pour l'Equipe de District Mango Taika, le chef de groupe selectionne doit etre un scout actif de cette entite avec la fonction COMMISSAIRE DE DISTRICT (CD)."
             : "Le chef de groupe selectionne doit etre un scout actif de cette entite avec la fonction CHEF DE GROUPE (CG).";
     }
 
@@ -415,5 +413,6 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
         Masculin
     }
 }
+
 
 

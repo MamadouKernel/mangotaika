@@ -182,9 +182,7 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
 
         if (isDistrictEquipe)
         {
-            return normalizedFunction == DatabaseText.NormalizeSearchKey("COMMISSAIRE DE DISTRICT (CD)")
-                || normalizedFunction == DatabaseText.NormalizeSearchKey("COMMISSAIRE DE DISTRICT ADJOINT (CDA)")
-                || normalizedFunction == DatabaseText.NormalizeSearchKey("ASSISTANT COMMISSAIRE DE DISTRICT (ACD)");
+            return normalizedFunction == DatabaseText.NormalizeSearchKey("COMMISSAIRE DE DISTRICT (CD)");
         }
 
         return normalizedFunction == DatabaseText.NormalizeSearchKey("CHEF DE GROUPE (CG)");
@@ -199,15 +197,7 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
             return "CD";
         }
 
-        if (normalizedFunction == DatabaseText.NormalizeSearchKey("COMMISSAIRE DE DISTRICT ADJOINT (CDA)"))
-        {
-            return "CDA";
-        }
 
-        if (normalizedFunction == DatabaseText.NormalizeSearchKey("ASSISTANT COMMISSAIRE DE DISTRICT (ACD)"))
-        {
-            return "ACD";
-        }
 
         return null;
     }
@@ -253,5 +243,6 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
         ViewBag.ChefsGroupe = items;
     }
 }
+
 
 

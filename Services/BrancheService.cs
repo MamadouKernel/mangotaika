@@ -189,6 +189,18 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
             throw new InvalidOperationException("Le responsable de branche est obligatoire.");
         }
 
+        var groupeNom = await db.Groupes
+            .Where(g => g.Id == groupeId && g.IsActive)
+            .Select(g => g.Nom)
+            .FirstOrDefaultAsync();
+
+        if (string.IsNullOrWhiteSpace(groupeNom))
+        {
+            throw new InvalidOperationException("Le groupe selectionne est introuvable ou inactif.");
+        }
+
+        var isDistrictEquipe = IsDistrictEquipe(groupeNom);
+
         var chefUnite = await db.Scouts
             .FirstOrDefaultAsync(s => s.Id == chefUniteId.Value && s.IsActive);
 
@@ -202,19 +214,38 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
             throw new InvalidOperationException("Le responsable de branche doit appartenir au groupe selectionne.");
         }
 
-        if (!IsChefUniteFunction(chefUnite.Fonction))
+        if (!IsEligibleResponsableFunction(chefUnite.Fonction, isDistrictEquipe))
         {
-            throw new InvalidOperationException("Le responsable de branche doit avoir la fonction CHEF D'UNITE (CU) ou CHEF D'UNITE ADJOINT (CUA).");
+            throw new InvalidOperationException(GetResponsableSelectionMessage(isDistrictEquipe));
         }
 
         return chefUnite;
     }
 
-    private static bool IsChefUniteFunction(string? fonction)
+    private static bool IsDistrictEquipe(string? groupeNom)
+    {
+        return DatabaseText.NormalizeSearchKey(groupeNom ?? string.Empty)
+            == DatabaseText.NormalizeSearchKey("Equipe de District Mango Taika");
+    }
+
+    private static bool IsEligibleResponsableFunction(string? fonction, bool isDistrictEquipe)
     {
         var normalizedFunction = DatabaseText.NormalizeSearchKey(fonction ?? string.Empty);
+
+        if (isDistrictEquipe)
+        {
+            return normalizedFunction == DatabaseText.NormalizeSearchKey("ASSISTANT COMMISSAIRE DE DISTRICT (ACD)");
+        }
+
         return normalizedFunction == DatabaseText.NormalizeSearchKey("CHEF D'UNITE (CU)")
             || normalizedFunction == DatabaseText.NormalizeSearchKey("CHEF D'UNITE ADJOINT (CUA)");
+    }
+
+    private static string GetResponsableSelectionMessage(bool isDistrictEquipe)
+    {
+        return isDistrictEquipe
+            ? "Pour les branches du groupe Equipe de District Mango Taika, le responsable de branche doit avoir la fonction ASSISTANT COMMISSAIRE DE DISTRICT (ACD)."
+            : "Le responsable de branche doit avoir la fonction CHEF D'UNITE (CU) ou CHEF D'UNITE ADJOINT (CUA).";
     }
 
     private async Task EnsureActiveGroupeExistsAsync(Guid groupeId)
@@ -355,6 +386,8 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
         Masculin
     }
 }
+
+
 
 
 

@@ -1,8 +1,11 @@
-﻿@model GroupeDto
+@model GroupeDto
 @{
     ViewData["Title"] = "Detail de l'entite";
     Layout = "_LayoutAdmin";
     var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+    var responsableLabel = string.Equals((Model.Nom ?? string.Empty).Trim(), "Equipe de District Mango Taika", StringComparison.OrdinalIgnoreCase)
+        ? "Commissaire du district"
+        : "Chef de groupe";
 
     static string GetBranchAccent(string nom)
     {
@@ -77,7 +80,7 @@
                 <dt class="col-sm-4 text-muted-custom">Adresse</dt>
                 <dd class="col-sm-8">@(Model.Adresse ?? "-")</dd>
 
-                <dt class="col-sm-4 text-muted-custom">Chef de groupe</dt>
+                <dt class="col-sm-4 text-muted-custom">@responsableLabel</dt>
                 <dd class="col-sm-8">@(Model.NomChefGroupe ?? "-")</dd>
 
                 <dt class="col-sm-4 text-muted-custom">Contact</dt>
@@ -96,7 +99,7 @@
 
         <div class="col-xl-3 col-lg-3">
             <div class="responsable-card">
-                <span class="responsable-card__label">Chef de groupe</span>
+                <span class="responsable-card__label">@responsableLabel</span>
                 @if (!string.IsNullOrWhiteSpace(Model.ResponsablePhotoUrl))
                 {
                     <img src="@Model.ResponsablePhotoUrl"
@@ -345,4 +348,5 @@
         display: block;
     }
 </style>
+
 
