@@ -211,7 +211,9 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
             .Select(s => new
             {
                 s.Id,
-                Nom = s.Prenom + " " + s.Nom + " (" + s.Matricule + ")" + (s.Branche != null ? " - " + s.Branche.Nom : string.Empty)
+                Nom = s.Prenom + " " + s.Nom + " (" + s.Matricule + ")"
+                    + (s.Branche != null ? " - " + s.Branche.Nom : string.Empty)
+                    + " - " + GetChefUniteRoleLabel(s.Fonction)
             })
             .ToList();
 
@@ -292,6 +294,14 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
             || normalizedFunction == DatabaseText.NormalizeSearchKey("CHEF D'UNITE ADJOINT (CUA)");
     }
 
+    private static string GetChefUniteRoleLabel(string? fonction)
+    {
+        var normalizedFunction = DatabaseText.NormalizeSearchKey(fonction ?? string.Empty);
+        return normalizedFunction == DatabaseText.NormalizeSearchKey("CHEF D'UNITE ADJOINT (CUA)")
+            ? "CUA"
+            : "CU";
+    }
+
     private static BrancheDto ToEditDto(Guid id, BrancheCreateDto dto) => new()
     {
         Id = id,
@@ -305,6 +315,8 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
         GroupeId = dto.GroupeId
     };
 }
+
+
 
 
 
