@@ -1,10 +1,20 @@
+@using MangoTaika.Data.Entities
 @model List<ScoutDto>
 @{
     ViewData["Title"] = "Scouts";
     Layout = "_LayoutAdmin";
     var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
-    var importError = TempData["ImportError"] as string;
+    var importError = ViewBag.ImportError as string;
     var importReport = ViewBag.ImportReport as ScoutImportResultDto;
+    var groupes = ViewBag.Groupes as List<Groupe> ?? new();
+    var branches = ViewBag.Branches as List<Branche> ?? new();
+    var recherche = ViewBag.Recherche as string;
+    var selectedGroupeId = ViewBag.SelectedGroupeId is Guid groupeId && groupeId != Guid.Empty ? groupeId : (Guid?)null;
+    var selectedBrancheId = ViewBag.SelectedBrancheId is Guid brancheId && brancheId != Guid.Empty ? brancheId : (Guid?)null;
+    var filterCu = ViewBag.FilterCu is bool cu && cu;
+    var filterAcd = ViewBag.FilterAcd is bool acd && acd;
+    var totalFiltered = ViewData["PaginationTotal"] is int total ? total : Model.Count;
+    var shouldOpenImportModal = !string.IsNullOrWhiteSpace(importError);
 }
 
 <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
@@ -14,10 +24,13 @@
     </div>
     @if (canManage)
     {
-        <div class="d-flex flex-wrap gap-2">
+        <div class="d-flex flex-wrap gap-2 scouts-toolbar">
             <a asp-action="DownloadImportTemplate" class="btn btn-outline-or">
                 <i class="bi bi-file-earmark-excel"></i> Modele Excel
             </a>
+            <button type="button" class="btn btn-outline-or" data-open-import-modal>
+                <i class="bi bi-cloud-arrow-up"></i> Nouveau scout par importation
+            </button>
             <a asp-action="Create" class="btn btn-mango">
                 <i class="bi bi-plus-lg"></i> Nouveau scout
             </a>
@@ -78,38 +91,77 @@
     </div>
 }
 
-@if (canManage)
-{
-    <div class="card-3d p-4 mb-4">
-            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
-            <div>
-                <h5 class="mb-1"><i class="bi bi-upload text-bleu"></i> Importer des scouts</h5>
-                <p class="text-muted-custom mb-0">Charge un fichier `.xlsx` base sur le modele telechargeable. Les scouts existants sont mis a jour par matricule, les nouveaux sont crees, et la colonne `Fonction` du fichier alimente directement le champ `Fonction` du scout.</p>
-            </div>
-            <span class="badge-3d badge-soumise">Colonnes obligatoires : Matricule, Nom, Prenom, DateNaissance</span>
+<div class="card-3d p-4 mb-4 scouts-filters-card">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+        <div>
+            <h5 class="mb-1"><i class="bi bi-funnel text-bleu"></i> Filtres intelligents</h5>
+            <p class="text-muted-custom mb-0">Affinez la liste par groupe, branche, responsabilite ou recherche libre. Les branches se recalculent automatiquement selon le groupe choisi.</p>
         </div>
-        <form asp-action="ImportExcel" method="post" enctype="multipart/form-data" class="row g-3 align-items-end">
-            @Html.AntiForgeryToken()
-            <div class="col-lg-8">
-                <label for="fichierImport" class="form-label">Fichier Excel</label>
-                <input id="fichierImport" name="fichier" type="file" class="form-control" accept=".xlsx" required />
-            </div>
-            <div class="col-lg-4 d-flex gap-2">
-                <button type="submit" class="btn btn-bleu w-100">
-                    <i class="bi bi-upload"></i> Importer
-                </button>
-            </div>
-        </form>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="badge-3d badge-validee">@totalFiltered fiche(s) visible(s)</span>
+            <a asp-action="Index" class="btn btn-sm btn-outline-or">Reinitialiser</a>
+        </div>
     </div>
-}
 
-<form method="get" class="mb-4">
-    <div class="input-group" style="max-width:500px;">
-        <input type="text" name="recherche" class="form-control" style="border-radius:12px 0 0 12px;"
-               placeholder="Rechercher par nom, prenom ou matricule..." value="@ViewBag.Recherche" />
-        <button class="btn btn-bleu" type="submit" style="border-radius:0 12px 12px 0;"><i class="bi bi-search"></i></button>
-    </div>
-</form>
+    <form method="get" class="row g-3 scouts-filter-form">
+        <div class="col-xl-4 col-lg-6">
+            <label for="rechercheScout" class="form-label">Recherche</label>
+            <div class="input-group scouts-input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input id="rechercheScout"
+                       type="text"
+                       name="recherche"
+                       class="form-control"
+                       placeholder="Nom, prenom ou matricule..."
+                       value="@recherche" />
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-lg-6">
+            <label for="groupeFilter" class="form-label">Groupe</label>
+            <select id="groupeFilter" name="groupeId" class="form-select">
+                <option value="">-- Tous les groupes --</option>
+                @foreach (var groupe in groupes)
+                {
+                    <option value="@groupe.Id" selected="@(selectedGroupeId == groupe.Id ? "selected" : null)">@groupe.Nom</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-xl-3 col-lg-6">
+            <label for="brancheFilter" class="form-label">Branche</label>
+            <select id="brancheFilter" name="brancheId" class="form-select">
+                <option value="">-- Toutes les branches --</option>
+                @foreach (var branche in branches)
+                {
+                    <option value="@branche.Id"
+                            data-groupe-id="@branche.GroupeId"
+                            selected="@(selectedBrancheId == branche.Id ? "selected" : null)">@branche.Nom</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-xl-2 col-lg-6 d-flex align-items-end">
+            <button class="btn btn-bleu w-100" type="submit">
+                <i class="bi bi-filter-circle"></i> Filtrer
+            </button>
+        </div>
+
+        <div class="col-12">
+            <div class="scouts-role-filters">
+                <span class="scouts-role-filters__label">Roles rapides</span>
+                <label class="scout-role-chip @(filterCu ? "is-active" : string.Empty)">
+                    <input type="checkbox" name="cu" value="true" class="visually-hidden" @(filterCu ? "checked" : null) />
+                    <i class="bi bi-person-badge"></i> CU
+                </label>
+                <label class="scout-role-chip @(filterAcd ? "is-active" : string.Empty)">
+                    <input type="checkbox" name="acd" value="true" class="visually-hidden" @(filterAcd ? "checked" : null) />
+                    <i class="bi bi-person-workspace"></i> ASSISTANT COMMISSAIRE DE DISTRICT (ACD)
+                </label>
+            </div>
+        </div>
+    </form>
+</div>
 
 <div class="row g-4">
     @foreach (var s in Model)
@@ -151,8 +203,264 @@
     }
     @if (!Model.Any())
     {
-        <div class="col-12 text-center text-muted-custom py-5">Aucun scout trouve</div>
+        <div class="col-12 text-center text-muted-custom py-5">Aucun scout ne correspond aux filtres selectionnes.</div>
     }
 </div>
 
+@if (canManage)
+{
+    <div class="scout-import-modal @(shouldOpenImportModal ? "is-open" : string.Empty)" id="scoutsImportModal" data-open-on-load="@shouldOpenImportModal.ToString().ToLowerInvariant()" aria-hidden="@(!shouldOpenImportModal).ToString().ToLowerInvariant()">
+        <div class="scout-import-modal__backdrop" data-close-import-modal></div>
+        <div class="scout-import-modal__dialog card-3d" role="dialog" aria-modal="true" aria-labelledby="scoutsImportModalTitle">
+            <div class="scout-import-modal__header">
+                <div>
+                    <h5 id="scoutsImportModalTitle" class="mb-1"><i class="bi bi-upload text-bleu"></i> Nouveau scout par importation</h5>
+                    <p class="text-muted-custom mb-0">Importez un fichier `.xlsx` base sur le modele officiel. Les scouts existants sont mis a jour par matricule, les nouveaux sont crees.</p>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-or" data-close-import-modal aria-label="Fermer">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(importError))
+            {
+                <div class="alert alert-danger border-0 mb-3">@importError</div>
+            }
+
+            <div class="scout-import-modal__hint">
+                <span class="badge-3d badge-soumise">Colonnes obligatoires : Matricule, Nom, Prenom, DateNaissance</span>
+                <a asp-action="DownloadImportTemplate" class="btn btn-sm btn-outline-or">
+                    <i class="bi bi-file-earmark-excel"></i> Telecharger le modele Excel
+                </a>
+            </div>
+
+            <form asp-action="ImportExcel" method="post" enctype="multipart/form-data" class="row g-3 align-items-end mt-1">
+                @Html.AntiForgeryToken()
+                <div class="col-lg-8">
+                    <label for="fichierImport" class="form-label">Fichier Excel</label>
+                    <input id="fichierImport" name="fichier" type="file" class="form-control" accept=".xlsx" required />
+                </div>
+                <div class="col-lg-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-bleu w-100">
+                        <i class="bi bi-upload"></i> Importer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
 <partial name="_ListPagination" />
+
+<style>
+    .scouts-toolbar .btn {
+        min-height: 46px;
+    }
+
+    .scouts-filters-card {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .scouts-filters-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at top right, rgba(138, 181, 90, 0.12), transparent 34%);
+        pointer-events: none;
+    }
+
+    .scouts-filter-form,
+    .scouts-filters-card > .d-flex {
+        position: relative;
+        z-index: 1;
+    }
+
+    .scouts-input-group .input-group-text {
+        border-radius: 14px 0 0 14px;
+        border-right: 0;
+        background: rgba(95, 127, 67, 0.08);
+        color: var(--vert-logo);
+    }
+
+    .scouts-input-group .form-control {
+        border-left: 0;
+        border-radius: 0 14px 14px 0;
+    }
+
+    .scouts-role-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .scouts-role-filters__label {
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #6b7a8e;
+        font-weight: 700;
+    }
+
+    .scout-role-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(95, 127, 67, 0.18);
+        background: rgba(255, 255, 255, 0.75);
+        color: #435263;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.18s ease;
+    }
+
+    .scout-role-chip.is-active {
+        background: rgba(95, 127, 67, 0.14);
+        border-color: rgba(95, 127, 67, 0.38);
+        color: var(--vert-logo);
+        box-shadow: 0 10px 18px rgba(95, 127, 67, 0.12);
+    }
+
+    .scout-import-modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        z-index: 1200;
+    }
+
+    .scout-import-modal.is-open {
+        display: block;
+    }
+
+    .scout-import-modal__backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(17, 24, 39, 0.48);
+        backdrop-filter: blur(6px);
+    }
+
+    .scout-import-modal__dialog {
+        position: relative;
+        z-index: 1;
+        width: min(780px, calc(100vw - 32px));
+        margin: 6vh auto 0;
+        padding: 24px;
+        max-height: 88vh;
+        overflow-y: auto;
+    }
+
+    .scout-import-modal__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 18px;
+    }
+
+    .scout-import-modal__hint {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+    }
+
+    body.scout-modal-open {
+        overflow: hidden;
+    }
+
+    @@media (max-width: 768px) {
+        .scout-import-modal__dialog {
+            width: calc(100vw - 20px);
+            margin-top: 3vh;
+            padding: 18px;
+        }
+    }
+</style>
+
+@section Scripts {
+    <script>
+        (() => {
+            const body = document.body;
+            const importModal = document.getElementById('scoutsImportModal');
+            const openButtons = document.querySelectorAll('[data-open-import-modal]');
+
+            if (importModal) {
+                const setImportModalOpen = (open) => {
+                    importModal.classList.toggle('is-open', open);
+                    importModal.setAttribute('aria-hidden', open ? 'false' : 'true');
+                    body.classList.toggle('scout-modal-open', open);
+                };
+
+                openButtons.forEach((button) => {
+                    button.addEventListener('click', () => setImportModalOpen(true));
+                });
+
+                importModal.querySelectorAll('[data-close-import-modal]').forEach((button) => {
+                    button.addEventListener('click', () => setImportModalOpen(false));
+                });
+
+                document.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape' && importModal.classList.contains('is-open')) {
+                        setImportModalOpen(false);
+                    }
+                });
+
+                if (importModal.dataset.openOnLoad === 'true') {
+                    setImportModalOpen(true);
+                }
+            }
+
+            const groupeFilter = document.getElementById('groupeFilter');
+            const brancheFilter = document.getElementById('brancheFilter');
+            if (groupeFilter && brancheFilter) {
+                const firstOption = brancheFilter.querySelector('option[value=""]');
+
+                const syncBranches = () => {
+                    const selectedGroup = groupeFilter.value;
+
+                    if (firstOption) {
+                        firstOption.textContent = selectedGroup
+                            ? '-- Toutes les branches du groupe --'
+                            : '-- Toutes les branches --';
+                    }
+
+                    Array.from(brancheFilter.options).forEach((option) => {
+                        if (!option.value) {
+                            option.hidden = false;
+                            return;
+                        }
+
+                        const optionGroupId = option.dataset.groupeId;
+                        const isVisible = !selectedGroup || optionGroupId === selectedGroup;
+                        option.hidden = !isVisible;
+                    });
+
+                    const selectedOption = brancheFilter.selectedOptions[0];
+                    if (selectedOption && selectedOption.value && selectedGroup && selectedOption.dataset.groupeId !== selectedGroup) {
+                        brancheFilter.value = '';
+                    }
+                };
+
+                groupeFilter.addEventListener('change', syncBranches);
+                syncBranches();
+            }
+
+            const syncRoleChips = () => {
+                document.querySelectorAll('.scout-role-chip').forEach((chip) => {
+                    const input = chip.querySelector('input');
+                    chip.classList.toggle('is-active', !!input?.checked);
+                });
+            };
+
+            document.querySelectorAll('.scout-role-chip input').forEach((input) => {
+                input.addEventListener('change', syncRoleChips);
+            });
+            syncRoleChips();
+        })();
+    </script>
+}

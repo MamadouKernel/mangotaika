@@ -21,16 +21,48 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db, IMemo
         ViewBag.Branches = await db.Branches.Where(b => b.IsActive).OrderBy(b => b.Nom).ToListAsync();
     }
 
-    public async Task<IActionResult> Index(string? recherche, string? importReportId)
+    public async Task<IActionResult> Index(string? recherche, Guid? groupeId, Guid? brancheId, bool cu = false, bool acd = false, string? importReportId = null)
     {
         var (page, ps) = ListPagination.Read(Request);
         var scouts = string.IsNullOrWhiteSpace(recherche)
             ? await scoutService.GetAllAsync()
             : await scoutService.SearchAsync(recherche);
-        var total = scouts.Count;
+
+        var filtered = scouts.AsEnumerable();
+
+        if (groupeId.HasValue && groupeId.Value != Guid.Empty)
+        {
+            filtered = filtered.Where(s => s.GroupeId == groupeId.Value);
+        }
+
+        if (brancheId.HasValue && brancheId.Value != Guid.Empty)
+        {
+            filtered = filtered.Where(s => s.BrancheId == brancheId.Value);
+        }
+
+        if (cu || acd)
+        {
+            filtered = filtered.Where(s =>
+                (cu && HasScoutFunction(s.Fonction, "CHEF D'UNITE (CU)")) ||
+                (acd && HasScoutFunction(s.Fonction, "ASSISTANT COMMISSAIRE DE DISTRICT (ACD)")));
+        }
+
+        var filteredList = filtered
+            .OrderBy(s => s.Prenom)
+            .ThenBy(s => s.Nom)
+            .ToList();
+
+        var total = filteredList.Count;
         var (p, pageSize, skip, totalPages) = ListPagination.Normalize(page, ps, total);
-        var pageItems = scouts.Skip(skip).Take(pageSize).ToList();
+        var pageItems = filteredList.Skip(skip).Take(pageSize).ToList();
+
+        await LoadDropdownsAsync();
         ViewBag.Recherche = recherche;
+        ViewBag.SelectedGroupeId = groupeId;
+        ViewBag.SelectedBrancheId = brancheId;
+        ViewBag.FilterCu = cu;
+        ViewBag.FilterAcd = acd;
+        ViewBag.ImportError = TempData["ImportError"] as string;
         ViewBag.ImportReport = ResolveImportReport(importReportId);
         ListPagination.SetViewData(ViewData, HttpContext, p, pageSize, total, totalPages);
         return View(pageItems);
@@ -210,6 +242,12 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db, IMemo
         await db.SaveChangesAsync();
         TempData["Success"] = $"Statut ASCCI verifie pour {scout.Prenom} {scout.Nom}.";
         return RedirectToAction(nameof(Details), new { id });
+    }
+
+    private static bool HasScoutFunction(string? fonction, string expectedFunction)
+    {
+        return DatabaseText.NormalizeSearchKey(fonction ?? string.Empty)
+            == DatabaseText.NormalizeSearchKey(expectedFunction);
     }
 
     private static ScoutCreateDto ToCreateDto(ScoutDto scout) => new()
