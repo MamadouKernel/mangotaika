@@ -1,4 +1,4 @@
-﻿using MangoTaika.Data;
+using MangoTaika.Data;
 using MangoTaika.DTOs;
 using MangoTaika.Helpers;
 using MangoTaika.Services;
@@ -195,11 +195,22 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
     [HttpGet]
     public async Task<IActionResult> GetScoutsByGroupe(Guid groupeId)
     {
+        var chefUniteKey = DatabaseText.NormalizeSearchKey("CHEF D'UNITE (CU)");
+
         var scouts = await db.Scouts
-            .Where(s => s.GroupeId == groupeId && s.IsActive)
+            .Where(s => s.GroupeId == groupeId
+                && s.IsActive
+                && s.BrancheId.HasValue
+                && s.Branche != null
+                && s.Branche.GroupeId == groupeId
+                && DatabaseText.NormalizeSearchKey(s.Fonction ?? string.Empty) == chefUniteKey)
             .OrderBy(s => s.Prenom)
             .ThenBy(s => s.Nom)
-            .Select(s => new { s.Id, Nom = s.Prenom + " " + s.Nom + " (" + s.Matricule + ")" })
+            .Select(s => new
+            {
+                s.Id,
+                Nom = s.Prenom + " " + s.Nom + " (" + s.Matricule + ")" + (s.Branche != null ? " - " + s.Branche.Nom : string.Empty)
+            })
             .ToListAsync();
         return Json(scouts);
     }
@@ -242,9 +253,17 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
             return;
         }
 
+        var chefUniteKey = DatabaseText.NormalizeSearchKey("CHEF D'UNITE (CU)");
+
         var chef = await db.Scouts
             .Where(s => s.Id == dto.ChefUniteId.Value && s.IsActive)
-            .Select(s => new { s.GroupeId })
+            .Select(s => new
+            {
+                s.GroupeId,
+                s.Fonction,
+                s.BrancheId,
+                BrancheGroupeId = s.Branche != null ? (Guid?)s.Branche.GroupeId : null
+            })
             .FirstOrDefaultAsync();
 
         if (chef is null)
@@ -253,9 +272,14 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
             return;
         }
 
-        if (chef.GroupeId != dto.GroupeId)
+        if (chef.GroupeId != dto.GroupeId || !chef.BrancheId.HasValue || chef.BrancheGroupeId != dto.GroupeId)
         {
-            ModelState.AddModelError(nameof(dto.ChefUniteId), "Le responsable de branche doit appartenir au groupe selectionne.");
+            ModelState.AddModelError(nameof(dto.ChefUniteId), "Le responsable de branche doit appartenir au groupe selectionne et etre rattache a une branche de ce groupe.");
+        }
+
+        if (DatabaseText.NormalizeSearchKey(chef.Fonction ?? string.Empty) != chefUniteKey)
+        {
+            ModelState.AddModelError(nameof(dto.ChefUniteId), "Le responsable de branche doit avoir la fonction CHEF D'UNITE (CU).");
         }
     }
 
@@ -272,5 +296,4 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
         GroupeId = dto.GroupeId
     };
 }
-
 

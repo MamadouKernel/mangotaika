@@ -1,4 +1,4 @@
-﻿@model GroupeCreateDto
+@model GroupeCreateDto
 @{
     ViewData["Title"] = "Nouvelle entite";
     Layout = "_LayoutAdmin";
@@ -62,7 +62,7 @@
                     <option value="">-- Enregistrez d'abord l'entite --</option>
                 </select>
             }
-            <small class="text-muted-custom">Apres creation de l'entite, revenez sur la modification pour selectionner un scout ayant la fonction Chef de groupe.</small>
+            <small class="text-muted-custom">Apres creation de l'entite, revenez sur la modification pour selectionner un scout ayant la fonction CHEF DE GROUPE (CG).</small>
             <span asp-validation-for="ChefGroupeScoutId" class="text-danger small d-block"></span>
         </div>
         <div class="row">
@@ -87,4 +87,5 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+
 

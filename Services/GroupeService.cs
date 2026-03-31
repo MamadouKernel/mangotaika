@@ -1,4 +1,4 @@
-﻿using MangoTaika.Data;
+using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
 using MangoTaika.Helpers;
@@ -205,7 +205,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
             && scout.BrancheId.HasValue
             && scout.Branche != null
             && scout.Branche.GroupeId == groupeId
-            && DatabaseText.NormalizeSearchKey(scout.Fonction ?? string.Empty) == DatabaseText.NormalizeSearchKey("Chef de groupe");
+            && DatabaseText.NormalizeSearchKey(scout.Fonction ?? string.Empty) == DatabaseText.NormalizeSearchKey("CHEF DE GROUPE (CG)");
     }
 
     private static bool MatchesChefGroupeName(string? storedName, Scout scout)
@@ -257,7 +257,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
 
         if (!IsChefGroupeScout(scout, groupeId))
         {
-            throw new InvalidOperationException("Le chef de groupe selectionne doit etre un scout actif de cette entite avec la fonction Chef de groupe.");
+            throw new InvalidOperationException("Le chef de groupe selectionne doit etre un scout actif de cette entite avec la fonction CHEF DE GROUPE (CG).");
         }
 
         return scout;
@@ -380,3 +380,4 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
         Masculin
     }
 }
+

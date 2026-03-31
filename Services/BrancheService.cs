@@ -190,6 +190,7 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
         }
 
         var chefUnite = await db.Scouts
+            .Include(s => s.Branche)
             .FirstOrDefaultAsync(s => s.Id == chefUniteId.Value && s.IsActive);
 
         if (chefUnite is null)
@@ -197,9 +198,14 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
             throw new InvalidOperationException("Le responsable de branche selectionne est introuvable.");
         }
 
-        if (chefUnite.GroupeId != groupeId)
+        if (chefUnite.GroupeId != groupeId || !chefUnite.BrancheId.HasValue || chefUnite.Branche?.GroupeId != groupeId)
         {
-            throw new InvalidOperationException("Le responsable de branche doit appartenir au groupe selectionne.");
+            throw new InvalidOperationException("Le responsable de branche doit appartenir au groupe selectionne et etre rattache a une branche de ce groupe.");
+        }
+
+        if (DatabaseText.NormalizeSearchKey(chefUnite.Fonction ?? string.Empty) != DatabaseText.NormalizeSearchKey("CHEF D'UNITE (CU)"))
+        {
+            throw new InvalidOperationException("Le responsable de branche doit avoir la fonction CHEF D'UNITE (CU).");
         }
 
         return chefUnite;
@@ -343,3 +349,5 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
         Masculin
     }
 }
+
+

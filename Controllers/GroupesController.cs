@@ -1,4 +1,4 @@
-﻿using MangoTaika.Data;
+using MangoTaika.Data;
 using MangoTaika.DTOs;
 using MangoTaika.Helpers;
 using MangoTaika.Services;
@@ -173,7 +173,7 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
     private async Task LoadChefsGroupeAsync(Guid? groupeId, Guid? selectedScoutId = null)
     {
         var items = new List<SelectListItem>();
-        var chefGroupeKey = DatabaseText.NormalizeSearchKey("Chef de groupe");
+        var chefGroupeKey = DatabaseText.NormalizeSearchKey("CHEF DE GROUPE (CG)");
 
         if (groupeId.HasValue && groupeId.Value != Guid.Empty)
         {
@@ -203,3 +203,4 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
         ViewBag.ChefsGroupe = items;
     }
 }
+

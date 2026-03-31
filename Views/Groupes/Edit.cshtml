@@ -1,4 +1,4 @@
-﻿@model GroupeDto
+@model GroupeDto
 @{
     ViewData["Title"] = "Modifier l'entite";
     Layout = "_LayoutAdmin";
@@ -55,7 +55,7 @@
                     <option value="@chef.Value" selected="@(chef.Selected ? "selected" : null)">@chef.Text</option>
                 }
             </select>
-            <small class="text-muted-custom">Seuls les scouts actifs de cette entite avec la fonction Chef de groupe sont proposes.</small>
+            <small class="text-muted-custom">Seuls les scouts actifs de cette entite avec la fonction CHEF DE GROUPE (CG) sont proposes.</small>
             <span asp-validation-for="ChefGroupeScoutId" class="text-danger small d-block"></span>
         </div>
         <div class="row">
@@ -80,4 +80,5 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+
 

@@ -61,7 +61,7 @@
             <select name="ChefUniteId" id="chefSelect" class="form-select" data-current="@Model.ChefUniteId">
                 <option value="">-- Chargement... --</option>
             </select>
-            <small class="text-muted-custom">Le responsable de branche doit appartenir au groupe selectionne.</small>
+            <small class="text-muted-custom">Le responsable de branche doit appartenir au groupe selectionne, etre rattache a une branche de ce groupe et avoir la fonction CHEF D'UNITE (CU).</small>
             <span asp-validation-for="ChefUniteId" class="text-danger small d-block"></span>
         </div>
         <button type="submit" class="btn btn-mango" title="Enregistrer"><i class="bi bi-check-lg"></i></button>
@@ -74,14 +74,14 @@
     function loadScouts(groupeId, selectedId) {
         var chefSelect = document.getElementById('chefSelect');
         if (!groupeId) {
-            chefSelect.innerHTML = '<option value="">-- Selectionner d\\'abord un groupe --</option>';
+            chefSelect.innerHTML = '<option value="">-- Selectionner d\'abord un groupe --</option>';
             return;
         }
         chefSelect.innerHTML = '<option value="">Chargement...</option>';
         fetch('/Branches/GetScoutsByGroupe?groupeId=' + groupeId)
             .then(r => r.json())
             .then(data => {
-                var html = '<option value="">-- Selectionner un responsable de branche --</option>';
+                var html = '<option value="">-- Selectionner un CHEF D\'UNITE (CU) --</option>';
                 data.forEach(s => {
                     var sel = (selectedId && s.id == selectedId) ? ' selected' : '';
                     html += '<option value="' + s.id + '"' + sel + '>' + s.nom + '</option>';
@@ -97,3 +97,4 @@
     if (initGroupe) loadScouts(initGroupe, initChef);
 </script>
 }
+
