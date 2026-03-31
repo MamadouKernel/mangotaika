@@ -1,4 +1,4 @@
-@model GroupeDto
+﻿@model GroupeDto
 @{
     ViewData["Title"] = "Detail de l'entite";
     Layout = "_LayoutAdmin";
@@ -96,11 +96,11 @@
 
         <div class="col-xl-3 col-lg-3">
             <div class="responsable-card">
-                <span class="responsable-card__label">Responsable</span>
+                <span class="responsable-card__label">Chef de groupe</span>
                 @if (!string.IsNullOrWhiteSpace(Model.ResponsablePhotoUrl))
                 {
                     <img src="@Model.ResponsablePhotoUrl"
-                         alt="Photo du responsable @Model.NomChefGroupe"
+                         alt="Photo du chef de groupe @Model.NomChefGroupe"
                          class="responsable-card__photo" />
                 }
                 else
@@ -345,3 +345,4 @@
         display: block;
     }
 </style>
+

@@ -1,4 +1,4 @@
-using MangoTaika.Data;
+﻿using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
 using MangoTaika.Helpers;
@@ -53,6 +53,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
         if (groupe is null) return null;
 
         var scouts = await db.Scouts
+            .Include(s => s.Branche)
             .Where(s => s.GroupeId == groupe.Id && s.IsActive)
             .ToListAsync();
 
@@ -60,6 +61,8 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
             .Where(b => b.GroupeId == groupe.Id && b.IsActive)
             .OrderBy(b => b.Nom)
             .ToListAsync();
+
+        var chefGroupeScout = FindChefGroupeScout(groupe, scouts);
 
         return new GroupeDto
         {
@@ -70,12 +73,15 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
             Latitude = groupe.Latitude,
             Longitude = groupe.Longitude,
             Adresse = groupe.Adresse,
-            NomChefGroupe = BuildChefGroupeName(
-                groupe.NomChefGroupe,
-                groupe.Responsable != null ? $"{groupe.Responsable.Prenom} {groupe.Responsable.Nom}" : null),
-            ResponsableId = groupe.ResponsableId,
-            ContactChefGroupe = NormalizeOptional(groupe.Responsable?.PhoneNumber),
-            ResponsablePhotoUrl = NormalizeOptional(groupe.Responsable?.PhotoUrl),
+            NomChefGroupe = chefGroupeScout != null
+                ? BuildScoutDisplayName(chefGroupeScout)
+                : BuildChefGroupeName(
+                    groupe.NomChefGroupe,
+                    groupe.Responsable != null ? $"{groupe.Responsable.Prenom} {groupe.Responsable.Nom}" : null),
+            ChefGroupeScoutId = chefGroupeScout?.Id,
+            ResponsableId = chefGroupeScout?.UserId ?? groupe.ResponsableId,
+            ContactChefGroupe = NormalizeOptional(chefGroupeScout?.Telephone) ?? NormalizeOptional(groupe.Responsable?.PhoneNumber),
+            ResponsablePhotoUrl = NormalizeOptional(chefGroupeScout?.PhotoUrl) ?? NormalizeOptional(groupe.Responsable?.PhotoUrl),
             NombreMembres = scouts.Count,
             NombreFilles = scouts.Count(s => ClassifySexe(s.Sexe) == SexeCategory.Feminin),
             NombreGarcons = scouts.Count(s => ClassifySexe(s.Sexe) == SexeCategory.Masculin),
@@ -103,7 +109,6 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
         var nom = NormalizeNom(dto.Nom);
         ValidateCoordinates(dto.Latitude, dto.Longitude);
         await EnsureUniqueNomAsync(nom);
-        await EnsureResponsableExistsAsync(dto.ResponsableId);
         var adresse = BuildAdresse(dto.Commune, dto.Quartier);
         var (lat, lng) = await geocoding.GeocodeAsync(adresse ?? "");
 
@@ -116,8 +121,8 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
             Latitude = lat ?? dto.Latitude,
             Longitude = lng ?? dto.Longitude,
             Adresse = adresse,
-            NomChefGroupe = NormalizeOptional(dto.NomChefGroupe),
-            ResponsableId = dto.ResponsableId
+            NomChefGroupe = null,
+            ResponsableId = null
         };
         db.Groupes.Add(groupe);
         await SaveChangesAsync();
@@ -133,9 +138,9 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
         var nom = NormalizeNom(dto.Nom);
         ValidateCoordinates(dto.Latitude, dto.Longitude);
         await EnsureUniqueNomAsync(nom, id);
-        await EnsureResponsableExistsAsync(dto.ResponsableId);
         var adresse = BuildAdresse(dto.Commune, dto.Quartier);
         var (lat, lng) = await geocoding.GeocodeAsync(adresse ?? "");
+        var chefGroupeScout = await GetChefGroupeScoutAsync(groupe.Id, dto.ChefGroupeScoutId);
 
         groupe.Nom = nom;
         groupe.Description = NormalizeOptional(dto.Description);
@@ -143,8 +148,8 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
         groupe.Latitude = lat ?? dto.Latitude;
         groupe.Longitude = lng ?? dto.Longitude;
         groupe.Adresse = adresse;
-        groupe.NomChefGroupe = NormalizeOptional(dto.NomChefGroupe);
-        groupe.ResponsableId = dto.ResponsableId;
+        groupe.NomChefGroupe = chefGroupeScout != null ? BuildScoutDisplayName(chefGroupeScout) : null;
+        groupe.ResponsableId = chefGroupeScout?.UserId;
         await SaveChangesAsync();
         return true;
     }
@@ -187,6 +192,75 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
     private static string? BuildChefGroupeName(string? storedName, string? fallbackName)
     {
         return NormalizeOptional(storedName) ?? NormalizeOptional(fallbackName);
+    }
+
+    private static string BuildScoutDisplayName(Scout scout)
+    {
+        return string.Join(" ", new[] { scout.Prenom, scout.Nom }.Where(value => !string.IsNullOrWhiteSpace(value))).Trim();
+    }
+
+    private static bool IsChefGroupeScout(Scout scout, Guid groupeId)
+    {
+        return scout.GroupeId == groupeId
+            && scout.BrancheId.HasValue
+            && scout.Branche != null
+            && scout.Branche.GroupeId == groupeId
+            && DatabaseText.NormalizeSearchKey(scout.Fonction ?? string.Empty) == DatabaseText.NormalizeSearchKey("Chef de groupe");
+    }
+
+    private static bool MatchesChefGroupeName(string? storedName, Scout scout)
+    {
+        var normalizedStoredName = DatabaseText.NormalizeSearchKey(storedName ?? string.Empty);
+        if (string.IsNullOrEmpty(normalizedStoredName))
+        {
+            return false;
+        }
+
+        var prenomNom = DatabaseText.NormalizeSearchKey(BuildScoutDisplayName(scout));
+        var nomPrenom = DatabaseText.NormalizeSearchKey($"{scout.Nom} {scout.Prenom}");
+        return normalizedStoredName == prenomNom || normalizedStoredName == nomPrenom;
+    }
+
+    private static Scout? FindChefGroupeScout(Groupe groupe, IEnumerable<Scout> scouts)
+    {
+        var eligibleScouts = scouts
+            .Where(s => IsChefGroupeScout(s, groupe.Id))
+            .ToList();
+
+        if (groupe.ResponsableId.HasValue)
+        {
+            var byUser = eligibleScouts.FirstOrDefault(s => s.UserId == groupe.ResponsableId.Value);
+            if (byUser is not null)
+            {
+                return byUser;
+            }
+        }
+
+        return eligibleScouts.FirstOrDefault(s => MatchesChefGroupeName(groupe.NomChefGroupe, s));
+    }
+
+    private async Task<Scout?> GetChefGroupeScoutAsync(Guid groupeId, Guid? chefGroupeScoutId)
+    {
+        if (!chefGroupeScoutId.HasValue)
+        {
+            return null;
+        }
+
+        var scout = await db.Scouts
+            .Include(s => s.Branche)
+            .FirstOrDefaultAsync(s => s.Id == chefGroupeScoutId.Value && s.IsActive);
+
+        if (scout is null)
+        {
+            throw new InvalidOperationException("Le chef de groupe selectionne est introuvable ou inactif.");
+        }
+
+        if (!IsChefGroupeScout(scout, groupeId))
+        {
+            throw new InvalidOperationException("Le chef de groupe selectionne doit etre un scout actif de cette entite avec la fonction Chef de groupe.");
+        }
+
+        return scout;
     }
 
     private static string? NormalizeOptional(string? value)
@@ -258,20 +332,6 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
         if (exists)
         {
             throw new InvalidOperationException("Un groupe avec ce nom existe deja.");
-        }
-    }
-
-    private async Task EnsureResponsableExistsAsync(Guid? responsableId)
-    {
-        if (!responsableId.HasValue)
-        {
-            return;
-        }
-
-        var exists = await db.Users.AnyAsync(u => u.Id == responsableId.Value && u.IsActive);
-        if (!exists)
-        {
-            throw new InvalidOperationException("Le responsable selectionne est introuvable ou inactif.");
         }
     }
 

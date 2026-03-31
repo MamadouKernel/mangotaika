@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace MangoTaika.DTOs;
 
@@ -12,6 +12,7 @@ public class GroupeDto
     public double? Longitude { get; set; }
     public string? Adresse { get; set; }
     public string? NomChefGroupe { get; set; }
+    public Guid? ChefGroupeScoutId { get; set; }
     public Guid? ResponsableId { get; set; }
     public string? ContactChefGroupe { get; set; }
     public string? ResponsablePhotoUrl { get; set; }
@@ -50,6 +51,7 @@ public class GroupeCreateDto : IValidatableObject
     public string? Commune { get; set; }
     public string? Quartier { get; set; }
     public string? NomChefGroupe { get; set; }
+    public Guid? ChefGroupeScoutId { get; set; }
     public string? LogoUrl { get; set; }
     public Guid? ResponsableId { get; set; }
     public double? Latitude { get; set; }

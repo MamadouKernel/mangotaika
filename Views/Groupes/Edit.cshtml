@@ -1,8 +1,8 @@
-@model GroupeDto
+﻿@model GroupeDto
 @{
     ViewData["Title"] = "Modifier l'entite";
     Layout = "_LayoutAdmin";
-    var responsables = ViewBag.Responsables as List<MangoTaika.Data.Entities.ApplicationUser> ?? new();
+    var chefsGroupe = ViewBag.ChefsGroupe as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
     var parts = (Model.Adresse ?? "").Split(',', 2, StringSplitOptions.TrimEntries);
     var quartier = parts.Length > 0 ? parts[0] : "";
     var commune = parts.Length > 1 ? parts[1] : "";
@@ -47,26 +47,16 @@
             </div>
         </div>
         <div class="mb-3">
-            <label class="form-label">Chef de groupe</label>
-            <input name="NomChefGroupe" class="form-control" value="@Model.NomChefGroupe" placeholder="Ex: Kone Moussa" />
-        </div>
-        <div class="mb-3">
-            <label asp-for="ResponsableId" class="form-label">Responsable rattache</label>
-            <select asp-for="ResponsableId" class="form-select">
-                <option value="">-- Aucun responsable rattache --</option>
-                @foreach (var responsable in responsables)
+            <label asp-for="ChefGroupeScoutId" class="form-label">Chef de groupe</label>
+            <select asp-for="ChefGroupeScoutId" class="form-select">
+                <option value="">-- Selectionner un chef de groupe --</option>
+                @foreach (var chef in chefsGroupe)
                 {
-                    <option value="@responsable.Id" selected="@(responsable.Id == Model.ResponsableId ? "selected" : null)">
-                        @responsable.Prenom @responsable.Nom
-                        @if (!string.IsNullOrWhiteSpace(responsable.PhoneNumber))
-                        {
-                            <text> - @responsable.PhoneNumber</text>
-                        }
-                    </option>
+                    <option value="@chef.Value" selected="@(chef.Selected ? "selected" : null)">@chef.Text</option>
                 }
             </select>
-            <small class="text-muted-custom">Le contact et la photo du responsable sur la fiche detail proviennent de cet utilisateur.</small>
-            <span asp-validation-for="ResponsableId" class="text-danger small d-block"></span>
+            <small class="text-muted-custom">Seuls les scouts actifs de cette entite avec la fonction Chef de groupe sont proposes.</small>
+            <span asp-validation-for="ChefGroupeScoutId" class="text-danger small d-block"></span>
         </div>
         <div class="row">
             <div class="col-md-6 mb-3">
@@ -90,3 +80,4 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+

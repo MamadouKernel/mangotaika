@@ -1,9 +1,10 @@
-using MangoTaika.Data;
+﻿using MangoTaika.Data;
 using MangoTaika.DTOs;
 using MangoTaika.Helpers;
 using MangoTaika.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 namespace MangoTaika.Controllers;
@@ -25,7 +26,7 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> Create()
     {
-        await LoadResponsablesAsync();
+        await LoadChefsGroupeAsync(null);
         return View();
     }
 
@@ -36,7 +37,7 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
     {
         if (!ModelState.IsValid)
         {
-            await LoadResponsablesAsync();
+            await LoadChefsGroupeAsync(null, dto.ChefGroupeScoutId);
             return View(dto);
         }
 
@@ -52,7 +53,7 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
         catch (InvalidOperationException ex)
         {
             this.AddDomainError(ex);
-            await LoadResponsablesAsync();
+            await LoadChefsGroupeAsync(null, dto.ChefGroupeScoutId);
             return View(dto);
         }
 
@@ -80,7 +81,7 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
             return NotFound();
         }
 
-        await LoadResponsablesAsync();
+        await LoadChefsGroupeAsync(id, groupe.ChefGroupeScoutId);
         return View(groupe);
     }
 
@@ -91,7 +92,7 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
     {
         if (!ModelState.IsValid)
         {
-            await LoadResponsablesAsync();
+            await LoadChefsGroupeAsync(id, dto.ChefGroupeScoutId);
             return View(ToEditDto(id, dto));
         }
 
@@ -108,7 +109,7 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
         catch (InvalidOperationException ex)
         {
             this.AddDomainError(ex);
-            await LoadResponsablesAsync();
+            await LoadChefsGroupeAsync(id, dto.ChefGroupeScoutId);
             return View(ToEditDto(id, dto));
         }
 
@@ -162,18 +163,43 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
             LogoUrl = dto.LogoUrl,
             Adresse = string.IsNullOrWhiteSpace(adresse) ? null : adresse,
             NomChefGroupe = dto.NomChefGroupe,
+            ChefGroupeScoutId = dto.ChefGroupeScoutId,
             ResponsableId = dto.ResponsableId,
             Latitude = dto.Latitude,
             Longitude = dto.Longitude
         };
     }
 
-    private async Task LoadResponsablesAsync()
+    private async Task LoadChefsGroupeAsync(Guid? groupeId, Guid? selectedScoutId = null)
     {
-        ViewBag.Responsables = await db.Users
-            .Where(u => u.IsActive)
-            .OrderBy(u => u.Prenom)
-            .ThenBy(u => u.Nom)
-            .ToListAsync();
+        var items = new List<SelectListItem>();
+        var chefGroupeKey = DatabaseText.NormalizeSearchKey("Chef de groupe");
+
+        if (groupeId.HasValue && groupeId.Value != Guid.Empty)
+        {
+            var scouts = await db.Scouts
+                .Include(s => s.Branche)
+                .Where(s => s.IsActive && s.GroupeId == groupeId.Value)
+                .OrderBy(s => s.Prenom)
+                .ThenBy(s => s.Nom)
+                .ToListAsync();
+
+            items = scouts
+                .Where(s => s.BrancheId.HasValue
+                    && s.Branche != null
+                    && s.Branche.GroupeId == groupeId.Value
+                    && DatabaseText.NormalizeSearchKey(s.Fonction ?? string.Empty) == chefGroupeKey)
+                .Select(s => new SelectListItem
+                {
+                    Value = s.Id.ToString(),
+                    Text = $"{s.Prenom} {s.Nom}" +
+                        (string.IsNullOrWhiteSpace(s.Matricule) ? string.Empty : $" ({s.Matricule})") +
+                        (s.Branche == null ? string.Empty : $" - {s.Branche.Nom}"),
+                    Selected = selectedScoutId.HasValue && s.Id == selectedScoutId.Value
+                })
+                .ToList();
+        }
+
+        ViewBag.ChefsGroupe = items;
     }
 }

@@ -1,8 +1,9 @@
-@model GroupeCreateDto
+﻿@model GroupeCreateDto
 @{
     ViewData["Title"] = "Nouvelle entite";
     Layout = "_LayoutAdmin";
-    var responsables = ViewBag.Responsables as List<MangoTaika.Data.Entities.ApplicationUser> ?? new();
+    var chefsGroupe = ViewBag.ChefsGroupe as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+    var hasChefsGroupe = chefsGroupe.Any();
 }
 
 <h2 class="section-title mb-1"><i class="bi bi-plus-lg text-or"></i> Nouvelle <span class="accent">entite</span></h2>
@@ -44,26 +45,25 @@
             </div>
         </div>
         <div class="mb-3">
-            <label asp-for="NomChefGroupe" class="form-label">Chef de groupe</label>
-            <input asp-for="NomChefGroupe" class="form-control" placeholder="Ex: Kone Moussa" />
-        </div>
-        <div class="mb-3">
-            <label asp-for="ResponsableId" class="form-label">Responsable rattache</label>
-            <select asp-for="ResponsableId" class="form-select">
-                <option value="">-- Aucun responsable rattache --</option>
-                @foreach (var responsable in responsables)
-                {
-                    <option value="@responsable.Id">
-                        @responsable.Prenom @responsable.Nom
-                        @if (!string.IsNullOrWhiteSpace(responsable.PhoneNumber))
-                        {
-                            <text> - @responsable.PhoneNumber</text>
-                        }
-                    </option>
-                }
-            </select>
-            <small class="text-muted-custom">Le contact et la photo du responsable sur la fiche detail proviennent de cet utilisateur.</small>
-            <span asp-validation-for="ResponsableId" class="text-danger small d-block"></span>
+            <label asp-for="ChefGroupeScoutId" class="form-label">Chef de groupe</label>
+            @if (hasChefsGroupe)
+            {
+                <select asp-for="ChefGroupeScoutId" class="form-select">
+                    <option value="">-- Selectionner un chef de groupe --</option>
+                    @foreach (var chef in chefsGroupe)
+                    {
+                        <option value="@chef.Value" selected="@(chef.Selected ? "selected" : null)">@chef.Text</option>
+                    }
+                </select>
+            }
+            else
+            {
+                <select class="form-select" disabled>
+                    <option value="">-- Enregistrez d'abord l'entite --</option>
+                </select>
+            }
+            <small class="text-muted-custom">Apres creation de l'entite, revenez sur la modification pour selectionner un scout ayant la fonction Chef de groupe.</small>
+            <span asp-validation-for="ChefGroupeScoutId" class="text-danger small d-block"></span>
         </div>
         <div class="row">
             <div class="col-md-6 mb-3">
@@ -87,3 +87,4 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+
