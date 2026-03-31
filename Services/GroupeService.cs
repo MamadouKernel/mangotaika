@@ -140,7 +140,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
         await EnsureUniqueNomAsync(nom, id);
         var adresse = BuildAdresse(dto.Commune, dto.Quartier);
         var (lat, lng) = await geocoding.GeocodeAsync(adresse ?? "");
-        var chefGroupeScout = await GetChefGroupeScoutAsync(groupe.Id, dto.ChefGroupeScoutId);
+        var chefGroupeScout = await GetChefGroupeScoutAsync(groupe, dto.ChefGroupeScoutId);
 
         groupe.Nom = nom;
         groupe.Description = NormalizeOptional(dto.Description);
@@ -199,13 +199,48 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
         return string.Join(" ", new[] { scout.Prenom, scout.Nom }.Where(value => !string.IsNullOrWhiteSpace(value))).Trim();
     }
 
-    private static bool IsChefGroupeScout(Scout scout, Guid groupeId)
+    private static bool IsDistrictEquipe(Groupe groupe)
     {
-        return scout.GroupeId == groupeId
-            && scout.BrancheId.HasValue
+        return DatabaseText.NormalizeSearchKey(groupe.Nom ?? string.Empty)
+            == DatabaseText.NormalizeSearchKey("Equipe de District Mango Taika");
+    }
+
+    private static bool HasChefGroupeFunction(string? fonction)
+    {
+        return DatabaseText.NormalizeSearchKey(fonction ?? string.Empty) == DatabaseText.NormalizeSearchKey("CHEF DE GROUPE (CG)");
+    }
+
+    private static bool HasDistrictEquipeFunction(string? fonction)
+    {
+        var normalizedFunction = DatabaseText.NormalizeSearchKey(fonction ?? string.Empty);
+        return normalizedFunction == DatabaseText.NormalizeSearchKey("COMMISSAIRE DE DISTRICT (CD)")
+            || normalizedFunction == DatabaseText.NormalizeSearchKey("COMMISSAIRE DE DISTRICT ADJOINT (CDA)")
+            || normalizedFunction == DatabaseText.NormalizeSearchKey("ASSISTANT COMMISSAIRE DE DISTRICT (ACD)");
+    }
+
+    private static bool IsChefGroupeScout(Scout scout, Groupe groupe)
+    {
+        if (scout.GroupeId != groupe.Id)
+        {
+            return false;
+        }
+
+        if (IsDistrictEquipe(groupe))
+        {
+            return HasDistrictEquipeFunction(scout.Fonction);
+        }
+
+        return scout.BrancheId.HasValue
             && scout.Branche != null
-            && scout.Branche.GroupeId == groupeId
-            && DatabaseText.NormalizeSearchKey(scout.Fonction ?? string.Empty) == DatabaseText.NormalizeSearchKey("CHEF DE GROUPE (CG)");
+            && scout.Branche.GroupeId == groupe.Id
+            && HasChefGroupeFunction(scout.Fonction);
+    }
+
+    private static string GetChefGroupeSelectionMessage(Groupe groupe)
+    {
+        return IsDistrictEquipe(groupe)
+            ? "Pour l'Equipe de District Mango Taika, le chef de groupe selectionne doit etre un scout actif de cette entite avec la fonction COMMISSAIRE DE DISTRICT (CD), COMMISSAIRE DE DISTRICT ADJOINT (CDA) ou ASSISTANT COMMISSAIRE DE DISTRICT (ACD)."
+            : "Le chef de groupe selectionne doit etre un scout actif de cette entite avec la fonction CHEF DE GROUPE (CG).";
     }
 
     private static bool MatchesChefGroupeName(string? storedName, Scout scout)
@@ -224,7 +259,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
     private static Scout? FindChefGroupeScout(Groupe groupe, IEnumerable<Scout> scouts)
     {
         var eligibleScouts = scouts
-            .Where(s => IsChefGroupeScout(s, groupe.Id))
+            .Where(s => IsChefGroupeScout(s, groupe))
             .ToList();
 
         if (groupe.ResponsableId.HasValue)
@@ -239,7 +274,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
         return eligibleScouts.FirstOrDefault(s => MatchesChefGroupeName(groupe.NomChefGroupe, s));
     }
 
-    private async Task<Scout?> GetChefGroupeScoutAsync(Guid groupeId, Guid? chefGroupeScoutId)
+    private async Task<Scout?> GetChefGroupeScoutAsync(Groupe groupe, Guid? chefGroupeScoutId)
     {
         if (!chefGroupeScoutId.HasValue)
         {
@@ -255,9 +290,9 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
             throw new InvalidOperationException("Le chef de groupe selectionne est introuvable ou inactif.");
         }
 
-        if (!IsChefGroupeScout(scout, groupeId))
+        if (!IsChefGroupeScout(scout, groupe))
         {
-            throw new InvalidOperationException("Le chef de groupe selectionne doit etre un scout actif de cette entite avec la fonction CHEF DE GROUPE (CG).");
+            throw new InvalidOperationException(GetChefGroupeSelectionMessage(groupe));
         }
 
         return scout;
@@ -380,4 +415,5 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
         Masculin
     }
 }
+
 

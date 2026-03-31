@@ -170,13 +170,61 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
         };
     }
 
+    private static bool IsDistrictEquipe(string? groupeNom)
+    {
+        return DatabaseText.NormalizeSearchKey(groupeNom ?? string.Empty)
+            == DatabaseText.NormalizeSearchKey("Equipe de District Mango Taika");
+    }
+
+    private static bool IsEligibleChefGroupeFunction(string? fonction, bool isDistrictEquipe)
+    {
+        var normalizedFunction = DatabaseText.NormalizeSearchKey(fonction ?? string.Empty);
+
+        if (isDistrictEquipe)
+        {
+            return normalizedFunction == DatabaseText.NormalizeSearchKey("COMMISSAIRE DE DISTRICT (CD)")
+                || normalizedFunction == DatabaseText.NormalizeSearchKey("COMMISSAIRE DE DISTRICT ADJOINT (CDA)")
+                || normalizedFunction == DatabaseText.NormalizeSearchKey("ASSISTANT COMMISSAIRE DE DISTRICT (ACD)");
+        }
+
+        return normalizedFunction == DatabaseText.NormalizeSearchKey("CHEF DE GROUPE (CG)");
+    }
+
+    private static string? GetChefGroupeRoleLabel(string? fonction)
+    {
+        var normalizedFunction = DatabaseText.NormalizeSearchKey(fonction ?? string.Empty);
+
+        if (normalizedFunction == DatabaseText.NormalizeSearchKey("COMMISSAIRE DE DISTRICT (CD)"))
+        {
+            return "CD";
+        }
+
+        if (normalizedFunction == DatabaseText.NormalizeSearchKey("COMMISSAIRE DE DISTRICT ADJOINT (CDA)"))
+        {
+            return "CDA";
+        }
+
+        if (normalizedFunction == DatabaseText.NormalizeSearchKey("ASSISTANT COMMISSAIRE DE DISTRICT (ACD)"))
+        {
+            return "ACD";
+        }
+
+        return null;
+    }
+
     private async Task LoadChefsGroupeAsync(Guid? groupeId, Guid? selectedScoutId = null)
     {
         var items = new List<SelectListItem>();
-        var chefGroupeKey = DatabaseText.NormalizeSearchKey("CHEF DE GROUPE (CG)");
 
         if (groupeId.HasValue && groupeId.Value != Guid.Empty)
         {
+            var groupeNom = await db.Groupes
+                .Where(g => g.Id == groupeId.Value && g.IsActive)
+                .Select(g => g.Nom)
+                .FirstOrDefaultAsync();
+
+            var isDistrictEquipe = IsDistrictEquipe(groupeNom);
+
             var scouts = await db.Scouts
                 .Include(s => s.Branche)
                 .Where(s => s.IsActive && s.GroupeId == groupeId.Value)
@@ -185,16 +233,18 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
                 .ToListAsync();
 
             items = scouts
-                .Where(s => s.BrancheId.HasValue
-                    && s.Branche != null
-                    && s.Branche.GroupeId == groupeId.Value
-                    && DatabaseText.NormalizeSearchKey(s.Fonction ?? string.Empty) == chefGroupeKey)
+                .Where(s => IsEligibleChefGroupeFunction(s.Fonction, isDistrictEquipe)
+                    && (isDistrictEquipe
+                        || (s.BrancheId.HasValue
+                            && s.Branche != null
+                            && s.Branche.GroupeId == groupeId.Value)))
                 .Select(s => new SelectListItem
                 {
                     Value = s.Id.ToString(),
-                    Text = $"{s.Prenom} {s.Nom}" +
-                        (string.IsNullOrWhiteSpace(s.Matricule) ? string.Empty : $" ({s.Matricule})") +
-                        (s.Branche == null ? string.Empty : $" - {s.Branche.Nom}"),
+                    Text = $"{s.Prenom} {s.Nom}"
+                        + (string.IsNullOrWhiteSpace(s.Matricule) ? string.Empty : $" ({s.Matricule})")
+                        + (s.Branche == null ? string.Empty : $" - {s.Branche.Nom}")
+                        + (GetChefGroupeRoleLabel(s.Fonction) is { Length: > 0 } roleLabel ? $" - {roleLabel}" : string.Empty),
                     Selected = selectedScoutId.HasValue && s.Id == selectedScoutId.Value
                 })
                 .ToList();
@@ -203,4 +253,5 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
         ViewBag.ChefsGroupe = items;
     }
 }
+
 

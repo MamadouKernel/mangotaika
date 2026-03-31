@@ -55,7 +55,7 @@
                     <option value="@chef.Value" selected="@(chef.Selected ? "selected" : null)">@chef.Text</option>
                 }
             </select>
-            <small class="text-muted-custom">Seuls les scouts actifs de cette entite avec la fonction CHEF DE GROUPE (CG) sont proposes.</small>
+            <small class="text-muted-custom">Pour Equipe de District Mango Taika, les fonctions CD, CDA et ACD sont proposees. Pour les autres entites, seule la fonction CHEF DE GROUPE (CG) est proposee.</small>
             <span asp-validation-for="ChefGroupeScoutId" class="text-danger small d-block"></span>
         </div>
         <div class="row">
@@ -80,5 +80,6 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+
 
 

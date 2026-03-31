@@ -198,10 +198,7 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
         var scouts = await db.Scouts
             .Include(s => s.Branche)
             .Where(s => s.GroupeId == groupeId
-                && s.IsActive
-                && s.BrancheId.HasValue
-                && s.Branche != null
-                && s.Branche.GroupeId == groupeId)
+                && s.IsActive)
             .OrderBy(s => s.Prenom)
             .ThenBy(s => s.Nom)
             .ToListAsync();
@@ -264,9 +261,7 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
             .Select(s => new
             {
                 s.GroupeId,
-                s.Fonction,
-                s.BrancheId,
-                BrancheGroupeId = s.Branche != null ? (Guid?)s.Branche.GroupeId : null
+                s.Fonction
             })
             .FirstOrDefaultAsync();
 
@@ -276,9 +271,9 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
             return;
         }
 
-        if (chef.GroupeId != dto.GroupeId || !chef.BrancheId.HasValue || chef.BrancheGroupeId != dto.GroupeId)
+        if (chef.GroupeId != dto.GroupeId)
         {
-            ModelState.AddModelError(nameof(dto.ChefUniteId), "Le responsable de branche doit appartenir au groupe selectionne et etre rattache a une branche de ce groupe.");
+            ModelState.AddModelError(nameof(dto.ChefUniteId), "Le responsable de branche doit appartenir au groupe selectionne.");
         }
 
         if (!IsChefUniteFunction(chef.Fonction))
@@ -315,6 +310,7 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
         GroupeId = dto.GroupeId
     };
 }
+
 
 
 

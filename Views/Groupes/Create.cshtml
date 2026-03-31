@@ -62,7 +62,7 @@
                     <option value="">-- Enregistrez d'abord l'entite --</option>
                 </select>
             }
-            <small class="text-muted-custom">Apres creation de l'entite, revenez sur la modification pour selectionner un scout ayant la fonction CHEF DE GROUPE (CG).</small>
+            <small class="text-muted-custom">Apres creation de l'entite, revenez sur la modification pour selectionner un scout eligible. Pour Equipe de District Mango Taika : CD, CDA ou ACD. Pour les autres entites : CHEF DE GROUPE (CG).</small>
             <span asp-validation-for="ChefGroupeScoutId" class="text-danger small d-block"></span>
         </div>
         <div class="row">
@@ -87,5 +87,6 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+
 
 
