@@ -61,7 +61,7 @@
             <select name="ChefUniteId" id="chefSelect" class="form-select" data-current="@Model.ChefUniteId">
                 <option value="">-- Chargement... --</option>
             </select>
-            <small class="text-muted-custom">Le responsable de branche doit appartenir au groupe selectionne, etre rattache a une branche de ce groupe et avoir la fonction CHEF D'UNITE (CU).</small>
+            <small class="text-muted-custom">Le responsable de branche doit appartenir au groupe selectionne, etre rattache a une branche de ce groupe et avoir la fonction CHEF D'UNITE (CU) ou CHEF D'UNITE ADJOINT (CUA).</small>
             <span asp-validation-for="ChefUniteId" class="text-danger small d-block"></span>
         </div>
         <button type="submit" class="btn btn-mango" title="Enregistrer"><i class="bi bi-check-lg"></i></button>
@@ -97,4 +97,6 @@
     if (initGroupe) loadScouts(initGroupe, initChef);
 </script>
 }
+
+
 

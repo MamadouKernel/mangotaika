@@ -203,12 +203,19 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
             throw new InvalidOperationException("Le responsable de branche doit appartenir au groupe selectionne et etre rattache a une branche de ce groupe.");
         }
 
-        if (DatabaseText.NormalizeSearchKey(chefUnite.Fonction ?? string.Empty) != DatabaseText.NormalizeSearchKey("CHEF D'UNITE (CU)"))
+        if (!IsChefUniteFunction(chefUnite.Fonction))
         {
-            throw new InvalidOperationException("Le responsable de branche doit avoir la fonction CHEF D'UNITE (CU).");
+            throw new InvalidOperationException("Le responsable de branche doit avoir la fonction CHEF D'UNITE (CU) ou CHEF D'UNITE ADJOINT (CUA).");
         }
 
         return chefUnite;
+    }
+
+    private static bool IsChefUniteFunction(string? fonction)
+    {
+        var normalizedFunction = DatabaseText.NormalizeSearchKey(fonction ?? string.Empty);
+        return normalizedFunction == DatabaseText.NormalizeSearchKey("CHEF D'UNITE (CU)")
+            || normalizedFunction == DatabaseText.NormalizeSearchKey("CHEF D'UNITE ADJOINT (CUA)");
     }
 
     private async Task EnsureActiveGroupeExistsAsync(Guid groupeId)
@@ -349,5 +356,7 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
         Masculin
     }
 }
+
+
 
 

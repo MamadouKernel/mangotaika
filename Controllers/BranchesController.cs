@@ -195,24 +195,27 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
     [HttpGet]
     public async Task<IActionResult> GetScoutsByGroupe(Guid groupeId)
     {
-        var chefUniteKey = DatabaseText.NormalizeSearchKey("CHEF D'UNITE (CU)");
-
         var scouts = await db.Scouts
+            .Include(s => s.Branche)
             .Where(s => s.GroupeId == groupeId
                 && s.IsActive
                 && s.BrancheId.HasValue
                 && s.Branche != null
-                && s.Branche.GroupeId == groupeId
-                && DatabaseText.NormalizeSearchKey(s.Fonction ?? string.Empty) == chefUniteKey)
+                && s.Branche.GroupeId == groupeId)
             .OrderBy(s => s.Prenom)
             .ThenBy(s => s.Nom)
+            .ToListAsync();
+
+        var items = scouts
+            .Where(s => IsChefUniteFunction(s.Fonction))
             .Select(s => new
             {
                 s.Id,
                 Nom = s.Prenom + " " + s.Nom + " (" + s.Matricule + ")" + (s.Branche != null ? " - " + s.Branche.Nom : string.Empty)
             })
-            .ToListAsync();
-        return Json(scouts);
+            .ToList();
+
+        return Json(items);
     }
 
     private async Task ValidateBrancheAsync(BrancheCreateDto dto, Guid? currentBrancheId = null)
@@ -253,7 +256,6 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
             return;
         }
 
-        var chefUniteKey = DatabaseText.NormalizeSearchKey("CHEF D'UNITE (CU)");
 
         var chef = await db.Scouts
             .Where(s => s.Id == dto.ChefUniteId.Value && s.IsActive)
@@ -277,10 +279,17 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
             ModelState.AddModelError(nameof(dto.ChefUniteId), "Le responsable de branche doit appartenir au groupe selectionne et etre rattache a une branche de ce groupe.");
         }
 
-        if (DatabaseText.NormalizeSearchKey(chef.Fonction ?? string.Empty) != chefUniteKey)
+        if (!IsChefUniteFunction(chef.Fonction))
         {
-            ModelState.AddModelError(nameof(dto.ChefUniteId), "Le responsable de branche doit avoir la fonction CHEF D'UNITE (CU).");
+            ModelState.AddModelError(nameof(dto.ChefUniteId), "Le responsable de branche doit avoir la fonction CHEF D'UNITE (CU) ou CHEF D'UNITE ADJOINT (CUA).");
         }
+    }
+
+    private static bool IsChefUniteFunction(string? fonction)
+    {
+        var normalizedFunction = DatabaseText.NormalizeSearchKey(fonction ?? string.Empty);
+        return normalizedFunction == DatabaseText.NormalizeSearchKey("CHEF D'UNITE (CU)")
+            || normalizedFunction == DatabaseText.NormalizeSearchKey("CHEF D'UNITE ADJOINT (CUA)");
     }
 
     private static BrancheDto ToEditDto(Guid id, BrancheCreateDto dto) => new()
@@ -296,4 +305,6 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
         GroupeId = dto.GroupeId
     };
 }
+
+
 
