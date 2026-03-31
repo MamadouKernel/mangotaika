@@ -6,6 +6,12 @@
     var parts = (Model.Adresse ?? "").Split(',', 2, StringSplitOptions.TrimEntries);
     var quartier = parts.Length > 0 ? parts[0] : "";
     var commune = parts.Length > 1 ? parts[1] : "";
+    var responsableLabel = string.Equals((Model.Nom ?? string.Empty).Trim(), "Equipe de District Mango Taika", StringComparison.OrdinalIgnoreCase)
+        ? "Commissaire du district"
+        : "Chef de groupe";
+    var responsablePlaceholder = string.Equals((Model.Nom ?? string.Empty).Trim(), "Equipe de District Mango Taika", StringComparison.OrdinalIgnoreCase)
+        ? "-- Selectionner un commissaire du district --"
+        : "-- Selectionner un chef de groupe --";
 }
 
 <h2 class="section-title mb-1"><i class="bi bi-pencil-fill text-or"></i> Modifier l'<span class="accent">entite</span></h2>
@@ -47,9 +53,9 @@
             </div>
         </div>
         <div class="mb-3">
-            <label asp-for="ChefGroupeScoutId" class="form-label">Chef de groupe</label>
+            <label asp-for="ChefGroupeScoutId" class="form-label">@responsableLabel</label>
             <select asp-for="ChefGroupeScoutId" class="form-select">
-                <option value="">-- Selectionner un chef de groupe --</option>
+                <option value="">@responsablePlaceholder</option>
                 @foreach (var chef in chefsGroupe)
                 {
                     <option value="@chef.Value" selected="@(chef.Selected ? "selected" : null)">@chef.Text</option>
@@ -80,6 +86,7 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+
 
 
 
