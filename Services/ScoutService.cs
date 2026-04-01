@@ -1,4 +1,4 @@
-﻿using ClosedXML.Excel;
+using ClosedXML.Excel;
 using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
@@ -60,6 +60,12 @@ public class ScoutService(AppDbContext db) : IScoutService
             District = NormalizeOptional(dto.District),
             NumeroCarte = numeroCarte,
             Fonction = NormalizeOptional(dto.Fonction),
+            FonctionVieActive = NormalizeOptional(dto.FonctionVieActive),
+            NiveauFormationScoute = NormalizeOptional(dto.NiveauFormationScoute),
+            ContactUrgenceNom = NormalizeOptional(dto.ContactUrgenceNom),
+            ContactUrgenceRelation = NormalizeOptional(dto.ContactUrgenceRelation),
+            ContactUrgenceTelephone = NormalizeOptional(dto.ContactUrgenceTelephone),
+            PhotoUrl = NormalizeOptional(dto.PhotoUrl),
             AssuranceAnnuelle = dto.AssuranceAnnuelle,
             AdresseGeographique = NormalizeOptional(dto.AdresseGeographique),
             GroupeId = dto.GroupeId,
@@ -96,6 +102,12 @@ public class ScoutService(AppDbContext db) : IScoutService
         scout.District = NormalizeOptional(dto.District);
         scout.NumeroCarte = numeroCarte;
         scout.Fonction = NormalizeOptional(dto.Fonction);
+        scout.FonctionVieActive = NormalizeOptional(dto.FonctionVieActive);
+        scout.NiveauFormationScoute = NormalizeOptional(dto.NiveauFormationScoute);
+        scout.ContactUrgenceNom = NormalizeOptional(dto.ContactUrgenceNom);
+        scout.ContactUrgenceRelation = NormalizeOptional(dto.ContactUrgenceRelation);
+        scout.ContactUrgenceTelephone = NormalizeOptional(dto.ContactUrgenceTelephone);
+        scout.PhotoUrl = NormalizeOptional(dto.PhotoUrl);
         scout.AssuranceAnnuelle = dto.AssuranceAnnuelle;
         scout.AdresseGeographique = NormalizeOptional(dto.AdresseGeographique);
         scout.GroupeId = dto.GroupeId;
@@ -511,6 +523,12 @@ public class ScoutService(AppDbContext db) : IScoutService
         District = s.District,
         NumeroCarte = s.NumeroCarte,
         Fonction = s.Fonction,
+        FonctionVieActive = s.FonctionVieActive,
+        NiveauFormationScoute = s.NiveauFormationScoute,
+        ContactUrgenceNom = s.ContactUrgenceNom,
+        ContactUrgenceRelation = s.ContactUrgenceRelation,
+        ContactUrgenceTelephone = s.ContactUrgenceTelephone,
+        PhotoUrl = s.PhotoUrl,
         StatutASCCI = s.StatutASCCI,
         AssuranceAnnuelle = s.AssuranceAnnuelle,
         AdresseGeographique = s.AdresseGeographique,

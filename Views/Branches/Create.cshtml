@@ -8,66 +8,160 @@
 <h2 class="section-title mb-1"><i class="bi bi-diagram-3-fill text-or"></i> Nouvelle <span class="accent">branche</span></h2>
 <div class="section-divider"></div>
 
-<div class="card-3d p-4 mt-3" style="max-width:600px;">
+<div class="card-3d p-4 mt-3 branche-form-shell">
     <form asp-action="Create" method="post" enctype="multipart/form-data" class="form-modern">
         <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
         <input asp-for="LogoUrl" type="hidden" />
-        <div class="mb-3">
-            <label asp-for="Nom" class="form-label">Nom de la branche</label>
-            <input asp-for="Nom" class="form-control" placeholder="Ex: Louveteaux" />
-            <span asp-validation-for="Nom" class="text-danger small"></span>
-        </div>
-        <div class="mb-3">
-            <label asp-for="Description" class="form-label">Description</label>
-            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Logo de la branche</label>
-            <input type="file" name="Logo" class="form-control" accept="image/*" />
-            <small class="text-muted-custom">Formats acceptes: JPG, PNG, GIF, WEBP. Taille maximale: 5 Mo.</small>
-            <span asp-validation-for="LogoUrl" class="text-danger small d-block"></span>
-            @if (!string.IsNullOrWhiteSpace(Model?.LogoUrl))
-            {
-                <div class="mt-2">
-                    <img src="@Model.LogoUrl" alt="Apercu du logo de la branche" style="width:72px;height:72px;object-fit:cover;border-radius:16px;border:1px solid rgba(255,255,255,0.12);" />
+        <input asp-for="FoulardUrl" type="hidden" />
+
+        <div class="row g-4 align-items-start">
+            <div class="col-lg-4">
+                <div class="branche-media-panel">
+                    <div class="branche-media-panel__block">
+                        <span class="branche-media-panel__label">Logo branche</span>
+                        @if (!string.IsNullOrWhiteSpace(Model?.LogoUrl))
+                        {
+                            <img src="@Model.LogoUrl" alt="Apercu du logo de la branche" class="branche-media-panel__image" />
+                        }
+                        else
+                        {
+                            <div class="branche-media-panel__image branche-media-panel__image--placeholder">
+                                <i class="bi bi-diagram-3"></i>
+                            </div>
+                        }
+                        <input type="file" name="Logo" class="form-control" accept="image/*" />
+                        <small class="text-muted-custom">JPG, PNG, GIF, WEBP. Taille maximale: 5 Mo.</small>
+                    </div>
+
+                    <div class="branche-media-panel__block branche-media-panel__block--soft">
+                        <span class="branche-media-panel__label">Photo du foulard</span>
+                        @if (!string.IsNullOrWhiteSpace(Model?.FoulardUrl))
+                        {
+                            <img src="@Model.FoulardUrl" alt="Apercu du foulard de la branche" class="branche-media-panel__image branche-media-panel__image--wide" />
+                        }
+                        else
+                        {
+                            <div class="branche-media-panel__image branche-media-panel__image--wide branche-media-panel__image--placeholder">
+                                <i class="bi bi-image"></i>
+                            </div>
+                        }
+                        <input type="file" name="Foulard" class="form-control" accept="image/*" />
+                        <small class="text-muted-custom">Visible uniquement dans la fiche detail de la branche.</small>
+                    </div>
                 </div>
-            }
-        </div>
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label asp-for="AgeMin" class="form-label">Age minimum</label>
-                <input asp-for="AgeMin" class="form-control" type="number" placeholder="Ex: 8" />
-                <span asp-validation-for="AgeMin" class="text-danger small"></span>
             </div>
-            <div class="col-md-6 mb-3">
-                <label asp-for="AgeMax" class="form-label">Age maximum</label>
-                <input asp-for="AgeMax" class="form-control" type="number" placeholder="Ex: 12" />
-                <span asp-validation-for="AgeMax" class="text-danger small"></span>
+
+            <div class="col-lg-8">
+                <div class="branche-form-card">
+                    <div class="mb-3">
+                        <label asp-for="Nom" class="form-label">Nom de la branche</label>
+                        <input asp-for="Nom" class="form-control" placeholder="Ex: Louveteaux" />
+                        <span asp-validation-for="Nom" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label">Description</label>
+                        <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="AgeMin" class="form-label">Age minimum</label>
+                            <input asp-for="AgeMin" class="form-control" type="number" placeholder="Ex: 8" />
+                            <span asp-validation-for="AgeMin" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="AgeMax" class="form-label">Age maximum</label>
+                            <input asp-for="AgeMax" class="form-control" type="number" placeholder="Ex: 12" />
+                            <span asp-validation-for="AgeMax" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="GroupeId" class="form-label">Groupe</label>
+                        <select asp-for="GroupeId" class="form-select" id="groupeSelect">
+                            <option value="">-- Selectionner un groupe --</option>
+                            @foreach (var g in groupes)
+                            {
+                                <option value="@g.Id">@g.Nom</option>
+                            }
+                        </select>
+                        <span asp-validation-for="GroupeId" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="ChefUniteId" class="form-label">Responsable de branche</label>
+                        <select asp-for="ChefUniteId" class="form-select" id="chefSelect" data-current="@Model?.ChefUniteId">
+                            <option value="">-- Selectionner un responsable de branche --</option>
+                        </select>
+                        <small class="text-muted-custom">Le responsable de branche doit appartenir au groupe selectionne. Pour Equipe de District Mango Taika : ACD uniquement. Pour les autres groupes : CU ou CUA.</small>
+                        <span asp-validation-for="ChefUniteId" class="text-danger small d-block"></span>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="mb-3">
-            <label asp-for="GroupeId" class="form-label">Groupe</label>
-            <select asp-for="GroupeId" class="form-select" id="groupeSelect">
-                <option value="">-- Selectionner un groupe --</option>
-                @foreach (var g in groupes)
-                {
-                    <option value="@g.Id">@g.Nom</option>
-                }
-            </select>
-            <span asp-validation-for="GroupeId" class="text-danger small"></span>
+
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Creer</button>
+            <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
         </div>
-        <div class="mb-4">
-            <label asp-for="ChefUniteId" class="form-label">Responsable de branche</label>
-            <select asp-for="ChefUniteId" class="form-select" id="chefSelect" data-current="@Model?.ChefUniteId">
-                <option value="">-- Selectionner un responsable de branche --</option>
-            </select>
-            <small class="text-muted-custom">Le responsable de branche doit appartenir au groupe selectionne. Pour les branches du groupe Equipe de District Mango Taika : ASSISTANT COMMISSAIRE DE DISTRICT (ACD) uniquement. Pour les autres groupes : CHEF D'UNITE (CU) ou CHEF D'UNITE ADJOINT (CUA).</small>
-            <span asp-validation-for="ChefUniteId" class="text-danger small d-block"></span>
-        </div>
-        <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Creer</button>
-        <a asp-action="Index" class="btn btn-outline-or ms-2">Annuler</a>
     </form>
 </div>
+
+<style>
+    .branche-form-shell {
+        max-width: 980px;
+    }
+
+    .branche-media-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .branche-media-panel__block,
+    .branche-form-card {
+        padding: 20px;
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.74);
+        border: 1px solid rgba(94, 117, 188, 0.12);
+    }
+
+    .branche-media-panel__block--soft {
+        background: linear-gradient(180deg, rgba(234, 179, 8, 0.08), rgba(255, 255, 255, 0.82));
+    }
+
+    .branche-media-panel__label {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #7b8a9b;
+        display: block;
+        margin-bottom: 10px;
+    }
+
+    .branche-media-panel__image {
+        width: 100%;
+        height: 140px;
+        object-fit: cover;
+        border-radius: 22px;
+        border: 1px solid rgba(94, 117, 188, 0.16);
+        background: rgba(255, 255, 255, 0.88);
+        margin-bottom: 12px;
+    }
+
+    .branche-media-panel__image--wide {
+        height: 160px;
+    }
+
+    .branche-media-panel__image--placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--bleu-logo);
+        font-size: 2rem;
+    }
+</style>
 
 @section Scripts {
 <script>
@@ -97,9 +191,3 @@
     if (initGroupe) loadScouts(initGroupe, initChef);
 </script>
 }
-
-
-
-
-
-

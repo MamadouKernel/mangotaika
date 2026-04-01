@@ -57,12 +57,16 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
             .Where(s => s.GroupeId == groupe.Id && s.IsActive)
             .ToListAsync();
 
-        var branches = await db.Branches
-            .Where(b => b.GroupeId == groupe.Id && b.IsActive)
-            .OrderBy(b => b.Nom)
-            .ToListAsync();
+        var branches = (await db.Branches
+                .Where(b => b.GroupeId == groupe.Id && b.IsActive)
+                .ToListAsync())
+            .OrderBy(b => BranchOrdering.GetSortWeight(b.Nom))
+            .ThenBy(b => b.AgeMin ?? int.MaxValue)
+            .ThenBy(b => b.Nom)
+            .ToList();
 
         var chefGroupeScout = FindChefGroupeScout(groupe, scouts);
+        var branchNamesById = branches.ToDictionary(b => b.Id, b => b.Nom);
 
         return new GroupeDto
         {
@@ -100,7 +104,30 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
                     Jeunes = BuildRepartition(branchScouts.Where(IsJeune)),
                     Adultes = BuildRepartition(branchScouts.Where(s => !IsJeune(s)))
                 };
-            }).ToList()
+            }).ToList(),
+            Membres = scouts
+                .Select(s => new
+                {
+                    Scout = s,
+                    Branche = s.Branche?.Nom ?? (s.BrancheId.HasValue && branchNamesById.TryGetValue(s.BrancheId.Value, out var brancheNom)
+                        ? brancheNom
+                        : null)
+                })
+                .OrderBy(x => IsJeune(x.Scout) ? 0 : 1)
+                .ThenBy(x => BranchOrdering.GetSortWeight(x.Branche))
+                .ThenBy(x => x.Branche)
+                .ThenBy(x => x.Scout.Nom)
+                .ThenBy(x => x.Scout.Prenom)
+                .Select(x => new GroupeMembreDto
+                {
+                    Matricule = x.Scout.Matricule,
+                    Nom = x.Scout.Nom,
+                    Prenoms = x.Scout.Prenom,
+                    Branche = x.Branche,
+                    Fonction = NormalizeOptional(x.Scout.Fonction) ?? "-",
+                    TypeMembre = IsJeune(x.Scout) ? "Jeune" : "Adulte"
+                })
+                .ToList()
         };
     }
 
@@ -413,6 +440,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
         Masculin
     }
 }
+
 
 
 

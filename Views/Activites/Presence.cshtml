@@ -1,0 +1,125 @@
+@model ActiviteDto
+@using MangoTaika.Data.Entities
+@{
+    ViewData["Title"] = $"Presence - {Model.Titre}";
+    Layout = "_LayoutAdmin";
+    var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+    var presenceUrl = ViewBag.PresenceUrl as string ?? string.Empty;
+    var totalParticipants = Model.Participants.Count;
+    var presents = Model.Participants.Count(p => p.Presence == StatutPresence.Present);
+    var absents = Model.Participants.Count(p => p.Presence == StatutPresence.Absent);
+    var excuses = Model.Participants.Count(p => p.Presence == StatutPresence.Excuse);
+}
+
+<div class="tracking-module tracking-module--presence">
+    <section class="tracking-hero tracking-hero--compact">
+        <div class="tracking-hero__content">
+            <span class="tracking-hero__eyebrow"><i class="bi bi-qr-code-scan"></i> Pointage mobile</span>
+            <h2 class="section-title tracking-hero__title mb-2"><i class="bi bi-qr-code-scan text-or"></i> Presence <span class="accent">@Model.Titre</span></h2>
+            <p class="tracking-hero__text mb-0">Une interface concise pour scanner, ouvrir la page de pointage et marquer rapidement les presences pendant l'activite.</p>
+            <div class="tracking-hero__chips">
+                <span class="tracking-chip"><i class="bi bi-calendar3"></i> @Model.DateDebut.ToString("dd/MM/yyyy HH:mm")</span>
+                <span class="tracking-chip tracking-chip--soft"><i class="bi bi-geo-alt"></i> @(Model.Lieu ?? "Lieu non renseigne")</span>
+                <span class="tracking-chip tracking-chip--highlight"><i class="bi bi-people-fill"></i> @totalParticipants participant(s)</span>
+            </div>
+        </div>
+        <div class="tracking-hero__actions">
+            <div class="tracking-hero__focus">
+                <span>Acces direct</span>
+                <strong>@Model.Statut</strong>
+                <small>@presenceUrl</small>
+            </div>
+            <div class="tracking-action-stack">
+                <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i> Retour a la fiche</a>
+            </div>
+        </div>
+    </section>
+
+    <div class="tracking-kpi-grid">
+        <article class="tracking-kpi tracking-kpi--olive">
+            <i class="bi bi-person-check tracking-kpi__icon"></i>
+            <span class="tracking-kpi__label">Presents</span>
+            <strong class="tracking-kpi__value">@presents</strong>
+            <span class="tracking-kpi__meta">participants deja pointes</span>
+        </article>
+        <article class="tracking-kpi tracking-kpi--rose">
+            <i class="bi bi-person-x tracking-kpi__icon"></i>
+            <span class="tracking-kpi__label">Absents</span>
+            <strong class="tracking-kpi__value">@absents</strong>
+            <span class="tracking-kpi__meta">absences enregistrees</span>
+        </article>
+        <article class="tracking-kpi tracking-kpi--gold">
+            <i class="bi bi-person-exclamation tracking-kpi__icon"></i>
+            <span class="tracking-kpi__label">Excuses</span>
+            <strong class="tracking-kpi__value">@excuses</strong>
+            <span class="tracking-kpi__meta">justifications remontees</span>
+        </article>
+        <article class="tracking-kpi tracking-kpi--blue">
+            <i class="bi bi-link-45deg tracking-kpi__icon"></i>
+            <span class="tracking-kpi__label">Lien direct</span>
+            <strong class="tracking-kpi__value">@totalParticipants</strong>
+            <span class="tracking-kpi__meta">participants suivis sur cette page</span>
+        </article>
+    </div>
+
+    @if (!canManage)
+    {
+        <div class="alert alert-warning mb-0">Vous pouvez consulter la liste, mais seul un gestionnaire ou administrateur peut marquer la presence.</div>
+    }
+
+    @if (Model.Participants.Any())
+    {
+        <section class="presence-grid">
+            @foreach (var participant in Model.Participants)
+            {
+                <article class="tracking-card presence-card">
+                    <div class="tracking-card__header">
+                        <div>
+                            <h3 class="tracking-card__title">@participant.NomComplet</h3>
+                            <div class="tracking-card__subtitle">@participant.Matricule @(string.IsNullOrWhiteSpace(participant.NomBranche) ? string.Empty : $"- {participant.NomBranche}")</div>
+                        </div>
+                        <span class="tracking-status-pill @(participant.Presence == StatutPresence.Present ? "tracking-status-pill--approved" : participant.Presence == StatutPresence.Absent ? "tracking-status-pill--rejected" : "tracking-status-pill--pending")">@participant.Presence</span>
+                    </div>
+
+                    @if (canManage)
+                    {
+                        <div class="presence-card__actions">
+                            <form asp-action="PresenceRapide" asp-route-id="@Model.Id" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="participantId" value="@participant.Id" />
+                                <input type="hidden" name="presence" value="@StatutPresence.Present" />
+                                <button type="submit" class="btn btn-sm presence-btn presence-btn--present"><i class="bi bi-check2-circle"></i> Present</button>
+                            </form>
+                            <form asp-action="PresenceRapide" asp-route-id="@Model.Id" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="participantId" value="@participant.Id" />
+                                <input type="hidden" name="presence" value="@StatutPresence.Absent" />
+                                <button type="submit" class="btn btn-sm presence-btn presence-btn--absent"><i class="bi bi-x-circle"></i> Absent</button>
+                            </form>
+                            <form asp-action="PresenceRapide" asp-route-id="@Model.Id" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="participantId" value="@participant.Id" />
+                                <input type="hidden" name="presence" value="@StatutPresence.Excuse" />
+                                <button type="submit" class="btn btn-sm presence-btn presence-btn--excuse"><i class="bi bi-exclamation-circle"></i> Excuse</button>
+                            </form>
+                        </div>
+                    }
+                </article>
+            }
+        </section>
+    }
+    else
+    {
+        <div class="tracking-empty-state"><i class="bi bi-people"></i><div>Aucun participant inscrit pour cette activite.</div></div>
+    }
+
+    <section class="tracking-panel tracking-panel--soft">
+        <div class="tracking-panel__header">
+            <div>
+                <h3 class="tracking-panel__title">Lien de pointage</h3>
+                <p class="tracking-panel__text">A partager ou ouvrir directement sur un mobile de terrain.</p>
+            </div>
+        </div>
+        <a href="@presenceUrl" class="text-or">@presenceUrl</a>
+    </section>
+</div>

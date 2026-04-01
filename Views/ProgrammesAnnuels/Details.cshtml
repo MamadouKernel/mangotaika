@@ -4,44 +4,68 @@
     ViewData["Title"] = Model.Titre;
     Layout = "_LayoutAdmin";
     var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+
+    string statusClass = Model.Statut switch
+    {
+        StatutWorkflowDocument.Brouillon => "tracking-status-pill--draft",
+        StatutWorkflowDocument.Soumis => "tracking-status-pill--pending",
+        StatutWorkflowDocument.AReviser => "tracking-status-pill--revision",
+        StatutWorkflowDocument.Valide => "tracking-status-pill--approved",
+        _ => "tracking-status-pill--draft"
+    };
 }
 
-<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
-    <div>
-        <h2 class="section-title mb-1"><i class="bi bi-calendar-range text-or"></i> <span class="accent">@Model.Titre</span></h2>
-        <p class="text-muted-custom mb-0">@(Model.Groupe?.Nom ?? "District") - @Model.AnneeReference</p>
-    </div>
-    <div class="d-flex gap-2 flex-wrap">
-        @if (canManage)
-        {
-            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-bleu"><i class="bi bi-pencil"></i></a>
-            @if (Model.Statut is StatutWorkflowDocument.Brouillon or StatutWorkflowDocument.AReviser)
-            {
-                <form asp-action="Soumettre" asp-route-id="@Model.Id" method="post" class="d-inline">@Html.AntiForgeryToken()<button type="submit" class="btn btn-mango"><i class="bi bi-send"></i> Soumettre</button></form>
-            }
-            @if (Model.Statut == StatutWorkflowDocument.Soumis)
-            {
-                <form asp-action="Valider" asp-route-id="@Model.Id" method="post" class="d-inline">@Html.AntiForgeryToken()<button type="submit" class="btn btn-mango"><i class="bi bi-check2-circle"></i> Valider</button></form>
-                <form asp-action="DemanderRevision" asp-route-id="@Model.Id" method="post" class="d-inline">@Html.AntiForgeryToken()<button type="submit" class="btn btn-outline-or"><i class="bi bi-arrow-counterclockwise"></i> Revision</button></form>
-            }
-        }
-        <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i></a>
-    </div>
-</div>
+<div class="tracking-module tracking-module--programmes-details">
+    <section class="tracking-hero tracking-hero--compact">
+        <div class="tracking-hero__content">
+            <span class="tracking-hero__eyebrow"><i class="bi bi-compass"></i> Vision annuelle</span>
+            <h2 class="section-title tracking-hero__title mb-2"><i class="bi bi-calendar-range text-or"></i> <span class="accent">@Model.Titre</span></h2>
+            <p class="tracking-hero__text mb-0">@(Model.Groupe?.Nom ?? "District") - @Model.AnneeReference</p>
+            <div class="tracking-hero__chips">
+                <span class="tracking-chip"><i class="bi bi-patch-check"></i> @Model.Statut</span>
+                <span class="tracking-chip tracking-chip--soft"><i class="bi bi-clock-history"></i> Cree le @Model.DateCreation.ToString("dd/MM/yyyy")</span>
+            </div>
+        </div>
+        <div class="tracking-hero__actions">
+            <div class="tracking-hero__focus">
+                <span>Createur</span>
+                <strong>@Model.Createur.Prenom @Model.Createur.Nom</strong>
+                <small>workflow annuel</small>
+            </div>
+            <div class="tracking-action-stack">
+                @if (canManage)
+                {
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-bleu"><i class="bi bi-pencil"></i> Modifier</a>
+                    @if (Model.Statut is StatutWorkflowDocument.Brouillon or StatutWorkflowDocument.AReviser)
+                    {
+                        <form asp-action="Soumettre" asp-route-id="@Model.Id" method="post" class="d-inline">@Html.AntiForgeryToken()<button type="submit" class="btn btn-mango"><i class="bi bi-send"></i> Soumettre</button></form>
+                    }
+                    @if (Model.Statut == StatutWorkflowDocument.Soumis)
+                    {
+                        <form asp-action="Valider" asp-route-id="@Model.Id" method="post" class="d-inline">@Html.AntiForgeryToken()<button type="submit" class="btn btn-mango"><i class="bi bi-check2-circle"></i> Valider</button></form>
+                        <form asp-action="DemanderRevision" asp-route-id="@Model.Id" method="post" class="d-inline">@Html.AntiForgeryToken()<button type="submit" class="btn btn-outline-or"><i class="bi bi-arrow-counterclockwise"></i> Revision</button></form>
+                    }
+                }
+                <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i> Retour</a>
+            </div>
+        </div>
+    </section>
 
-<div class="card-3d p-4 mb-4">
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-        <div class="badge-3d badge-soumise">@Model.Statut</div>
-        <small class="text-muted-custom">Cree le @Model.DateCreation.ToString("dd/MM/yyyy") par @Model.Createur.Prenom @Model.Createur.Nom</small>
-    </div>
-    @if (!string.IsNullOrWhiteSpace(Model.CommentaireValidation))
-    {
-        <div class="alert alert-warning border-0">@Model.CommentaireValidation</div>
-    }
-    <h5 class="text-or">Objectifs</h5>
-    <div style="white-space:pre-line;" class="text-muted-custom mb-4">@Model.Objectifs</div>
-    <h5 class="text-or">Calendrier synthese</h5>
-    <div style="white-space:pre-line;" class="text-muted-custom mb-4">@Model.CalendrierSynthese</div>
-    <h5 class="text-or">Observations</h5>
-    <div style="white-space:pre-line;" class="text-muted-custom">@(string.IsNullOrWhiteSpace(Model.Observations) ? "Aucune observation." : Model.Observations)</div>
+    <section class="tracking-panel tracking-panel--soft">
+        <div class="tracking-panel__header">
+            <div>
+                <h3 class="tracking-panel__title">Etat du document</h3>
+                <p class="tracking-panel__text">Lecture rapide du statut, des commentaires et du porteur du programme.</p>
+            </div>
+            <span class="tracking-status-pill @statusClass">@Model.Statut</span>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Model.CommentaireValidation))
+        {
+            <div class="alert alert-warning border-0 mb-0">@Model.CommentaireValidation</div>
+        }
+    </section>
+
+    <section class="tracking-panel"><div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Objectifs</h3><p class="tracking-panel__text">Intentions pedagogiques et resultat recherche.</p></div></div><div class="tracking-rich-text">@Model.Objectifs</div></section>
+    <section class="tracking-panel"><div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Calendrier synthese</h3><p class="tracking-panel__text">Temps forts prevus sur l'annee de reference.</p></div></div><div class="tracking-rich-text">@Model.CalendrierSynthese</div></section>
+    <section class="tracking-panel"><div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Observations</h3><p class="tracking-panel__text">Informations complementaires de cadrage.</p></div></div><div class="tracking-rich-text">@(string.IsNullOrWhiteSpace(Model.Observations) ? "Aucune observation." : Model.Observations)</div></section>
 </div>

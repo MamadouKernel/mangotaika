@@ -7,85 +7,123 @@
     var selectedGroupeId = ViewBag.SelectedGroupeId as Guid?;
     var selectedStatut = ViewBag.SelectedStatut as StatutWorkflowDocument?;
     var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+    var brouillons = Model.Count(x => x.Statut == StatutWorkflowDocument.Brouillon || x.Statut == StatutWorkflowDocument.AReviser);
+    var soumis = Model.Count(x => x.Statut == StatutWorkflowDocument.Soumis);
+    var valides = Model.Count(x => x.Statut == StatutWorkflowDocument.Valide);
+
+    string GetStatusClass(StatutWorkflowDocument statut) => statut switch
+    {
+        StatutWorkflowDocument.Brouillon => "tracking-status-pill--draft",
+        StatutWorkflowDocument.Soumis => "tracking-status-pill--pending",
+        StatutWorkflowDocument.AReviser => "tracking-status-pill--revision",
+        StatutWorkflowDocument.Valide => "tracking-status-pill--approved",
+        _ => "tracking-status-pill--draft"
+    };
 }
 
-<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
-    <div>
-        <h2 class="section-title mb-1"><i class="bi bi-journal-richtext text-or"></i> <span class="accent">Rapports d'activite</span></h2>
-        <p class="text-muted-custom mb-0">Cloture des activites avec bilan, difficultes, recommandations et validation.</p>
-    </div>
-    @if (canManage)
-    {
-        <a asp-action="Create" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Nouveau rapport</a>
-    }
-</div>
-
-<div class="card-3d p-4 mb-4">
-    <form method="get" class="row g-3">
-        <div class="col-lg-5">
-            <label class="form-label">Groupe</label>
-            <select class="form-select" name="groupeId">
-                <option value="">-- Tous --</option>
-                @foreach (var groupe in groupes)
+<div class="tracking-module tracking-module--rapports-index">
+    <section class="tracking-hero">
+        <div class="tracking-hero__content">
+            <span class="tracking-hero__eyebrow"><i class="bi bi-journal-richtext"></i> Cloture terrain</span>
+            <h2 class="section-title tracking-hero__title mb-2"><i class="bi bi-journal-richtext text-or"></i> Rapports d'<span class="accent">activite</span></h2>
+            <p class="tracking-hero__text mb-0">Une lecture plus propre des bilans post-activite pour suivre les retours terrain, les difficultes et les recommandations sans perdre le contexte de validation.</p>
+            <div class="tracking-hero__chips">
+                <span class="tracking-chip"><i class="bi bi-collection"></i> @Model.Count rapport(s)</span>
+                <span class="tracking-chip tracking-chip--soft"><i class="bi bi-send-check"></i> @soumis en attente</span>
+                <span class="tracking-chip tracking-chip--highlight"><i class="bi bi-check2-circle"></i> @valides valide(s)</span>
+            </div>
+        </div>
+        <div class="tracking-hero__actions">
+            <div class="tracking-hero__focus">
+                <span>Zone d'attention</span>
+                <strong>@brouillons</strong>
+                <small>rapport(s) a completer ou reprendre</small>
+            </div>
+            <div class="tracking-action-stack">
+                @if (canManage)
                 {
-                    <option value="@groupe.Id" selected="@(selectedGroupeId == groupe.Id ? "selected" : null)">@groupe.Nom</option>
+                    <a asp-action="Create" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Nouveau rapport</a>
                 }
-            </select>
+            </div>
         </div>
-        <div class="col-lg-5">
-            <label class="form-label">Statut</label>
-            <select class="form-select" name="statut">
-                <option value="">-- Tous --</option>
-                @foreach (var statut in Enum.GetValues<StatutWorkflowDocument>())
-                {
-                    <option value="@statut" selected="@(selectedStatut == statut ? "selected" : null)">@statut</option>
-                }
-            </select>
-        </div>
-        <div class="col-lg-2 d-flex align-items-end">
-            <button class="btn btn-bleu w-100" type="submit"><i class="bi bi-filter-circle"></i> Filtrer</button>
-        </div>
-    </form>
-</div>
+    </section>
 
-<div class="card-3d">
-    <div class="table-responsive">
-        <table class="table-modern">
-            <thead>
-                <tr>
-                    <th>Activite</th>
-                    <th>Entite</th>
-                    <th>Date</th>
-                    <th>Statut</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-            @foreach (var rapport in Model)
-            {
-                <tr>
-                    <td>@rapport.Activite.Titre</td>
-                    <td>@(rapport.Activite.Groupe?.Nom ?? "District")</td>
-                    <td>@rapport.DateCreation.ToString("dd/MM/yyyy")</td>
-                    <td><span class="badge-3d badge-soumise">@rapport.Statut</span></td>
-                    <td class="text-end">
-                        <div class="d-flex justify-content-end gap-2">
-                            <a asp-action="Details" asp-route-id="@rapport.Id" class="btn btn-sm btn-outline-or"><i class="bi bi-eye"></i></a>
-                            @if (canManage)
-                            {
-                                <a asp-action="Edit" asp-route-id="@rapport.Id" class="btn btn-sm btn-bleu"><i class="bi bi-pencil"></i></a>
-                            }
-                        </div>
-                    </td>
-                </tr>
-            }
-            @if (!Model.Any())
-            {
-                <tr><td colspan="5" class="text-center text-muted-custom py-4">Aucun rapport d'activite trouve.</td></tr>
-            }
-            </tbody>
-        </table>
+    <div class="tracking-kpi-grid">
+        <article class="tracking-kpi tracking-kpi--olive"><i class="bi bi-pencil-square tracking-kpi__icon"></i><span class="tracking-kpi__label">Brouillons / revisions</span><strong class="tracking-kpi__value">@brouillons</strong><span class="tracking-kpi__meta">rapports a consolider</span></article>
+        <article class="tracking-kpi tracking-kpi--gold"><i class="bi bi-hourglass-split tracking-kpi__icon"></i><span class="tracking-kpi__label">Soumis</span><strong class="tracking-kpi__value">@soumis</strong><span class="tracking-kpi__meta">en file de validation</span></article>
+        <article class="tracking-kpi tracking-kpi--blue"><i class="bi bi-patch-check tracking-kpi__icon"></i><span class="tracking-kpi__label">Valides</span><strong class="tracking-kpi__value">@valides</strong><span class="tracking-kpi__meta">retours officiellement clos</span></article>
+        <article class="tracking-kpi tracking-kpi--rose"><i class="bi bi-diagram-3 tracking-kpi__icon"></i><span class="tracking-kpi__label">Entites</span><strong class="tracking-kpi__value">@Model.Select(x => x.Activite.GroupeId).Distinct().Count()</strong><span class="tracking-kpi__meta">perimetres representes</span></article>
     </div>
-</div>
 
-@await Html.PartialAsync("_ListPagination")
+    <section class="tracking-panel tracking-panel--soft">
+        <div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Filtres de consultation</h3><p class="tracking-panel__text">Croisez les retours par entite et par statut de workflow.</p></div></div>
+        <form method="get" class="tracking-filter-form">
+            <div class="tracking-field-wide">
+                <label class="form-label">Groupe</label>
+                <select class="form-select" name="groupeId">
+                    <option value="">-- Tous --</option>
+                    @foreach (var groupe in groupes)
+                    {
+                        <option value="@groupe.Id" selected="@(selectedGroupeId == groupe.Id ? "selected" : null)">@groupe.Nom</option>
+                    }
+                </select>
+            </div>
+            <div class="tracking-field-wide">
+                <label class="form-label">Statut</label>
+                <select class="form-select" name="statut">
+                    <option value="">-- Tous --</option>
+                    @foreach (var statut in Enum.GetValues<StatutWorkflowDocument>())
+                    {
+                        <option value="@statut" selected="@(selectedStatut == statut ? "selected" : null)">@statut</option>
+                    }
+                </select>
+            </div>
+            <div class="tracking-field-action">
+                <button class="btn btn-bleu w-100" type="submit"><i class="bi bi-filter-circle"></i> Filtrer</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="tracking-panel tracking-table-shell">
+        <div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Tableau des rapports</h3><p class="tracking-panel__text">Vue compacte des activites closes et de leur avancement administratif.</p></div></div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Activite</th>
+                        <th>Entite</th>
+                        <th>Date</th>
+                        <th>Statut</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var rapport in Model)
+                {
+                    <tr>
+                        <td><div class="fw-semibold" style="color:var(--bleu-logo);">@rapport.Activite.Titre</div><small class="text-muted-custom">@rapport.Activite.DateDebut.ToString("dd/MM/yyyy")</small></td>
+                        <td>@(rapport.Activite.Groupe?.Nom ?? "District")</td>
+                        <td>@rapport.DateCreation.ToString("dd/MM/yyyy")</td>
+                        <td><span class="tracking-status-pill @GetStatusClass(rapport.Statut)">@rapport.Statut</span></td>
+                        <td class="text-end">
+                            <div class="tracking-actions justify-content-end">
+                                <a asp-action="Details" asp-route-id="@rapport.Id" class="btn btn-outline-or"><i class="bi bi-eye"></i> Voir</a>
+                                @if (canManage)
+                                {
+                                    <a asp-action="Edit" asp-route-id="@rapport.Id" class="btn btn-bleu"><i class="bi bi-pencil"></i> Modifier</a>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="5" class="text-center py-5 text-muted-custom">Aucun rapport d'activite trouve.</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    @await Html.PartialAsync("_ListPagination")
+</div>

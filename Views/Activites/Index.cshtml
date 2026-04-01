@@ -1,75 +1,152 @@
 @model List<ActiviteDto>
+@using MangoTaika.Data.Entities
 @{
-    ViewData["Title"] = "Activités";
+    ViewData["Title"] = "Activites";
     Layout = "_LayoutAdmin";
     var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
-}
-
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="section-title mb-0"><i class="bi bi-calendar-event-fill text-or"></i> <span class="accent">Activités</span></h2>
-    @if (canManage)
-    {
-        <a asp-action="Create" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Nouvelle activité</a>
-    }
-</div>
-
-@{
     var countsByStatut = ViewBag.CountsByStatut as Dictionary<StatutActivite, int> ?? new();
     var totalActivites = ViewBag.TotalActivites as int? ?? Model.Count;
-}
-<div class="d-flex gap-2 mb-3 flex-wrap">
-    <button type="button" class="btn btn-sm btn-outline-or filter-btn active" data-filter="all">Toutes (@totalActivites)</button>
-    @foreach (var st in Enum.GetValues<StatutActivite>())
-    {
-        var count = countsByStatut.GetValueOrDefault(st);
-        if (count > 0)
-        {
-            <button type="button" class="btn btn-sm btn-outline-or filter-btn" data-filter="@st">@st (@count)</button>
-        }
-    }
-</div>
+    var brouillons = countsByStatut.GetValueOrDefault(StatutActivite.Brouillon);
+    var aValider = countsByStatut.GetValueOrDefault(StatutActivite.Soumise) + countsByStatut.GetValueOrDefault(StatutActivite.Validee);
+    var enCours = countsByStatut.GetValueOrDefault(StatutActivite.EnCours);
+    var cloturees = countsByStatut.GetValueOrDefault(StatutActivite.Terminee) + countsByStatut.GetValueOrDefault(StatutActivite.Archivee);
 
-<div class="row g-4">
-    @foreach (var a in Model)
+    string GetStatusClass(StatutActivite statut) => statut switch
     {
-        <div class="col-lg-4 col-md-6 activite-card-item" data-statut="@a.Statut">
-            <div class="card-3d p-4 h-100 d-flex flex-column">
-                <h5 class="text-or mb-2">
-                    <a asp-action="Details" asp-route-id="@a.Id" class="text-decoration-none" style="color:inherit;">@a.Titre</a>
-                </h5>
-                <p class="text-muted-custom small mb-2">
-                    <span class="badge bg-secondary bg-opacity-25" style="color:var(--bleu-logo);border-radius:10px;font-size:0.7rem;">@a.Type</span>
-                    <span class="badge-3d badge-@a.Statut.ToString().ToLower() ms-1" style="font-size:0.7rem;">@a.Statut</span>
-                </p>
-                <div class="d-flex flex-column gap-1 mb-3 flex-grow-1" style="font-size:0.85rem;">
-                    <span><i class="bi bi-calendar3 text-bleu"></i> @a.DateDebut.ToString("dd/MM/yyyy")</span>
-                    <span><i class="bi bi-geo-alt text-or"></i> @(a.Lieu ?? "-")</span>
-                    <span><i class="bi bi-building text-bleu"></i> @(a.NomGroupe ?? "-")</span>
-                    <span><i class="bi bi-people-fill text-or"></i> <span class="badge-3d badge-soumise" style="font-size:0.7rem;">@a.NbParticipants participant(s)</span></span>
-                </div>
-                <div class="d-flex flex-wrap gap-2 mt-auto">
-                    <a asp-action="Details" asp-route-id="@a.Id" class="btn btn-sm btn-outline-or" title="Détails"><i class="bi bi-eye"></i></a>
-                    @if (canManage)
-                    {
-                        <a asp-action="Edit" asp-route-id="@a.Id" class="btn btn-sm btn-bleu" title="Modifier"><i class="bi bi-pencil"></i></a>
-                        <form asp-action="Delete" asp-route-id="@a.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer cette activité ?')">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Supprimer">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </form>
-                    }
-                </div>
+        StatutActivite.Brouillon => "tracking-status-pill--draft",
+        StatutActivite.Soumise => "tracking-status-pill--pending",
+        StatutActivite.Validee => "tracking-status-pill--approved",
+        StatutActivite.EnCours => "tracking-status-pill--live",
+        StatutActivite.Terminee => "tracking-status-pill--complete",
+        StatutActivite.Rejetee => "tracking-status-pill--rejected",
+        StatutActivite.Archivee => "tracking-status-pill--archived",
+        _ => "tracking-status-pill--draft"
+    };
+}
+
+<div class="tracking-module tracking-module--activities-index">
+    <section class="tracking-hero">
+        <div class="tracking-hero__content">
+            <span class="tracking-hero__eyebrow"><i class="bi bi-compass"></i> Pilotage des activites</span>
+            <h2 class="section-title tracking-hero__title mb-2"><i class="bi bi-calendar-event-fill text-or"></i> Centre de suivi des <span class="accent">activites</span></h2>
+            <p class="tracking-hero__text mb-0">Un ecran plus net pour piloter le calendrier, les validations, les presences terrain et la cloture des activites sans multiplier les manipulations.</p>
+            <div class="tracking-hero__chips">
+                <span class="tracking-chip"><i class="bi bi-calendar3"></i> @totalActivites activite(s)</span>
+                <span class="tracking-chip tracking-chip--soft"><i class="bi bi-send-check"></i> @aValider element(s) en validation</span>
+                <span class="tracking-chip tracking-chip--highlight"><i class="bi bi-qr-code-scan"></i> QR presence sur les activites terrain</span>
             </div>
         </div>
-    }
-    @if (!Model.Any())
-    {
-        <div class="col-12 text-center text-muted-custom py-5">Aucune activité</div>
-    }
-</div>
+        <div class="tracking-hero__actions">
+            <div class="tracking-hero__focus">
+                <span>Vue terrain</span>
+                <strong>@enCours</strong>
+                <small>activite(s) actuellement en cours</small>
+            </div>
+            <div class="tracking-action-stack">
+                @if (canManage)
+                {
+                    <a asp-action="Create" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Nouvelle activite</a>
+                }
+            </div>
+        </div>
+    </section>
 
-<partial name="_ListPagination" />
+    <div class="tracking-kpi-grid">
+        <article class="tracking-kpi tracking-kpi--olive">
+            <i class="bi bi-journal-plus tracking-kpi__icon"></i>
+            <span class="tracking-kpi__label">Brouillons</span>
+            <strong class="tracking-kpi__value">@brouillons</strong>
+            <span class="tracking-kpi__meta">activite(s) encore a consolider</span>
+        </article>
+        <article class="tracking-kpi tracking-kpi--blue">
+            <i class="bi bi-patch-check tracking-kpi__icon"></i>
+            <span class="tracking-kpi__label">Validation</span>
+            <strong class="tracking-kpi__value">@aValider</strong>
+            <span class="tracking-kpi__meta">soumissions et activites pretes a demarrer</span>
+        </article>
+        <article class="tracking-kpi tracking-kpi--gold">
+            <i class="bi bi-broadcast tracking-kpi__icon"></i>
+            <span class="tracking-kpi__label">En cours</span>
+            <strong class="tracking-kpi__value">@enCours</strong>
+            <span class="tracking-kpi__meta">operations actuellement sur le terrain</span>
+        </article>
+        <article class="tracking-kpi tracking-kpi--rose">
+            <i class="bi bi-archive tracking-kpi__icon"></i>
+            <span class="tracking-kpi__label">Cloturees</span>
+            <strong class="tracking-kpi__value">@cloturees</strong>
+            <span class="tracking-kpi__meta">activites terminees ou archivees</span>
+        </article>
+    </div>
+
+    <section class="tracking-panel tracking-panel--soft">
+        <div class="tracking-panel__header">
+            <div>
+                <h3 class="tracking-panel__title">Filtres rapides</h3>
+                <p class="tracking-panel__text">Basculer en un clic entre les grands etats du workflow.</p>
+            </div>
+        </div>
+        <div class="tracking-filter-row">
+            <button type="button" class="tracking-filter-chip filter-btn active" data-filter="all">Toutes (@totalActivites)</button>
+            @foreach (var st in Enum.GetValues<StatutActivite>())
+            {
+                var count = countsByStatut.GetValueOrDefault(st);
+                if (count > 0)
+                {
+                    <button type="button" class="tracking-filter-chip filter-btn" data-filter="@st">@st (@count)</button>
+                }
+            }
+        </div>
+    </section>
+
+    @if (Model.Any())
+    {
+        <section class="tracking-card-grid">
+            @foreach (var a in Model)
+            {
+                <article class="tracking-card activite-card-item" data-statut="@a.Statut">
+                    <div class="tracking-card__header">
+                        <div>
+                            <h3 class="tracking-card__title"><a asp-action="Details" asp-route-id="@a.Id" class="text-decoration-none" style="color:inherit;">@a.Titre</a></h3>
+                            <div class="tracking-card__subtitle">@(a.NomGroupe ?? "Tout le district")</div>
+                        </div>
+                        <span class="tracking-status-pill @GetStatusClass(a.Statut)">@a.Statut</span>
+                    </div>
+
+                    <p class="tracking-card__summary">@(string.IsNullOrWhiteSpace(a.Description) ? "Aucune description renseignee pour cette activite." : a.Description)</p>
+
+                    <div class="tracking-meta-list">
+                        <div class="tracking-meta-list__item"><i class="bi bi-bookmark-star"></i><span>@a.Type</span></div>
+                        <div class="tracking-meta-list__item"><i class="bi bi-calendar3"></i><span>@a.DateDebut.ToString("dd/MM/yyyy") a @a.DateDebut.ToString("HH:mm")</span></div>
+                        <div class="tracking-meta-list__item"><i class="bi bi-geo-alt"></i><span>@(a.Lieu ?? "Lieu non renseigne")</span></div>
+                        <div class="tracking-meta-list__item"><i class="bi bi-people-fill"></i><span>@a.NbParticipants participant(s)</span></div>
+                    </div>
+
+                    <div class="tracking-card__actions">
+                        <a asp-action="Details" asp-route-id="@a.Id" class="btn btn-outline-or"><i class="bi bi-eye"></i> Voir</a>
+                        @if (canManage && (a.Statut == StatutActivite.EnCours || a.Statut == StatutActivite.Terminee))
+                        {
+                            <a asp-action="Presence" asp-route-id="@a.Id" class="btn btn-outline-or"><i class="bi bi-qr-code-scan"></i> Presence</a>
+                        }
+                        @if (canManage)
+                        {
+                            <a asp-action="Edit" asp-route-id="@a.Id" class="btn btn-bleu"><i class="bi bi-pencil"></i> Modifier</a>
+                            <form asp-action="Delete" asp-route-id="@a.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer cette activite ?')">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm" style="background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3);"><i class="bi bi-trash"></i></button>
+                            </form>
+                        }
+                    </div>
+                </article>
+            }
+        </section>
+    }
+    else
+    {
+        <div class="tracking-empty-state"><i class="bi bi-calendar-x"></i><div>Aucune activite disponible pour le moment.</div></div>
+    }
+
+    <partial name="_ListPagination" />
+</div>
 
 @section Scripts {
 <script>

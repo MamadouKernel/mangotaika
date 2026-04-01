@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace MangoTaika.DTOs;
 
@@ -8,9 +8,11 @@ public class BrancheDto
     public string Nom { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? LogoUrl { get; set; }
+    public string? FoulardUrl { get; set; }
     public int? AgeMin { get; set; }
     public int? AgeMax { get; set; }
     public string? NomChefUnite { get; set; }
+    public string? ContactChefUnite { get; set; }
     public Guid? ChefUniteId { get; set; }
     public Guid GroupeId { get; set; }
     public string? NomGroupe { get; set; }
@@ -53,6 +55,7 @@ public class BrancheCreateDto : IValidatableObject
     public string Nom { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? LogoUrl { get; set; }
+    public string? FoulardUrl { get; set; }
     public int? AgeMin { get; set; }
     public int? AgeMax { get; set; }
 

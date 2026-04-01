@@ -22,6 +22,7 @@ public class GroupeDto
     public RepartitionMembresDto Jeunes { get; set; } = new();
     public RepartitionMembresDto Adultes { get; set; } = new();
     public List<BrancheScoutCountDto> BranchesScouts { get; set; } = [];
+    public List<GroupeMembreDto> Membres { get; set; } = [];
 }
 
 public class BrancheScoutCountDto
@@ -33,6 +34,16 @@ public class BrancheScoutCountDto
     public string? NomChefUnite { get; set; }
     public RepartitionMembresDto Jeunes { get; set; } = new();
     public RepartitionMembresDto Adultes { get; set; } = new();
+}
+
+public class GroupeMembreDto
+{
+    public string Matricule { get; set; } = string.Empty;
+    public string Nom { get; set; } = string.Empty;
+    public string Prenoms { get; set; } = string.Empty;
+    public string? Branche { get; set; }
+    public string Fonction { get; set; } = "-";
+    public string TypeMembre { get; set; } = "Jeune";
 }
 
 public class RepartitionMembresDto

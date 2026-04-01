@@ -8,78 +8,126 @@
     var selectedStatut = ViewBag.SelectedStatut as StatutWorkflowDocument?;
     var annee = ViewBag.Annee is int currentYear ? currentYear : DateTime.UtcNow.Year;
     var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+    var brouillons = Model.Count(x => x.Statut == StatutWorkflowDocument.Brouillon || x.Statut == StatutWorkflowDocument.AReviser);
+    var soumis = Model.Count(x => x.Statut == StatutWorkflowDocument.Soumis);
+    var valides = Model.Count(x => x.Statut == StatutWorkflowDocument.Valide);
+    var districtCount = Model.Count(x => !x.GroupeId.HasValue);
+
+    string GetStatusClass(StatutWorkflowDocument statut) => statut switch
+    {
+        StatutWorkflowDocument.Brouillon => "tracking-status-pill--draft",
+        StatutWorkflowDocument.Soumis => "tracking-status-pill--pending",
+        StatutWorkflowDocument.AReviser => "tracking-status-pill--revision",
+        StatutWorkflowDocument.Valide => "tracking-status-pill--approved",
+        _ => "tracking-status-pill--draft"
+    };
 }
 
-<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
-    <div>
-        <h2 class="section-title mb-1"><i class="bi bi-calendar-range text-or"></i> <span class="accent">Programmes annuels</span></h2>
-        <p class="text-muted-custom mb-0">Planification annuelle des activites des groupes et du district avec circuit de validation.</p>
-    </div>
-    @if (canManage)
-    {
-        <a asp-action="Create" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Nouveau programme</a>
-    }
-</div>
-
-<div class="card-3d p-4 mb-4">
-    <form method="get" class="row g-3">
-        <div class="col-lg-3">
-            <label class="form-label">Annee</label>
-            <input type="number" class="form-control" name="annee" value="@annee" min="2000" max="2100" />
-        </div>
-        <div class="col-lg-4">
-            <label class="form-label">Entite</label>
-            <select class="form-select" name="groupeId">
-                <option value="">-- Programme district --</option>
-                @foreach (var groupe in groupes)
-                {
-                    <option value="@groupe.Id" selected="@(selectedGroupeId == groupe.Id ? "selected" : null)">@groupe.Nom</option>
-                }
-            </select>
-        </div>
-        <div class="col-lg-3">
-            <label class="form-label">Statut</label>
-            <select class="form-select" name="statut">
-                <option value="">-- Tous --</option>
-                @foreach (var statut in Enum.GetValues<StatutWorkflowDocument>())
-                {
-                    <option value="@statut" selected="@(selectedStatut == statut ? "selected" : null)">@statut</option>
-                }
-            </select>
-        </div>
-        <div class="col-lg-2 d-flex align-items-end">
-            <button class="btn btn-bleu w-100" type="submit"><i class="bi bi-filter-circle"></i> Filtrer</button>
-        </div>
-    </form>
-</div>
-
-<div class="row g-4">
-@foreach (var programme in Model)
-{
-    <div class="col-lg-6">
-        <div class="card-3d p-4 h-100 d-flex flex-column">
-            <div class="d-flex justify-content-between gap-3 mb-2">
-                <div>
-                    <h5 class="text-or mb-1">@programme.Titre</h5>
-                    <div class="text-muted-custom small">@(programme.Groupe?.Nom ?? "District") - @programme.AnneeReference</div>
-                </div>
-                <span class="badge-3d badge-soumise">@programme.Statut</span>
+<div class="tracking-module tracking-module--programmes-index">
+    <section class="tracking-hero">
+        <div class="tracking-hero__content">
+            <span class="tracking-hero__eyebrow"><i class="bi bi-calendar-range"></i> Cadence annuelle</span>
+            <h2 class="section-title tracking-hero__title mb-2"><i class="bi bi-calendar-range text-or"></i> Programmes <span class="accent">annuels</span></h2>
+            <p class="tracking-hero__text mb-0">Un tableau de bord plus lisible pour suivre les plans annuels, distinguer les livrables district des programmes d'entite et accelerer la validation.</p>
+            <div class="tracking-hero__chips">
+                <span class="tracking-chip"><i class="bi bi-calendar3"></i> Annee @annee</span>
+                <span class="tracking-chip tracking-chip--soft"><i class="bi bi-diagram-3"></i> @Model.Count programme(s) visibles</span>
+                <span class="tracking-chip tracking-chip--highlight"><i class="bi bi-building"></i> @districtCount programme(s) district</span>
             </div>
-            <p class="text-muted-custom flex-grow-1">@programme.Objectifs</p>
-            <div class="d-flex gap-2 mt-auto">
-                <a asp-action="Details" asp-route-id="@programme.Id" class="btn btn-sm btn-outline-or"><i class="bi bi-eye"></i></a>
+        </div>
+        <div class="tracking-hero__actions">
+            <div class="tracking-hero__focus">
+                <span>Validation</span>
+                <strong>@valides</strong>
+                <small>programme(s) deja valides sur cette vue</small>
+            </div>
+            <div class="tracking-action-stack">
                 @if (canManage)
                 {
-                    <a asp-action="Edit" asp-route-id="@programme.Id" class="btn btn-sm btn-bleu"><i class="bi bi-pencil"></i></a>
+                    <a asp-action="Create" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Nouveau programme</a>
                 }
             </div>
         </div>
-    </div>
-}
-@if (!Model.Any())
-{
-    <div class="col-12 text-center text-muted-custom py-5">Aucun programme annuel trouve.</div>
-}
-</div>
+    </section>
 
-@await Html.PartialAsync("_ListPagination")
+    <div class="tracking-kpi-grid">
+        <article class="tracking-kpi tracking-kpi--olive"><i class="bi bi-journal-plus tracking-kpi__icon"></i><span class="tracking-kpi__label">Brouillons / revisions</span><strong class="tracking-kpi__value">@brouillons</strong><span class="tracking-kpi__meta">elements a structurer ou corriger</span></article>
+        <article class="tracking-kpi tracking-kpi--gold"><i class="bi bi-send-check tracking-kpi__icon"></i><span class="tracking-kpi__label">Soumis</span><strong class="tracking-kpi__value">@soumis</strong><span class="tracking-kpi__meta">en attente de decision</span></article>
+        <article class="tracking-kpi tracking-kpi--blue"><i class="bi bi-patch-check tracking-kpi__icon"></i><span class="tracking-kpi__label">Valides</span><strong class="tracking-kpi__value">@valides</strong><span class="tracking-kpi__meta">adoptes dans le cycle annuel</span></article>
+        <article class="tracking-kpi tracking-kpi--rose"><i class="bi bi-globe2 tracking-kpi__icon"></i><span class="tracking-kpi__label">District</span><strong class="tracking-kpi__value">@districtCount</strong><span class="tracking-kpi__meta">plans transverses visibles</span></article>
+    </div>
+
+    <section class="tracking-panel tracking-panel--soft">
+        <div class="tracking-panel__header">
+            <div>
+                <h3 class="tracking-panel__title">Filtres de pilotage</h3>
+                <p class="tracking-panel__text">Affinez par annee, entite ou statut de workflow.</p>
+            </div>
+        </div>
+        <form method="get" class="tracking-filter-form">
+            <div class="tracking-field">
+                <label class="form-label">Annee</label>
+                <input type="number" class="form-control" name="annee" value="@annee" min="2000" max="2100" />
+            </div>
+            <div class="tracking-field-wide">
+                <label class="form-label">Entite</label>
+                <select class="form-select" name="groupeId">
+                    <option value="">-- Programme district --</option>
+                    @foreach (var groupe in groupes)
+                    {
+                        <option value="@groupe.Id" selected="@(selectedGroupeId == groupe.Id ? "selected" : null)">@groupe.Nom</option>
+                    }
+                </select>
+            </div>
+            <div class="tracking-field">
+                <label class="form-label">Statut</label>
+                <select class="form-select" name="statut">
+                    <option value="">-- Tous --</option>
+                    @foreach (var statut in Enum.GetValues<StatutWorkflowDocument>())
+                    {
+                        <option value="@statut" selected="@(selectedStatut == statut ? "selected" : null)">@statut</option>
+                    }
+                </select>
+            </div>
+            <div class="tracking-field-action">
+                <button class="btn btn-bleu w-100" type="submit"><i class="bi bi-filter-circle"></i> Filtrer</button>
+            </div>
+        </form>
+    </section>
+
+    @if (Model.Any())
+    {
+        <section class="tracking-card-grid">
+        @foreach (var programme in Model)
+        {
+            <article class="tracking-card">
+                <div class="tracking-card__header">
+                    <div>
+                        <h3 class="tracking-card__title">@programme.Titre</h3>
+                        <div class="tracking-card__subtitle">@(programme.Groupe?.Nom ?? "District") - @programme.AnneeReference</div>
+                    </div>
+                    <span class="tracking-status-pill @GetStatusClass(programme.Statut)">@programme.Statut</span>
+                </div>
+                <p class="tracking-card__summary">@(string.IsNullOrWhiteSpace(programme.Objectifs) ? "Aucun objectif renseigne." : programme.Objectifs)</p>
+                <div class="tracking-meta-list">
+                    <div class="tracking-meta-list__item"><i class="bi bi-calendar2-week"></i><span>@(string.IsNullOrWhiteSpace(programme.CalendrierSynthese) ? "Calendrier non renseigne" : "Calendrier synthetise disponible")</span></div>
+                    <div class="tracking-meta-list__item"><i class="bi bi-clock-history"></i><span>Cree le @programme.DateCreation.ToString("dd/MM/yyyy")</span></div>
+                </div>
+                <div class="tracking-card__actions">
+                    <a asp-action="Details" asp-route-id="@programme.Id" class="btn btn-outline-or"><i class="bi bi-eye"></i> Voir</a>
+                    @if (canManage)
+                    {
+                        <a asp-action="Edit" asp-route-id="@programme.Id" class="btn btn-bleu"><i class="bi bi-pencil"></i> Modifier</a>
+                    }
+                </div>
+            </article>
+        }
+        </section>
+    }
+    else
+    {
+        <div class="tracking-empty-state"><i class="bi bi-calendar2-x"></i><div>Aucun programme annuel trouve pour ces criteres.</div></div>
+    }
+
+    @await Html.PartialAsync("_ListPagination")
+</div>

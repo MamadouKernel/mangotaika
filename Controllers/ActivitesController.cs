@@ -24,7 +24,6 @@ public class ActivitesController(
         ViewBag.Groupes = await db.Groupes.Where(g => g.IsActive).OrderBy(g => g.Nom).ToListAsync();
     }
 
-    // === INDEX ===
     public async Task<IActionResult> Index()
     {
         var (page, ps) = ListPagination.Read(Request);
@@ -38,7 +37,6 @@ public class ActivitesController(
         return View(pageItems);
     }
 
-    // === CREATE ===
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> Create()
     {
@@ -50,13 +48,17 @@ public class ActivitesController(
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> Create(ActiviteCreateDto dto)
     {
-        if (!ModelState.IsValid) { await LoadViewDataAsync(); return View(dto); }
+        if (!ModelState.IsValid)
+        {
+            await LoadViewDataAsync();
+            return View(dto);
+        }
+
         await activiteService.CreateAsync(dto, UserId);
-        TempData["Success"] = "Activité créée avec succès.";
+        TempData["Success"] = "Activite creee avec succes.";
         return RedirectToAction(nameof(Index));
     }
 
-    // === EDIT ===
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> Edit(Guid id)
     {
@@ -70,19 +72,28 @@ public class ActivitesController(
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> Edit(Guid id, ActiviteCreateDto dto)
     {
-        if (!ModelState.IsValid) { await LoadViewDataAsync(); return View(dto); }
+        if (!ModelState.IsValid)
+        {
+            await LoadViewDataAsync();
+            return View(dto);
+        }
+
         var result = await activiteService.UpdateAsync(id, dto);
         if (!result) return NotFound();
-        TempData["Success"] = "Activité mise à jour.";
+        TempData["Success"] = "Activite mise a jour.";
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    // === DETAILS ===
     public async Task<IActionResult> Details(Guid id)
     {
         var activite = await activiteService.GetByIdAsync(id);
         if (activite is null) return NotFound();
-        // Charger les scouts du groupe pour l'ajout de participants
+
+        ViewBag.RapportActivite = await db.RapportsActivite
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.ActiviteId == id);
+        ViewBag.PresenceUrl = Url.Action(nameof(Presence), "Activites", new { id }, Request.Scheme) ?? string.Empty;
+
         if (activite.GroupeId.HasValue)
         {
             ViewBag.ScoutsGroupe = await db.Scouts
@@ -99,10 +110,19 @@ public class ActivitesController(
                 .OrderBy(s => s.Nom)
                 .ToListAsync();
         }
+
         return View(activite);
     }
 
-    // === WORKFLOW : Soumettre ===
+    public async Task<IActionResult> Presence(Guid id)
+    {
+        var activite = await activiteService.GetByIdAsync(id);
+        if (activite is null) return NotFound();
+
+        ViewBag.PresenceUrl = Url.Action(nameof(Presence), "Activites", new { id }, Request.Scheme) ?? string.Empty;
+        return View(activite);
+    }
+
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> Soumettre(Guid id)
@@ -112,15 +132,17 @@ public class ActivitesController(
         a.Statut = StatutActivite.Soumise;
         db.CommentairesActivite.Add(new CommentaireActivite
         {
-            Id = Guid.NewGuid(), ActiviteId = id, AuteurId = UserId,
-            Contenu = "Activité soumise pour validation.", TypeAction = "Soumission"
+            Id = Guid.NewGuid(),
+            ActiviteId = id,
+            AuteurId = UserId,
+            Contenu = "Activite soumise pour validation.",
+            TypeAction = "Soumission"
         });
         await db.SaveChangesAsync();
-        TempData["Success"] = "Activité soumise pour validation.";
+        TempData["Success"] = "Activite soumise pour validation.";
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    // === WORKFLOW : Valider ===
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> Valider(Guid id)
@@ -131,15 +153,17 @@ public class ActivitesController(
         a.MotifRejet = null;
         db.CommentairesActivite.Add(new CommentaireActivite
         {
-            Id = Guid.NewGuid(), ActiviteId = id, AuteurId = UserId,
-            Contenu = "Activité validée.", TypeAction = "Validation"
+            Id = Guid.NewGuid(),
+            ActiviteId = id,
+            AuteurId = UserId,
+            Contenu = "Activite validee.",
+            TypeAction = "Validation"
         });
         await db.SaveChangesAsync();
-        TempData["Success"] = "Activité validée.";
+        TempData["Success"] = "Activite validee.";
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    // === WORKFLOW : Rejeter ===
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> Rejeter(Guid id, string? motif)
@@ -150,15 +174,17 @@ public class ActivitesController(
         a.MotifRejet = motif;
         db.CommentairesActivite.Add(new CommentaireActivite
         {
-            Id = Guid.NewGuid(), ActiviteId = id, AuteurId = UserId,
-            Contenu = $"Activité rejetée. Motif : {motif ?? "Non précisé"}", TypeAction = "Rejet"
+            Id = Guid.NewGuid(),
+            ActiviteId = id,
+            AuteurId = UserId,
+            Contenu = $"Activite rejetee. Motif : {motif ?? "Non precise"}",
+            TypeAction = "Rejet"
         });
         await db.SaveChangesAsync();
-        TempData["Success"] = "Activité rejetée.";
+        TempData["Success"] = "Activite rejetee.";
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    // === WORKFLOW : Démarrer (En cours) ===
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> Demarrer(Guid id)
@@ -168,15 +194,17 @@ public class ActivitesController(
         a.Statut = StatutActivite.EnCours;
         db.CommentairesActivite.Add(new CommentaireActivite
         {
-            Id = Guid.NewGuid(), ActiviteId = id, AuteurId = UserId,
-            Contenu = "Activité démarrée.", TypeAction = "Démarrage"
+            Id = Guid.NewGuid(),
+            ActiviteId = id,
+            AuteurId = UserId,
+            Contenu = "Activite demarree.",
+            TypeAction = "Demarrage"
         });
         await db.SaveChangesAsync();
-        TempData["Success"] = "Activité en cours.";
+        TempData["Success"] = "Activite en cours.";
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    // === WORKFLOW : Terminer ===
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> Terminer(Guid id)
@@ -186,15 +214,17 @@ public class ActivitesController(
         a.Statut = StatutActivite.Terminee;
         db.CommentairesActivite.Add(new CommentaireActivite
         {
-            Id = Guid.NewGuid(), ActiviteId = id, AuteurId = UserId,
-            Contenu = "Activité terminée.", TypeAction = "Clôture"
+            Id = Guid.NewGuid(),
+            ActiviteId = id,
+            AuteurId = UserId,
+            Contenu = "Activite terminee.",
+            TypeAction = "Cloture"
         });
         await db.SaveChangesAsync();
-        TempData["Success"] = "Activité terminée.";
+        TempData["Success"] = "Activite terminee.";
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    // === WORKFLOW : Archiver ===
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> Archiver(Guid id)
@@ -204,15 +234,17 @@ public class ActivitesController(
         a.Statut = StatutActivite.Archivee;
         db.CommentairesActivite.Add(new CommentaireActivite
         {
-            Id = Guid.NewGuid(), ActiviteId = id, AuteurId = UserId,
-            Contenu = "Activité archivée.", TypeAction = "Archivage"
+            Id = Guid.NewGuid(),
+            ActiviteId = id,
+            AuteurId = UserId,
+            Contenu = "Activite archivee.",
+            TypeAction = "Archivage"
         });
         await db.SaveChangesAsync();
-        TempData["Success"] = "Activité archivée.";
+        TempData["Success"] = "Activite archivee.";
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    // === WORKFLOW : Remettre en brouillon (après rejet) ===
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> Rebrouillon(Guid id)
@@ -223,15 +255,17 @@ public class ActivitesController(
         a.MotifRejet = null;
         db.CommentairesActivite.Add(new CommentaireActivite
         {
-            Id = Guid.NewGuid(), ActiviteId = id, AuteurId = UserId,
-            Contenu = "Activité remise en brouillon pour correction.", TypeAction = "Correction"
+            Id = Guid.NewGuid(),
+            ActiviteId = id,
+            AuteurId = UserId,
+            Contenu = "Activite remise en brouillon pour correction.",
+            TypeAction = "Correction"
         });
         await db.SaveChangesAsync();
-        TempData["Success"] = "Activité remise en brouillon.";
+        TempData["Success"] = "Activite remise en brouillon.";
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    // === DOCUMENTS : Upload ===
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> AjouterDocument(Guid id, IFormFile fichier, string? typeDocument)
@@ -240,7 +274,7 @@ public class ActivitesController(
         if (a is null) return NotFound();
         if (fichier is null || fichier.Length == 0)
         {
-            TempData["Error"] = "Veuillez sélectionner un fichier.";
+            TempData["Error"] = "Veuillez selectionner un fichier.";
             return RedirectToAction(nameof(Details), new { id });
         }
 
@@ -249,7 +283,9 @@ public class ActivitesController(
         var fileName = $"{Guid.NewGuid()}{Path.GetExtension(fichier.FileName)}";
         var filePath = Path.Combine(dir, fileName);
         using (var stream = new FileStream(filePath, FileMode.Create))
+        {
             await fichier.CopyToAsync(stream);
+        }
 
         db.DocumentsActivite.Add(new DocumentActivite
         {
@@ -262,16 +298,18 @@ public class ActivitesController(
 
         db.CommentairesActivite.Add(new CommentaireActivite
         {
-            Id = Guid.NewGuid(), ActiviteId = id, AuteurId = UserId,
-            Contenu = $"Document ajouté : {fichier.FileName}", TypeAction = "Document"
+            Id = Guid.NewGuid(),
+            ActiviteId = id,
+            AuteurId = UserId,
+            Contenu = $"Document ajoute : {fichier.FileName}",
+            TypeAction = "Document"
         });
 
         await db.SaveChangesAsync();
-        TempData["Success"] = "Document ajouté.";
+        TempData["Success"] = "Document ajoute.";
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    // === DOCUMENTS : Supprimer ===
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> SupprimerDocument(Guid id, Guid docId)
@@ -280,11 +318,10 @@ public class ActivitesController(
         if (doc is null) return NotFound();
         db.DocumentsActivite.Remove(doc);
         await db.SaveChangesAsync();
-        TempData["Success"] = "Document supprimé.";
+        TempData["Success"] = "Document supprime.";
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    // === PARTICIPANTS : Ajouter ===
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> AjouterParticipant(Guid id, Guid scoutId)
@@ -292,9 +329,10 @@ public class ActivitesController(
         var exists = await db.ParticipantsActivite.AnyAsync(p => p.ActiviteId == id && p.ScoutId == scoutId);
         if (exists)
         {
-            TempData["Error"] = "Ce scout est déjà inscrit.";
+            TempData["Error"] = "Ce scout est deja inscrit.";
             return RedirectToAction(nameof(Details), new { id });
         }
+
         var scout = await db.Scouts.FindAsync(scoutId);
         if (scout is null) return NotFound();
 
@@ -309,57 +347,80 @@ public class ActivitesController(
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    // === PARTICIPANTS : Retirer ===
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> RetirerParticipant(Guid id, Guid participantId)
     {
-        var p = await db.ParticipantsActivite.FindAsync(participantId);
-        if (p is not null) db.ParticipantsActivite.Remove(p);
+        var participant = await db.ParticipantsActivite.FindAsync(participantId);
+        if (participant is not null)
+        {
+            db.ParticipantsActivite.Remove(participant);
+        }
+
         await db.SaveChangesAsync();
-        TempData["Success"] = "Participant retiré.";
+        TempData["Success"] = "Participant retire.";
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    // === PARTICIPANTS : Marquer présence ===
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> MarquerPresence(Guid id, Guid participantId, StatutPresence presence)
     {
-        var p = await db.ParticipantsActivite.FindAsync(participantId);
-        if (p is not null) { p.Presence = presence; await db.SaveChangesAsync(); }
-        TempData["Success"] = "Présence mise à jour.";
+        var participant = await db.ParticipantsActivite.FindAsync(participantId);
+        if (participant is not null)
+        {
+            participant.Presence = presence;
+            await db.SaveChangesAsync();
+        }
+
+        TempData["Success"] = "Presence mise a jour.";
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    // === COMMENTAIRE ===
+    [HttpPost, ValidateAntiForgeryToken]
+    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    public async Task<IActionResult> PresenceRapide(Guid id, Guid participantId, StatutPresence presence)
+    {
+        var participant = await db.ParticipantsActivite.FindAsync(participantId);
+        if (participant is not null)
+        {
+            participant.Presence = presence;
+            await db.SaveChangesAsync();
+        }
+
+        TempData["Success"] = "Presence mise a jour.";
+        return RedirectToAction(nameof(Presence), new { id });
+    }
+
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> AjouterCommentaire(Guid id, string contenu)
     {
         if (string.IsNullOrWhiteSpace(contenu))
         {
-            TempData["Error"] = "Le commentaire ne peut pas être vide.";
+            TempData["Error"] = "Le commentaire ne peut pas etre vide.";
             return RedirectToAction(nameof(Details), new { id });
         }
+
         db.CommentairesActivite.Add(new CommentaireActivite
         {
-            Id = Guid.NewGuid(), ActiviteId = id, AuteurId = UserId,
-            Contenu = contenu, TypeAction = "Commentaire"
+            Id = Guid.NewGuid(),
+            ActiviteId = id,
+            AuteurId = UserId,
+            Contenu = contenu,
+            TypeAction = "Commentaire"
         });
         await db.SaveChangesAsync();
-        TempData["Success"] = "Commentaire ajouté.";
+        TempData["Success"] = "Commentaire ajoute.";
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    // === DELETE ===
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> Delete(Guid id)
     {
         await activiteService.DeleteAsync(id);
-        TempData["Success"] = "Activité supprimée.";
+        TempData["Success"] = "Activite supprimee.";
         return RedirectToAction(nameof(Index));
     }
 }
-

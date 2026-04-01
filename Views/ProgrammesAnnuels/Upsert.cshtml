@@ -6,57 +6,84 @@
     var groupes = ViewBag.Groupes as List<Groupe> ?? new();
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2 class="section-title mb-1"><i class="bi bi-calendar-range text-or"></i> <span class="accent">@ViewData["Title"]</span></h2>
-        <p class="text-muted-custom mb-0">Centralisez les objectifs, jalons et echeances du programme annuel.</p>
-    </div>
-    <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i></a>
-</div>
+<div class="tracking-module tracking-module--programmes-form">
+    <section class="tracking-hero tracking-hero--compact">
+        <div class="tracking-hero__content">
+            <span class="tracking-hero__eyebrow"><i class="bi bi-diagram-2"></i> Construction du cycle annuel</span>
+            <h2 class="section-title tracking-hero__title mb-2"><i class="bi bi-calendar-range text-or"></i> <span class="accent">@ViewData["Title"]</span></h2>
+            <p class="tracking-hero__text mb-0">Cadrez les objectifs, le calendrier synthetique et les observations dans une fiche plus claire pour le workflow annuel.</p>
+        </div>
+        <div class="tracking-hero__actions">
+            <div class="tracking-hero__focus">
+                <span>Portee</span>
+                <strong>@(Model.Groupe?.Nom ?? "District")</strong>
+                <small>selectionnez une entite uniquement si le programme n'est pas district.</small>
+            </div>
+            <div class="tracking-action-stack">
+                <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i> Retour</a>
+            </div>
+        </div>
+    </section>
 
-<div class="card-3d p-4">
-    <form method="post">
-        @Html.AntiForgeryToken()
-        @if (Model.Id != Guid.Empty)
-        {
-            <input type="hidden" asp-for="Id" />
-        }
-        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
-        <div class="row g-3">
-            <div class="col-lg-4">
-                <label asp-for="GroupeId" class="form-label">Entite</label>
-                <select asp-for="GroupeId" class="form-select">
-                    <option value="">-- Programme district --</option>
-                    @foreach (var groupe in groupes)
-                    {
-                        <option value="@groupe.Id">@groupe.Nom</option>
-                    }
-                </select>
+    <div class="tracking-form-layout">
+        <section class="tracking-panel tracking-form-shell">
+            <form method="post">
+                @Html.AntiForgeryToken()
+                @if (Model.Id != Guid.Empty)
+                {
+                    <input type="hidden" asp-for="Id" />
+                }
+                <div asp-validation-summary="ModelOnly" class="text-danger small"></div>
+                <div class="tracking-form-grid">
+                    <div class="tracking-form-col-5">
+                        <label asp-for="GroupeId" class="form-label">Entite</label>
+                        <select asp-for="GroupeId" class="form-select">
+                            <option value="">-- Programme district --</option>
+                            @foreach (var groupe in groupes)
+                            {
+                                <option value="@groupe.Id">@groupe.Nom</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="tracking-form-col-2">
+                        <label asp-for="AnneeReference" class="form-label">Annee</label>
+                        <input asp-for="AnneeReference" class="form-control" />
+                    </div>
+                    <div class="tracking-form-col-5">
+                        <label asp-for="Titre" class="form-label">Titre</label>
+                        <input asp-for="Titre" class="form-control" />
+                    </div>
+                    <div class="tracking-form-col-12">
+                        <label asp-for="Objectifs" class="form-label">Objectifs</label>
+                        <textarea asp-for="Objectifs" class="form-control" rows="5"></textarea>
+                    </div>
+                    <div class="tracking-form-col-12">
+                        <label asp-for="CalendrierSynthese" class="form-label">Calendrier synthese</label>
+                        <textarea asp-for="CalendrierSynthese" class="form-control" rows="8" placeholder="Ex.: Janvier - camp de lancement&#10;Mars - journee de district&#10;Juillet - camp d'ete"></textarea>
+                    </div>
+                    <div class="tracking-form-col-12">
+                        <label asp-for="Observations" class="form-label">Observations</label>
+                        <textarea asp-for="Observations" class="form-control" rows="4"></textarea>
+                    </div>
+                </div>
+                <div class="tracking-actions">
+                    <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Enregistrer</button>
+                    <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
+                </div>
+            </form>
+        </section>
+
+        <aside class="tracking-side-stack">
+            <div class="tracking-side-card">
+                <span class="tracking-side-card__label"><i class="bi bi-lightbulb"></i> Bonne pratique</span>
+                <h4>Un programme lisible</h4>
+                <p class="text-muted-custom mb-0">Reste synthetique sur les objectifs et concentre le calendrier sur les temps forts du cycle pour faciliter la validation.</p>
             </div>
-            <div class="col-lg-2">
-                <label asp-for="AnneeReference" class="form-label">Annee</label>
-                <input asp-for="AnneeReference" class="form-control" />
+            <div class="tracking-side-card">
+                <span class="tracking-side-card__label"><i class="bi bi-calendar-event"></i> Cadence</span>
+                <h5>Conseil</h5>
+                <p class="text-muted-custom mb-0">Pense a distinguer les activites de groupe des rendez-vous district dans la synthese du calendrier.</p>
             </div>
-            <div class="col-lg-6">
-                <label asp-for="Titre" class="form-label">Titre</label>
-                <input asp-for="Titre" class="form-control" />
-            </div>
-            <div class="col-12">
-                <label asp-for="Objectifs" class="form-label">Objectifs</label>
-                <textarea asp-for="Objectifs" class="form-control" rows="5"></textarea>
-            </div>
-            <div class="col-12">
-                <label asp-for="CalendrierSynthese" class="form-label">Calendrier synthese</label>
-                <textarea asp-for="CalendrierSynthese" class="form-control" rows="8" placeholder="Ex.: Janvier - camp de lancement&#10;Mars - journee de district&#10;Juillet - camp d'ete"></textarea>
-            </div>
-            <div class="col-12">
-                <label asp-for="Observations" class="form-label">Observations</label>
-                <textarea asp-for="Observations" class="form-control" rows="4"></textarea>
-            </div>
-        </div>
-        <div class="d-flex gap-2 mt-4">
-            <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Enregistrer</button>
-            <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
-        </div>
-    </form>
+        </aside>
+    </div>
 </div>

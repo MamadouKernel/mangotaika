@@ -1,4 +1,4 @@
-namespace MangoTaika.Data.Entities;
+﻿namespace MangoTaika.Data.Entities;
 
 public class Branche
 {
@@ -7,6 +7,7 @@ public class Branche
     public string NomNormalise { get; private set; } = string.Empty;
     public string? Description { get; set; }
     public string? LogoUrl { get; set; }
+    public string? FoulardUrl { get; set; }
     public int? AgeMin { get; set; }
     public int? AgeMax { get; set; }
     public string? NomChefUnite { get; set; }
@@ -14,7 +15,6 @@ public class Branche
     public Scout? ChefUnite { get; set; }
     public bool IsActive { get; set; } = true;
 
-    // Navigation
     public Guid GroupeId { get; set; }
     public Groupe Groupe { get; set; } = null!;
     public ICollection<Scout> Scouts { get; set; } = [];

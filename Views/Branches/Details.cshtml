@@ -1,4 +1,4 @@
-﻿@model BrancheDto
+@model BrancheDto
 @{
     ViewData["Title"] = "Detail de la branche";
     Layout = "_LayoutAdmin";
@@ -62,6 +62,14 @@
                 <td>@(Model.Description ?? "-")</td>
             </tr>
             <tr>
+                <td>Synthese</td>
+                <td>Responsable</td>
+                <td>@(Model.NomChefUnite ?? "-")</td>
+                <td>@(Model.ContactChefUnite ?? "-")</td>
+                <td>@(Model.FoulardUrl ?? "-")</td>
+                <td>@(Model.NomGroupe ?? "-")</td>
+            </tr>
+            <tr>
                 <td>Effectifs</td>
                 <td>Scouts</td>
                 <td>Total</td>
@@ -85,7 +93,6 @@
                 <td>Femmes @Model.Adultes.NombreFeminin</td>
                 <td>Hommes @Model.Adultes.NombreMasculin</td>
             </tr>
-
             @foreach (var groupe in Model.TotauxParGroupes)
             {
                 <tr>
@@ -113,7 +120,6 @@
                     <td>Hommes @groupe.Adultes.NombreMasculin</td>
                 </tr>
             }
-
             @foreach (var membre in Model.Membres)
             {
                 <tr>
@@ -134,9 +140,7 @@
         <div class="col-xl-2 col-lg-3">
             @if (!string.IsNullOrWhiteSpace(Model.LogoUrl))
             {
-                <img src="@Model.LogoUrl"
-                     alt="Logo de la branche @Model.Nom"
-                     class="branche-details-logo" />
+                <img src="@Model.LogoUrl" alt="Logo de la branche @Model.Nom" class="branche-details-logo" />
             }
             else
             {
@@ -186,6 +190,9 @@
 
                 <dt class="col-sm-4 text-muted-custom">Responsable de branche</dt>
                 <dd class="col-sm-8">@(Model.NomChefUnite ?? "-")</dd>
+
+                <dt class="col-sm-4 text-muted-custom">Contact du responsable</dt>
+                <dd class="col-sm-8">@(Model.ContactChefUnite ?? "-")</dd>
             </dl>
         </div>
 
@@ -194,9 +201,7 @@
                 <span class="branche-responsable-card__label">Responsable</span>
                 @if (!string.IsNullOrWhiteSpace(Model.ResponsablePhotoUrl))
                 {
-                    <img src="@Model.ResponsablePhotoUrl"
-                         alt="Photo du responsable @Model.NomChefUnite"
-                         class="branche-responsable-card__photo" />
+                    <img src="@Model.ResponsablePhotoUrl" alt="Photo du responsable @Model.NomChefUnite" class="branche-responsable-card__photo" />
                 }
                 else
                 {
@@ -205,10 +210,26 @@
                     </div>
                 }
                 <strong class="branche-responsable-card__name">@(Model.NomChefUnite ?? "Non renseigne")</strong>
+                <span class="branche-responsable-card__contact">@(Model.ContactChefUnite ?? "Contact non renseigne")</span>
             </div>
         </div>
     </div>
 </div>
+
+@if (!string.IsNullOrWhiteSpace(Model.FoulardUrl))
+{
+    <div class="card-3d p-4 mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <div>
+                <h4 class="mb-1">Foulard de la branche</h4>
+                <p class="text-muted-custom mb-0">Cette photo est visible uniquement dans le detail de la branche.</p>
+            </div>
+        </div>
+        <div class="branche-foulard-frame">
+            <img src="@Model.FoulardUrl" alt="Foulard de la branche @Model.Nom" class="branche-foulard-frame__image" />
+        </div>
+    </div>
+}
 
 <div class="card-3d p-4 mb-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
@@ -261,9 +282,7 @@
                         {
                             <td>
                                 <strong>@groupe.NombreScouts</strong>
-                                <div class="small text-muted-custom">
-                                    F @groupe.NombreFilles / G @groupe.NombreGarcons
-                                </div>
+                                <div class="small text-muted-custom">F @groupe.NombreFilles / G @groupe.NombreGarcons</div>
                             </td>
                         }
                     </tr>
@@ -273,9 +292,7 @@
                         {
                             <td>
                                 <strong>@groupe.NombreJeunes</strong>
-                                <div class="small text-muted-custom">
-                                    F @groupe.Jeunes.NombreFeminin / G @groupe.Jeunes.NombreMasculin
-                                </div>
+                                <div class="small text-muted-custom">F @groupe.Jeunes.NombreFeminin / G @groupe.Jeunes.NombreMasculin</div>
                             </td>
                         }
                     </tr>
@@ -285,9 +302,7 @@
                         {
                             <td>
                                 <strong>@groupe.NombreAdultes</strong>
-                                <div class="small text-muted-custom">
-                                    F @groupe.Adultes.NombreFeminin / G @groupe.Adultes.NombreMasculin
-                                </div>
+                                <div class="small text-muted-custom">F @groupe.Adultes.NombreFeminin / G @groupe.Adultes.NombreMasculin</div>
                             </td>
                         }
                     </tr>
@@ -446,6 +461,26 @@
 
     .branche-responsable-card__name {
         color: #213547;
+    }
+
+    .branche-responsable-card__contact {
+        color: var(--bleu-logo);
+        font-weight: 600;
+    }
+
+    .branche-foulard-frame {
+        border-radius: 26px;
+        overflow: hidden;
+        border: 1px solid rgba(234, 179, 8, 0.22);
+        background: linear-gradient(180deg, rgba(234, 179, 8, 0.08), rgba(255, 255, 255, 0.88));
+        padding: 14px;
+    }
+
+    .branche-foulard-frame__image {
+        width: 100%;
+        max-height: 320px;
+        object-fit: cover;
+        border-radius: 20px;
     }
 
     .branche-groupes-grid {

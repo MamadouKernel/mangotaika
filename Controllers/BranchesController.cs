@@ -37,6 +37,8 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
 
         var filteredList = filteredBranches
             .OrderBy(b => b.NomGroupe)
+            .ThenBy(b => BranchOrdering.GetSortWeight(b.Nom))
+            .ThenBy(b => b.AgeMin ?? int.MaxValue)
             .ThenBy(b => b.Nom)
             .ToList();
 
@@ -58,9 +60,13 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
         var nomsBranches = allBranches
             .GroupBy(b => DatabaseText.NormalizeSearchKey(b.Nom))
             .Select(group => group
-                .OrderBy(b => b.Nom, StringComparer.CurrentCultureIgnoreCase)
+                .OrderBy(b => BranchOrdering.GetSortWeight(b.Nom))
+                .ThenBy(b => b.AgeMin ?? int.MaxValue)
+                .ThenBy(b => b.Nom, StringComparer.CurrentCultureIgnoreCase)
                 .First())
-            .OrderBy(b => b.Nom, StringComparer.CurrentCultureIgnoreCase)
+            .OrderBy(b => BranchOrdering.GetSortWeight(b.Nom))
+            .ThenBy(b => b.AgeMin ?? int.MaxValue)
+            .ThenBy(b => b.Nom, StringComparer.CurrentCultureIgnoreCase)
             .Select(b => new SelectListItem
             {
                 Value = b.Nom,
@@ -90,7 +96,7 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
     [HttpPost]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(BrancheCreateDto dto, IFormFile? Logo)
+    public async Task<IActionResult> Create(BrancheCreateDto dto, IFormFile? Logo, IFormFile? Foulard)
     {
         if (ModelState.IsValid)
         {
@@ -110,6 +116,11 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
                 dto.LogoUrl,
                 "branches",
                 "Le logo de la branche doit etre une image valide de 5 Mo maximum.");
+            dto.FoulardUrl = await fileUploadService.SaveImageAsync(
+                Foulard,
+                dto.FoulardUrl,
+                "branches",
+                "La photo du foulard doit etre une image valide de 5 Mo maximum.");
             await brancheService.CreateAsync(dto);
         }
         catch (InvalidOperationException ex)
@@ -142,7 +153,7 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
     [HttpPost]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(Guid id, BrancheCreateDto dto, IFormFile? Logo)
+    public async Task<IActionResult> Edit(Guid id, BrancheCreateDto dto, IFormFile? Logo, IFormFile? Foulard)
     {
         if (ModelState.IsValid)
         {
@@ -163,6 +174,11 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
                 dto.LogoUrl,
                 "branches",
                 "Le logo de la branche doit etre une image valide de 5 Mo maximum.");
+            dto.FoulardUrl = await fileUploadService.SaveImageAsync(
+                Foulard,
+                dto.FoulardUrl,
+                "branches",
+                "La photo du foulard doit etre une image valide de 5 Mo maximum.");
             result = await brancheService.UpdateAsync(id, dto);
         }
         catch (InvalidOperationException ex)
@@ -268,7 +284,6 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
             return;
         }
 
-
         var chef = await db.Scouts
             .Where(s => s.Id == dto.ChefUniteId.Value && s.IsActive)
             .Select(s => new
@@ -341,18 +356,12 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
         Nom = dto.Nom,
         Description = dto.Description,
         LogoUrl = dto.LogoUrl,
+        FoulardUrl = dto.FoulardUrl,
         AgeMin = dto.AgeMin,
         AgeMax = dto.AgeMax,
         NomChefUnite = null,
+        ContactChefUnite = null,
         ChefUniteId = dto.ChefUniteId,
         GroupeId = dto.GroupeId
     };
 }
-
-
-
-
-
-
-
-

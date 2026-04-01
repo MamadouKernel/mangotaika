@@ -10,13 +10,18 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
 {
     public async Task<List<BrancheDto>> GetAllAsync()
     {
-        return await db.Branches
-            .Include(b => b.Groupe)
-            .Include(b => b.Scouts)
-            .Include(b => b.ChefUnite)
-            .Where(b => b.IsActive)
-            .Select(b => ToDto(b))
-            .ToListAsync();
+        return (await db.Branches
+                .Include(b => b.Groupe)
+                .Include(b => b.Scouts)
+                .Include(b => b.ChefUnite)
+                .Where(b => b.IsActive)
+                .ToListAsync())
+            .OrderBy(b => b.Groupe?.Nom)
+            .ThenBy(b => BranchOrdering.GetSortWeight(b.Nom))
+            .ThenBy(b => b.AgeMin ?? int.MaxValue)
+            .ThenBy(b => b.Nom)
+            .Select(ToDto)
+            .ToList();
     }
 
     public async Task<BrancheDto?> GetByIdAsync(Guid id)
@@ -62,6 +67,7 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
             Nom = nom,
             Description = description,
             LogoUrl = NormalizeOptional(dto.LogoUrl),
+            FoulardUrl = NormalizeOptional(dto.FoulardUrl),
             AgeMin = dto.AgeMin,
             AgeMax = dto.AgeMax,
             ChefUniteId = chefUnite.Id,
@@ -89,6 +95,7 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
         branche.Nom = nom;
         branche.Description = description;
         branche.LogoUrl = NormalizeOptional(dto.LogoUrl);
+        branche.FoulardUrl = NormalizeOptional(dto.FoulardUrl);
         branche.AgeMin = dto.AgeMin;
         branche.AgeMax = dto.AgeMax;
         branche.ChefUniteId = chefUnite.Id;
@@ -113,9 +120,11 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
         Nom = b.Nom,
         Description = b.Description,
         LogoUrl = b.LogoUrl,
+        FoulardUrl = b.FoulardUrl,
         AgeMin = b.AgeMin,
         AgeMax = b.AgeMax,
         NomChefUnite = b.ChefUnite != null ? $"{b.ChefUnite.Prenom} {b.ChefUnite.Nom}" : b.NomChefUnite,
+        ContactChefUnite = NormalizeOptional(b.ChefUnite?.Telephone),
         ChefUniteId = b.ChefUniteId,
         GroupeId = b.GroupeId,
         NomGroupe = b.Groupe?.Nom,
@@ -386,6 +395,7 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
         Masculin
     }
 }
+
 
 
 

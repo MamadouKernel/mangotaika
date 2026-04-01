@@ -10,15 +10,25 @@ using Microsoft.Extensions.Caching.Memory;
 namespace MangoTaika.Controllers;
 
 [Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant")]
-public class ScoutsController(IScoutService scoutService, AppDbContext db, IMemoryCache memoryCache) : Controller
+public class ScoutsController(
+    IScoutService scoutService,
+    AppDbContext db,
+    IMemoryCache memoryCache,
+    IFileUploadService fileUploadService) : Controller
 {
     private const string ImportReportCachePrefix = "scouts-import-report:";
     private static readonly TimeSpan ImportReportLifetime = TimeSpan.FromMinutes(15);
 
     private async Task LoadDropdownsAsync()
     {
-        ViewBag.Groupes = await db.Groupes.Where(g => g.IsActive).OrderBy(g => g.Nom).ToListAsync();
-        ViewBag.Branches = await db.Branches.Where(b => b.IsActive).OrderBy(b => b.Nom).ToListAsync();
+        ViewBag.Groupes = await db.Groupes
+            .Where(g => g.IsActive)
+            .OrderBy(g => g.Nom)
+            .ToListAsync();
+
+        ViewBag.Branches = await db.Branches
+            .Where(b => b.IsActive)
+            .ToListAsync();
     }
 
     public async Task<IActionResult> Index(string? recherche, Guid? groupeId, Guid? brancheId, bool cu = false, bool acd = false, string? importReportId = null)
@@ -78,7 +88,7 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db, IMemo
     [HttpPost]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(ScoutCreateDto dto)
+    public async Task<IActionResult> Create(ScoutCreateDto dto, IFormFile? Photo)
     {
         if (!ModelState.IsValid)
         {
@@ -89,6 +99,11 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db, IMemo
         ScoutDto scout;
         try
         {
+            dto.PhotoUrl = await fileUploadService.SaveImageAsync(
+                Photo,
+                dto.PhotoUrl,
+                "scouts",
+                "La photo du scout doit etre une image valide de 5 Mo maximum.");
             scout = await scoutService.CreateAsync(dto);
         }
         catch (InvalidOperationException ex)
@@ -97,6 +112,7 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db, IMemo
             this.AddDomainError(ex);
             return View(dto);
         }
+
         TempData["Success"] = $"Scout cree avec succes. Matricule attribue : {scout.Matricule}";
         return RedirectToAction(nameof(Index));
     }
@@ -117,7 +133,7 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db, IMemo
     [HttpPost]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(Guid id, ScoutCreateDto dto)
+    public async Task<IActionResult> Edit(Guid id, ScoutCreateDto dto, IFormFile? Photo)
     {
         if (!ModelState.IsValid)
         {
@@ -128,6 +144,11 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db, IMemo
         bool result;
         try
         {
+            dto.PhotoUrl = await fileUploadService.SaveImageAsync(
+                Photo,
+                dto.PhotoUrl,
+                "scouts",
+                "La photo du scout doit etre une image valide de 5 Mo maximum.");
             result = await scoutService.UpdateAsync(id, dto);
         }
         catch (InvalidOperationException ex)
@@ -136,6 +157,7 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db, IMemo
             this.AddDomainError(ex);
             return View(dto);
         }
+
         if (!result)
         {
             return NotFound();
@@ -226,11 +248,15 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db, IMemo
     [HttpGet]
     public async Task<IActionResult> GetBranchesByGroupe(Guid groupeId)
     {
-        var branches = await db.Branches
-            .Where(b => b.GroupeId == groupeId && b.IsActive)
-            .OrderBy(b => b.AgeMin)
+        var branches = (await db.Branches
+                .Where(b => b.GroupeId == groupeId && b.IsActive)
+                .ToListAsync())
+            .OrderBy(b => BranchOrdering.GetSortWeight(b.Nom))
+            .ThenBy(b => b.AgeMin ?? int.MaxValue)
+            .ThenBy(b => b.Nom)
             .Select(b => new { b.Id, b.Nom, b.AgeMin, b.AgeMax })
-            .ToListAsync();
+            .ToList();
+
         return Json(branches);
     }
 
@@ -265,12 +291,18 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db, IMemo
         DateNaissance = scout.DateNaissance,
         LieuNaissance = scout.LieuNaissance,
         Sexe = scout.Sexe,
+        PhotoUrl = scout.PhotoUrl,
         Telephone = scout.Telephone,
         Email = scout.Email,
         RegionScoute = scout.RegionScoute,
         District = scout.District,
         NumeroCarte = scout.NumeroCarte,
         Fonction = scout.Fonction,
+        FonctionVieActive = scout.FonctionVieActive,
+        NiveauFormationScoute = scout.NiveauFormationScoute,
+        ContactUrgenceNom = scout.ContactUrgenceNom,
+        ContactUrgenceRelation = scout.ContactUrgenceRelation,
+        ContactUrgenceTelephone = scout.ContactUrgenceTelephone,
         AssuranceAnnuelle = scout.AssuranceAnnuelle,
         AdresseGeographique = scout.AdresseGeographique,
         GroupeId = scout.GroupeId,
@@ -296,5 +328,3 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db, IMemo
             : null;
     }
 }
-
-

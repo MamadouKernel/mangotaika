@@ -1,4 +1,4 @@
-namespace MangoTaika.DTOs;
+﻿namespace MangoTaika.DTOs;
 
 using System.ComponentModel.DataAnnotations;
 using MangoTaika.Helpers;
@@ -13,12 +13,18 @@ public class ScoutDto
     public DateTime DateNaissance { get; set; }
     public string? LieuNaissance { get; set; }
     public string? Sexe { get; set; }
+    public string? PhotoUrl { get; set; }
     public string? Telephone { get; set; }
     public string? Email { get; set; }
     public string? RegionScoute { get; set; }
     public string? District { get; set; }
     public string? NumeroCarte { get; set; }
     public string? Fonction { get; set; }
+    public string? FonctionVieActive { get; set; }
+    public string? NiveauFormationScoute { get; set; }
+    public string? ContactUrgenceNom { get; set; }
+    public string? ContactUrgenceRelation { get; set; }
+    public string? ContactUrgenceTelephone { get; set; }
     public string? StatutASCCI { get; set; }
     public bool AssuranceAnnuelle { get; set; }
     public string? AdresseGeographique { get; set; }
@@ -44,12 +50,18 @@ public class ScoutCreateDto : IValidatableObject
     public DateTime DateNaissance { get; set; }
     public string? LieuNaissance { get; set; }
     public string? Sexe { get; set; }
+    public string? PhotoUrl { get; set; }
     public string? Telephone { get; set; }
     public string? Email { get; set; }
     public string? RegionScoute { get; set; }
     public string? District { get; set; }
     public string? NumeroCarte { get; set; }
     public string? Fonction { get; set; }
+    public string? FonctionVieActive { get; set; }
+    public string? NiveauFormationScoute { get; set; }
+    public string? ContactUrgenceNom { get; set; }
+    public string? ContactUrgenceRelation { get; set; }
+    public string? ContactUrgenceTelephone { get; set; }
     public bool AssuranceAnnuelle { get; set; }
     public string? AdresseGeographique { get; set; }
     public Guid? GroupeId { get; set; }

@@ -4,9 +4,12 @@
     ViewData["Title"] = $"{Model.Prenom} {Model.Nom}";
     Layout = "_LayoutAdmin";
     var inscriptions = ViewBag.InscriptionsAnnuelles as List<InscriptionAnnuelleScout> ?? new();
+    var contactUrgence = string.IsNullOrWhiteSpace(Model.ContactUrgenceNom)
+        ? "Aucun contact d'urgence renseigne"
+        : $"{Model.ContactUrgenceNom} {(string.IsNullOrWhiteSpace(Model.ContactUrgenceRelation) ? string.Empty : $"({Model.ContactUrgenceRelation})")}".Trim();
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <h2 class="section-title mb-0"><i class="bi bi-person-fill text-or"></i> @Model.Prenom <span class="accent">@Model.Nom</span></h2>
     <div class="d-flex gap-2">
         <a asp-controller="InscriptionsAnnuelles" asp-action="Create" asp-route-scoutId="@Model.Id" class="btn btn-bleu" title="Inscription annuelle">
@@ -16,65 +19,115 @@
     </div>
 </div>
 
-<div class="card-3d p-4 mb-4">
-    <div class="row">
-        <div class="col-md-6">
-            <p><span class="text-muted-custom">Matricule :</span> <span class="badge-3d badge-soumise">@Model.Matricule</span></p>
-            <p><span class="text-muted-custom">No Carte :</span> @(Model.NumeroCarte ?? "-")</p>
-            <p><span class="text-muted-custom">Date de naissance :</span> @Model.DateNaissance.ToString("dd/MM/yyyy")</p>
-            <p><span class="text-muted-custom">Sexe :</span> @(Model.Sexe ?? "-")</p>
-        </div>
-        <div class="col-md-6">
-            <p><span class="text-muted-custom">Telephone :</span> @(Model.Telephone ?? "-")</p>
-            <p><span class="text-muted-custom">Email :</span> @(Model.Email ?? "-")</p>
-            <p><span class="text-muted-custom">Fonction :</span> @(Model.Fonction ?? "-")</p>
-            <p><span class="text-muted-custom">Adresse :</span> @(Model.AdresseGeographique ?? "-")</p>
-            <p><span class="text-muted-custom">Cotisation nationale :</span>
-                @if (Model.AssuranceAnnuelle)
+<div class="card-3d p-4 mb-4 scout-details-shell">
+    <div class="row g-4 align-items-start">
+        <div class="col-xl-3 col-lg-4">
+            <div class="scout-profile-card">
+                @if (!string.IsNullOrWhiteSpace(Model.PhotoUrl))
                 {
-                    <span class="badge-3d badge-approuvee">A jour</span>
+                    <img src="@Model.PhotoUrl" alt="Photo de @Model.Prenom @Model.Nom" class="scout-profile-card__photo" />
                 }
                 else
                 {
-                    <span class="badge-3d badge-rejetee">Non a jour</span>
+                    <div class="scout-profile-card__photo scout-profile-card__photo--placeholder">
+                        <i class="bi bi-person-circle"></i>
+                    </div>
                 }
-            </p>
+                <span class="badge-3d badge-soumise">@Model.Matricule</span>
+                <strong class="scout-profile-card__name">@Model.Prenom @Model.Nom</strong>
+                <span class="scout-profile-card__role">@(Model.Fonction ?? "Fonction non renseignee")</span>
+                <div class="scout-profile-card__status">
+                    @if (Model.AssuranceAnnuelle)
+                    {
+                        <span class="badge-3d badge-approuvee">Cotisation a jour</span>
+                    }
+                    else
+                    {
+                        <span class="badge-3d badge-rejetee">Cotisation non a jour</span>
+                    }
+                </div>
+            </div>
         </div>
-    </div>
-    <hr style="border-color:var(--gris-border);" />
-    <div class="row">
-        <div class="col-md-6">
-            <p><span class="text-muted-custom">Region Scoute :</span> @(Model.RegionScoute ?? "-")</p>
+
+        <div class="col-xl-9 col-lg-8">
+            <div class="scout-details-grid mb-3">
+                <div class="scout-info-card">
+                    <span class="scout-info-card__label">Naissance</span>
+                    <strong>@Model.DateNaissance.ToString("dd/MM/yyyy")</strong>
+                    <small>@(Model.LieuNaissance ?? "Lieu non renseigne")</small>
+                </div>
+                <div class="scout-info-card">
+                    <span class="scout-info-card__label">Contacts</span>
+                    <strong>@(Model.Telephone ?? "Telephone non renseigne")</strong>
+                    <small>@(Model.Email ?? "Email non renseigne")</small>
+                </div>
+                <div class="scout-info-card">
+                    <span class="scout-info-card__label">Affectation</span>
+                    <strong>@(Model.NomGroupe ?? "Non affecte")</strong>
+                    <small>@(Model.NomBranche ?? "Branche non affectee")</small>
+                </div>
+                <div class="scout-info-card">
+                    <span class="scout-info-card__label">Formation scoute</span>
+                    <strong>@(Model.NiveauFormationScoute ?? "Niveau non renseigne")</strong>
+                    <small>@(Model.FonctionVieActive ?? "Vie active non renseignee")</small>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-7">
+                    <div class="detail-block h-100">
+                        <h5>Fiche administrative</h5>
+                        <dl class="row mb-0 small">
+                            <dt class="col-sm-5 text-muted-custom">Numero de carte</dt>
+                            <dd class="col-sm-7">@(Model.NumeroCarte ?? "-")</dd>
+
+                            <dt class="col-sm-5 text-muted-custom">Sexe</dt>
+                            <dd class="col-sm-7">@(Model.Sexe ?? "-")</dd>
+
+                            <dt class="col-sm-5 text-muted-custom">Region scoute</dt>
+                            <dd class="col-sm-7">@(Model.RegionScoute ?? "-")</dd>
+
+                            <dt class="col-sm-5 text-muted-custom">District</dt>
+                            <dd class="col-sm-7">@(Model.District ?? "-")</dd>
+
+                            <dt class="col-sm-5 text-muted-custom">Fonction vie active</dt>
+                            <dd class="col-sm-7">@(Model.FonctionVieActive ?? "-")</dd>
+
+                            <dt class="col-sm-5 text-muted-custom">Adresse</dt>
+                            <dd class="col-sm-7">@(Model.AdresseGeographique ?? "-")</dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <div class="detail-block h-100 detail-block--emergency">
+                        <h5><i class="bi bi-shield-check"></i> Contact d'urgence</h5>
+                        <p class="mb-1"><strong>@contactUrgence</strong></p>
+                        <p class="text-muted-custom mb-3">@(Model.ContactUrgenceTelephone ?? "Telephone d'urgence non renseigne")</p>
+                        <div class="detail-block__footer">
+                            <span>Statut ASCCI</span>
+                            <strong>@(Model.StatutASCCI ?? "Non verifie")</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 flex-wrap mt-3">
+                <a href="https://adhesion.scoutascci.org/" target="_blank" rel="noopener" class="btn btn-outline-or" title="Adhesion SYGESCA">
+                    <i class="bi bi-box-arrow-up-right"></i>
+                </a>
+                <a asp-controller="InscriptionsAnnuelles" asp-action="Index" asp-route-groupeId="@Model.GroupeId" class="btn btn-outline-or" title="Historique annuel">
+                    <i class="bi bi-journal-check"></i> Historique annuel
+                </a>
+                <a asp-controller="Competences" asp-action="Progression" asp-route-id="@Model.Id" class="btn btn-outline-or" title="Parcours scout">
+                    <i class="bi bi-graph-up-arrow"></i> Parcours scout
+                </a>
+            </div>
         </div>
-        <div class="col-md-6">
-            <p><span class="text-muted-custom">District :</span> @(Model.District ?? "-")</p>
-        </div>
-    </div>
-    <hr style="border-color:var(--gris-border);" />
-    <div class="row">
-        <div class="col-md-6">
-            <p><span class="text-muted-custom">Groupe :</span> @(Model.NomGroupe ?? "Non affecte")</p>
-        </div>
-        <div class="col-md-6">
-            <p><span class="text-muted-custom">Branche :</span> @(Model.NomBranche ?? "Non affecte")</p>
-        </div>
-    </div>
-    <hr style="border-color:var(--gris-border);" />
-    <div class="d-flex gap-2 flex-wrap">
-        <a href="https://adhesion.scoutascci.org/" target="_blank" rel="noopener" class="btn btn-outline-or" title="Adhesion SYGESCA">
-            <i class="bi bi-box-arrow-up-right"></i>
-        </a>
-        <a asp-controller="InscriptionsAnnuelles" asp-action="Index" asp-route-groupeId="@Model.GroupeId" class="btn btn-outline-or" title="Historique annuel">
-            <i class="bi bi-journal-check"></i> Historique annuel
-        </a>
-        <a asp-controller="Competences" asp-action="Progression" asp-route-id="@Model.Id" class="btn btn-outline-or" title="Parcours scout">
-            <i class="bi bi-graph-up-arrow"></i> Parcours scout
-        </a>
     </div>
 </div>
 
 <div class="card-3d p-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <h5 class="mb-0 text-or">Historique des inscriptions annuelles</h5>
         <span class="badge-3d badge-soumise">@inscriptions.Count</span>
     </div>
@@ -116,4 +169,117 @@
     }
 </div>
 
+<style>
+    .scout-details-shell {
+        overflow: hidden;
+    }
 
+    .scout-profile-card {
+        padding: 18px;
+        border-radius: 24px;
+        background: linear-gradient(180deg, rgba(95, 127, 67, 0.16), rgba(255, 255, 255, 0.82));
+        border: 1px solid rgba(95, 127, 67, 0.18);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 12px;
+    }
+
+    .scout-profile-card__photo {
+        width: 100%;
+        max-width: 220px;
+        aspect-ratio: 1;
+        object-fit: cover;
+        border-radius: 28px;
+        border: 1px solid rgba(95, 127, 67, 0.18);
+        background: rgba(255, 255, 255, 0.88);
+    }
+
+    .scout-profile-card__photo--placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--vert-logo);
+        font-size: 3.2rem;
+    }
+
+    .scout-profile-card__name {
+        font-size: 1.15rem;
+        color: #223547;
+    }
+
+    .scout-profile-card__role {
+        color: #6a7a8c;
+        font-weight: 600;
+    }
+
+    .scout-profile-card__status {
+        display: flex;
+        justify-content: center;
+    }
+
+    .scout-details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 14px;
+    }
+
+    .scout-info-card,
+    .detail-block {
+        padding: 18px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(95, 127, 67, 0.12);
+        height: 100%;
+    }
+
+    .scout-info-card__label {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #7a899c;
+        display: block;
+        margin-bottom: 6px;
+    }
+
+    .scout-info-card strong {
+        color: var(--vert-logo);
+        display: block;
+        font-size: 1.08rem;
+    }
+
+    .scout-info-card small {
+        color: #67778a;
+    }
+
+    .detail-block h5 {
+        margin-bottom: 14px;
+        color: #223547;
+    }
+
+    .detail-block--emergency {
+        background: linear-gradient(180deg, rgba(239, 68, 68, 0.08), rgba(255, 255, 255, 0.82));
+        border-color: rgba(239, 68, 68, 0.12);
+    }
+
+    .detail-block__footer {
+        padding-top: 12px;
+        margin-top: 12px;
+        border-top: 1px dashed rgba(95, 127, 67, 0.18);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .detail-block__footer span {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #7a899c;
+    }
+
+    .detail-block__footer strong {
+        color: var(--vert-logo);
+    }
+</style>

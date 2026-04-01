@@ -4,63 +4,56 @@
     ViewData["Title"] = Model.Id == Guid.Empty ? "Nouvelle proposition de maitrise" : "Modifier la proposition de maitrise";
     Layout = "_LayoutAdmin";
     var groupes = ViewBag.Groupes as List<Groupe> ?? new();
+    var referenceYear = Model.AnneeReference > 0 ? Model.AnneeReference : DateTime.UtcNow.Year;
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2 class="section-title mb-1"><i class="bi bi-people text-or"></i> <span class="accent">@ViewData["Title"]</span></h2>
-        <p class="text-muted-custom mb-0">Structurez l'equipe de maitrise, ses objectifs et les besoins de montee en competence.</p>
-    </div>
-    <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i></a>
-</div>
+<div class="tracking-module tracking-module--maitrise-form">
+    <section class="tracking-hero tracking-hero--compact">
+        <div class="tracking-hero__content">
+            <span class="tracking-hero__eyebrow"><i class="bi bi-diagram-3"></i> Preparation de l'encadrement</span>
+            <h2 class="section-title tracking-hero__title mb-2"><i class="bi bi-people text-or"></i> <span class="accent">@ViewData["Title"]</span></h2>
+            <p class="tracking-hero__text mb-0">Structurez l'equipe de maitrise, les objectifs pedagogiques et les besoins de montee en competence dans un canevas unique.</p>
+        </div>
+        <div class="tracking-hero__actions">
+            <div class="tracking-hero__focus">
+                <span>Reference</span>
+                <strong>@referenceYear</strong>
+                <small>annee a preparer avec l'entite concernee.</small>
+            </div>
+            <div class="tracking-action-stack">
+                <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i> Retour</a>
+            </div>
+        </div>
+    </section>
 
-<div class="card-3d p-4">
-    <form method="post">
-        @Html.AntiForgeryToken()
-        @if (Model.Id != Guid.Empty)
-        {
-            <input type="hidden" asp-for="Id" />
-        }
-        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
-        <div class="row g-3">
-            <div class="col-lg-5">
-                <label asp-for="GroupeId" class="form-label">Entite</label>
-                <select asp-for="GroupeId" class="form-select">
-                    <option value="">-- Selectionner une entite --</option>
-                    @foreach (var groupe in groupes)
-                    {
-                        <option value="@groupe.Id">@groupe.Nom</option>
-                    }
-                </select>
-            </div>
-            <div class="col-lg-2">
-                <label asp-for="AnneeReference" class="form-label">Annee</label>
-                <input asp-for="AnneeReference" class="form-control" />
-            </div>
-            <div class="col-lg-5">
-                <label asp-for="Titre" class="form-label">Titre</label>
-                <input asp-for="Titre" class="form-control" />
-            </div>
-            <div class="col-12">
-                <label asp-for="CompositionProposee" class="form-label">Composition proposee</label>
-                <textarea asp-for="CompositionProposee" class="form-control" rows="7"></textarea>
-            </div>
-            <div class="col-12">
-                <label asp-for="ObjectifsPedagogiques" class="form-label">Objectifs pedagogiques</label>
-                <textarea asp-for="ObjectifsPedagogiques" class="form-control" rows="5"></textarea>
-            </div>
-            <div class="col-12">
-                <label asp-for="BesoinsFormation" class="form-label">Besoins de formation</label>
-                <textarea asp-for="BesoinsFormation" class="form-control" rows="4"></textarea>
-            </div>
-            <div class="col-12">
-                <label asp-for="Observations" class="form-label">Observations</label>
-                <textarea asp-for="Observations" class="form-control" rows="4"></textarea>
-            </div>
-        </div>
-        <div class="d-flex gap-2 mt-4">
-            <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Enregistrer</button>
-            <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
-        </div>
-    </form>
+    <div class="tracking-form-layout">
+        <section class="tracking-panel tracking-form-shell">
+            <form method="post">
+                @Html.AntiForgeryToken()
+                @if (Model.Id != Guid.Empty)
+                {
+                    <input type="hidden" asp-for="Id" />
+                }
+                <div asp-validation-summary="ModelOnly" class="text-danger small"></div>
+                <div class="tracking-form-grid">
+                    <div class="tracking-form-col-5"><label asp-for="GroupeId" class="form-label">Entite</label><select asp-for="GroupeId" class="form-select"><option value="">-- Selectionner une entite --</option>@foreach (var groupe in groupes){<option value="@groupe.Id">@groupe.Nom</option>}</select></div>
+                    <div class="tracking-form-col-2"><label asp-for="AnneeReference" class="form-label">Annee</label><input asp-for="AnneeReference" class="form-control" /></div>
+                    <div class="tracking-form-col-5"><label asp-for="Titre" class="form-label">Titre</label><input asp-for="Titre" class="form-control" /></div>
+                    <div class="tracking-form-col-12"><label asp-for="CompositionProposee" class="form-label">Composition proposee</label><textarea asp-for="CompositionProposee" class="form-control" rows="7"></textarea></div>
+                    <div class="tracking-form-col-12"><label asp-for="ObjectifsPedagogiques" class="form-label">Objectifs pedagogiques</label><textarea asp-for="ObjectifsPedagogiques" class="form-control" rows="5"></textarea></div>
+                    <div class="tracking-form-col-12"><label asp-for="BesoinsFormation" class="form-label">Besoins de formation</label><textarea asp-for="BesoinsFormation" class="form-control" rows="4"></textarea></div>
+                    <div class="tracking-form-col-12"><label asp-for="Observations" class="form-label">Observations</label><textarea asp-for="Observations" class="form-control" rows="4"></textarea></div>
+                </div>
+                <div class="tracking-actions">
+                    <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Enregistrer</button>
+                    <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
+                </div>
+            </form>
+        </section>
+
+        <aside class="tracking-side-stack">
+            <div class="tracking-side-card"><span class="tracking-side-card__label"><i class="bi bi-lightbulb"></i> Bon angle</span><h4>Parler equipe</h4><p class="text-muted-custom mb-0">Decrivez la composition et les besoins en formation de maniere operationnelle pour faciliter l'arbitrage annuel.</p></div>
+            <div class="tracking-side-card"><span class="tracking-side-card__label"><i class="bi bi-mortarboard"></i> Formation</span><h5>Conseil</h5><p class="text-muted-custom mb-0">Mettez en avant les manques prioritaires de competences plutot qu'une liste trop large de souhaits.</p></div>
+        </aside>
+    </div>
 </div>

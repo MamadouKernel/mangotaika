@@ -17,7 +17,7 @@
             var value when value.Contains("LOUVETEAU") => "#facc15",
             var value when value.Contains("ECLAIREUR") => "#16a34a",
             var value when value.Contains("CHEMINOT") => "#f59e0b",
-            var value when value.Contains("ROUTIER") => "#ef4444",
+            var value when value.Contains("ROUTE") || value.Contains("ROUTIER") => "#ef4444",
             _ => "#5f7f43"
         };
     }
@@ -39,9 +39,7 @@
         <div class="col-xl-2 col-lg-3">
             @if (!string.IsNullOrWhiteSpace(Model.LogoUrl))
             {
-                <img src="@Model.LogoUrl"
-                     alt="Logo du groupe @Model.Nom"
-                     class="groupe-details-logo" />
+                <img src="@Model.LogoUrl" alt="Logo du groupe @Model.Nom" class="groupe-details-logo" />
             }
             else
             {
@@ -86,7 +84,7 @@
                 <dt class="col-sm-4 text-muted-custom">Contact</dt>
                 <dd class="col-sm-8">@(Model.ContactChefGroupe ?? "-")</dd>
 
-                <dt class="col-sm-4 text-muted-custom">R&eacute;partition g&eacute;n&eacute;rale</dt>
+                <dt class="col-sm-4 text-muted-custom">Repartition generale</dt>
                 <dd class="col-sm-8">@Model.NombreMembres membres | @Model.NombreFilles filles | @Model.NombreGarcons garcons</dd>
 
                 <dt class="col-sm-4 text-muted-custom">Jeunes</dt>
@@ -102,9 +100,7 @@
                 <span class="responsable-card__label">@responsableLabel</span>
                 @if (!string.IsNullOrWhiteSpace(Model.ResponsablePhotoUrl))
                 {
-                    <img src="@Model.ResponsablePhotoUrl"
-                         alt="Photo du chef de groupe @Model.NomChefGroupe"
-                         class="responsable-card__photo" />
+                    <img src="@Model.ResponsablePhotoUrl" alt="Photo du responsable @Model.NomChefGroupe" class="responsable-card__photo" />
                 }
                 else
                 {
@@ -119,7 +115,7 @@
     </div>
 </div>
 
-<div class="card-3d p-4">
+<div class="card-3d p-4 mb-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
         <div>
             <h4 class="mb-1">Totaux par branche</h4>
@@ -145,7 +141,7 @@
             <table class="table table-sm align-middle groupe-branches-table mb-0">
                 <thead>
                     <tr>
-                        <th scope="col">Cat&eacute;gorie</th>
+                        <th scope="col">Categorie</th>
                         @foreach (var branche in Model.BranchesScouts)
                         {
                             <th scope="col">@branche.Nom</th>
@@ -159,9 +155,7 @@
                         {
                             <td>
                                 <strong>@branche.NombreScouts</strong>
-                                <div class="small text-muted-custom">
-                                    F @branche.NombreFilles / G @branche.NombreGarcons
-                                </div>
+                                <div class="small text-muted-custom">F @branche.NombreFilles / G @branche.NombreGarcons</div>
                             </td>
                         }
                     </tr>
@@ -171,9 +165,7 @@
                         {
                             <td>
                                 <strong>@branche.Jeunes.Total</strong>
-                                <div class="small text-muted-custom">
-                                    F @branche.Jeunes.NombreFeminin / G @branche.Jeunes.NombreMasculin
-                                </div>
+                                <div class="small text-muted-custom">F @branche.Jeunes.NombreFeminin / G @branche.Jeunes.NombreMasculin</div>
                             </td>
                         }
                     </tr>
@@ -183,9 +175,7 @@
                         {
                             <td>
                                 <strong>@branche.Adultes.Total</strong>
-                                <div class="small text-muted-custom">
-                                    F @branche.Adultes.NombreFeminin / G @branche.Adultes.NombreMasculin
-                                </div>
+                                <div class="small text-muted-custom">F @branche.Adultes.NombreFeminin / G @branche.Adultes.NombreMasculin</div>
                             </td>
                         }
                     </tr>
@@ -196,6 +186,53 @@
     else
     {
         <div class="text-muted-custom">Aucune branche active rattachee a cette entite.</div>
+    }
+</div>
+
+<div class="card-3d p-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h4 class="mb-1">Liste de tous les scouts et adultes</h4>
+            <p class="text-muted-custom mb-0">Vue detaillee des membres actifs rattaches a cette entite.</p>
+        </div>
+        <span class="badge-3d badge-soumise">@Model.Membres.Count membre(s)</span>
+    </div>
+
+    @if (Model.Membres.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-sm align-middle groupe-membres-table mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Matricule</th>
+                        <th scope="col">Nom</th>
+                        <th scope="col">Prenoms</th>
+                        <th scope="col">Branche</th>
+                        <th scope="col">Fonction</th>
+                        <th scope="col">Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var membre in Model.Membres)
+                    {
+                        <tr>
+                            <td>@membre.Matricule</td>
+                            <td>@membre.Nom</td>
+                            <td>@membre.Prenoms</td>
+                            <td>@(membre.Branche ?? "-")</td>
+                            <td>@membre.Fonction</td>
+                            <td>
+                                <span class="badge-3d @(membre.TypeMembre == "Adulte" ? "badge-approuvee" : "badge-soumise")">@membre.TypeMembre</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="text-muted-custom">Aucun membre actif rattache a cette entite.</div>
     }
 </div>
 
@@ -330,7 +367,8 @@
         opacity: 0.92;
     }
 
-    .groupe-branches-table thead th {
+    .groupe-branches-table thead th,
+    .groupe-membres-table thead th {
         border-bottom-width: 1px;
         color: #546173;
         font-size: 0.8rem;
@@ -348,5 +386,3 @@
         display: block;
     }
 </style>
-
-

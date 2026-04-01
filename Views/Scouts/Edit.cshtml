@@ -1,18 +1,20 @@
 @model ScoutCreateDto
 @using System.Text.Json
+@using MangoTaika.Helpers
 @{
     ViewData["Title"] = "Modifier scout";
     Layout = "_LayoutAdmin";
     var groupes = ViewBag.Groupes as List<MangoTaika.Data.Entities.Groupe> ?? new();
     var branches = ViewBag.Branches as List<MangoTaika.Data.Entities.Branche> ?? new();
     var routeId = ViewContext.RouteData.Values["id"];
-    var selectedGroupeId = Model?.GroupeId;
     var selectedBrancheId = Model?.BrancheId;
     var groupesById = groupes.ToDictionary(g => g.Id, g => g.Nom);
-    var orderedBranches = branches.OrderBy(b => b.AgeMin).ThenBy(b => b.Nom).ToList();
-    var branchesPayload = branches
-        .OrderBy(b => b.AgeMin)
+    var orderedBranches = branches
+        .OrderBy(b => BranchOrdering.GetSortWeight(b.Nom))
+        .ThenBy(b => b.AgeMin ?? int.MaxValue)
         .ThenBy(b => b.Nom)
+        .ToList();
+    var branchesPayload = orderedBranches
         .Select(b => new
         {
             id = b.Id,
@@ -28,133 +30,341 @@
 <h2 class="section-title mb-1"><i class="bi bi-pencil-fill text-or"></i> Modifier le <span class="accent">scout</span></h2>
 <div class="section-divider"></div>
 
-<div class="card-3d p-4 mt-3">
-    <form asp-action="Edit" asp-route-id="@routeId" method="post" class="form-modern">
+<div class="card-3d p-4 mt-3 scout-form-shell">
+    <form asp-action="Edit" asp-route-id="@routeId" method="post" enctype="multipart/form-data" class="form-modern">
         <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+        <input asp-for="PhotoUrl" type="hidden" />
 
-        <div class="mb-3">
-            <label asp-for="Matricule" class="form-label">Matricule</label>
-            <input asp-for="Matricule" class="form-control" placeholder="Ex: 0583753X" />
-            <span asp-validation-for="Matricule" class="text-danger small"></span>
-            <small class="text-muted-custom">Format attendu : 0583753X.</small>
-        </div>
+        <div class="row g-4 align-items-start">
+            <div class="col-xl-3 col-lg-4">
+                <div class="scout-photo-panel">
+                    <span class="scout-photo-panel__label">Cadre photo</span>
+                    @if (!string.IsNullOrWhiteSpace(Model?.PhotoUrl))
+                    {
+                        <img src="@Model.PhotoUrl" alt="Photo du scout" class="scout-photo-panel__image" />
+                    }
+                    else
+                    {
+                        <div class="scout-photo-panel__image scout-photo-panel__image--placeholder">
+                            <i class="bi bi-person-badge"></i>
+                        </div>
+                    }
+                    <div>
+                        <label class="form-label">Photo du scout</label>
+                        <input type="file" name="Photo" class="form-control" accept="image/*" />
+                        <small class="text-muted-custom">JPG, PNG, GIF, WEBP. Taille maximale: 5 Mo.</small>
+                    </div>
+                    <div class="scout-photo-panel__meta">
+                        <span>Fonction scout</span>
+                        <strong>@(string.IsNullOrWhiteSpace(Model?.Fonction) ? "A renseigner" : Model!.Fonction)</strong>
+                    </div>
+                </div>
+            </div>
 
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label asp-for="Nom" class="form-label">Nom</label>
-                <input asp-for="Nom" class="form-control" />
-                <span asp-validation-for="Nom" class="text-danger small"></span>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label asp-for="Prenom" class="form-label">Prenom</label>
-                <input asp-for="Prenom" class="form-control" />
-                <span asp-validation-for="Prenom" class="text-danger small"></span>
-            </div>
-        </div>
+            <div class="col-xl-9 col-lg-8">
+                <ul class="nav nav-pills scout-form-tabs mb-3" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" type="button" data-bs-toggle="pill" data-bs-target="#identite-tab" aria-selected="true">Identite</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" type="button" data-bs-toggle="pill" data-bs-target="#affectation-tab" aria-selected="false">Affectation</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" type="button" data-bs-toggle="pill" data-bs-target="#urgence-tab" aria-selected="false">Urgence</button>
+                    </li>
+                </ul>
 
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <label asp-for="DateNaissance" class="form-label">Date de naissance</label>
-                <input asp-for="DateNaissance" class="form-control" type="date" />
-                <span asp-validation-for="DateNaissance" class="text-danger small"></span>
-            </div>
-            <div class="col-md-4 mb-3">
-                <label asp-for="LieuNaissance" class="form-label">Lieu de naissance</label>
-                <input asp-for="LieuNaissance" class="form-control" />
-            </div>
-            <div class="col-md-4 mb-3">
-                <label asp-for="Sexe" class="form-label">Sexe</label>
-                <select asp-for="Sexe" class="form-select">
-                    <option value="">-- Choisir --</option>
-                    <option value="M">Masculin</option>
-                    <option value="F">Feminin</option>
-                </select>
-            </div>
-        </div>
+                <div class="tab-content scout-form-content">
+                    <div class="tab-pane fade show active" id="identite-tab">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="Matricule" class="form-label">Matricule</label>
+                                <input asp-for="Matricule" class="form-control" placeholder="Ex: 0583753X" />
+                                <span asp-validation-for="Matricule" class="text-danger small"></span>
+                                <small class="text-muted-custom">Format attendu : 0583753X.</small>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="NumeroCarte" class="form-label">Numero de carte</label>
+                                <input asp-for="NumeroCarte" class="form-control" placeholder="Ex: ASCCI-001" />
+                            </div>
+                            <div class="col-md-4 mb-3 d-flex align-items-end">
+                                <div class="form-check form-switch scout-switch mb-2">
+                                    <input asp-for="AssuranceAnnuelle" class="form-check-input" type="checkbox" />
+                                    <label asp-for="AssuranceAnnuelle" class="form-check-label">Cotisation nationale a jour</label>
+                                </div>
+                            </div>
+                        </div>
 
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label asp-for="Telephone" class="form-label">Telephone</label>
-                <input asp-for="Telephone" class="form-control" />
-            </div>
-            <div class="col-md-6 mb-3">
-                <label asp-for="Email" class="form-label">Email</label>
-                <input asp-for="Email" class="form-control" type="email" />
-            </div>
-        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Nom" class="form-label">Nom</label>
+                                <input asp-for="Nom" class="form-control" />
+                                <span asp-validation-for="Nom" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Prenom" class="form-label">Prenom</label>
+                                <input asp-for="Prenom" class="form-control" />
+                                <span asp-validation-for="Prenom" class="text-danger small"></span>
+                            </div>
+                        </div>
 
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label asp-for="RegionScoute" class="form-label">Region Scoute</label>
-                <input asp-for="RegionScoute" class="form-control" placeholder="Ex: ABIDJAN" />
-            </div>
-            <div class="col-md-6 mb-3">
-                <label asp-for="District" class="form-label">District</label>
-                <input asp-for="District" class="form-control" placeholder="Ex: Requin Feroce" />
-            </div>
-        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="DateNaissance" class="form-label">Date de naissance</label>
+                                <input asp-for="DateNaissance" class="form-control" type="date" />
+                                <span asp-validation-for="DateNaissance" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="LieuNaissance" class="form-label">Lieu de naissance</label>
+                                <input asp-for="LieuNaissance" class="form-control" />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="Sexe" class="form-label">Sexe</label>
+                                <select asp-for="Sexe" class="form-select">
+                                    <option value="">-- Choisir --</option>
+                                    <option value="M">Masculin</option>
+                                    <option value="F">Feminin</option>
+                                </select>
+                            </div>
+                        </div>
 
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label asp-for="NumeroCarte" class="form-label">Numero de carte</label>
-                <input asp-for="NumeroCarte" class="form-control" placeholder="Ex: ASCCI-001" />
-            </div>
-            <div class="col-md-6 mb-3">
-                <label asp-for="Fonction" class="form-label">Fonction</label>
-                <input asp-for="Fonction" class="form-control" placeholder="Ex: LOUVETEAU (8 - 11 ANS)" />
-            </div>
-        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Telephone" class="form-label">Telephone</label>
+                                <input asp-for="Telephone" class="form-control" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Email" class="form-label">Email</label>
+                                <input asp-for="Email" class="form-control" type="email" />
+                            </div>
+                        </div>
 
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label asp-for="AdresseGeographique" class="form-label">Adresse geographique</label>
-                <input asp-for="AdresseGeographique" class="form-control" placeholder="Ex: Cocody Riviera Palmeraie" />
-            </div>
-            <div class="col-md-6 mb-3 d-flex align-items-center pt-4">
-                <div class="form-check form-switch">
-                    <input asp-for="AssuranceAnnuelle" class="form-check-input" type="checkbox" />
-                    <label asp-for="AssuranceAnnuelle" class="form-check-label">Cotisation nationale a jour</label>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Fonction" class="form-label">Fonction dans le scoutisme</label>
+                                <input asp-for="Fonction" class="form-control" placeholder="Ex: LOUVETEAU (8 - 11 ANS)" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="FonctionVieActive" class="form-label">Fonction dans la vie active</label>
+                                <input asp-for="FonctionVieActive" class="form-control" placeholder="Ex: Enseignant, Comptable, Artisan" />
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="NiveauFormationScoute" class="form-label">Niveau de formation dans le scoutisme</label>
+                                <input asp-for="NiveauFormationScoute" class="form-control" placeholder="Ex: Base, Intermediaire, Avance" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="AdresseGeographique" class="form-label">Adresse geographique</label>
+                                <input asp-for="AdresseGeographique" class="form-control" placeholder="Ex: Cocody Riviera Palmeraie" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="affectation-tab">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="RegionScoute" class="form-label">Region scoute</label>
+                                <input asp-for="RegionScoute" class="form-control" placeholder="Ex: Abidjan" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="District" class="form-label">District</label>
+                                <input asp-for="District" class="form-control" placeholder="Ex: Mango Taika" />
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="GroupeId" class="form-label">Groupe</label>
+                                <select asp-for="GroupeId" class="form-select" id="GroupeId">
+                                    <option value="">-- Choisir un groupe --</option>
+                                    @foreach (var g in groupes)
+                                    {
+                                        <option value="@g.Id">@g.Nom</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="GroupeId" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="BrancheId" class="form-label">Branche</label>
+                                <select asp-for="BrancheId" class="form-select" id="brancheSelect" data-current="@selectedBrancheId">
+                                    <option value="">-- Toutes les branches --</option>
+                                    @foreach (var branche in orderedBranches)
+                                    {
+                                        var groupeNom = groupesById.TryGetValue(branche.GroupeId, out var nomGroupe) ? nomGroupe : "Groupe inconnu";
+                                        <option value="@branche.Id"
+                                                data-group-id="@branche.GroupeId"
+                                                selected="@(selectedBrancheId == branche.Id ? "selected" : null)">
+                                            @groupeNom - @branche.Nom (@(branche.AgeMin ?? 0)-@(branche.AgeMax ?? 99) ans)
+                                        </option>
+                                    }
+                                </select>
+                                <small class="text-muted-custom">Le choix du groupe filtre la branche pour garder une affectation coherente.</small>
+                                <span asp-validation-for="BrancheId" class="text-danger small"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="urgence-tab">
+                        <div class="scout-tab-banner mb-3">
+                            <i class="bi bi-shield-check"></i>
+                            <div>
+                                <strong>Contact en cas d'urgence</strong>
+                                <small>Reference rapide pour joindre un parent ou tuteur en cas de besoin.</small>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-5 mb-3">
+                                <label asp-for="ContactUrgenceNom" class="form-label">Personne a contacter</label>
+                                <input asp-for="ContactUrgenceNom" class="form-control" placeholder="Nom complet" />
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label asp-for="ContactUrgenceRelation" class="form-label">Lien</label>
+                                <select asp-for="ContactUrgenceRelation" class="form-select">
+                                    <option value="">-- Choisir --</option>
+                                    <option value="Pere">Pere</option>
+                                    <option value="Mere">Mere</option>
+                                    <option value="Tuteur">Tuteur</option>
+                                    <option value="Autre">Autre</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="ContactUrgenceTelephone" class="form-label">Telephone d'urgence</label>
+                                <input asp-for="ContactUrgenceTelephone" class="form-control" placeholder="Ex: 0700000000" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label asp-for="GroupeId" class="form-label">Groupe</label>
-                <select asp-for="GroupeId" id="GroupeId" class="form-select">
-                    <option value="">-- Choisir un groupe --</option>
-                    @foreach (var g in groupes)
-                    {
-                        <option value="@g.Id">@g.Nom</option>
-                    }
-                </select>
-                <span asp-validation-for="GroupeId" class="text-danger small"></span>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label asp-for="BrancheId" class="form-label">Branche</label>
-                <select asp-for="BrancheId" id="brancheSelect" class="form-select" data-current="@selectedBrancheId">
-                    <option value="">-- Toutes les branches --</option>
-                    @foreach (var branche in orderedBranches)
-                    {
-                        var groupeNom = groupesById.TryGetValue(branche.GroupeId, out var nomGroupe) ? nomGroupe : "Groupe inconnu";
-                        <option value="@branche.Id"
-                                data-group-id="@branche.GroupeId"
-                                selected="@(selectedBrancheId == branche.Id ? "selected" : null)">
-                            @groupeNom - @branche.Nom (@(branche.AgeMin ?? 0)-@(branche.AgeMax ?? 99) ans)
-                        </option>
-                    }
-                </select>
-                <small class="text-muted-custom">Choisis un groupe pour filtrer la liste, ou selectionne directement une branche.</small>
-                <span asp-validation-for="BrancheId" class="text-danger small"></span>
-            </div>
-        </div>
-
-        <div class="d-flex gap-2 mt-2">
-            <button type="submit" class="btn btn-mango" title="Mettre a jour"><i class="bi bi-check-lg"></i></button>
-            <a asp-action="Index" class="btn btn-outline-or" title="Annuler"><i class="bi bi-x-lg"></i></a>
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Enregistrer</button>
+            <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
         </div>
     </form>
 </div>
+
+<style>
+    .scout-form-shell {
+        overflow: hidden;
+    }
+
+    .scout-photo-panel {
+        padding: 18px;
+        border-radius: 24px;
+        background: linear-gradient(180deg, rgba(95, 127, 67, 0.16), rgba(255, 255, 255, 0.82));
+        border: 1px solid rgba(95, 127, 67, 0.18);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        position: sticky;
+        top: 94px;
+    }
+
+    .scout-photo-panel__label {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #6b7a8d;
+    }
+
+    .scout-photo-panel__image {
+        width: 100%;
+        aspect-ratio: 1;
+        object-fit: cover;
+        border-radius: 24px;
+        border: 1px solid rgba(95, 127, 67, 0.18);
+        background: rgba(255, 255, 255, 0.88);
+    }
+
+    .scout-photo-panel__image--placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--vert-logo);
+        font-size: 3rem;
+    }
+
+    .scout-photo-panel__meta {
+        padding: 12px 14px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(95, 127, 67, 0.12);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .scout-photo-panel__meta span {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #7b8a9b;
+    }
+
+    .scout-form-tabs {
+        gap: 10px;
+    }
+
+    .scout-form-tabs .nav-link {
+        border-radius: 999px;
+        color: #5b6a7f;
+        border: 1px solid rgba(95, 127, 67, 0.14);
+        background: rgba(255, 255, 255, 0.75);
+        padding-inline: 16px;
+        font-weight: 600;
+    }
+
+    .scout-form-tabs .nav-link.active {
+        background: linear-gradient(135deg, rgba(95, 127, 67, 0.18), rgba(138, 181, 90, 0.22));
+        color: var(--vert-logo);
+        border-color: rgba(95, 127, 67, 0.3);
+    }
+
+    .scout-form-content {
+        padding: 22px;
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.68);
+        border: 1px solid rgba(95, 127, 67, 0.12);
+    }
+
+    .scout-tab-banner {
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: rgba(94, 117, 188, 0.09);
+        border: 1px solid rgba(94, 117, 188, 0.14);
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+    }
+
+    .scout-tab-banner i {
+        font-size: 1.4rem;
+        color: var(--bleu-logo);
+    }
+
+    .scout-tab-banner small {
+        display: block;
+        color: #68778a;
+    }
+
+    .scout-switch {
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: rgba(95, 127, 67, 0.08);
+        border: 1px solid rgba(95, 127, 67, 0.12);
+        width: 100%;
+    }
+
+    @@media (max-width: 991.98px) {
+        .scout-photo-panel {
+            position: static;
+        }
+    }
+</style>
 
 @section Scripts {
     <script>

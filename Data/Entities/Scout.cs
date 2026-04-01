@@ -1,4 +1,4 @@
-namespace MangoTaika.Data.Entities;
+﻿namespace MangoTaika.Data.Entities;
 
 public class Scout
 {
@@ -16,6 +16,11 @@ public class Scout
     public string? District { get; set; }
     public string? NumeroCarte { get; set; }
     public string? Fonction { get; set; }
+    public string? FonctionVieActive { get; set; }
+    public string? NiveauFormationScoute { get; set; }
+    public string? ContactUrgenceNom { get; set; }
+    public string? ContactUrgenceRelation { get; set; }
+    public string? ContactUrgenceTelephone { get; set; }
     public string? StatutASCCI { get; set; }
     public bool AssuranceAnnuelle { get; set; } = false;
     public string? AdresseGeographique { get; set; }

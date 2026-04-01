@@ -1,70 +1,116 @@
 @model ActiviteCreateDto
 @using MangoTaika.Data.Entities
 @{
-    ViewData["Title"] = "Nouvelle activité";
+    ViewData["Title"] = "Nouvelle activite";
     Layout = "_LayoutAdmin";
     var groupes = ViewBag.Groupes as IList<Groupe>;
 }
 
-<h2 class="section-title mb-1"><i class="bi bi-plus-lg text-or"></i> Nouvelle <span class="accent">activité</span></h2>
-<div class="section-divider"></div>
+<div class="tracking-module tracking-module--activity-form">
+    <section class="tracking-hero tracking-hero--compact">
+        <div class="tracking-hero__content">
+            <span class="tracking-hero__eyebrow"><i class="bi bi-calendar-plus"></i> Preparation terrain</span>
+            <h2 class="section-title tracking-hero__title mb-2"><i class="bi bi-plus-lg text-or"></i> Nouvelle <span class="accent">activite</span></h2>
+            <p class="tracking-hero__text mb-0">Prepare la fiche d'activite avec un cadre plus propre: horaires, responsable, rattachement territorial et readiness du pointage QR.</p>
+        </div>
+        <div class="tracking-hero__actions">
+            <div class="tracking-hero__focus">
+                <span>Bon reflexe</span>
+                <strong>Horaire precis</strong>
+                <small>l'heure de debut est reprise dans la fiche detail et dans la page de presence.</small>
+            </div>
+            <div class="tracking-action-stack">
+                <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i> Retour a la liste</a>
+            </div>
+        </div>
+    </section>
 
-<div class="card-3d p-4 mt-3" style="max-width:800px;">
-    <form asp-action="Create" method="post" class="form-modern">
-        <div class="row">
-            <div class="col-md-8 mb-3">
-                <label asp-for="Titre" class="form-label">Titre</label>
-                <input asp-for="Titre" class="form-control" required />
+    <div class="tracking-form-layout">
+        <section class="tracking-panel tracking-form-shell">
+            <form asp-action="Create" method="post" class="form-modern">
+                <div asp-validation-summary="ModelOnly" class="text-danger small"></div>
+
+                <div class="tracking-form-grid">
+                    <div class="tracking-form-col-8">
+                        <label asp-for="Titre" class="form-label">Titre</label>
+                        <input asp-for="Titre" class="form-control" required />
+                    </div>
+                    <div class="tracking-form-col-4">
+                        <label asp-for="Type" class="form-label">Type d'activite</label>
+                        <select asp-for="Type" class="form-select" asp-items="Html.GetEnumSelectList<TypeActivite>()"></select>
+                    </div>
+
+                    <div class="tracking-form-col-12">
+                        <label asp-for="Description" class="form-label">Description</label>
+                        <textarea asp-for="Description" class="form-control" rows="4" placeholder="Objectifs, programme, consignes..."></textarea>
+                    </div>
+
+                    <div class="tracking-form-col-4">
+                        <label asp-for="DateDebut" class="form-label">Date et heure de debut</label>
+                        <input asp-for="DateDebut" class="form-control" type="datetime-local" value="@(Model.DateDebut == default ? string.Empty : Model.DateDebut.ToString("yyyy-MM-ddTHH:mm"))" required />
+                    </div>
+                    <div class="tracking-form-col-4">
+                        <label asp-for="DateFin" class="form-label">Date et heure de fin</label>
+                        <input asp-for="DateFin" class="form-control" type="datetime-local" value="@(Model.DateFin.HasValue ? Model.DateFin.Value.ToString("yyyy-MM-ddTHH:mm") : string.Empty)" />
+                    </div>
+                    <div class="tracking-form-col-4">
+                        <label asp-for="Lieu" class="form-label">Lieu</label>
+                        <input asp-for="Lieu" class="form-control" placeholder="Ex: Parc du Banco" />
+                    </div>
+
+                    <div class="tracking-form-col-4">
+                        <label asp-for="GroupeId" class="form-label">Groupe</label>
+                        <select asp-for="GroupeId" class="form-select">
+                            <option value="">-- Tout le district --</option>
+                            @if (groupes != null)
+                            {
+                                @foreach (var g in groupes)
+                                {
+                                    <option value="@g.Id">@g.Nom</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="tracking-form-col-4">
+                        <label asp-for="NomResponsable" class="form-label">Responsable</label>
+                        <input asp-for="NomResponsable" class="form-control" placeholder="Nom du responsable" />
+                    </div>
+                    <div class="tracking-form-col-4">
+                        <label asp-for="BudgetPrevisionnel" class="form-label">Budget previsionnel (FCFA)</label>
+                        <input asp-for="BudgetPrevisionnel" class="form-control" type="number" min="0" step="100" />
+                    </div>
+                </div>
+
+                <div class="tracking-note">
+                    <i class="bi bi-qr-code-scan"></i>
+                    <div class="tracking-note__text">
+                        <strong>Presence QR</strong>
+                        <div>Une fois l'activite creee, un QR code de pointage et une page mobile de presence seront disponibles dans la fiche detail.</div>
+                    </div>
+                </div>
+
+                <div class="tracking-actions">
+                    <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Creer l'activite</button>
+                    <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
+                </div>
+            </form>
+        </section>
+
+        <aside class="tracking-side-stack">
+            <div class="tracking-side-card">
+                <span class="tracking-side-card__label"><i class="bi bi-lightning-charge"></i> Checklist</span>
+                <h4>Avant validation</h4>
+                <p class="text-muted-custom mb-0">Renseigne un titre clair, le lieu exact, le responsable et un horaire de debut fiable pour eviter les ecarts de suivi sur le terrain.</p>
             </div>
-            <div class="col-md-4 mb-3">
-                <label asp-for="Type" class="form-label">Type d'activité</label>
-                <select asp-for="Type" class="form-select" asp-items="Html.GetEnumSelectList<TypeActivite>()"></select>
+            <div class="tracking-side-card">
+                <span class="tracking-side-card__label"><i class="bi bi-clock-history"></i> Horodatage</span>
+                <h5>Point de vigilance</h5>
+                <p class="text-muted-custom mb-0">Si l'activite finit a une date differente, renseigne aussi la fin pour fiabiliser le reporting et la cloture.</p>
             </div>
-        </div>
-        <div class="mb-3">
-            <label asp-for="Description" class="form-label">Description</label>
-            <textarea asp-for="Description" class="form-control" rows="4" placeholder="Objectifs, programme, consignes..."></textarea>
-        </div>
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <label asp-for="DateDebut" class="form-label">Date début</label>
-                <input asp-for="DateDebut" class="form-control" type="date" required />
-            </div>
-            <div class="col-md-4 mb-3">
-                <label asp-for="DateFin" class="form-label">Date fin</label>
-                <input asp-for="DateFin" class="form-control" type="date" />
-            </div>
-            <div class="col-md-4 mb-3">
-                <label asp-for="Lieu" class="form-label">Lieu</label>
-                <input asp-for="Lieu" class="form-control" placeholder="Ex: Parc du Banco" />
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <label asp-for="GroupeId" class="form-label">Groupe</label>
-                <select asp-for="GroupeId" class="form-select">
-                    <option value="">— Tout le district —</option>
-                    @if (groupes != null)
-                    {
-                        @foreach (var g in groupes)
-                        {
-                            <option value="@g.Id">@g.Nom</option>
-                        }
-                    }
-                </select>
-            </div>
-            <div class="col-md-4 mb-3">
-                <label asp-for="NomResponsable" class="form-label">Responsable</label>
-                <input asp-for="NomResponsable" class="form-control" placeholder="Nom du responsable" />
-            </div>
-            <div class="col-md-4 mb-3">
-                <label asp-for="BudgetPrevisionnel" class="form-label">Budget prévisionnel (FCFA)</label>
-                <input asp-for="BudgetPrevisionnel" class="form-control" type="number" min="0" step="100" />
-            </div>
-        </div>
-        <div class="d-flex gap-2 mt-2">
-            <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Créer</button>
-            <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
-        </div>
-    </form>
+        </aside>
+    </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
