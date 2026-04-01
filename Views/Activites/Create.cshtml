@@ -4,6 +4,7 @@
     ViewData["Title"] = "Nouvelle activite";
     Layout = "_LayoutAdmin";
     var groupes = ViewBag.Groupes as IList<Groupe>;
+    var currentModel = Model ?? new ActiviteCreateDto { DateDebut = DateTime.Now };
 }
 
 <div class="tracking-module tracking-module--activity-form">
@@ -47,11 +48,11 @@
 
                     <div class="tracking-form-col-4">
                         <label asp-for="DateDebut" class="form-label">Date et heure de debut</label>
-                        <input asp-for="DateDebut" class="form-control" type="datetime-local" value="@(Model.DateDebut == default ? string.Empty : Model.DateDebut.ToString("yyyy-MM-ddTHH:mm"))" required />
+                        <input asp-for="DateDebut" class="form-control" type="datetime-local" value="@(currentModel.DateDebut == default ? string.Empty : currentModel.DateDebut.ToString("yyyy-MM-ddTHH:mm"))" required />
                     </div>
                     <div class="tracking-form-col-4">
                         <label asp-for="DateFin" class="form-label">Date et heure de fin</label>
-                        <input asp-for="DateFin" class="form-control" type="datetime-local" value="@(Model.DateFin.HasValue ? Model.DateFin.Value.ToString("yyyy-MM-ddTHH:mm") : string.Empty)" />
+                        <input asp-for="DateFin" class="form-control" type="datetime-local" value="@(currentModel.DateFin.HasValue ? currentModel.DateFin.Value.ToString("yyyy-MM-ddTHH:mm") : string.Empty)" />
                     </div>
                     <div class="tracking-form-col-4">
                         <label asp-for="Lieu" class="form-label">Lieu</label>
