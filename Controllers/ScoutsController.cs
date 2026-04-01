@@ -82,7 +82,7 @@ public class ScoutsController(
     public async Task<IActionResult> Create()
     {
         await LoadDropdownsAsync();
-        return View();
+        return View(new ScoutCreateDto());
     }
 
     [HttpPost]

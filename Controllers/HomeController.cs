@@ -1,4 +1,4 @@
-using MangoTaika.Data;
+﻿using MangoTaika.Data;
 using MangoTaika.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -68,7 +68,7 @@ public class HomeController(AppDbContext db, IConfiguration configuration) : Con
         return View();
     }
 
-    public IActionResult Contact() => View();
+    public IActionResult Contact() => View(new Data.Entities.ContactMessage());
 
     public IActionResult WhatsApp()
     {
@@ -130,7 +130,7 @@ public class HomeController(AppDbContext db, IConfiguration configuration) : Con
         return RedirectToAction(nameof(Contact));
     }
 
-    public IActionResult Avis() => View();
+    public IActionResult Avis() => View(new Data.Entities.ContactMessage());
 
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -149,19 +149,8 @@ public class HomeController(AppDbContext db, IConfiguration configuration) : Con
 
     public async Task<IActionResult> LivreDor()
     {
-        var messages = await db.LivreDor
-            .Where(l => l.EstValide && !l.EstSupprime)
-            .OrderByDescending(l => l.DateCreation)
-            .ToListAsync();
-
-        // Premières pages : anciens commissaires, CG, membres CAD
-        ViewBag.Historique = await db.MembresHistoriques
-            .Where(m => !m.EstSupprime)
-            .OrderBy(m => m.Categorie)
-            .ThenBy(m => m.Ordre)
-            .ToListAsync();
-
-        return View(messages);
+        await LoadLivreDorHistoriqueAsync();
+        return View(await LoadLivreDorMessagesAsync());
     }
 
     [HttpPost]
@@ -170,7 +159,13 @@ public class HomeController(AppDbContext db, IConfiguration configuration) : Con
     {
         if (!string.IsNullOrEmpty(Website)) return RedirectToAction(nameof(LivreDor));
 
-        if (!ModelState.IsValid) return View();
+        if (!ModelState.IsValid)
+        {
+            ViewBag.FormNomAuteur = model.NomAuteur;
+            ViewBag.FormMessage = model.Message;
+            await LoadLivreDorHistoriqueAsync();
+            return View(await LoadLivreDorMessagesAsync());
+        }
         model.Id = Guid.NewGuid();
         db.LivreDor.Add(model);
         await db.SaveChangesAsync();
@@ -185,6 +180,24 @@ public class HomeController(AppDbContext db, IConfiguration configuration) : Con
     }
 
     public IActionResult PolitiqueConfidentialite() => View();
+
+    private Task<List<Data.Entities.LivreDor>> LoadLivreDorMessagesAsync()
+    {
+        return db.LivreDor
+            .Where(l => l.EstValide && !l.EstSupprime)
+            .OrderByDescending(l => l.DateCreation)
+            .ToListAsync();
+    }
+
+    private async Task LoadLivreDorHistoriqueAsync()
+    {
+        ViewBag.Historique = await db.MembresHistoriques
+            .Where(m => !m.EstSupprime)
+            .OrderBy(m => m.Categorie)
+            .ThenBy(m => m.Ordre)
+            .ToListAsync();
+    }
+
 
     private static WhatsAppContactOptionViewModel CreateWhatsAppOption(
         string phoneNumber,

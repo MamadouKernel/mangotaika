@@ -41,7 +41,10 @@ public class ActivitesController(
     public async Task<IActionResult> Create()
     {
         await LoadViewDataAsync();
-        return View();
+        return View(new ActiviteCreateDto
+        {
+            DateDebut = DateTime.Now
+        });
     }
 
     [HttpPost, ValidateAntiForgeryToken]

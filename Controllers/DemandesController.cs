@@ -1,4 +1,4 @@
-using MangoTaika.Data;
+﻿using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
 using MangoTaika.Helpers;
@@ -55,13 +55,16 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
 
     public async Task<IActionResult> Create()
     {
-        // Seuls les admins/gestionnaires et les scouts chefs peuvent créer
+        // Seuls les admins/gestionnaires et les scouts chefs peuvent creer
         var isAdmin = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
         if (!isAdmin && !await EstScoutChef())
             return Forbid();
 
         ViewBag.Groupes = await db.Groupes.Where(g => g.IsActive).ToListAsync();
-        return View();
+        return View(new DemandeAutorisationCreateDto
+        {
+            DateActivite = DateTime.Today
+        });
     }
 
     [HttpPost]

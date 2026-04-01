@@ -143,7 +143,7 @@ public class ReportingController(AppDbContext db) : Controller
         using var wb = new XLWorkbook();
         var ws = wb.Worksheets.Add("Scouts");
         ws.Cell(1, 1).Value = "Matricule";
-        ws.Cell(1, 2).Value = "NÂ° Carte";
+        ws.Cell(1, 2).Value = "N° Carte";
         ws.Cell(1, 3).Value = "Nom";
         ws.Cell(1, 4).Value = "Prénom";
         ws.Cell(1, 5).Value = "Date Naissance";

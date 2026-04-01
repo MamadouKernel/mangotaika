@@ -27,7 +27,7 @@ public class GroupesController(IGroupeService groupeService, IFileUploadService 
     public async Task<IActionResult> Create()
     {
         await LoadChefsGroupeAsync(null);
-        return View();
+        return View(new GroupeCreateDto());
     }
 
     [HttpPost]

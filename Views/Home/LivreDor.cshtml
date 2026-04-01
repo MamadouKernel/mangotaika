@@ -1,6 +1,9 @@
-@model List<MangoTaika.Data.Entities.LivreDor>
+﻿@model List<MangoTaika.Data.Entities.LivreDor>
 @{
     ViewData["Title"] = "Livre d'or";
+    var messages = Model ?? new List<MangoTaika.Data.Entities.LivreDor>();
+    var postedNomAuteur = ViewBag.FormNomAuteur as string;
+    var postedMessage = ViewBag.FormMessage as string;
 }
 
 <div class="container my-5">
@@ -53,13 +56,14 @@
                     <div style="position:absolute;left:-9999px;" aria-hidden="true">
                         <input type="text" name="Website" tabindex="-1" autocomplete="off" />
                     </div>
+                    <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
                     <div class="mb-3">
                         <label class="form-label">Votre nom</label>
-                        <input name="NomAuteur" class="form-control" required placeholder="Votre nom" />
+                        <input name="NomAuteur" class="form-control" required placeholder="Votre nom" value="@postedNomAuteur" />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Votre message</label>
-                        <textarea name="Message" class="form-control" rows="3" required placeholder="Votre témoignage..."></textarea>
+                        <textarea name="Message" class="form-control" rows="3" required placeholder="Votre témoignage...">@postedMessage</textarea>
                     </div>
                     <partial name="_ConsentementARTCI" />
                     <button type="submit" class="btn btn-mango">
@@ -71,7 +75,7 @@
     </div>
 
     <div class="row g-4">
-        @foreach (var msg in Model)
+        @foreach (var msg in messages)
         {
             <div class="col-md-6">
                 <div class="livre-dor-card">

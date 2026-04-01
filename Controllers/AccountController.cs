@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using ClosedXML.Excel;
 using MangoTaika.Data;
@@ -23,7 +23,7 @@ public class AccountController(
     public IActionResult Login(string? returnUrl = null)
     {
         ViewData["ReturnUrl"] = returnUrl;
-        return View();
+        return View(new LoginViewModel());
     }
 
     [HttpGet]

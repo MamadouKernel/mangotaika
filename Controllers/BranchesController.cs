@@ -90,7 +90,7 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
     public async Task<IActionResult> Create()
     {
         await LoadGroupesAsync();
-        return View();
+        return View(new BrancheCreateDto());
     }
 
     [HttpPost]

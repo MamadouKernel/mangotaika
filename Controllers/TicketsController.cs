@@ -1,4 +1,4 @@
-using MangoTaika.Data;
+﻿using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
 using MangoTaika.Helpers;
@@ -146,7 +146,7 @@ public class TicketsController(
             .Where(s => s.EstActif)
             .OrderBy(s => s.Nom)
             .ToListAsync();
-        return View();
+        return View(new TicketCreateDto());
     }
 
     [HttpGet]
