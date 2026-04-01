@@ -5,6 +5,7 @@
     Layout = "_LayoutAdmin";
     var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
     var scouts = ViewBag.ScoutsGroupe as List<Scout> ?? new();
+    var rapportActivite = ViewBag.RapportActivite as RapportActivite;
     var participantIds = Model.Participants.Select(p => p.ScoutId).ToHashSet();
     var scoutsDisponibles = scouts.Where(s => !participantIds.Contains(s.Id)).ToList();
 }
@@ -78,6 +79,24 @@
     }
 </div>
 
+<div class="card-3d p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h5 class="mb-1"><i class="bi bi-journal-richtext text-or"></i> Rapport d'activite</h5>
+            <p class="text-muted-custom mb-0">Le rapport post-activite formalise le bilan, les difficultes et les recommandations apres cloture.</p>
+        </div>
+        <div class="d-flex gap-2">
+            @if (rapportActivite is null)
+            {
+                <a asp-controller="RapportsActivite" asp-action="Create" asp-route-activiteId="@Model.Id" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Creer le rapport</a>
+            }
+            else
+            {
+                <a asp-controller="RapportsActivite" asp-action="Details" asp-route-id="@rapportActivite.Id" class="btn btn-outline-or"><i class="bi bi-eye"></i> Voir le rapport</a>
+            }
+        </div>
+    </div>
+</div>
 <!-- Onglets -->
 <ul class="nav nav-tabs mb-3" role="tablist" style="border-color:var(--gris-border);">
     <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#infos" style="color:var(--bleu-logo);"><i class="bi bi-info-circle"></i> Informations</a></li>
@@ -332,3 +351,4 @@
     </div>
 </div>
 }
+

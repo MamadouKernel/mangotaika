@@ -1,35 +1,42 @@
+@using MangoTaika.Data.Entities
 @model ScoutDto
 @{
     ViewData["Title"] = $"{Model.Prenom} {Model.Nom}";
     Layout = "_LayoutAdmin";
+    var inscriptions = ViewBag.InscriptionsAnnuelles as List<InscriptionAnnuelleScout> ?? new();
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="section-title mb-0"><i class="bi bi-person-fill text-or"></i> @Model.Prenom <span class="accent">@Model.Nom</span></h2>
-    <a asp-action="Index" class="btn btn-outline-or" title="Retour"><i class="bi bi-arrow-left"></i></a>
+    <div class="d-flex gap-2">
+        <a asp-controller="InscriptionsAnnuelles" asp-action="Create" asp-route-scoutId="@Model.Id" class="btn btn-bleu" title="Inscription annuelle">
+            <i class="bi bi-journal-check"></i>
+        </a>
+        <a asp-action="Index" class="btn btn-outline-or" title="Retour"><i class="bi bi-arrow-left"></i></a>
+    </div>
 </div>
 
-<div class="card-3d p-4">
+<div class="card-3d p-4 mb-4">
     <div class="row">
         <div class="col-md-6">
             <p><span class="text-muted-custom">Matricule :</span> <span class="badge-3d badge-soumise">@Model.Matricule</span></p>
-            <p><span class="text-muted-custom">N° Carte :</span> @(Model.NumeroCarte ?? "—")</p>
+            <p><span class="text-muted-custom">No Carte :</span> @(Model.NumeroCarte ?? "-")</p>
             <p><span class="text-muted-custom">Date de naissance :</span> @Model.DateNaissance.ToString("dd/MM/yyyy")</p>
-            <p><span class="text-muted-custom">Sexe :</span> @(Model.Sexe ?? "—")</p>
+            <p><span class="text-muted-custom">Sexe :</span> @(Model.Sexe ?? "-")</p>
         </div>
         <div class="col-md-6">
-            <p><span class="text-muted-custom">Téléphone :</span> @(Model.Telephone ?? "—")</p>
-            <p><span class="text-muted-custom">Email :</span> @(Model.Email ?? "—")</p>
-            <p><span class="text-muted-custom">Fonction :</span> @(Model.Fonction ?? "—")</p>
-            <p><span class="text-muted-custom">Adresse :</span> @(Model.AdresseGeographique ?? "—")</p>
+            <p><span class="text-muted-custom">Telephone :</span> @(Model.Telephone ?? "-")</p>
+            <p><span class="text-muted-custom">Email :</span> @(Model.Email ?? "-")</p>
+            <p><span class="text-muted-custom">Fonction :</span> @(Model.Fonction ?? "-")</p>
+            <p><span class="text-muted-custom">Adresse :</span> @(Model.AdresseGeographique ?? "-")</p>
             <p><span class="text-muted-custom">Cotisation nationale :</span>
                 @if (Model.AssuranceAnnuelle)
                 {
-                    <span class="badge-3d badge-approuvee">✅ À jour</span>
+                    <span class="badge-3d badge-approuvee">A jour</span>
                 }
                 else
                 {
-                    <span class="badge-3d badge-rejetee">❌ Non à jour</span>
+                    <span class="badge-3d badge-rejetee">Non a jour</span>
                 }
             </p>
         </div>
@@ -37,25 +44,76 @@
     <hr style="border-color:var(--gris-border);" />
     <div class="row">
         <div class="col-md-6">
-            <p><span class="text-muted-custom">Région Scoute :</span> @(Model.RegionScoute ?? "—")</p>
+            <p><span class="text-muted-custom">Region Scoute :</span> @(Model.RegionScoute ?? "-")</p>
         </div>
         <div class="col-md-6">
-            <p><span class="text-muted-custom">District :</span> @(Model.District ?? "—")</p>
+            <p><span class="text-muted-custom">District :</span> @(Model.District ?? "-")</p>
         </div>
     </div>
     <hr style="border-color:var(--gris-border);" />
     <div class="row">
         <div class="col-md-6">
-            <p><span class="text-muted-custom">Groupe :</span> @(Model.NomGroupe ?? "Non affecté")</p>
+            <p><span class="text-muted-custom">Groupe :</span> @(Model.NomGroupe ?? "Non affecte")</p>
         </div>
         <div class="col-md-6">
-            <p><span class="text-muted-custom">Branche :</span> @(Model.NomBranche ?? "Non affecté")</p>
+            <p><span class="text-muted-custom">Branche :</span> @(Model.NomBranche ?? "Non affecte")</p>
         </div>
     </div>
     <hr style="border-color:var(--gris-border);" />
     <div class="d-flex gap-2 flex-wrap">
-        <a href="https://adhesion.scoutascci.org/" target="_blank" rel="noopener" class="btn btn-outline-or" title="Adhésion SYGESCA">
+        <a href="https://adhesion.scoutascci.org/" target="_blank" rel="noopener" class="btn btn-outline-or" title="Adhesion SYGESCA">
             <i class="bi bi-box-arrow-up-right"></i>
+        </a>
+        <a asp-controller="InscriptionsAnnuelles" asp-action="Index" asp-route-groupeId="@Model.GroupeId" class="btn btn-outline-or" title="Historique annuel">
+            <i class="bi bi-journal-check"></i> Historique annuel
+        </a>
+        <a asp-controller="Competences" asp-action="Progression" asp-route-id="@Model.Id" class="btn btn-outline-or" title="Parcours scout">
+            <i class="bi bi-graph-up-arrow"></i> Parcours scout
         </a>
     </div>
 </div>
+
+<div class="card-3d p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0 text-or">Historique des inscriptions annuelles</h5>
+        <span class="badge-3d badge-soumise">@inscriptions.Count</span>
+    </div>
+    @if (inscriptions.Any())
+    {
+        <div class="table-responsive">
+            <table class="table-modern">
+                <thead>
+                    <tr>
+                        <th>Annee</th>
+                        <th>Groupe</th>
+                        <th>Branche</th>
+                        <th>Fonction</th>
+                        <th>Statut</th>
+                        <th>Cotisation</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var inscription in inscriptions)
+                {
+                    <tr>
+                        <td>@inscription.LibelleAnnee</td>
+                        <td>@(inscription.Groupe?.Nom ?? "-")</td>
+                        <td>@(inscription.Branche?.Nom ?? "-")</td>
+                        <td>@(string.IsNullOrWhiteSpace(inscription.FonctionSnapshot) ? "-" : inscription.FonctionSnapshot)</td>
+                        <td>@inscription.Statut</td>
+                        <td>@(inscription.CotisationNationaleAjour ? "A jour" : "Non")</td>
+                        <td class="text-end"><a asp-controller="InscriptionsAnnuelles" asp-action="Details" asp-route-id="@inscription.Id" class="btn btn-sm btn-outline-or"><i class="bi bi-eye"></i></a></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="text-muted-custom">Aucune inscription annuelle enregistree pour ce scout.</div>
+    }
+</div>
+
+

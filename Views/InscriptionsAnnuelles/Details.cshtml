@@ -1,0 +1,42 @@
+@using MangoTaika.Data.Entities
+@model InscriptionAnnuelleScout
+@{
+    ViewData["Title"] = "Detail inscription annuelle";
+    Layout = "_LayoutAdmin";
+    var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="section-title mb-1"><i class="bi bi-journal-check text-or"></i> <span class="accent">@Model.Scout.Prenom @Model.Scout.Nom</span></h2>
+        <p class="text-muted-custom mb-0">Inscription annuelle @Model.LibelleAnnee</p>
+    </div>
+    <div class="d-flex gap-2">
+        @if (canManage)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-bleu"><i class="bi bi-pencil"></i></a>
+            @if (Model.Statut != StatutInscriptionAnnuelle.Validee)
+            {
+                <form asp-action="Valider" asp-route-id="@Model.Id" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-mango"><i class="bi bi-check2-circle"></i> Valider</button>
+                </form>
+            }
+        }
+        <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i></a>
+    </div>
+</div>
+
+<div class="card-3d p-4">
+    <div class="row g-3">
+        <div class="col-md-4"><strong>Groupe de l'annee</strong><div>@(Model.Groupe?.Nom ?? "-")</div></div>
+        <div class="col-md-4"><strong>Branche de l'annee</strong><div>@(Model.Branche?.Nom ?? "-")</div></div>
+        <div class="col-md-4"><strong>Fonction de l'annee</strong><div>@(string.IsNullOrWhiteSpace(Model.FonctionSnapshot) ? "-" : Model.FonctionSnapshot)</div></div>
+        <div class="col-md-4"><strong>Statut</strong><div>@Model.Statut</div></div>
+        <div class="col-md-4"><strong>Date d'inscription</strong><div>@Model.DateInscription.ToString("dd/MM/yyyy")</div></div>
+        <div class="col-md-4"><strong>Date validation</strong><div>@(Model.DateValidation?.ToString("dd/MM/yyyy") ?? "-")</div></div>
+        <div class="col-md-6"><strong>Inscription paroissiale</strong><div>@(Model.InscriptionParoissialeValidee ? "Validee" : "En attente")</div></div>
+        <div class="col-md-6"><strong>Cotisation nationale</strong><div>@(Model.CotisationNationaleAjour ? "A jour" : "Non a jour")</div></div>
+        <div class="col-12"><strong>Observations</strong><div class="text-muted-custom" style="white-space:pre-line;">@(string.IsNullOrWhiteSpace(Model.Observations) ? "Aucune observation." : Model.Observations)</div></div>
+    </div>
+</div>

@@ -1,0 +1,80 @@
+@model MangoTaika.Data.Entities.CotisationNationaleImport
+@using MangoTaika.Data.Entities
+@{
+    ViewData["Title"] = "Detail import cotisations nationales";
+    Layout = "_LayoutAdmin";
+    var lignes = Model.Lignes.OrderBy(l => l.Statut).ThenBy(l => l.Matricule).ToList();
+
+    string BadgeClass(StatutLigneCotisationNationale statut) => statut switch
+    {
+        StatutLigneCotisationNationale.Ajour => "badge-approuvee",
+        StatutLigneCotisationNationale.NonAjour => "badge-rejetee",
+        _ => "badge-soumise"
+    };
+
+    string StatutLabel(StatutLigneCotisationNationale statut) => statut switch
+    {
+        StatutLigneCotisationNationale.Ajour => "A jour",
+        StatutLigneCotisationNationale.NonAjour => "Non a jour",
+        _ => "A verifier"
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+        <h2 class="section-title mb-1"><i class="bi bi-file-earmark-spreadsheet text-or"></i> Detail <span class="accent">import national</span></h2>
+        <div class="text-muted-custom">@Model.NomFichier</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Index" asp-route-annee="@Model.AnneeReference" asp-route-importId="@Model.Id" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i> Retour</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="card-3d p-3 text-center"><small class="text-muted-custom">Annee</small><h4>@Model.AnneeReference</h4></div></div>
+    <div class="col-md-3"><div class="card-3d p-3 text-center"><small class="text-muted-custom">A jour</small><h4 style="color:#10b981;">@Model.NombreAjour</h4></div></div>
+    <div class="col-md-3"><div class="card-3d p-3 text-center"><small class="text-muted-custom">Non a jour</small><h4 style="color:#f87171;">@Model.NombreNonAjour</h4></div></div>
+    <div class="col-md-3"><div class="card-3d p-3 text-center"><small class="text-muted-custom">A verifier</small><h4 style="color:#f59e0b;">@Model.NombreAVerifier</h4></div></div>
+</div>
+
+<div class="card-3d p-4 mb-4">
+    <div class="row g-3">
+        <div class="col-md-4"><strong>Date d'import :</strong> @Model.DateImport.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+        <div class="col-md-4"><strong>Createur :</strong> @(Model.Createur is null ? "-" : $"{Model.Createur.Prenom} {Model.Createur.Nom}".Trim())</div>
+        <div class="col-md-4"><strong>Montant rapproche :</strong> @Model.MontantTotal.ToString("N0") FCFA</div>
+    </div>
+</div>
+
+<div class="card-3d p-4">
+    <partial name="_ListExportActions" />
+    <div class="table-responsive mt-3">
+        <table class="table-modern exportable-list" data-export-name="detail-import-cotisations-@Model.AnneeReference">
+            <thead>
+                <tr>
+                    <th>Statut</th>
+                    <th>Scout</th>
+                    <th>Matricule</th>
+                    <th>Groupe</th>
+                    <th>Branche</th>
+                    <th>Montant</th>
+                    <th>Motif</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var ligne in lignes)
+            {
+                <tr>
+                    <td><span class="badge-3d @BadgeClass(ligne.Statut)">@StatutLabel(ligne.Statut)</span></td>
+                    <td>@(ligne.Scout is null ? (ligne.NomImporte ?? "-") : $"{ligne.Scout.Prenom} {ligne.Scout.Nom}")</td>
+                    <td>@(string.IsNullOrWhiteSpace(ligne.Matricule) ? "-" : ligne.Matricule)</td>
+                    <td>@(ligne.Scout?.Groupe?.Nom ?? "-")</td>
+                    <td>@(ligne.Scout?.Branche?.Nom ?? "-")</td>
+                    <td>@(ligne.Montant.HasValue ? $"{ligne.Montant.Value:N0} FCFA" : "-")</td>
+                    <td>@(string.IsNullOrWhiteSpace(ligne.Motif) ? "-" : ligne.Motif)</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+

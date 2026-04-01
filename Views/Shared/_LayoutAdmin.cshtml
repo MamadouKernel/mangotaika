@@ -1,4 +1,4 @@
-﻿@{
+@{
     Layout = "_Layout";
     ViewData["IsAdminLayout"] = true;
 
@@ -85,6 +85,7 @@
                             <li><a class="nav-link" asp-controller="Groupes" asp-action="Index"><i class="bi bi-building"></i> Entites scouts</a></li>
                             <li><a class="nav-link" asp-controller="Branches" asp-action="Index"><i class="bi bi-diagram-3-fill"></i> Branches</a></li>
                             <li><a class="nav-link" asp-controller="Groupes" asp-action="Carte"><i class="bi bi-geo-alt-fill"></i> Carte GPS</a></li>
+                            <li><a class="nav-link" asp-controller="InscriptionsAnnuelles" asp-action="Index"><i class="bi bi-journal-check"></i> Inscriptions annuelles</a></li>
                         </ul>
                     </li>
                 }
@@ -99,6 +100,9 @@
                         <ul class="sidebar-submenu" id="grp-activites">
                             <li><a class="nav-link" asp-controller="Activites" asp-action="Index"><i class="bi bi-calendar-event-fill"></i> Activites</a></li>
                             <li><a class="nav-link" asp-controller="Competences" asp-action="Index"><i class="bi bi-award-fill"></i> Competences</a></li>
+                            <li><a class="nav-link" asp-controller="ProgrammesAnnuels" asp-action="Index"><i class="bi bi-calendar-range"></i> Programmes annuels</a></li>
+                            <li><a class="nav-link" asp-controller="RapportsActivite" asp-action="Index"><i class="bi bi-journal-richtext"></i> Rapports d'activite</a></li>
+                            <li><a class="nav-link" asp-controller="PropositionsMaitrise" asp-action="Index"><i class="bi bi-people"></i> Propositions de maitrise</a></li>
                             @if (isAdminOrGest)
                             {
                                 <li><a class="nav-link" asp-controller="Formations" asp-action="Index"><i class="bi bi-mortarboard-fill"></i> Formations</a></li>
@@ -135,6 +139,7 @@
                         </a>
                         <ul class="sidebar-submenu" id="grp-finances">
                             <li><a class="nav-link" asp-controller="Finances" asp-action="Index"><i class="bi bi-wallet2"></i> Finances</a></li>
+                            <li><a class="nav-link" asp-controller="CotisationsNationales" asp-action="Index"><i class="bi bi-cash-coin"></i> Cotisations nationales</a></li>
                             <li><a class="nav-link" asp-controller="AGR" asp-action="Index"><i class="bi bi-briefcase-fill"></i> Projets AGR</a></li>
                         </ul>
                     </li>
@@ -250,4 +255,6 @@
         if (overlay) overlay.classList.remove('open');
     }
 </script>
+
+
 

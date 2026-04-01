@@ -213,6 +213,13 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db, IMemo
             return NotFound();
         }
 
+        ViewBag.InscriptionsAnnuelles = await db.InscriptionsAnnuellesScouts.AsNoTracking()
+            .Include(i => i.Groupe)
+            .Include(i => i.Branche)
+            .Where(i => i.ScoutId == id)
+            .OrderByDescending(i => i.AnneeReference)
+            .ToListAsync();
+
         return View(scout);
     }
 
@@ -289,3 +296,5 @@ public class ScoutsController(IScoutService scoutService, AppDbContext db, IMemo
             : null;
     }
 }
+
+

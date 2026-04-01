@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Text.RegularExpressions;
 using FluentAssertions;
 using MangoTaika.Data;
@@ -47,12 +47,14 @@ public sealed class GroupesPagesTests
     }
 
     [Fact]
-    public async Task Create_And_Edit_Display_Responsable_Field_And_Current_Selection()
+    public async Task Create_And_Edit_Display_Chef_De_Groupe_Field_And_Current_Selection()
     {
         await using var factory = new SupportWebApplicationFactory();
         ApplicationUser gestionnaire = null!;
         ApplicationUser responsable = null!;
         Groupe groupe = null!;
+        Branche branche = null!;
+        Scout chefGroupe = null!;
 
         await factory.SeedAsync(async db =>
         {
@@ -65,24 +67,48 @@ public sealed class GroupesPagesTests
             {
                 Id = Guid.NewGuid(),
                 Nom = "Groupe Riviera",
+                NomChefGroupe = "Lucette Ossuh",
                 ResponsableId = responsable.Id
             };
 
+            branche = new Branche
+            {
+                Id = Guid.NewGuid(),
+                Nom = "Louveteau",
+                GroupeId = groupe.Id
+            };
+
+            chefGroupe = new Scout
+            {
+                Id = Guid.NewGuid(),
+                Matricule = "0583999X",
+                Nom = "Ossuh",
+                Prenom = "Lucette",
+                DateNaissance = new DateTime(1998, 1, 1),
+                GroupeId = groupe.Id,
+                BrancheId = branche.Id,
+                Fonction = "CHEF DE GROUPE (CG)",
+                UserId = responsable.Id
+            };
+
             db.Groupes.Add(groupe);
+            db.Branches.Add(branche);
+            db.Scouts.Add(chefGroupe);
         });
 
         using var client = factory.CreateAuthenticatedClient(gestionnaire.Id, "Gestionnaire");
 
         var createHtml = await client.GetStringAsync("/Groupes/Create");
-        createHtml.Should().Contain("Responsable rattache");
-        createHtml.Should().Contain("Le contact et la photo du responsable sur la fiche detail proviennent de cet utilisateur.");
-        createHtml.Should().Contain("Lucette Ossuh");
-        createHtml.Should().Contain("0701020304");
+        createHtml.Should().Contain("Chef de groupe");
+        createHtml.Should().Contain("Enregistrez d'abord l'entite");
+        createHtml.Should().Contain("CHEF DE GROUPE (CG)");
+        createHtml.Should().NotContain("Responsable rattache");
 
         var editHtml = await client.GetStringAsync($"/Groupes/Edit/{groupe.Id}");
-        editHtml.Should().Contain("Responsable rattache");
+        editHtml.Should().Contain("Chef de groupe");
+        editHtml.Should().Contain("CHEF DE GROUPE (CG)");
         editHtml.Should().Contain("Lucette Ossuh");
-        editHtml.Should().MatchRegex($"<option value=\"{Regex.Escape(responsable.Id.ToString())}\" selected=\"selected\">");
+        editHtml.Should().MatchRegex($"<option value=\"{Regex.Escape(chefGroupe.Id.ToString())}\" selected=\"selected\">");
     }
 
     [Fact]
@@ -196,7 +222,7 @@ public sealed class GroupesPagesTests
 
         html.Should().Contain("/uploads/groupes/riviera.png");
         html.Should().Contain("Logo du groupe");
-        html.Should().Contain("Responsable");
+        html.Should().Contain("Chef de groupe");
         html.Should().Contain("/uploads/users/lucette.png");
         html.Should().Contain("0701020304");
         html.Should().Contain("Totaux par branche");
@@ -277,3 +303,4 @@ public sealed class GroupesPagesTests
         branches.Select(b => b.Nom).Should().BeEquivalentTo(["Eclaireur", "Louveteau"]);
     }
 }
+

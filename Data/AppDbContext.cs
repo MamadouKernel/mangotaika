@@ -42,6 +42,13 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<Partenaire> Partenaires => Set<Partenaire>();
     public DbSet<LienReseauSocial> LiensReseauxSociaux => Set<LienReseauSocial>();
     public DbSet<SuiviAcademique> SuivisAcademiques => Set<SuiviAcademique>();
+    public DbSet<EtapeParcoursScout> EtapesParcoursScouts => Set<EtapeParcoursScout>();
+    public DbSet<InscriptionAnnuelleScout> InscriptionsAnnuellesScouts => Set<InscriptionAnnuelleScout>();
+    public DbSet<ProgrammeAnnuel> ProgrammesAnnuels => Set<ProgrammeAnnuel>();
+    public DbSet<RapportActivite> RapportsActivite => Set<RapportActivite>();
+    public DbSet<PropositionMaitriseAnnuelle> PropositionsMaitriseAnnuelles => Set<PropositionMaitriseAnnuelle>();
+    public DbSet<CotisationNationaleImport> CotisationsNationalesImports => Set<CotisationNationaleImport>();
+    public DbSet<CotisationNationaleImportLigne> CotisationsNationalesImportLignes => Set<CotisationNationaleImportLigne>();
 
     // LMS
     public DbSet<Formation> Formations => Set<Formation>();
@@ -243,6 +250,55 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasOne(s => s.Scout).WithMany(sc => sc.SuivisAcademiques).HasForeignKey(s => s.ScoutId).OnDelete(DeleteBehavior.Cascade);
         });
 
+        // Inscriptions annuelles
+        builder.Entity<InscriptionAnnuelleScout>(e =>
+        {
+            e.HasIndex(i => new { i.ScoutId, i.AnneeReference }).IsUnique();
+            e.HasOne(i => i.Scout).WithMany().HasForeignKey(i => i.ScoutId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(i => i.ValidePar).WithMany().HasForeignKey(i => i.ValideParId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Programme annuel
+        builder.Entity<ProgrammeAnnuel>(e =>
+        {
+            e.HasIndex(p => new { p.GroupeId, p.AnneeReference }).IsUnique();
+            e.HasOne(p => p.Groupe).WithMany().HasForeignKey(p => p.GroupeId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(p => p.Createur).WithMany().HasForeignKey(p => p.CreateurId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(p => p.Valideur).WithMany().HasForeignKey(p => p.ValideurId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Rapport d'activite
+        builder.Entity<RapportActivite>(e =>
+        {
+            e.HasIndex(r => r.ActiviteId).IsUnique();
+            e.HasOne(r => r.Activite).WithMany().HasForeignKey(r => r.ActiviteId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(r => r.Createur).WithMany().HasForeignKey(r => r.CreateurId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(r => r.Valideur).WithMany().HasForeignKey(r => r.ValideurId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Proposition annuelle de maitrise
+        builder.Entity<PropositionMaitriseAnnuelle>(e =>
+        {
+            e.HasIndex(p => new { p.GroupeId, p.AnneeReference }).IsUnique();
+            e.HasOne(p => p.Groupe).WithMany().HasForeignKey(p => p.GroupeId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(p => p.Createur).WithMany().HasForeignKey(p => p.CreateurId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(p => p.Valideur).WithMany().HasForeignKey(p => p.ValideurId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Imports de cotisations nationales
+        builder.Entity<CotisationNationaleImport>(e =>
+        {
+            e.HasIndex(i => new { i.AnneeReference, i.DateImport });
+            e.HasOne(i => i.Createur).WithMany().HasForeignKey(i => i.CreateurId).OnDelete(DeleteBehavior.Restrict);
+            e.HasMany(i => i.Lignes).WithOne(l => l.Import).HasForeignKey(l => l.ImportId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<CotisationNationaleImportLigne>(e =>
+        {
+            e.HasIndex(l => new { l.ImportId, l.Matricule });
+            e.HasOne(l => l.Scout).WithMany().HasForeignKey(l => l.ScoutId).OnDelete(DeleteBehavior.SetNull);
+        });
+
         // === LMS ===
 
         // Formation
@@ -379,3 +435,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         }
     }
 }
+
+
+
+

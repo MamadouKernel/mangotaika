@@ -1,0 +1,66 @@
+@using MangoTaika.Data.Entities
+@model PropositionMaitriseAnnuelle
+@{
+    ViewData["Title"] = Model.Id == Guid.Empty ? "Nouvelle proposition de maitrise" : "Modifier la proposition de maitrise";
+    Layout = "_LayoutAdmin";
+    var groupes = ViewBag.Groupes as List<Groupe> ?? new();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="section-title mb-1"><i class="bi bi-people text-or"></i> <span class="accent">@ViewData["Title"]</span></h2>
+        <p class="text-muted-custom mb-0">Structurez l'equipe de maitrise, ses objectifs et les besoins de montee en competence.</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i></a>
+</div>
+
+<div class="card-3d p-4">
+    <form method="post">
+        @Html.AntiForgeryToken()
+        @if (Model.Id != Guid.Empty)
+        {
+            <input type="hidden" asp-for="Id" />
+        }
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+        <div class="row g-3">
+            <div class="col-lg-5">
+                <label asp-for="GroupeId" class="form-label">Entite</label>
+                <select asp-for="GroupeId" class="form-select">
+                    <option value="">-- Selectionner une entite --</option>
+                    @foreach (var groupe in groupes)
+                    {
+                        <option value="@groupe.Id">@groupe.Nom</option>
+                    }
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <label asp-for="AnneeReference" class="form-label">Annee</label>
+                <input asp-for="AnneeReference" class="form-control" />
+            </div>
+            <div class="col-lg-5">
+                <label asp-for="Titre" class="form-label">Titre</label>
+                <input asp-for="Titre" class="form-control" />
+            </div>
+            <div class="col-12">
+                <label asp-for="CompositionProposee" class="form-label">Composition proposee</label>
+                <textarea asp-for="CompositionProposee" class="form-control" rows="7"></textarea>
+            </div>
+            <div class="col-12">
+                <label asp-for="ObjectifsPedagogiques" class="form-label">Objectifs pedagogiques</label>
+                <textarea asp-for="ObjectifsPedagogiques" class="form-control" rows="5"></textarea>
+            </div>
+            <div class="col-12">
+                <label asp-for="BesoinsFormation" class="form-label">Besoins de formation</label>
+                <textarea asp-for="BesoinsFormation" class="form-control" rows="4"></textarea>
+            </div>
+            <div class="col-12">
+                <label asp-for="Observations" class="form-label">Observations</label>
+                <textarea asp-for="Observations" class="form-control" rows="4"></textarea>
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Enregistrer</button>
+            <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
+        </div>
+    </form>
+</div>

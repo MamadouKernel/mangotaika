@@ -1,0 +1,85 @@
+@using MangoTaika.Data.Entities
+@model List<ProgrammeAnnuel>
+@{
+    ViewData["Title"] = "Programmes annuels";
+    Layout = "_LayoutAdmin";
+    var groupes = ViewBag.Groupes as List<Groupe> ?? new();
+    var selectedGroupeId = ViewBag.SelectedGroupeId as Guid?;
+    var selectedStatut = ViewBag.SelectedStatut as StatutWorkflowDocument?;
+    var annee = ViewBag.Annee is int currentYear ? currentYear : DateTime.UtcNow.Year;
+    var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+}
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div>
+        <h2 class="section-title mb-1"><i class="bi bi-calendar-range text-or"></i> <span class="accent">Programmes annuels</span></h2>
+        <p class="text-muted-custom mb-0">Planification annuelle des activites des groupes et du district avec circuit de validation.</p>
+    </div>
+    @if (canManage)
+    {
+        <a asp-action="Create" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Nouveau programme</a>
+    }
+</div>
+
+<div class="card-3d p-4 mb-4">
+    <form method="get" class="row g-3">
+        <div class="col-lg-3">
+            <label class="form-label">Annee</label>
+            <input type="number" class="form-control" name="annee" value="@annee" min="2000" max="2100" />
+        </div>
+        <div class="col-lg-4">
+            <label class="form-label">Entite</label>
+            <select class="form-select" name="groupeId">
+                <option value="">-- Programme district --</option>
+                @foreach (var groupe in groupes)
+                {
+                    <option value="@groupe.Id" selected="@(selectedGroupeId == groupe.Id ? "selected" : null)">@groupe.Nom</option>
+                }
+            </select>
+        </div>
+        <div class="col-lg-3">
+            <label class="form-label">Statut</label>
+            <select class="form-select" name="statut">
+                <option value="">-- Tous --</option>
+                @foreach (var statut in Enum.GetValues<StatutWorkflowDocument>())
+                {
+                    <option value="@statut" selected="@(selectedStatut == statut ? "selected" : null)">@statut</option>
+                }
+            </select>
+        </div>
+        <div class="col-lg-2 d-flex align-items-end">
+            <button class="btn btn-bleu w-100" type="submit"><i class="bi bi-filter-circle"></i> Filtrer</button>
+        </div>
+    </form>
+</div>
+
+<div class="row g-4">
+@foreach (var programme in Model)
+{
+    <div class="col-lg-6">
+        <div class="card-3d p-4 h-100 d-flex flex-column">
+            <div class="d-flex justify-content-between gap-3 mb-2">
+                <div>
+                    <h5 class="text-or mb-1">@programme.Titre</h5>
+                    <div class="text-muted-custom small">@(programme.Groupe?.Nom ?? "District") - @programme.AnneeReference</div>
+                </div>
+                <span class="badge-3d badge-soumise">@programme.Statut</span>
+            </div>
+            <p class="text-muted-custom flex-grow-1">@programme.Objectifs</p>
+            <div class="d-flex gap-2 mt-auto">
+                <a asp-action="Details" asp-route-id="@programme.Id" class="btn btn-sm btn-outline-or"><i class="bi bi-eye"></i></a>
+                @if (canManage)
+                {
+                    <a asp-action="Edit" asp-route-id="@programme.Id" class="btn btn-sm btn-bleu"><i class="bi bi-pencil"></i></a>
+                }
+            </div>
+        </div>
+    </div>
+}
+@if (!Model.Any())
+{
+    <div class="col-12 text-center text-muted-custom py-5">Aucun programme annuel trouve.</div>
+}
+</div>
+
+@await Html.PartialAsync("_ListPagination")

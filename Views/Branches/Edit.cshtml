@@ -59,9 +59,9 @@
         <div class="mb-4">
             <label class="form-label">Responsable de branche</label>
             <select name="ChefUniteId" id="chefSelect" class="form-select" data-current="@Model.ChefUniteId">
-                <option value="">-- Chargement... --</option>
+                <option value="">-- Selectionner un responsable de branche --</option>
             </select>
-            <small class="text-muted-custom">Pour les branches du groupe Equipe de District Mango Taika : ASSISTANT COMMISSAIRE DE DISTRICT (ACD) uniquement. Pour les autres groupes : CHEF D'UNITE (CU) ou CHEF D'UNITE ADJOINT (CUA).</small>
+            <small class="text-muted-custom">Le responsable de branche doit appartenir au groupe selectionne. Pour les branches du groupe Equipe de District Mango Taika : ASSISTANT COMMISSAIRE DE DISTRICT (ACD) uniquement. Pour les autres groupes : CHEF D'UNITE (CU) ou CHEF D'UNITE ADJOINT (CUA).</small>
             <span asp-validation-for="ChefUniteId" class="text-danger small d-block"></span>
         </div>
         <button type="submit" class="btn btn-mango" title="Enregistrer"><i class="bi bi-check-lg"></i></button>
@@ -74,14 +74,14 @@
     function loadScouts(groupeId, selectedId) {
         var chefSelect = document.getElementById('chefSelect');
         if (!groupeId) {
-            chefSelect.innerHTML = '<option value="">-- Selectionner d\'abord un groupe --</option>';
+            chefSelect.innerHTML = '<option value="">-- Selectionner un responsable de branche --</option>';
             return;
         }
         chefSelect.innerHTML = '<option value="">Chargement...</option>';
         fetch('/Branches/GetScoutsByGroupe?groupeId=' + groupeId)
             .then(r => r.json())
             .then(data => {
-                var html = '<option value="">-- Selectionner un CHEF D\'UNITE (CU) --</option>';
+                var html = '<option value="">-- Selectionner un responsable de branche --</option>';
                 data.forEach(s => {
                     var sel = (selectedId && s.id == selectedId) ? ' selected' : '';
                     html += '<option value="' + s.id + '"' + sel + '>' + s.nom + '</option>';
@@ -97,6 +97,7 @@
     if (initGroupe) loadScouts(initGroupe, initChef);
 </script>
 }
+
 
 
 

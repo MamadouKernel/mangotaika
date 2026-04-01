@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang='fr'>
+<head>
+  <meta charset='utf-8' />
+  <title>Dictionnaire de donnees - MangoTaika</title>
+  <style>
+    @page { size: A4; margin: 2cm 1.6cm 2cm 1.6cm; }
+    body { font-family: 'Aptos', 'Segoe UI', Arial, sans-serif; color: #21313f; line-height: 1.45; font-size: 11pt; }
+    .cover { page-break-after: always; min-height: 24cm; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+    .cover-logo { width: 96px; height: 96px; object-fit: contain; margin-bottom: 18px; }
+    .cover-kicker { color: #5f7f43; font-weight: 700; letter-spacing: 0.08em; font-size: 11pt; text-transform: uppercase; margin-bottom: 8px; }
+    .cover-title { font-size: 24pt; font-weight: 800; color: #25323d; margin: 0 0 12px 0; line-height: 1.2; }
+    .cover-subtitle { max-width: 560px; font-size: 12pt; color: #5a6772; margin-bottom: 28px; }
+    .cover-meta { font-size: 10.5pt; color: #6d7680; }
+    .section-break { page-break-before: always; min-height: 8cm; display: flex; flex-direction: column; justify-content: center; }
+    .section-kicker { color: #5f7f43; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; font-size: 10pt; margin-bottom: 6px; }
+    .section-title { font-size: 21pt; font-weight: 800; color: #25323d; margin: 0 0 8px 0; }
+    .section-subtitle { color: #62707d; font-size: 11pt; max-width: 560px; }
+    .toc-box { page-break-after: always; border: 1px solid #d5dee6; border-radius: 14px; padding: 20px 24px; background: #fbfcfd; }
+    .toc-box h2 { margin-top: 0; }
+    .toc-item { margin-bottom: 10px; }
+    h1 { font-size: 20pt; color: #25323d; border-bottom: 3px solid #5f7f43; padding-bottom: 6px; margin-top: 0; }
+    h2 { font-size: 15pt; color: #4f6e37; margin-top: 24px; margin-bottom: 10px; }
+    h3 { font-size: 12.5pt; color: #31414f; margin-top: 18px; margin-bottom: 8px; }
+    p { margin: 0 0 10px 0; }
+    ul { margin: 0 0 12px 18px; padding-left: 0; }
+    li { margin-bottom: 5px; }
+    code { font-family: Consolas, 'Courier New', monospace; background: #f3f5f7; padding: 1px 4px; border-radius: 4px; color: #22313d; }
+    .md-link { font-weight: 600; }
+    .md-link-target { color: #687480; font-size: 9.5pt; }
+    .doc-table { border-collapse: collapse; width: 100%; margin: 10px 0 14px 0; font-size: 9.5pt; }
+    .doc-table th, .doc-table td { border: 1px solid #cad4de; padding: 7px 8px; vertical-align: top; }
+    .doc-table th { background: #eef5e4; color: #31414f; font-weight: 700; }
+    .doc-table tr:nth-child(even) td { background: #fafcfd; }
+    .code-block { margin: 12px 0 16px 0; border: 1px solid #d3dbe3; border-radius: 10px; overflow: hidden; }
+    .code-title { background: #2f3b46; color: white; font-weight: 700; padding: 8px 12px; font-size: 10pt; }
+    pre { margin: 0; padding: 12px 14px; background: #f8fafc; font-family: Consolas, 'Courier New', monospace; font-size: 9pt; white-space: pre-wrap; word-break: break-word; }
+    .source-box { margin-top: 18px; padding: 10px 12px; border-left: 4px solid #5f7f43; background: #f7faf3; color: #51606c; font-size: 10pt; }
+    </style>
+</head>
+<body>
+  
+    <section class='cover'>
+      <img src='file:///C:/Users/kerne/Downloads/rodi/new/MangoTaika/wwwroot/images/logo.png' alt='Logo Mango Taika' class='cover-logo' />
+      <div class='cover-kicker'>Mango Taika District Scout</div>
+      <h1 class='cover-title' style='border:none;padding:0;margin:0 0 12px 0'>Dictionnaire de donnees</h1>
+      <div class='cover-subtitle'>Description structuree des tables, champs et roles de donnees du projet MangoTaika</div>
+      <div class='cover-meta'>Version de remise officielle<br/>Genere automatiquement depuis la documentation du depot</div>
+    </section>
+    
+  <div class='source-box'>Source documentaire: <code>docs/dictionnaire-donnees.md</code></div>
+  <p>Date de generation: 2026-04-01</p>
+<h2>Sources</h2>
+<ul>
+<li><code>Data/AppDbContext.cs</code></li>
+<li><code>Data/Entities/*.cs</code></li>
+<li>conventions EF Core et ASP.NET Identity du projet</li>
+</ul>
+<h2>Legende</h2>
+<ul>
+<li><code>PK</code> : cle primaire</li>
+<li><code>FK</code> : cle etrangere</li>
+<li><code>Enum</code> : champ base sur une enumeration C#</li>
+<li><code>Flag</code> : booleen de statut</li>
+<li><code>Nullable</code> : accepte ou non les valeurs nulles dans le modele</li>
+</ul>
+<h2>Territoire, identites et parcours scout</h2>
+<h3><code>AspNetUsers</code></h3>
+<p>Role: Comptes applicatifs et administratifs, avec extensions metier MangoTaika. Source: <code>Data/Entities/ApplicationUser.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>UserName</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>NormalizedUserName</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Email</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>NormalizedEmail</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>EmailConfirmed</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>PasswordHash</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>PhoneNumber</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>PhoneNumberConfirmed</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>TwoFactorEnabled</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>LockoutEnd</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>LockoutEnabled</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>AccessFailedCount</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Nom</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Prenom</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>PhotoUrl</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Chemin, URL ou ressource associee.</td></tr>
+<tr><td><code>Matricule</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>IsActive</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>GroupeId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>Groupes</code>.</td></tr>
+<tr><td><code>BrancheId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>Branches</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>Groupes</code></h3>
+<p>Role: Entites scoutes du district, y compris l&#x27;equipe de district. Source: <code>Data/Entities/Groupe.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Nom</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>NomNormalise</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Description</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>LogoUrl</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Chemin, URL ou ressource associee.</td></tr>
+<tr><td><code>Latitude</code></td><td><code>double?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Longitude</code></td><td><code>double?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Adresse</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>NomChefGroupe</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>IsActive</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>ResponsableId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+</tbody>
+</table>
+<p>Contraintes / notes:</p>
+<ul>
+<li>NomNormalise unique sur les groupes actifs.</li>
+</ul>
+<h3><code>Branches</code></h3>
+<p>Role: Unites ou branches d&#x27;age rattachees a un groupe. Source: <code>Data/Entities/Branche.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Nom</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>NomNormalise</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Description</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>LogoUrl</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Chemin, URL ou ressource associee.</td></tr>
+<tr><td><code>AgeMin</code></td><td><code>int?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>AgeMax</code></td><td><code>int?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>NomChefUnite</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>ChefUniteId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>Scouts</code>.</td></tr>
+<tr><td><code>IsActive</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>GroupeId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Groupes</code>.</td></tr>
+</tbody>
+</table>
+<p>Contraintes / notes:</p>
+<ul>
+<li>Unicite logique du nom dans un groupe actif via (GroupeId, NomNormalise).</li>
+</ul>
+<h3><code>Scouts</code></h3>
+<p>Role: Fiches centrales des membres scouts et responsables terrain. Source: <code>Data/Entities/Scout.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Matricule</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Nom</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Prenom</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateNaissance</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>LieuNaissance</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Sexe</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>PhotoUrl</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Chemin, URL ou ressource associee.</td></tr>
+<tr><td><code>Telephone</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Email</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>RegionScoute</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>District</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>NumeroCarte</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Fonction</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>StatutASCCI</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>AssuranceAnnuelle</code></td><td><code>bool</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>AdresseGeographique</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>IsActive</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>DateInscription</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>UserId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+<tr><td><code>GroupeId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>Groupes</code>.</td></tr>
+<tr><td><code>BrancheId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>Branches</code>.</td></tr>
+</tbody>
+</table>
+<p>Contraintes / notes:</p>
+<ul>
+<li>Matricule unique.</li>
+<li>NumeroCarte unique si renseigne.</li>
+</ul>
+<h3><code>Parents</code></h3>
+<p>Role: Representants ou contacts parentaux relies aux scouts. Source: <code>Data/Entities/Parent.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Nom</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Prenom</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Telephone</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Email</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Relation</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+</tbody>
+</table>
+<h3><code>ParentScout</code></h3>
+<p>Role: Table de jointure many-to-many entre parents et scouts. Source: <code>Association implicite EF Core Scout &lt;-&gt; Parent</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>ParentsId</code></td><td><code>Guid</code></td><td>Non</td><td>PK/FK</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>ScoutsId</code></td><td><code>Guid</code></td><td>Non</td><td>PK/FK</td><td>Champ metier de la table.</td></tr>
+</tbody>
+</table>
+<h3><code>Competences</code></h3>
+<p>Role: Competences et acquis du scout. Source: <code>Data/Entities/Competence.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Nom</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Description</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>DateObtention</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>Niveau</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Type</code></td><td><code>TypeCompetence</code></td><td>Non</td><td>Enum</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>ScoutId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Scouts</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>HistoriqueFonctions</code></h3>
+<p>Role: Historisation des fonctions exercees par un scout ou un utilisateur. Source: <code>Data/Entities/HistoriqueFonction.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Fonction</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateDebut</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateFin</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>Commentaire</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>ScoutId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>Scouts</code>.</td></tr>
+<tr><td><code>UserId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+<tr><td><code>GroupeId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>Groupes</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>SuivisAcademiques</code></h3>
+<p>Role: Suivi scolaire et academique du scout. Source: <code>Data/Entities/SuiviAcademique.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>AnneeScolaire</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Etablissement</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>NiveauScolaire</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Classe</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>MoyenneGenerale</code></td><td><code>double?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Mention</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Observations</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>EstRedoublant</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>DateSaisie</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>ScoutId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Scouts</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>CodesInvitation</code></h3>
+<p>Role: Codes d&#x27;invitation utilises pour l&#x27;inscription ou l&#x27;activation de comptes. Source: <code>Data/Entities/CodeInvitation.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Code</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>EstUtilise</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateUtilisation</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>CreateurId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+<tr><td><code>UtilisePaId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+</tbody>
+</table>
+<p>Contraintes / notes:</p>
+<ul>
+<li>Code unique.</li>
+</ul>
+<h3><code>EtapesParcoursScouts</code></h3>
+<p>Role: Etapes du parcours scout, avec prevision et validation. Source: <code>Data/Entities/ParcoursScout.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>ScoutId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Scouts</code>.</td></tr>
+<tr><td><code>NomEtape</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>CodeEtape</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>OrdreAffichage</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateValidation</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DatePrevisionnelle</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>Observations</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>EstObligatoire</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+</tbody>
+</table>
+<h3><code>InscriptionsAnnuellesScouts</code></h3>
+<p>Role: Historique annuel des inscriptions et de la conformite du scout. Source: <code>Data/Entities/WorkflowMetier.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>ScoutId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Scouts</code>.</td></tr>
+<tr><td><code>GroupeId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>Groupes</code>.</td></tr>
+<tr><td><code>BrancheId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>Branches</code>.</td></tr>
+<tr><td><code>FonctionSnapshot</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>AnneeReference</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>LibelleAnnee</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>DateInscription</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateValidation</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>Statut</code></td><td><code>StatutInscriptionAnnuelle</code></td><td>Non</td><td>Enum</td><td>Statut fonctionnel de l&#x27;enregistrement.</td></tr>
+<tr><td><code>InscriptionParoissialeValidee</code></td><td><code>bool</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>CotisationNationaleAjour</code></td><td><code>bool</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Observations</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>ValideParId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+</tbody>
+</table>
+<p>Contraintes / notes:</p>
+<ul>
+<li>Unicite (ScoutId, AnneeReference).</li>
+</ul>
+<h2>Activites, gouvernance et workflows</h2>
+<h3><code>Activites</code></h3>
+<p>Role: Activites scouts soumises, suivies et validees. Source: <code>Data/Entities/Activite.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Titre</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Description</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>Type</code></td><td><code>TypeActivite</code></td><td>Non</td><td>Enum</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateDebut</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateFin</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>Lieu</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>BudgetPrevisionnel</code></td><td><code>decimal?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>NomResponsable</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Statut</code></td><td><code>StatutActivite</code></td><td>Non</td><td>Enum</td><td>Statut fonctionnel de l&#x27;enregistrement.</td></tr>
+<tr><td><code>MotifRejet</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>EstSupprime</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>CreateurId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+<tr><td><code>GroupeId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>Groupes</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>DocumentsActivite</code></h3>
+<p>Role: Documents rattaches a une activite. Source: <code>Data/Entities/DocumentActivite.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>NomFichier</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>CheminFichier</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Chemin, URL ou ressource associee.</td></tr>
+<tr><td><code>TypeDocument</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateUpload</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>ActiviteId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Activites</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>ParticipantsActivite</code></h3>
+<p>Role: Participants scouts inscrits a une activite. Source: <code>Data/Entities/ParticipantActivite.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>ActiviteId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Activites</code>.</td></tr>
+<tr><td><code>ScoutId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Scouts</code>.</td></tr>
+<tr><td><code>Presence</code></td><td><code>StatutPresence</code></td><td>Non</td><td>Enum</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateInscription</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+</tbody>
+</table>
+<p>Contraintes / notes:</p>
+<ul>
+<li>Unicite (ActiviteId, ScoutId).</li>
+</ul>
+<h3><code>CommentairesActivite</code></h3>
+<p>Role: Commentaires, actions et journal d&#x27;une activite. Source: <code>Data/Entities/CommentaireActivite.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>ActiviteId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Activites</code>.</td></tr>
+<tr><td><code>AuteurId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+<tr><td><code>Contenu</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>TypeAction</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+</tbody>
+</table>
+<h3><code>DemandesAutorisation</code></h3>
+<p>Role: Demandes administratives ou autorisations d&#x27;activite. Source: <code>Data/Entities/DemandeAutorisation.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Titre</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Description</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>TypeActivite</code></td><td><code>TypeActiviteDemande</code></td><td>Non</td><td>Enum</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateActivite</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateFin</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>Lieu</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>NombreParticipants</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Valeur numerique de suivi ou de calcul.</td></tr>
+<tr><td><code>Objectifs</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>MoyensLogistiques</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Budget</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Observations</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>TdrContenu</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Statut</code></td><td><code>StatutDemande</code></td><td>Non</td><td>Enum</td><td>Statut fonctionnel de l&#x27;enregistrement.</td></tr>
+<tr><td><code>MotifRejet</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateValidation</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DemandeurId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+<tr><td><code>ValideurId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+<tr><td><code>GroupeId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>Groupes</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>SuivisDemande</code></h3>
+<p>Role: Journal de suivi associe a une demande d&#x27;autorisation. Source: <code>Data/Entities/DemandeAutorisation.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>DemandeId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>DemandesAutorisation</code>.</td></tr>
+<tr><td><code>AncienStatut</code></td><td><code>StatutDemande</code></td><td>Non</td><td>Enum</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>NouveauStatut</code></td><td><code>StatutDemande</code></td><td>Non</td><td>Enum</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Commentaire</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>Auteur</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Date</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+</tbody>
+</table>
+<h3><code>DemandesGroupe</code></h3>
+<p>Role: Demandes de creation / reconnaissance d&#x27;entite scoute. Source: <code>Data/Entities/DemandeGroupe.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>NomGroupe</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Commune</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Quartier</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>NomResponsable</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>TelephoneResponsable</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>EmailResponsable</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Motivation</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>NombreMembresPrevus</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Valeur numerique de suivi ou de calcul.</td></tr>
+<tr><td><code>Statut</code></td><td><code>StatutDemandeGroupe</code></td><td>Non</td><td>Enum</td><td>Statut fonctionnel de l&#x27;enregistrement.</td></tr>
+<tr><td><code>MotifRejet</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateTraitement</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>TraiteParId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>ProgrammesAnnuels</code></h3>
+<p>Role: Programme annuel d&#x27;un groupe ou du district. Source: <code>Data/Entities/WorkflowMetier.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>GroupeId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>Groupes</code>.</td></tr>
+<tr><td><code>AnneeReference</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Titre</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Objectifs</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>CalendrierSynthese</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Observations</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>Statut</code></td><td><code>StatutWorkflowDocument</code></td><td>Non</td><td>Enum</td><td>Statut fonctionnel de l&#x27;enregistrement.</td></tr>
+<tr><td><code>CommentaireValidation</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateSoumission</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateValidation</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>CreateurId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+<tr><td><code>ValideurId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+</tbody>
+</table>
+<p>Contraintes / notes:</p>
+<ul>
+<li>Unicite (GroupeId, AnneeReference).</li>
+</ul>
+<h3><code>RapportsActivite</code></h3>
+<p>Role: Rapports post-activite avec validation. Source: <code>Data/Entities/WorkflowMetier.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>ActiviteId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Activites</code>.</td></tr>
+<tr><td><code>ResumeExecutif</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>ResultatsObtenus</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DifficultesRencontrees</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Recommandations</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>ObservationsComplementaires</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>Statut</code></td><td><code>StatutWorkflowDocument</code></td><td>Non</td><td>Enum</td><td>Statut fonctionnel de l&#x27;enregistrement.</td></tr>
+<tr><td><code>CommentaireValidation</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateSoumission</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateValidation</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>CreateurId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+<tr><td><code>ValideurId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+</tbody>
+</table>
+<p>Contraintes / notes:</p>
+<ul>
+<li>Un rapport maximum par activite.</li>
+</ul>
+<h3><code>PropositionsMaitriseAnnuelles</code></h3>
+<p>Role: Propositions annuelles de maitrise / encadrement. Source: <code>Data/Entities/WorkflowMetier.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>GroupeId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Groupes</code>.</td></tr>
+<tr><td><code>AnneeReference</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Titre</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>CompositionProposee</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>ObjectifsPedagogiques</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>BesoinsFormation</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Observations</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>Statut</code></td><td><code>StatutWorkflowDocument</code></td><td>Non</td><td>Enum</td><td>Statut fonctionnel de l&#x27;enregistrement.</td></tr>
+<tr><td><code>CommentaireValidation</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateSoumission</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateValidation</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>CreateurId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+<tr><td><code>ValideurId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+</tbody>
+</table>
+<p>Contraintes / notes:</p>
+<ul>
+<li>Unicite (GroupeId, AnneeReference).</li>
+</ul>
+<h2>Support, finance et cotisations</h2>
+<h3><code>SupportCatalogueServices</code></h3>
+<p>Role: Catalogue des services du centre de support. Source: <code>Data/Entities/Ticket.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Code</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Nom</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Description</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>TypeParDefaut</code></td><td><code>TypeTicket</code></td><td>Non</td><td>Enum</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>CategorieParDefaut</code></td><td><code>CategorieTicket</code></td><td>Non</td><td>Enum</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>ImpactParDefaut</code></td><td><code>ImpactTicket</code></td><td>Non</td><td>Enum</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>UrgenceParDefaut</code></td><td><code>UrgenceTicket</code></td><td>Non</td><td>Enum</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DelaiSlaHeures</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>AssigneParDefautId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+<tr><td><code>GroupeParDefautId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>Groupes</code>.</td></tr>
+<tr><td><code>EstActif</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>AuteurId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+</tbody>
+</table>
+<p>Contraintes / notes:</p>
+<ul>
+<li>Code unique.</li>
+</ul>
+<h3><code>SupportKnowledgeArticles</code></h3>
+<p>Role: Base de connaissances du support. Source: <code>Data/Entities/Ticket.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Titre</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Resume</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>Contenu</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>Categorie</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>MotsCles</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>EstPublie</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateMiseAJour</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>AuteurId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>Tickets</code></h3>
+<p>Role: Tickets du centre de support avec SLA, escalade et satisfaction. Source: <code>Data/Entities/Ticket.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>NumeroTicket</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Sujet</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Description</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>Type</code></td><td><code>TypeTicket</code></td><td>Non</td><td>Enum</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Categorie</code></td><td><code>CategorieTicket</code></td><td>Non</td><td>Enum</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Impact</code></td><td><code>ImpactTicket</code></td><td>Non</td><td>Enum</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Urgence</code></td><td><code>UrgenceTicket</code></td><td>Non</td><td>Enum</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Priorite</code></td><td><code>PrioriteTicket</code></td><td>Non</td><td>Enum</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Statut</code></td><td><code>StatutTicket</code></td><td>Non</td><td>Enum</td><td>Statut fonctionnel de l&#x27;enregistrement.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateLimiteSla</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DatePremiereReponse</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateAffectation</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateResolution</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>EstEscalade</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>NiveauEscalade</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateDerniereEscalade</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>ResumeResolution</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>NoteSatisfaction</code></td><td><code>int?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>CommentaireSatisfaction</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>EstSupprime</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>ServiceCatalogueId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>SupportCatalogueServices</code>.</td></tr>
+<tr><td><code>CreateurId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+<tr><td><code>AssigneAId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+<tr><td><code>GroupeAssigneId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>GroupeAssigne</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>MessagesTicket</code></h3>
+<p>Role: Messages d&#x27;echange sur un ticket. Source: <code>Data/Entities/MessageTicket.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Contenu</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>EstNoteInterne</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>DateEnvoi</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>TicketId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Tickets</code>.</td></tr>
+<tr><td><code>AuteurId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>TicketPiecesJointes</code></h3>
+<p>Role: Pieces jointes attachees a un ticket. Source: <code>Data/Entities/Ticket.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>TicketId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Tickets</code>.</td></tr>
+<tr><td><code>NomOriginal</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>UrlFichier</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>TypeMime</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>TailleOctets</code></td><td><code>long</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateAjout</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>AjouteParId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>HistoriquesTicket</code></h3>
+<p>Role: Historique des changements d&#x27;un ticket. Source: <code>Data/Entities/HistoriqueTicket.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>TicketId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Tickets</code>.</td></tr>
+<tr><td><code>AuteurId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+<tr><td><code>Commentaire</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>DateChangement</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+</tbody>
+</table>
+<h3><code>NotificationsUtilisateur</code></h3>
+<p>Role: Notifications internes recues par les utilisateurs. Source: <code>Data/Entities/NotificationUtilisateur.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>UserId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+<tr><td><code>Titre</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Message</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>Categorie</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Lien</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>EstLue</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateLecture</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+</tbody>
+</table>
+<h3><code>TransactionsFinancieres</code></h3>
+<p>Role: Ecritures financieres liees aux scouts, activites, groupes ou projets. Source: <code>Data/Entities/TransactionFinanciere.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Libelle</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Montant</code></td><td><code>decimal</code></td><td>Non</td><td>Metier</td><td>Valeur numerique de suivi ou de calcul.</td></tr>
+<tr><td><code>Type</code></td><td><code>TypeTransaction</code></td><td>Non</td><td>Enum</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Categorie</code></td><td><code>CategorieFinance</code></td><td>Non</td><td>Enum</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateTransaction</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>Reference</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Commentaire</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>EstSupprime</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>GroupeId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>Groupes</code>.</td></tr>
+<tr><td><code>ActiviteId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>Activites</code>.</td></tr>
+<tr><td><code>ProjetAGRId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>ProjetsAGR</code>.</td></tr>
+<tr><td><code>ScoutId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>Scouts</code>.</td></tr>
+<tr><td><code>CreateurId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>ProjetsAGR</code></h3>
+<p>Role: Projets d&#x27;activites generatrices de revenus. Source: <code>Data/Entities/ProjetAGR.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Nom</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Description</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>Statut</code></td><td><code>StatutProjetAGR</code></td><td>Non</td><td>Enum</td><td>Statut fonctionnel de l&#x27;enregistrement.</td></tr>
+<tr><td><code>BudgetInitial</code></td><td><code>decimal</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateDebut</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateFin</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>Responsable</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>EstSupprime</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>GroupeId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>Groupes</code>.</td></tr>
+<tr><td><code>CreateurId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>CotisationsNationalesImports</code></h3>
+<p>Role: Lots d&#x27;import des cotisations nationales. Source: <code>Data/Entities/CotisationsNationales.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>AnneeReference</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>NomFichier</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateImport</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>MontantTotal</code></td><td><code>decimal</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>NombreAjour</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Valeur numerique de suivi ou de calcul.</td></tr>
+<tr><td><code>NombreNonAjour</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Valeur numerique de suivi ou de calcul.</td></tr>
+<tr><td><code>NombreAVerifier</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Valeur numerique de suivi ou de calcul.</td></tr>
+<tr><td><code>CreateurId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>CotisationsNationalesImportLignes</code></h3>
+<p>Role: Lignes detaillees d&#x27;un import de cotisations nationales. Source: <code>Data/Entities/CotisationsNationales.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>ImportId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>CotisationsNationalesImports</code>.</td></tr>
+<tr><td><code>ScoutId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>Scouts</code>.</td></tr>
+<tr><td><code>Matricule</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>NomImporte</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Montant</code></td><td><code>decimal?</code></td><td>Oui</td><td>Metier</td><td>Valeur numerique de suivi ou de calcul.</td></tr>
+<tr><td><code>Statut</code></td><td><code>StatutLigneCotisationNationale</code></td><td>Non</td><td>Enum</td><td>Statut fonctionnel de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Motif</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+</tbody>
+</table>
+<p>Contraintes / notes:</p>
+<ul>
+<li>Index sur (ImportId, Matricule).</li>
+</ul>
+<h2>LMS / formation</h2>
+<h3><code>Formations</code></h3>
+<p>Role: Cours ou parcours de formation du LMS. Source: <code>Data/Entities/Formation.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Titre</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Description</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>ImageUrl</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Chemin, URL ou ressource associee.</td></tr>
+<tr><td><code>Niveau</code></td><td><code>NiveauFormation</code></td><td>Non</td><td>Enum</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Statut</code></td><td><code>StatutFormation</code></td><td>Non</td><td>Enum</td><td>Statut fonctionnel de l&#x27;enregistrement.</td></tr>
+<tr><td><code>DureeEstimeeHeures</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DatePublication</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DelivreBadge</code></td><td><code>bool</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DelivreAttestation</code></td><td><code>bool</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DelivreCertificat</code></td><td><code>bool</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DelivranceConfiguree</code></td><td><code>bool</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>BrancheCibleId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>BrancheCible</code>.</td></tr>
+<tr><td><code>CompetenceLieeId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference logique vers <code>Competences</code>.</td></tr>
+<tr><td><code>AuteurId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>FormationsPrerequis</code></h3>
+<p>Role: Relations de prerequis entre formations. Source: <code>Data/Entities/FormationPrerequis.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>FormationId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Formations</code>.</td></tr>
+<tr><td><code>PrerequisFormationId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Formations</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>ModulesFormation</code></h3>
+<p>Role: Modules composant une formation. Source: <code>Data/Entities/ModuleFormation.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Titre</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Description</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>Ordre</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>FormationId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Formations</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>Lecons</code></h3>
+<p>Role: Lecons appartenant a un module de formation. Source: <code>Data/Entities/Lecon.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Titre</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Type</code></td><td><code>TypeLecon</code></td><td>Non</td><td>Enum</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>ContenuTexte</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>VideoUrl</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Chemin, URL ou ressource associee.</td></tr>
+<tr><td><code>DocumentUrl</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Chemin, URL ou ressource associee.</td></tr>
+<tr><td><code>Ordre</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DureeMinutes</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>ModuleId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>ModulesFormation</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>Quizzes</code></h3>
+<p>Role: Quiz rattaches a un module de formation. Source: <code>Data/Entities/Quiz.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Titre</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>NoteMinimale</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>NombreTentativesMax</code></td><td><code>int?</code></td><td>Oui</td><td>Metier</td><td>Valeur numerique de suivi ou de calcul.</td></tr>
+<tr><td><code>DateOuvertureDisponibilite</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateFermetureDisponibilite</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>ModuleId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>ModulesFormation</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>QuestionsQuiz</code></h3>
+<p>Role: Questions d&#x27;un quiz. Source: <code>Data/Entities/QuestionQuiz.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Enonce</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Ordre</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>QuizId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Quizzes</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>ReponsesQuiz</code></h3>
+<p>Role: Reponses possibles a une question de quiz. Source: <code>Data/Entities/ReponseQuiz.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Texte</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>EstCorrecte</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>Ordre</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>QuestionId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>QuestionsQuiz</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>SessionsFormation</code></h3>
+<p>Role: Sessions publiees d&#x27;une formation. Source: <code>Data/Entities/SessionFormation.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Titre</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Description</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>EstSelfPaced</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>EstPubliee</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>DateOuverture</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateFermeture</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>FormationId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Formations</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>InscriptionsFormation</code></h3>
+<p>Role: Inscriptions des scouts aux formations. Source: <code>Data/Entities/InscriptionFormation.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>DateInscription</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>Statut</code></td><td><code>StatutInscription</code></td><td>Non</td><td>Enum</td><td>Statut fonctionnel de l&#x27;enregistrement.</td></tr>
+<tr><td><code>DateTerminee</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>ProgressionPourcent</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Valeur numerique de suivi ou de calcul.</td></tr>
+<tr><td><code>ScoutId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Scouts</code>.</td></tr>
+<tr><td><code>FormationId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Formations</code>.</td></tr>
+<tr><td><code>SessionFormationId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>SessionsFormation</code>.</td></tr>
+</tbody>
+</table>
+<p>Contraintes / notes:</p>
+<ul>
+<li>Unicite (ScoutId, FormationId).</li>
+</ul>
+<h3><code>ProgressionsLecon</code></h3>
+<p>Role: Progression d&#x27;un scout sur une lecon. Source: <code>Data/Entities/ProgressionLecon.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>EstTerminee</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>DateTerminee</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>ScoutId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Scouts</code>.</td></tr>
+<tr><td><code>LeconId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Lecons</code>.</td></tr>
+</tbody>
+</table>
+<p>Contraintes / notes:</p>
+<ul>
+<li>Unicite (ScoutId, LeconId).</li>
+</ul>
+<h3><code>TentativesQuiz</code></h3>
+<p>Role: Tentatives d&#x27;un scout sur un quiz. Source: <code>Data/Entities/TentativeQuiz.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Score</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Valeur numerique de suivi ou de calcul.</td></tr>
+<tr><td><code>Reussi</code></td><td><code>bool</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateTentative</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>ReponsesJson</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>ScoutId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Scouts</code>.</td></tr>
+<tr><td><code>QuizId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Quizzes</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>CertificationsFormation</code></h3>
+<p>Role: Certificats, attestations ou badges emis apres formation. Source: <code>Data/Entities/CertificationFormation.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Type</code></td><td><code>TypeCertificationFormation</code></td><td>Non</td><td>Enum</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Code</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>DateEmission</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>ScoreFinal</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Mention</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>ScoutId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Scouts</code>.</td></tr>
+<tr><td><code>FormationId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Formations</code>.</td></tr>
+<tr><td><code>InscriptionFormationId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>InscriptionsFormation</code>.</td></tr>
+</tbody>
+</table>
+<p>Contraintes / notes:</p>
+<ul>
+<li>Code unique.</li>
+<li>Unicite (ScoutId, FormationId, Type).</li>
+</ul>
+<h3><code>JalonsFormation</code></h3>
+<p>Role: Dates clefs et jalons d&#x27;une formation. Source: <code>Data/Entities/JalonFormation.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>FormationId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Formations</code>.</td></tr>
+<tr><td><code>Titre</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Description</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>DateJalon</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>Type</code></td><td><code>TypeJalonFormation</code></td><td>Non</td><td>Enum</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>EstPublie</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+</tbody>
+</table>
+<h3><code>AnnoncesFormation</code></h3>
+<p>Role: Annonces publiees dans le contexte d&#x27;une formation. Source: <code>Data/Entities/AnnonceFormation.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Titre</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Contenu</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>EstPubliee</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>DatePublication</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>FormationId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Formations</code>.</td></tr>
+<tr><td><code>AuteurId</code></td><td><code>Guid?</code></td><td>Oui</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>DiscussionsFormation</code></h3>
+<p>Role: Discussions ou fils de forum associes a une formation. Source: <code>Data/Entities/DiscussionFormation.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Titre</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>ContenuInitial</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateDerniereActivite</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>EstVerrouillee</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>FormationId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>Formations</code>.</td></tr>
+<tr><td><code>AuteurId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>MessagesDiscussionFormation</code></h3>
+<p>Role: Messages postes dans une discussion de formation. Source: <code>Data/Entities/MessageDiscussionFormation.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Contenu</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>EstSupprime</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>DiscussionFormationId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>DiscussionsFormation</code>.</td></tr>
+<tr><td><code>AuteurId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+</tbody>
+</table>
+<h2>Communication et vitrine publique</h2>
+<h3><code>Actualites</code></h3>
+<p>Role: Actualites publiees sur le portail. Source: <code>Data/Entities/Actualite.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Titre</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Contenu</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>ImageUrl</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Chemin, URL ou ressource associee.</td></tr>
+<tr><td><code>Resume</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>DatePublication</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>EstPublie</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>EstSupprime</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>CreateurId</code></td><td><code>Guid</code></td><td>Non</td><td>FK</td><td>Reference vers <code>AspNetUsers</code>.</td></tr>
+</tbody>
+</table>
+<h3><code>Galeries</code></h3>
+<p>Role: Elements medias de la galerie. Source: <code>Data/Entities/Galerie.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Titre</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Description</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>CheminMedia</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Chemin, URL ou ressource associee.</td></tr>
+<tr><td><code>TypeMedia</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateUpload</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>EstPublie</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>EstSupprime</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+</tbody>
+</table>
+<h3><code>MotsCommissaire</code></h3>
+<p>Role: Mot du commissaire publie sur la plateforme. Source: <code>Data/Entities/MotCommissaire.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Contenu</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>PhotoUrl</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Chemin, URL ou ressource associee.</td></tr>
+<tr><td><code>Annee</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>EstActif</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>EstSupprime</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+</tbody>
+</table>
+<h3><code>LivreDor</code></h3>
+<p>Role: Messages du livre d&#x27;or. Source: <code>Data/Entities/LivreDor.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>NomAuteur</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Message</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>EstValide</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>EstSupprime</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+<tr><td><code>DateValidation</code></td><td><code>DateTime?</code></td><td>Oui</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+</tbody>
+</table>
+<h3><code>ContactMessages</code></h3>
+<p>Role: Messages envoyes depuis le formulaire de contact. Source: <code>Data/Entities/ContactMessage.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Nom</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Email</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Sujet</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Message</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>Type</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>EstLu</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>EstSupprime</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>DateEnvoi</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+</tbody>
+</table>
+<h3><code>MembresHistoriques</code></h3>
+<p>Role: Membres historiques ou anciens responsables mis en avant. Source: <code>Data/Entities/MembreHistorique.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Nom</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>PhotoUrl</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Chemin, URL ou ressource associee.</td></tr>
+<tr><td><code>Description</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>Periode</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Categorie</code></td><td><code>CategorieHistorique</code></td><td>Non</td><td>Enum</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Ordre</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>EstSupprime</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+</tbody>
+</table>
+<h3><code>Partenaires</code></h3>
+<p>Role: Partenaires institutionnels ou prives. Source: <code>Data/Entities/Partenaire.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Nom</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Libelle ou identifiant metier lisible.</td></tr>
+<tr><td><code>Description</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Contenu textuel ou descriptif.</td></tr>
+<tr><td><code>LogoUrl</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Chemin, URL ou ressource associee.</td></tr>
+<tr><td><code>SiteWeb</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>TypePartenariat</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>EstActif</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>EstSupprime</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>Ordre</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>DateCreation</code></td><td><code>DateTime</code></td><td>Non</td><td>Date</td><td>Date ou horodatage du processus metier.</td></tr>
+</tbody>
+</table>
+<h3><code>LiensReseauxSociaux</code></h3>
+<p>Role: Liens de reseaux sociaux exposes sur la plateforme. Source: <code>Data/Entities/Partenaire.cs</code></p>
+<table class='doc-table'>
+<thead><tr><th>Champ</th><th>Type C#</th><th>Nullable</th><th>Role</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Id</code></td><td><code>Guid</code></td><td>Non</td><td>PK</td><td>Identifiant technique unique de l&#x27;enregistrement.</td></tr>
+<tr><td><code>Plateforme</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>Url</code></td><td><code>string</code></td><td>Non</td><td>Metier</td><td>Chemin, URL ou ressource associee.</td></tr>
+<tr><td><code>Icone</code></td><td><code>string?</code></td><td>Oui</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+<tr><td><code>EstActif</code></td><td><code>bool</code></td><td>Non</td><td>Flag</td><td>Indicateur booleen de statut ou de visibilite.</td></tr>
+<tr><td><code>Ordre</code></td><td><code>int</code></td><td>Non</td><td>Metier</td><td>Champ metier de la table.</td></tr>
+</tbody>
+</table>
+<h2>Tables techniques Identity</h2>
+<h3><code>AspNetRoles</code></h3>
+<p>Role: Roles techniques ASP.NET Identity.</p>
+<p>Table technique geree par ASP.NET Identity. Sa structure exacte depend des conventions Identity / EF Core du projet.</p>
+<h3><code>AspNetUserRoles</code></h3>
+<p>Role: Jointure utilisateur-role Identity.</p>
+<p>Table technique geree par ASP.NET Identity. Sa structure exacte depend des conventions Identity / EF Core du projet.</p>
+<h3><code>AspNetUserClaims</code></h3>
+<p>Role: Claims utilises par Identity.</p>
+<p>Table technique geree par ASP.NET Identity. Sa structure exacte depend des conventions Identity / EF Core du projet.</p>
+<h3><code>AspNetUserLogins</code></h3>
+<p>Role: Logins externes Identity.</p>
+<p>Table technique geree par ASP.NET Identity. Sa structure exacte depend des conventions Identity / EF Core du projet.</p>
+<h3><code>AspNetUserTokens</code></h3>
+<p>Role: Tokens techniques Identity.</p>
+<p>Table technique geree par ASP.NET Identity. Sa structure exacte depend des conventions Identity / EF Core du projet.</p>
+<h3><code>AspNetRoleClaims</code></h3>
+<p>Role: Claims attaches aux roles Identity.</p>
+<p>Table technique geree par ASP.NET Identity. Sa structure exacte depend des conventions Identity / EF Core du projet.</p>
+<h2>Enumerations metier</h2>
+<ul>
+<li><code>StatutWorkflowDocument</code> : <code>Brouillon</code>, <code>Soumis</code>, <code>AReviser</code>, <code>Valide</code></li>
+<li><code>StatutInscriptionAnnuelle</code> : <code>Enregistree</code>, <code>Validee</code>, <code>Suspendue</code></li>
+<li><code>StatutLigneCotisationNationale</code> : <code>Ajour</code>, <code>NonAjour</code>, <code>AVerifier</code></li>
+</ul>
+<h2>Remarques</h2>
+<ul>
+<li>Ce dictionnaire est centre sur le modele de donnees du depot et ses conventions EF Core.</li>
+<li>Les tables physiques peuvent contenir des colonnes supplementaires generees par EF Core ou PostgreSQL selon les migrations.</li>
+<li><code>CompetenceLieeId</code> sur <code>Formations</code> est documente comme reference logique car aucune FK explicite n&#x27;est configuree dans <code>OnModelCreating</code>.</li>
+</ul>
+</body>
+</html>

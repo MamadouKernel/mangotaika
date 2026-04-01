@@ -1,0 +1,91 @@
+@using MangoTaika.Data.Entities
+@model List<RapportActivite>
+@{
+    ViewData["Title"] = "Rapports d'activite";
+    Layout = "_LayoutAdmin";
+    var groupes = ViewBag.Groupes as List<Groupe> ?? new();
+    var selectedGroupeId = ViewBag.SelectedGroupeId as Guid?;
+    var selectedStatut = ViewBag.SelectedStatut as StatutWorkflowDocument?;
+    var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+}
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div>
+        <h2 class="section-title mb-1"><i class="bi bi-journal-richtext text-or"></i> <span class="accent">Rapports d'activite</span></h2>
+        <p class="text-muted-custom mb-0">Cloture des activites avec bilan, difficultes, recommandations et validation.</p>
+    </div>
+    @if (canManage)
+    {
+        <a asp-action="Create" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Nouveau rapport</a>
+    }
+</div>
+
+<div class="card-3d p-4 mb-4">
+    <form method="get" class="row g-3">
+        <div class="col-lg-5">
+            <label class="form-label">Groupe</label>
+            <select class="form-select" name="groupeId">
+                <option value="">-- Tous --</option>
+                @foreach (var groupe in groupes)
+                {
+                    <option value="@groupe.Id" selected="@(selectedGroupeId == groupe.Id ? "selected" : null)">@groupe.Nom</option>
+                }
+            </select>
+        </div>
+        <div class="col-lg-5">
+            <label class="form-label">Statut</label>
+            <select class="form-select" name="statut">
+                <option value="">-- Tous --</option>
+                @foreach (var statut in Enum.GetValues<StatutWorkflowDocument>())
+                {
+                    <option value="@statut" selected="@(selectedStatut == statut ? "selected" : null)">@statut</option>
+                }
+            </select>
+        </div>
+        <div class="col-lg-2 d-flex align-items-end">
+            <button class="btn btn-bleu w-100" type="submit"><i class="bi bi-filter-circle"></i> Filtrer</button>
+        </div>
+    </form>
+</div>
+
+<div class="card-3d">
+    <div class="table-responsive">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th>Activite</th>
+                    <th>Entite</th>
+                    <th>Date</th>
+                    <th>Statut</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var rapport in Model)
+            {
+                <tr>
+                    <td>@rapport.Activite.Titre</td>
+                    <td>@(rapport.Activite.Groupe?.Nom ?? "District")</td>
+                    <td>@rapport.DateCreation.ToString("dd/MM/yyyy")</td>
+                    <td><span class="badge-3d badge-soumise">@rapport.Statut</span></td>
+                    <td class="text-end">
+                        <div class="d-flex justify-content-end gap-2">
+                            <a asp-action="Details" asp-route-id="@rapport.Id" class="btn btn-sm btn-outline-or"><i class="bi bi-eye"></i></a>
+                            @if (canManage)
+                            {
+                                <a asp-action="Edit" asp-route-id="@rapport.Id" class="btn btn-sm btn-bleu"><i class="bi bi-pencil"></i></a>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+            @if (!Model.Any())
+            {
+                <tr><td colspan="5" class="text-center text-muted-custom py-4">Aucun rapport d'activite trouve.</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@await Html.PartialAsync("_ListPagination")

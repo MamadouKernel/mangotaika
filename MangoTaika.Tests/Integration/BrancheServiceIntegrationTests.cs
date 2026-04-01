@@ -24,7 +24,8 @@ public sealed class BrancheServiceIntegrationTests
             Nom = "Chef",
             Prenom = "Alpha",
             DateNaissance = new DateTime(2010, 1, 1),
-            GroupeId = groupe.Id
+            GroupeId = groupe.Id,
+            Fonction = "CHEF D'UNITE (CU)"
         };
 
         db.Groupes.Add(groupe);
@@ -293,7 +294,8 @@ public sealed class BrancheServiceIntegrationTests
             Nom = "Edgar",
             Prenom = "Yann",
             DateNaissance = new DateTime(2000, 1, 1),
-            GroupeId = districtGroup.Id
+            GroupeId = districtGroup.Id,
+            Fonction = "ASSISTANT COMMISSAIRE DE DISTRICT (ACD)"
         };
 
         db.Groupes.AddRange(districtGroup, groupeA, groupeB);
@@ -358,3 +360,4 @@ public sealed class BrancheServiceIntegrationTests
         propagatedBranches.Should().Contain(b => b.GroupeId == groupeB.Id);
     }
 }
+

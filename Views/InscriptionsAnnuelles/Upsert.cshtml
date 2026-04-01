@@ -1,0 +1,146 @@
+@using MangoTaika.Data.Entities
+@model InscriptionAnnuelleScout
+@{
+    ViewData["Title"] = Model.Id == Guid.Empty ? "Nouvelle inscription annuelle" : "Modifier l'inscription annuelle";
+    Layout = "_LayoutAdmin";
+    var scouts = ViewBag.Scouts as List<Scout> ?? new();
+    var groupes = ViewBag.Groupes as List<Groupe> ?? new();
+    var branches = ViewBag.Branches as List<Branche> ?? new();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="section-title mb-1"><i class="bi bi-journal-check text-or"></i> <span class="accent">@ViewData["Title"]</span></h2>
+        <p class="text-muted-custom mb-0">Renseignez l'annee pastorale et le snapshot annuel du groupe, de la branche et de la fonction.</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i></a>
+</div>
+
+<div class="card-3d p-4">
+    <form method="post">
+        @Html.AntiForgeryToken()
+        @if (Model.Id != Guid.Empty)
+        {
+            <input type="hidden" asp-for="Id" />
+        }
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <label asp-for="ScoutId" class="form-label">Scout</label>
+                <select asp-for="ScoutId" class="form-select">
+                    <option value="">-- Selectionner un scout --</option>
+                    @foreach (var scout in scouts)
+                    {
+                        <option value="@scout.Id">@scout.Prenom @scout.Nom (@scout.Matricule)@(scout.Groupe != null ? $" - {scout.Groupe.Nom}" : string.Empty)</option>
+                    }
+                </select>
+                <span asp-validation-for="ScoutId" class="text-danger small"></span>
+            </div>
+            <div class="col-lg-3">
+                <label asp-for="AnneeReference" class="form-label">Annee</label>
+                <input asp-for="AnneeReference" class="form-control" />
+                <span asp-validation-for="AnneeReference" class="text-danger small"></span>
+            </div>
+            <div class="col-lg-3">
+                <label asp-for="LibelleAnnee" class="form-label">Libelle</label>
+                <input asp-for="LibelleAnnee" class="form-control" />
+            </div>
+            <div class="col-lg-4">
+                <label asp-for="DateInscription" class="form-label">Date d'inscription</label>
+                <input asp-for="DateInscription" type="date" class="form-control" value="@Model.DateInscription.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-lg-4">
+                <label asp-for="Statut" class="form-label">Statut</label>
+                <select asp-for="Statut" class="form-select" asp-items="Html.GetEnumSelectList<StatutInscriptionAnnuelle>()"></select>
+            </div>
+            <div class="col-lg-4 d-flex align-items-end">
+                <div class="form-check form-switch">
+                    <input asp-for="InscriptionParoissialeValidee" class="form-check-input" />
+                    <label asp-for="InscriptionParoissialeValidee" class="form-check-label">Inscription paroissiale validee</label>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <label asp-for="GroupeId" class="form-label">Groupe de l'annee</label>
+                <select asp-for="GroupeId" class="form-select">
+                    <option value="">-- Selectionner un groupe --</option>
+                    @foreach (var groupe in groupes)
+                    {
+                        <option value="@groupe.Id">@groupe.Nom</option>
+                    }
+                </select>
+                <span asp-validation-for="GroupeId" class="text-danger small"></span>
+            </div>
+            <div class="col-lg-4">
+                <label asp-for="BrancheId" class="form-label">Branche de l'annee</label>
+                <select asp-for="BrancheId" class="form-select">
+                    <option value="">-- Selectionner une branche --</option>
+                    @foreach (var branche in branches)
+                    {
+                        <option value="@branche.Id" data-groupe-id="@branche.GroupeId">@branche.Nom</option>
+                    }
+                </select>
+                <span asp-validation-for="BrancheId" class="text-danger small"></span>
+            </div>
+            <div class="col-lg-4">
+                <label asp-for="FonctionSnapshot" class="form-label">Fonction de l'annee</label>
+                <input asp-for="FonctionSnapshot" class="form-control" placeholder="Chef, tresorier, secretaire..." />
+                <span asp-validation-for="FonctionSnapshot" class="text-danger small"></span>
+            </div>
+            <div class="col-lg-6">
+                <div class="form-check form-switch mt-4">
+                    <input asp-for="CotisationNationaleAjour" class="form-check-input" />
+                    <label asp-for="CotisationNationaleAjour" class="form-check-label">Cotisation nationale a jour</label>
+                </div>
+            </div>
+            <div class="col-12">
+                <label asp-for="Observations" class="form-label">Observations</label>
+                <textarea asp-for="Observations" class="form-control" rows="5"></textarea>
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Enregistrer</button>
+            <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const groupeSelect = document.getElementById('GroupeId');
+            const brancheSelect = document.getElementById('BrancheId');
+            if (!groupeSelect || !brancheSelect) {
+                return;
+            }
+
+            const firstOption = brancheSelect.querySelector('option[value=""]');
+            const syncBranches = () => {
+                const selectedGroup = groupeSelect.value;
+                if (firstOption) {
+                    firstOption.textContent = selectedGroup
+                        ? '-- Selectionner une branche du groupe --'
+                        : '-- Selectionner une branche --';
+                }
+
+                Array.from(brancheSelect.options).forEach((option) => {
+                    if (!option.value) {
+                        option.hidden = false;
+                        return;
+                    }
+
+                    const visible = !selectedGroup || option.dataset.groupeId === selectedGroup;
+                    option.hidden = !visible;
+                });
+
+                const selected = brancheSelect.selectedOptions[0];
+                if (selected && selected.value && selectedGroup && selected.dataset.groupeId !== selectedGroup) {
+                    brancheSelect.value = '';
+                }
+            };
+
+            groupeSelect.addEventListener('change', syncBranches);
+            syncBranches();
+        })();
+    </script>
+}

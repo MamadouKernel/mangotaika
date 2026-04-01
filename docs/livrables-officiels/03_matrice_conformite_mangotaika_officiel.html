@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang='fr'>
+<head>
+  <meta charset='utf-8' />
+  <title>Matrice de conformite aux cahiers de charge - MangoTaika</title>
+  <style>
+    @page { size: A4; margin: 2cm 1.6cm 2cm 1.6cm; }
+    body { font-family: 'Aptos', 'Segoe UI', Arial, sans-serif; color: #21313f; line-height: 1.45; font-size: 11pt; }
+    .cover { page-break-after: always; min-height: 24cm; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+    .cover-logo { width: 96px; height: 96px; object-fit: contain; margin-bottom: 18px; }
+    .cover-kicker { color: #5f7f43; font-weight: 700; letter-spacing: 0.08em; font-size: 11pt; text-transform: uppercase; margin-bottom: 8px; }
+    .cover-title { font-size: 24pt; font-weight: 800; color: #25323d; margin: 0 0 12px 0; line-height: 1.2; }
+    .cover-subtitle { max-width: 560px; font-size: 12pt; color: #5a6772; margin-bottom: 28px; }
+    .cover-meta { font-size: 10.5pt; color: #6d7680; }
+    .section-break { page-break-before: always; min-height: 8cm; display: flex; flex-direction: column; justify-content: center; }
+    .section-kicker { color: #5f7f43; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; font-size: 10pt; margin-bottom: 6px; }
+    .section-title { font-size: 21pt; font-weight: 800; color: #25323d; margin: 0 0 8px 0; }
+    .section-subtitle { color: #62707d; font-size: 11pt; max-width: 560px; }
+    .toc-box { page-break-after: always; border: 1px solid #d5dee6; border-radius: 14px; padding: 20px 24px; background: #fbfcfd; }
+    .toc-box h2 { margin-top: 0; }
+    .toc-item { margin-bottom: 10px; }
+    h1 { font-size: 20pt; color: #25323d; border-bottom: 3px solid #5f7f43; padding-bottom: 6px; margin-top: 0; }
+    h2 { font-size: 15pt; color: #4f6e37; margin-top: 24px; margin-bottom: 10px; }
+    h3 { font-size: 12.5pt; color: #31414f; margin-top: 18px; margin-bottom: 8px; }
+    p { margin: 0 0 10px 0; }
+    ul { margin: 0 0 12px 18px; padding-left: 0; }
+    li { margin-bottom: 5px; }
+    code { font-family: Consolas, 'Courier New', monospace; background: #f3f5f7; padding: 1px 4px; border-radius: 4px; color: #22313d; }
+    .md-link { font-weight: 600; }
+    .md-link-target { color: #687480; font-size: 9.5pt; }
+    .doc-table { border-collapse: collapse; width: 100%; margin: 10px 0 14px 0; font-size: 9.5pt; }
+    .doc-table th, .doc-table td { border: 1px solid #cad4de; padding: 7px 8px; vertical-align: top; }
+    .doc-table th { background: #eef5e4; color: #31414f; font-weight: 700; }
+    .doc-table tr:nth-child(even) td { background: #fafcfd; }
+    .code-block { margin: 12px 0 16px 0; border: 1px solid #d3dbe3; border-radius: 10px; overflow: hidden; }
+    .code-title { background: #2f3b46; color: white; font-weight: 700; padding: 8px 12px; font-size: 10pt; }
+    pre { margin: 0; padding: 12px 14px; background: #f8fafc; font-family: Consolas, 'Courier New', monospace; font-size: 9pt; white-space: pre-wrap; word-break: break-word; }
+    .source-box { margin-top: 18px; padding: 10px 12px; border-left: 4px solid #5f7f43; background: #f7faf3; color: #51606c; font-size: 10pt; }
+    </style>
+</head>
+<body>
+  
+    <section class='cover'>
+      <img src='file:///C:/Users/kerne/Downloads/rodi/new/MangoTaika/wwwroot/images/logo.png' alt='Logo Mango Taika' class='cover-logo' />
+      <div class='cover-kicker'>Mango Taika District Scout</div>
+      <h1 class='cover-title' style='border:none;padding:0;margin:0 0 12px 0'>Matrice de conformite aux cahiers de charge</h1>
+      <div class='cover-subtitle'>Etat de conformite fonctionnelle et projet du systeme MangoTaika</div>
+      <div class='cover-meta'>Version de remise officielle<br/>Genere automatiquement depuis la documentation du depot</div>
+    </section>
+    
+  <div class='source-box'>Source documentaire: <code>docs/matrice-conformite-cahiers-charge.md</code></div>
+  <p>Date de mise a jour: 2026-04-01</p>
+<h2>Sources analysees</h2>
+<ul>
+<li><code>C:\Users\kerne\Downloads\cahier_des_charges_application_scouts.docx</code></li>
+<li><code>C:\Users\kerne\Downloads\Cahier de charge - Gestion District MANGO TAIKA V1.docx</code></li>
+</ul>
+<h2>Methode</h2>
+<p>Cette matrice distingue 2 niveaux:</p>
+<ul>
+<li><strong>Conformite logicielle</strong>: ce que le code, la base et les ecrans prouvent deja.</li>
+<li><strong>Conformite projet / contractuelle</strong>: ce qui demande aussi des livrables hors code (documentation, exploitation, formation, recette, validation metier).</li>
+</ul>
+<h2>Verification technique actuelle</h2>
+<ul>
+<li><code>dotnet build --no-restore /p:UseAppHost=false</code>: OK</li>
+<li><code>dotnet test .\MangoTaika.Tests\MangoTaika.Tests.csproj</code>: OK (<code>118/118</code>)</li>
+<li><code>dotnet ef database update</code>: OK</li>
+<li>migrations appliquees:</li>
+<li><code>20260401040932_AddComplianceCoreModules</code></li>
+<li><code>20260401043813_AddNationalDuesImportWorkflow</code></li>
+<li><code>20260401050503_AddAnnualSnapshotAndScoutJourney</code></li>
+</ul>
+<h2>Synthese executive</h2>
+<h3>Verdict logiciel</h3>
+<p>Sur le <strong>perimetre applicatif du depot</strong>, le projet couvre maintenant l&#x27;essentiel des exigences fonctionnelles majeures des cahiers:</p>
+<ul>
+<li>gestion des scouts</li>
+<li>suivi du parcours scout</li>
+<li>gestion administrative des activites</li>
+<li>gestion de la maitrise</li>
+<li>gestion du programme annuel</li>
+<li>suivi des cotisations nationales</li>
+<li>fonctionnement niveau groupe et district Mango Taika</li>
+</ul>
+<h3>Verdict contractuel global</h3>
+<p>Le projet ne peut <strong>pas encore etre certifie a 100% conforme aux cahiers</strong> au sens strict tant que les elements suivants ne sont pas produits et valides:</p>
+<ul>
+<li>documentation utilisateur</li>
+<li>documentation administrateur / exploitation</li>
+<li>procedure de sauvegarde / restauration / mise en service</li>
+<li>plan ou support de formation des utilisateurs</li>
+<li>recette metier formelle avec validation des parties prenantes</li>
+<li>preuve de deploiement et de fonctionnement en environnement cible selon les exigences du projet</li>
+</ul>
+<h2>Matrice de conformite fonctionnelle</h2>
+<table class='doc-table'>
+<thead><tr><th>Exigence</th><th>Statut</th><th>Preuves principales dans le code</th><th>Commentaire</th></tr></thead>
+<tbody>
+<tr><td>Gestion des membres scouts</td><td>Conforme logiciel</td><td><code>Data/Entities/Scout.cs</code>, <code>Controllers/ScoutsController.cs</code>, <code>Views/Scouts/Index.cshtml</code></td><td>CRUD, import Excel, recherche, filtres, details, rattachement groupe/branche.</td></tr>
+<tr><td>Suivi du parcours scout</td><td>Conforme logiciel</td><td><code>Data/Entities/ParcoursScout.cs</code>, <code>Controllers/CompetencesController.cs</code>, <code>Views/Competences/Progression.cshtml</code></td><td>Etapes du parcours, dates previsionnelles, validations, observations, vue de progression.</td></tr>
+<tr><td>Inscriptions annuelles</td><td>Conforme logiciel</td><td><code>Data/Entities/WorkflowMetier.cs</code>, <code>Controllers/InscriptionsAnnuellesController.cs</code>, <code>Views/InscriptionsAnnuelles/Index.cshtml</code></td><td>Historique annuel, statut, validation paroissiale, cotisation, snapshot groupe/branche/fonction.</td></tr>
+<tr><td>Gestion administrative des activites</td><td>Conforme logiciel</td><td><code>Controllers/ActivitesController.cs</code>, <code>Views/Activites/Details.cshtml</code></td><td>Creation, suivi, validation, participants, pieces, cycle d&#x27;activite.</td></tr>
+<tr><td>Rapports d&#x27;activite</td><td>Conforme logiciel</td><td><code>Controllers/RapportsActiviteController.cs</code>, <code>Views/RapportsActivite/Details.cshtml</code></td><td>Rapport post-activite, resultats, difficultes, recommandations, validation.</td></tr>
+<tr><td>Gestion du programme annuel</td><td>Conforme logiciel</td><td><code>Controllers/ProgrammesAnnuelsController.cs</code>, <code>Views/ProgrammesAnnuels/Details.cshtml</code></td><td>Brouillon, soumission, revision, validation du programme annuel.</td></tr>
+<tr><td>Gestion de la maitrise</td><td>Conforme logiciel</td><td><code>Controllers/PropositionsMaitriseController.cs</code>, <code>Controllers/GroupesController.cs</code>, <code>Controllers/BranchesController.cs</code></td><td>Propositions annuelles de maitrise + regles de selection des responsables par fonction.</td></tr>
+<tr><td>Suivi des cotisations nationales</td><td>Conforme logiciel</td><td><code>Data/Entities/CotisationsNationales.cs</code>, <code>Controllers/CotisationsNationalesController.cs</code>, <code>Views/CotisationsNationales/Index.cshtml</code></td><td>Import Excel, rapprochement A jour / Non a jour / A verifier, synchronisation avec inscriptions annuelles et transactions.</td></tr>
+<tr><td>Niveau Groupe et District</td><td>Conforme avec reserve technique</td><td><code>Controllers/GroupesController.cs</code>, <code>Controllers/BranchesController.cs</code>, <code>Services/DistrictBranchInheritanceService.cs</code></td><td>Fonctionnel pour Mango Taika. Reserve: le district est gere par une regle metier specialisee autour du groupe <code>Equipe de District Mango Taika</code>, pas par une entite <code>District</code> generique.</td></tr>
+<tr><td>Reporting et exports</td><td>Conforme logiciel</td><td><code>Controllers/ReportingController.cs</code>, <code>wwwroot/js/list-export.js</code>, vues de listes et details</td><td>Reporting, export PDF/Excel sur listes et details principaux.</td></tr>
+<tr><td>Carte / geolocalisation des groupes</td><td>Conforme logiciel</td><td><code>Controllers/GroupesController.cs</code>, <code>Views/Groupes/Carte.cshtml</code></td><td>Cartographie des entites et geocodage.</td></tr>
+<tr><td>Communication et portail public</td><td>Conforme logiciel</td><td><code>Controllers/HomeController.cs</code>, <code>Controllers/MotCommissaireController.cs</code>, <code>Controllers/GalerieController.cs</code>, <code>Controllers/PartenairesController.cs</code></td><td>Vitrine publique district, contenus, galerie, partenaires, carte.</td></tr>
+<tr><td>Support et base de connaissances</td><td>Conforme logiciel</td><td><code>Controllers/TicketsController.cs</code>, <code>Controllers/KnowledgeBaseController.cs</code>, <code>Controllers/SupportCatalogController.cs</code></td><td>Centre de support, catalogue, base de connaissances.</td></tr>
+<tr><td>Formation / LMS</td><td>Conforme logiciel</td><td><code>Controllers/FormationsController.cs</code>, <code>Data/AppDbContext.cs</code></td><td>Formations, modules, quiz, inscriptions, statistiques.</td></tr>
+<tr><td>Gestion financiere / AGR</td><td>Conforme logiciel</td><td><code>Controllers/FinancesController.cs</code>, <code>Controllers/AGRController.cs</code></td><td>Transactions, categories, projets AGR.</td></tr>
+<tr><td>Authentification, roles et securite de base</td><td>Conforme logiciel</td><td><code>Controllers/AccountController.cs</code>, <code>Models/RegisterViewModel.cs</code></td><td>Comptes, roles, consentement, 2FA SMS deja present dans l&#x27;application.</td></tr>
+</tbody>
+</table>
+<h2>Matrice de conformite projet / contractuelle</h2>
+<table class='doc-table'>
+<thead><tr><th>Exigence projet</th><th>Statut actuel</th><th>Preuves / constats</th><th>Action restante</th></tr></thead>
+<tbody>
+<tr><td>Documentation utilisateur</td><td>A produire</td><td>Pas de manuel utilisateur structure livre dans le depot</td><td>Rediger un guide utilisateur par profil (gestionnaire, administrateur, consultant, etc.).</td></tr>
+<tr><td>Documentation d&#x27;administration / exploitation</td><td>A produire</td><td>Pas de runbook complet d&#x27;exploitation dans le depot</td><td>Rediger installation, configuration, sauvegarde, restauration, supervision, rotation des secrets.</td></tr>
+<tr><td>Procedure de mise en production</td><td>A produire / formaliser</td><td>Le code et les migrations existent, mais pas de dossier d&#x27;exploitation formalise</td><td>Produire la procedure de deploiement, rollback et verification post-deploiement.</td></tr>
+<tr><td>Sauvegarde / restauration</td><td>A produire</td><td>Pas de preuve documentaire ou script d&#x27;exploitation formalise dans le depot</td><td>Definir RPO/RTO, sauvegardes PostgreSQL, restoration testee, responsabilites.</td></tr>
+<tr><td>Formation des utilisateurs</td><td>A produire</td><td>Aucune preuve de support de formation ou planning d&#x27;accompagnement</td><td>Produire support de formation, plan de prise en main et feuille de presence / validation.</td></tr>
+<tr><td>Recette metier formelle</td><td>A produire</td><td>Les tests techniques passent, mais cela ne remplace pas un PV de recette metier</td><td>Construire une campagne UAT et faire valider les cas par les acteurs metier.</td></tr>
+<tr><td>Validation contractuelle finale</td><td>Non prouvee</td><td>Aucune signature / validation des parties prenantes dans le depot</td><td>Obtenir validation officielle du commanditaire sur la version livree.</td></tr>
+</tbody>
+</table>
+<h2>Points forts constates</h2>
+<ul>
+<li>La base de code est coherentement testee (<code>118/118</code>).</li>
+<li>Les migrations sont appliquees et la base est alignee avec le code.</li>
+<li>Les principaux ecarts fonctionnels identifies initialement ont ete couverts dans le logiciel.</li>
+<li>Le projet possede maintenant une couverture metier plus large que le noyau initial (cotisations, programmes annuels, rapports d&#x27;activite, maitrise, parcours scout, inscriptions annuelles).</li>
+</ul>
+<h2>Reserves a garder en tete</h2>
+<ul>
+<li>La conformite <strong>logicielle</strong> est tres elevee, mais la conformite <strong>contractuelle globale</strong> depend encore de livrables hors code.</li>
+<li>La gestion du district est fonctionnelle pour Mango Taika, mais reste specialisee metier plutot que totalement generique dans le modele.</li>
+<li>Le fait que les tests passent ne constitue pas a lui seul une recette utilisateur ou une homologation projet.</li>
+</ul>
+<h2>Conclusion</h2>
+<h3>Reponse courte</h3>
+<ul>
+<li><strong>Oui</strong>, le projet est maintenant tres proche d&#x27;une conformite complete sur le <strong>plan logiciel fonctionnel</strong>.</li>
+<li><strong>Non</strong>, il n&#x27;est pas encore possible d&#x27;affirmer honnetement <strong>100% conforme aux cahiers</strong> au sens <strong>projet / contractuel global</strong> sans les livrables et validations hors code cites plus haut.</li>
+</ul>
+<h3>Formulation recommandee</h3>
+<p>&gt; L&#x27;application est desormais conforme sur le perimetre logiciel fonctionnel majeur des cahiers de charge, avec build, tests et migrations valides. La conformite a 100% au sens contractuel reste subordonnee a la production des livrables d&#x27;exploitation, de documentation, de formation et a la recette metier formelle.</p>
+</body>
+</html>

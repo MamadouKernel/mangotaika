@@ -396,7 +396,8 @@ public sealed class BranchesPagesTests
                 Nom = "Edgar",
                 Prenom = "Yann",
                 DateNaissance = new DateTime(2000, 1, 1),
-                GroupeId = districtGroup.Id
+                GroupeId = districtGroup.Id,
+                Fonction = "ASSISTANT COMMISSAIRE DE DISTRICT (ACD)"
             };
             db.Scouts.Add(chefDistrict);
         });
@@ -430,3 +431,4 @@ public sealed class BranchesPagesTests
         branches.Should().Contain(b => b.GroupeId == groupeB.Id && b.ChefUniteId == null);
     }
 }
+

@@ -22,11 +22,9 @@ public class Scout
     public bool IsActive { get; set; } = true;
     public DateTime DateInscription { get; set; } = DateTime.UtcNow;
 
-    // Lien vers le compte utilisateur (si le scout a un compte)
     public Guid? UserId { get; set; }
     public ApplicationUser? User { get; set; }
 
-    // Navigation
     public Guid? GroupeId { get; set; }
     public Groupe? Groupe { get; set; }
     public Guid? BrancheId { get; set; }
@@ -36,4 +34,5 @@ public class Scout
     public ICollection<HistoriqueFonction> HistoriqueFonctions { get; set; } = [];
     public ICollection<TransactionFinanciere> Cotisations { get; set; } = [];
     public ICollection<SuiviAcademique> SuivisAcademiques { get; set; } = [];
+    public ICollection<EtapeParcoursScout> EtapesParcours { get; set; } = [];
 }

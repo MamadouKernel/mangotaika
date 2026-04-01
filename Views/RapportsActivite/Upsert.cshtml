@@ -1,0 +1,62 @@
+@using MangoTaika.Data.Entities
+@model RapportActivite
+@{
+    ViewData["Title"] = Model.Id == Guid.Empty ? "Nouveau rapport d'activite" : "Modifier le rapport d'activite";
+    Layout = "_LayoutAdmin";
+    var activites = ViewBag.Activites as List<Activite> ?? new();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="section-title mb-1"><i class="bi bi-journal-richtext text-or"></i> <span class="accent">@ViewData["Title"]</span></h2>
+        <p class="text-muted-custom mb-0">Formalisez les resultats, les difficultes et les recommandations apres l'activite.</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i></a>
+</div>
+
+<div class="card-3d p-4">
+    <form method="post">
+        @Html.AntiForgeryToken()
+        @if (Model.Id != Guid.Empty)
+        {
+            <input type="hidden" asp-for="Id" />
+        }
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+        <div class="row g-3">
+            <div class="col-12">
+                <label asp-for="ActiviteId" class="form-label">Activite</label>
+                <select asp-for="ActiviteId" class="form-select">
+                    <option value="">-- Selectionner une activite cloturee --</option>
+                    @foreach (var activite in activites)
+                    {
+                        <option value="@activite.Id">@activite.Titre (@(activite.Groupe?.Nom ?? "District"))</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12">
+                <label asp-for="ResumeExecutif" class="form-label">Resume executif</label>
+                <textarea asp-for="ResumeExecutif" class="form-control" rows="4"></textarea>
+            </div>
+            <div class="col-12">
+                <label asp-for="ResultatsObtenus" class="form-label">Resultats obtenus</label>
+                <textarea asp-for="ResultatsObtenus" class="form-control" rows="5"></textarea>
+            </div>
+            <div class="col-12">
+                <label asp-for="DifficultesRencontrees" class="form-label">Difficultes rencontrees</label>
+                <textarea asp-for="DifficultesRencontrees" class="form-control" rows="5"></textarea>
+            </div>
+            <div class="col-12">
+                <label asp-for="Recommandations" class="form-label">Recommandations</label>
+                <textarea asp-for="Recommandations" class="form-control" rows="5"></textarea>
+            </div>
+            <div class="col-12">
+                <label asp-for="ObservationsComplementaires" class="form-label">Observations complementaires</label>
+                <textarea asp-for="ObservationsComplementaires" class="form-control" rows="4"></textarea>
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Enregistrer</button>
+            <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
+        </div>
+    </form>
+</div>

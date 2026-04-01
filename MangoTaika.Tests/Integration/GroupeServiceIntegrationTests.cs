@@ -38,27 +38,26 @@ public sealed class GroupeServiceIntegrationTests
         created.Longitude.Should().Be(-4.0267);
         groupe.Description.Should().Be("Groupe test");
         groupe.LogoUrl.Should().Be("/uploads/groupes/riviera.png");
-        groupe.NomChefGroupe.Should().Be("Chef Principal");
+        groupe.NomChefGroupe.Should().BeNull();
     }
 
     [Fact]
-    public async Task CreateAsync_Rejects_Inactive_Responsable()
+    public async Task CreateAsync_Ignores_Obsolete_ResponsableId_On_Create()
     {
         await using var db = TestDbContextFactory.CreateDbContext();
         var responsable = await TestDataSeeder.AddUserAsync(db, "Awa", "Responsable", [], isActive: false);
         var inheritance = new DistrictBranchInheritanceService(db);
         var service = new GroupeService(db, new FakeGeocodingService(), inheritance);
 
-        Func<Task> act = () => service.CreateAsync(new GroupeCreateDto
+        var created = await service.CreateAsync(new GroupeCreateDto
         {
             Nom = "Groupe Riviera",
             ResponsableId = responsable.Id
         });
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*responsable selectionne est introuvable ou inactif*");
-
-        db.Groupes.Should().BeEmpty();
+        created.Nom.Should().Be("Groupe Riviera");
+        created.ResponsableId.Should().BeNull();
+        db.Groupes.Should().ContainSingle();
     }
 
     [Fact]
@@ -226,3 +225,4 @@ public sealed class GroupeServiceIntegrationTests
         inheritedBranches.Should().OnlyContain(b => b.ChefUniteId == null && b.NomChefUnite == null);
     }
 }
+

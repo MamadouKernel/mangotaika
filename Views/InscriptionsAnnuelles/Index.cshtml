@@ -1,0 +1,114 @@
+@using MangoTaika.Data.Entities
+@model List<InscriptionAnnuelleScout>
+@{
+    ViewData["Title"] = "Inscriptions annuelles";
+    Layout = "_LayoutAdmin";
+    var groupes = ViewBag.Groupes as List<Groupe> ?? new();
+    var branches = ViewBag.Branches as List<Branche> ?? new();
+    var selectedGroupeId = ViewBag.SelectedGroupeId as Guid?;
+    var selectedBrancheId = ViewBag.SelectedBrancheId as Guid?;
+    var selectedStatut = ViewBag.SelectedStatut as StatutInscriptionAnnuelle?;
+    var annee = ViewBag.Annee is int currentYear ? currentYear : DateTime.UtcNow.Year;
+    var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+}
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div>
+        <h2 class="section-title mb-1"><i class="bi bi-journal-check text-or"></i> <span class="accent">Inscriptions annuelles</span></h2>
+        <p class="text-muted-custom mb-0">Historique annuel des scouts avec snapshot du groupe, de la branche et de la fonction.</p>
+    </div>
+    @if (canManage)
+    {
+        <a asp-action="Create" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Nouvelle inscription</a>
+    }
+</div>
+
+<div class="card-3d p-4 mb-4">
+    <form method="get" class="row g-3">
+        <div class="col-lg-3">
+            <label class="form-label">Annee</label>
+            <input type="number" class="form-control" name="annee" value="@annee" min="2000" max="2100" />
+        </div>
+        <div class="col-lg-3">
+            <label class="form-label">Groupe</label>
+            <select class="form-select" name="groupeId">
+                <option value="">-- Tous --</option>
+                @foreach (var groupe in groupes)
+                {
+                    <option value="@groupe.Id" selected="@(selectedGroupeId == groupe.Id ? "selected" : null)">@groupe.Nom</option>
+                }
+            </select>
+        </div>
+        <div class="col-lg-3">
+            <label class="form-label">Branche</label>
+            <select class="form-select" name="brancheId">
+                <option value="">-- Toutes --</option>
+                @foreach (var branche in branches)
+                {
+                    <option value="@branche.Id" selected="@(selectedBrancheId == branche.Id ? "selected" : null)">@branche.Nom</option>
+                }
+            </select>
+        </div>
+        <div class="col-lg-2">
+            <label class="form-label">Statut</label>
+            <select class="form-select" name="statut">
+                <option value="">-- Tous --</option>
+                @foreach (var statut in Enum.GetValues<StatutInscriptionAnnuelle>())
+                {
+                    <option value="@statut" selected="@(selectedStatut == statut ? "selected" : null)">@statut</option>
+                }
+            </select>
+        </div>
+        <div class="col-lg-1 d-flex align-items-end">
+            <button class="btn btn-bleu w-100" type="submit"><i class="bi bi-filter-circle"></i></button>
+        </div>
+    </form>
+</div>
+
+<div class="card-3d">
+    <div class="table-responsive">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th>Scout</th>
+                    <th>Annee</th>
+                    <th>Groupe</th>
+                    <th>Branche</th>
+                    <th>Fonction</th>
+                    <th>Statut</th>
+                    <th>Cotisation</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var inscription in Model)
+            {
+                <tr>
+                    <td>@inscription.Scout.Prenom @inscription.Scout.Nom</td>
+                    <td>@inscription.LibelleAnnee</td>
+                    <td>@(inscription.Groupe?.Nom ?? "-")</td>
+                    <td>@(inscription.Branche?.Nom ?? "-")</td>
+                    <td>@(string.IsNullOrWhiteSpace(inscription.FonctionSnapshot) ? "-" : inscription.FonctionSnapshot)</td>
+                    <td><span class="badge-3d badge-soumise">@inscription.Statut</span></td>
+                    <td>@(inscription.CotisationNationaleAjour ? "A jour" : "Non")</td>
+                    <td class="text-end">
+                        <div class="d-flex justify-content-end gap-2">
+                            <a asp-action="Details" asp-route-id="@inscription.Id" class="btn btn-sm btn-outline-or"><i class="bi bi-eye"></i></a>
+                            @if (canManage)
+                            {
+                                <a asp-action="Edit" asp-route-id="@inscription.Id" class="btn btn-sm btn-bleu"><i class="bi bi-pencil"></i></a>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+            @if (!Model.Any())
+            {
+                <tr><td colspan="8" class="text-center text-muted-custom py-4">Aucune inscription annuelle trouvee.</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@await Html.PartialAsync("_ListPagination")
