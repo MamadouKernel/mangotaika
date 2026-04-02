@@ -1,23 +1,30 @@
-@using MangoTaika.Data.Entities
+﻿@using MangoTaika.Data.Entities
 @model ProgrammeAnnuel
 @{
     ViewData["Title"] = Model.Id == Guid.Empty ? "Nouveau programme annuel" : "Modifier le programme annuel";
     Layout = "_LayoutAdmin";
     var groupes = ViewBag.Groupes as List<Groupe> ?? new();
+    var branches = ViewBag.Branches as List<Branche> ?? new();
+    var activites = (Model.Activites?.OrderBy(a => a.OrdreAffichage).ThenBy(a => a.DateActivite).ToList() ?? new List<ProgrammeAnnuelActivite>());
+    if (!activites.Any())
+    {
+        activites.Add(new ProgrammeAnnuelActivite { DateActivite = DateTime.UtcNow.Date, OrdreAffichage = 1 });
+    }
+    var formAction = Model.Id == Guid.Empty ? Url.Action("Create") : Url.Action("Edit", new { id = Model.Id });
 }
 
 <div class="tracking-module tracking-module--programmes-form">
     <section class="tracking-hero tracking-hero--compact">
         <div class="tracking-hero__content">
-            <span class="tracking-hero__eyebrow"><i class="bi bi-diagram-2"></i> Construction du cycle annuel</span>
+            <span class="tracking-hero__eyebrow"><i class="bi bi-calendar2-plus"></i> Plan annuel d'activites</span>
             <h2 class="section-title tracking-hero__title mb-2"><i class="bi bi-calendar-range text-or"></i> <span class="accent">@ViewData["Title"]</span></h2>
-            <p class="tracking-hero__text mb-0">Cadrez les objectifs, le calendrier synthetique et les observations dans une fiche plus claire pour le workflow annuel.</p>
+            <p class="tracking-hero__text mb-0">Le cahier des charges demande une saisie structuree du programme annuel: activite, branche cible, objectif, lieu, date, responsable, description et montant de participation.</p>
         </div>
         <div class="tracking-hero__actions">
             <div class="tracking-hero__focus">
-                <span>Portee</span>
-                <strong>@(Model.Groupe?.Nom ?? "District")</strong>
-                <small>selectionnez une entite uniquement si le programme n'est pas district.</small>
+                <span>Structure</span>
+                <strong>@activites.Count ligne(s)</strong>
+                <small>une ligne par activite planifiee</small>
             </div>
             <div class="tracking-action-stack">
                 <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i> Retour</a>
@@ -27,18 +34,19 @@
 
     <div class="tracking-form-layout">
         <section class="tracking-panel tracking-form-shell">
-            <form method="post">
+            <form method="post" action="@formAction">
                 @Html.AntiForgeryToken()
                 @if (Model.Id != Guid.Empty)
                 {
                     <input type="hidden" asp-for="Id" />
                 }
-                <div asp-validation-summary="ModelOnly" class="text-danger small"></div>
-                <div class="tracking-form-grid">
-                    <div class="tracking-form-col-5">
+                <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+                <div class="tracking-form-grid mb-4">
+                    <div class="tracking-form-col-4">
                         <label asp-for="GroupeId" class="form-label">Entite</label>
-                        <select asp-for="GroupeId" class="form-select">
-                            <option value="">-- Programme district --</option>
+                        <select asp-for="GroupeId" class="form-select" id="programmeGroupeId">
+                            <option value="">-- Selectionner une entite --</option>
                             @foreach (var groupe in groupes)
                             {
                                 <option value="@groupe.Id">@groupe.Nom</option>
@@ -47,25 +55,57 @@
                     </div>
                     <div class="tracking-form-col-2">
                         <label asp-for="AnneeReference" class="form-label">Annee</label>
-                        <input asp-for="AnneeReference" class="form-control" />
+                        <input asp-for="AnneeReference" class="form-control" min="2000" max="2100" />
                     </div>
-                    <div class="tracking-form-col-5">
-                        <label asp-for="Titre" class="form-label">Titre</label>
+                    <div class="tracking-form-col-6">
+                        <label asp-for="Titre" class="form-label">Titre du programme</label>
                         <input asp-for="Titre" class="form-control" />
                     </div>
                     <div class="tracking-form-col-12">
-                        <label asp-for="Objectifs" class="form-label">Objectifs</label>
-                        <textarea asp-for="Objectifs" class="form-control" rows="5"></textarea>
-                    </div>
-                    <div class="tracking-form-col-12">
-                        <label asp-for="CalendrierSynthese" class="form-label">Calendrier synthese</label>
-                        <textarea asp-for="CalendrierSynthese" class="form-control" rows="8" placeholder="Ex.: Janvier - camp de lancement&#10;Mars - journee de district&#10;Juillet - camp d'ete"></textarea>
+                        <label asp-for="Objectifs" class="form-label">Objectifs annuels</label>
+                        <textarea asp-for="Objectifs" class="form-control" rows="4"></textarea>
                     </div>
                     <div class="tracking-form-col-12">
                         <label asp-for="Observations" class="form-label">Observations</label>
-                        <textarea asp-for="Observations" class="form-control" rows="4"></textarea>
+                        <textarea asp-for="Observations" class="form-control" rows="3"></textarea>
                     </div>
                 </div>
+
+                <div class="tracking-panel tracking-panel--soft mb-4">
+                    <div class="tracking-panel__header">
+                        <div>
+                            <h3 class="tracking-panel__title">Activites planifiees</h3>
+                            <p class="tracking-panel__text">Ajoutez toutes les activites de l'annee avec leur branche cible, leur objectif, leur responsable et le montant de participation.</p>
+                        </div>
+                        <button type="button" class="btn btn-outline-or" id="addProgrammeActivity"><i class="bi bi-plus-lg"></i> Ajouter une activite</button>
+                    </div>
+
+                    <div id="programmeActivities" class="tracking-list-stack">
+                        @for (var i = 0; i < activites.Count; i++)
+                        {
+                            var activite = activites[i];
+                            <div class="programme-row card-3d p-3">
+                                <input type="hidden" name="Activites[@i].Id" value="@activite.Id" />
+                                <div class="programme-row__head">
+                                    <h4>Activite @(i + 1)</h4>
+                                    <button type="button" class="btn btn-sm btn-outline-or" data-remove-row><i class="bi bi-trash"></i> Retirer</button>
+                                </div>
+                                <div class="tracking-form-grid">
+                                    <div class="tracking-form-col-4"><label class="form-label">Nom de l'activite</label><input class="form-control" name="Activites[@i].NomActivite" value="@activite.NomActivite" /></div>
+                                    <div class="tracking-form-col-4"><label class="form-label">Branche concernee / cible</label><select class="form-select" name="Activites[@i].BrancheId" data-programme-branch-select><option value="">-- Toutes / cible libre --</option>@foreach (var branche in branches){<option value="@branche.Id" data-groupe-id="@branche.GroupeId" selected="@(activite.BrancheId == branche.Id ? "selected" : null)">@branche.Nom</option>}</select></div>
+                                    <div class="tracking-form-col-4"><label class="form-label">Cible complementaire</label><input class="form-control" name="Activites[@i].Cible" value="@activite.Cible" placeholder="Ex: parents, jeunes, chefs" /></div>
+                                    <div class="tracking-form-col-4"><label class="form-label">Objectif</label><input class="form-control" name="Activites[@i].Objectif" value="@activite.Objectif" /></div>
+                                    <div class="tracking-form-col-3"><label class="form-label">Lieu</label><input class="form-control" name="Activites[@i].Lieu" value="@activite.Lieu" /></div>
+                                    <div class="tracking-form-col-2"><label class="form-label">Date</label><input class="form-control" type="date" name="Activites[@i].DateActivite" value="@(activite.DateActivite == default ? string.Empty : activite.DateActivite.ToString("yyyy-MM-dd"))" /></div>
+                                    <div class="tracking-form-col-3"><label class="form-label">Responsable</label><input class="form-control" name="Activites[@i].Responsable" value="@activite.Responsable" /></div>
+                                    <div class="tracking-form-col-12"><label class="form-label">Description</label><textarea class="form-control" name="Activites[@i].Description" rows="3">@activite.Description</textarea></div>
+                                    <div class="tracking-form-col-3"><label class="form-label">Montant de participation (FCFA)</label><input class="form-control" type="number" min="0" step="100" name="Activites[@i].MontantParticipation" value="@(activite.MontantParticipation?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty)" /></div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
                 <div class="tracking-actions">
                     <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Enregistrer</button>
                     <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
@@ -74,16 +114,134 @@
         </section>
 
         <aside class="tracking-side-stack">
-            <div class="tracking-side-card">
-                <span class="tracking-side-card__label"><i class="bi bi-lightbulb"></i> Bonne pratique</span>
-                <h4>Un programme lisible</h4>
-                <p class="text-muted-custom mb-0">Reste synthetique sur les objectifs et concentre le calendrier sur les temps forts du cycle pour faciliter la validation.</p>
-            </div>
-            <div class="tracking-side-card">
-                <span class="tracking-side-card__label"><i class="bi bi-calendar-event"></i> Cadence</span>
-                <h5>Conseil</h5>
-                <p class="text-muted-custom mb-0">Pense a distinguer les activites de groupe des rendez-vous district dans la synthese du calendrier.</p>
-            </div>
+            <div class="tracking-side-card"><span class="tracking-side-card__label"><i class="bi bi-lightbulb"></i> Bon usage</span><h4>Une ligne = une action</h4><p class="text-muted-custom mb-0">Le programme doit rester lisible. Créez une ligne distincte pour chaque activite prevue et renseignez la branche cible quand elle est connue.</p></div>
+            <div class="tracking-side-card"><span class="tracking-side-card__label"><i class="bi bi-calendar-week"></i> Calendrier</span><h5>Resultat attendu</h5><p class="text-muted-custom mb-0">Les activites saisies alimentent ensuite automatiquement la vue calendrier annuelle.</p></div>
         </aside>
     </div>
 </div>
+
+<script type="text/template" id="programmeActivityTemplate">
+<div class="programme-row card-3d p-3">
+    <input type="hidden" name="Activites[__index__].Id" value="" />
+    <div class="programme-row__head">
+        <h4>Activite __order__</h4>
+        <button type="button" class="btn btn-sm btn-outline-or" data-remove-row><i class="bi bi-trash"></i> Retirer</button>
+    </div>
+    <div class="tracking-form-grid">
+        <div class="tracking-form-col-4"><label class="form-label">Nom de l'activite</label><input class="form-control" name="Activites[__index__].NomActivite" value="" /></div>
+        <div class="tracking-form-col-4"><label class="form-label">Branche concernee / cible</label><select class="form-select" name="Activites[__index__].BrancheId" data-programme-branch-select><option value="">-- Toutes / cible libre --</option>@foreach (var branche in branches){<option value="@branche.Id" data-groupe-id="@branche.GroupeId">@branche.Nom</option>}</select></div>
+        <div class="tracking-form-col-4"><label class="form-label">Cible complementaire</label><input class="form-control" name="Activites[__index__].Cible" value="" placeholder="Ex: parents, jeunes, chefs" /></div>
+        <div class="tracking-form-col-4"><label class="form-label">Objectif</label><input class="form-control" name="Activites[__index__].Objectif" value="" /></div>
+        <div class="tracking-form-col-3"><label class="form-label">Lieu</label><input class="form-control" name="Activites[__index__].Lieu" value="" /></div>
+        <div class="tracking-form-col-2"><label class="form-label">Date</label><input class="form-control" type="date" name="Activites[__index__].DateActivite" value="" /></div>
+        <div class="tracking-form-col-3"><label class="form-label">Responsable</label><input class="form-control" name="Activites[__index__].Responsable" value="" /></div>
+        <div class="tracking-form-col-12"><label class="form-label">Description</label><textarea class="form-control" name="Activites[__index__].Description" rows="3"></textarea></div>
+        <div class="tracking-form-col-3"><label class="form-label">Montant de participation (FCFA)</label><input class="form-control" type="number" min="0" step="100" name="Activites[__index__].MontantParticipation" value="" /></div>
+    </div>
+</div>
+</script>
+
+<style>
+    .programme-row__head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+
+    .programme-row__head h4 {
+        margin: 0;
+        font-size: 1rem;
+        color: var(--bleu-logo);
+    }
+
+    .tracking-list-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+</style>
+
+<script>
+    (() => {
+        const container = document.getElementById('programmeActivities');
+        const template = document.getElementById('programmeActivityTemplate');
+        const addButton = document.getElementById('addProgrammeActivity');
+        const groupSelect = document.getElementById('programmeGroupeId');
+
+        if (!container || !template || !addButton) {
+            return;
+        }
+
+        const reindexRows = () => {
+            Array.from(container.querySelectorAll('.programme-row')).forEach((row, index) => {
+                const title = row.querySelector('h4');
+                if (title) {
+                    title.textContent = `Activite ${index + 1}`;
+                }
+
+                row.querySelectorAll('input[name], select[name], textarea[name]').forEach((field) => {
+                    const name = field.getAttribute('name');
+                    if (!name) {
+                        return;
+                    }
+
+                    field.setAttribute('name', name.replace(/Activites\[\d+\]/, `Activites[${index}]`));
+                });
+            });
+        };
+
+        const syncBranchSelect = (select) => {
+            const selectedGroup = groupSelect ? groupSelect.value : '';
+            Array.from(select.options).forEach((option) => {
+                if (!option.value) {
+                    option.hidden = false;
+                    return;
+                }
+
+                const optionGroupId = option.dataset.groupeId;
+                option.hidden = !!selectedGroup && optionGroupId !== selectedGroup;
+            });
+
+            const selectedOption = select.selectedOptions[0];
+            if (selectedOption && selectedOption.value && selectedGroup && selectedOption.dataset.groupeId !== selectedGroup) {
+                select.value = '';
+            }
+        };
+
+        const syncAllBranchSelects = () => {
+            container.querySelectorAll('[data-programme-branch-select]').forEach((select) => syncBranchSelect(select));
+        };
+
+        addButton.addEventListener('click', () => {
+            const nextIndex = container.querySelectorAll('.programme-row').length;
+            const html = template.innerHTML
+                .replace(/__index__/g, nextIndex)
+                .replace(/__order__/g, nextIndex + 1);
+            container.insertAdjacentHTML('beforeend', html);
+            reindexRows();
+            syncAllBranchSelects();
+        });
+
+        container.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-remove-row]');
+            if (!button) {
+                return;
+            }
+
+            const rows = container.querySelectorAll('.programme-row');
+            if (rows.length === 1) {
+                return;
+            }
+
+            button.closest('.programme-row')?.remove();
+            reindexRows();
+        });
+
+        groupSelect?.addEventListener('change', syncAllBranchSelects);
+        reindexRows();
+        syncAllBranchSelects();
+    })();
+</script>
+

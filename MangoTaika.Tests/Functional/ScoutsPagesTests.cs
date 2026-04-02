@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Text;
 using ClosedXML.Excel;
 using FluentAssertions;
@@ -47,7 +47,6 @@ public sealed class ScoutsPagesTests
         request.Headers.Add("RequestVerificationToken", token);
         request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
         {
-            ["Matricule"] = "0583760X",
             ["Nom"] = "Kone",
             ["Prenom"] = "Awa",
             ["DateNaissance"] = "2012-05-14",
@@ -67,7 +66,7 @@ public sealed class ScoutsPagesTests
     }
 
     [Fact]
-    public async Task Create_Rejects_Duplicate_Matricule()
+    public async Task Create_Rejects_Manual_Matricule_Assignment()
     {
         await using var factory = new SupportWebApplicationFactory();
         ApplicationUser gestionnaire = null!;
@@ -76,15 +75,6 @@ public sealed class ScoutsPagesTests
         {
             await TestDataSeeder.EnsureRolesAsync(db, "Gestionnaire");
             gestionnaire = await TestDataSeeder.AddUserAsync(db, "Awa", "Gestion", ["Gestionnaire"]);
-
-            db.Scouts.Add(new Scout
-            {
-                Id = Guid.NewGuid(),
-                Matricule = "0583761X",
-                Nom = "Premier",
-                Prenom = "Scout",
-                DateNaissance = new DateTime(2011, 1, 1)
-            });
         });
 
         using var client = factory.CreateAuthenticatedClient(gestionnaire.Id, "Gestionnaire");
@@ -105,11 +95,11 @@ public sealed class ScoutsPagesTests
         var html = await response.Content.ReadAsStringAsync();
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        html.Should().Contain("Le matricule existe deja");
+        html.Should().Contain("attribue automatiquement lors de la premiere cotisation nationale");
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.Scouts.Count().Should().Be(1);
+        db.Scouts.Should().BeEmpty();
     }
 
     [Fact]
@@ -147,8 +137,7 @@ public sealed class ScoutsPagesTests
         request.Headers.Add("RequestVerificationToken", token);
         request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
         {
-            ["Matricule"] = "0583780X",
-            ["Nom"] = "",
+            ["Nom"] = string.Empty,
             ["Prenom"] = "Awa",
             ["DateNaissance"] = "2012-05-14",
             ["GroupeId"] = groupe.Id.ToString(),
@@ -212,9 +201,9 @@ public sealed class ScoutsPagesTests
         var createHtml = await client.GetStringAsync("/Scouts/Create");
         var indexHtml = await client.GetStringAsync("/Scouts");
 
-        createHtml.Should().Contain("Cotisation nationale a jour");
-        indexHtml.Should().Contain("Fonction");
-        indexHtml.Should().Contain("alimente directement le champ `Fonction` du scout");
+        createHtml.Should().Contain("Cotisation nationale");
+        createHtml.Should().Contain("premiere cotisation nationale");
+        indexHtml.Should().Contain("champ `Fonction`");
     }
 
     [Fact]
@@ -318,7 +307,7 @@ public sealed class ScoutsPagesTests
         worksheet.Cell(1, 3).Value = "Prenom";
         worksheet.Cell(1, 4).Value = "DateNaissance";
 
-        worksheet.Cell(2, 1).Value = "0583772X";
+        worksheet.Cell(2, 1).Value = string.Empty;
         worksheet.Cell(2, 2).Value = "Kone";
         worksheet.Cell(2, 3).Value = "Awa";
         worksheet.Cell(2, 4).Value = new DateTime(2012, 5, 14);
@@ -347,12 +336,12 @@ public sealed class ScoutsPagesTests
 
         html.Should().Contain("1 cree(s), 0 mis a jour, 1 non enregistre(s).");
         html.Should().Contain("Scouts crees (1)");
-        html.Should().Contain("0583772X");
-        html.Should().Contain("Ligne 3 (0583772X): Matricule duplique dans le fichier");
+        html.Should().Contain("Awa Kone (sans matricule)");
+        html.Should().Contain("Ligne 3 (0583772X): Le matricule ne peut pas etre attribue manuellement");
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.Scouts.Should().ContainSingle(s => s.Matricule == "0583772X" && s.Nom == "Kone" && s.Prenom == "Awa");
+        db.Scouts.Should().ContainSingle(s => s.Matricule == null && s.Nom == "Kone" && s.Prenom == "Awa");
     }
 
     [Fact]
@@ -408,13 +397,13 @@ public sealed class ScoutsPagesTests
         worksheet.Cell(2, 3).Value = "Awa";
         worksheet.Cell(2, 4).Value = new DateTime(2012, 5, 14);
 
-        worksheet.Cell(3, 1).Value = "0583776X";
+        worksheet.Cell(3, 1).Value = string.Empty;
         worksheet.Cell(3, 2).Value = "Doumbia";
         worksheet.Cell(3, 3).Value = "Lina";
         worksheet.Cell(3, 4).Value = new DateTime(2013, 6, 10);
         worksheet.Cell(3, 5).Value = "ASCCI-999";
 
-        worksheet.Cell(4, 1).Value = "0583777X";
+        worksheet.Cell(4, 1).Value = string.Empty;
         worksheet.Cell(4, 2).Value = "Yao";
         worksheet.Cell(4, 3).Value = "Kevin";
         worksheet.Cell(4, 4).Value = new DateTime(2014, 7, 11);
@@ -439,14 +428,14 @@ public sealed class ScoutsPagesTests
 
         html.Should().Contain("1 cree(s), 1 mis a jour, 1 non enregistre(s).");
         html.Should().Contain("Scouts mis a jour (1)");
-        html.Should().Contain("0583774X");
+        html.Should().Contain("Awa Kone (0583774X)");
         html.Should().Contain("Scouts crees (1)");
-        html.Should().Contain("0583777X");
-        html.Should().Contain("Ligne 3 (0583776X): Numero de carte deja existant");
+        html.Should().Contain("Kevin Yao (sans matricule)");
+        html.Should().Contain("Ligne 3: Numero de carte deja existant: ASCCI-999.");
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.Scouts.Should().Contain(s => s.Matricule == "0583777X" && s.NumeroCarte == "ASCCI-777");
+        db.Scouts.Should().Contain(s => s.Nom == "Yao" && s.Prenom == "Kevin" && s.NumeroCarte == "ASCCI-777" && s.Matricule == null);
         db.Scouts.Should().Contain(s =>
             s.Id == existingScoutId &&
             s.Nom == "Kone" &&
@@ -477,7 +466,7 @@ public sealed class ScoutsPagesTests
         worksheet.Cell(1, 3).Value = "Prenom";
         worksheet.Cell(1, 4).Value = "DateNaissance";
 
-        worksheet.Cell(2, 1).Value = "0583773X";
+        worksheet.Cell(2, 1).Value = string.Empty;
         worksheet.Cell(2, 2).Value = "Kone";
         worksheet.Cell(2, 3).Value = "Awa";
         worksheet.Cell(2, 4).Value = new DateTime(2012, 5, 14);
@@ -508,8 +497,8 @@ public sealed class ScoutsPagesTests
         var html = await client.GetStringAsync(response.Headers.Location);
 
         html.Should().Contain("1 cree(s), 0 mis a jour, 5 non enregistre(s).");
-        html.Should().Contain("Ligne 3 (0583773X): Matricule duplique dans le fichier");
-        html.Should().Contain("Ligne 7 (0583773X): Matricule duplique dans le fichier");
+        html.Should().Contain("Ligne 3 (0583773X): Le matricule ne peut pas etre attribue manuellement");
+        html.Should().Contain("Ligne 7 (0583773X): Matricule duplique dans le fichier: 0583773X.");
         html.Should().NotContain("Affichage limite aux 3 premieres erreurs.");
     }
 }

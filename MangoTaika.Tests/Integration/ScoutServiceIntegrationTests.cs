@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using ClosedXML.Excel;
 using FluentAssertions;
 using MangoTaika.Data.Entities;
@@ -13,7 +13,7 @@ namespace MangoTaika.Tests.Integration;
 public sealed class ScoutServiceIntegrationTests
 {
     [Fact]
-    public async Task CreateAsync_Persists_Normalized_Matricule_And_Assignment()
+    public async Task CreateAsync_Creates_Scout_Without_Manual_Matricule_And_Preserves_Assignment()
     {
         await using var db = TestDbContextFactory.CreateDbContext();
 
@@ -28,7 +28,6 @@ public sealed class ScoutServiceIntegrationTests
 
         var created = await service.CreateAsync(new ScoutCreateDto
         {
-            Matricule = "0583764x",
             Nom = " Kone ",
             Prenom = " Awa ",
             DateNaissance = new DateTime(2012, 5, 14),
@@ -40,10 +39,10 @@ public sealed class ScoutServiceIntegrationTests
 
         var scout = await db.Scouts.SingleAsync();
 
-        created.Matricule.Should().Be("0583764X");
+        created.Matricule.Should().BeNull();
         created.Nom.Should().Be("Kone");
         created.Prenom.Should().Be("Awa");
-        scout.Matricule.Should().Be("0583764X");
+        scout.Matricule.Should().BeNull();
         scout.NumeroCarte.Should().Be("ASCCI-001");
         scout.Fonction.Should().Be("Scout");
         scout.GroupeId.Should().Be(groupe.Id);
@@ -70,7 +69,6 @@ public sealed class ScoutServiceIntegrationTests
 
         Func<Task> act = () => service.CreateAsync(new ScoutCreateDto
         {
-            Matricule = "0583766X",
             Nom = "Second",
             Prenom = "Scout",
             DateNaissance = new DateTime(2012, 1, 1),
@@ -137,6 +135,61 @@ public sealed class ScoutServiceIntegrationTests
     }
 
     [Fact]
+    public async Task SearchAsync_Exposes_Latest_Annual_Registration_And_History_Count()
+    {
+        await using var db = TestDbContextFactory.CreateDbContext();
+
+        var groupe = new Groupe { Id = Guid.NewGuid(), Nom = "Groupe A" };
+        var branche = new Branche { Id = Guid.NewGuid(), Nom = "Eclaireurs", GroupeId = groupe.Id };
+        var scout = new Scout
+        {
+            Id = Guid.NewGuid(),
+            Matricule = "0583799X",
+            Nom = "Kone",
+            Prenom = "Awa",
+            DateNaissance = new DateTime(2011, 4, 8),
+            GroupeId = groupe.Id,
+            BrancheId = branche.Id
+        };
+
+        db.Groupes.Add(groupe);
+        db.Branches.Add(branche);
+        db.Scouts.Add(scout);
+        db.InscriptionsAnnuellesScouts.AddRange(
+            new InscriptionAnnuelleScout
+            {
+                Id = Guid.NewGuid(),
+                ScoutId = scout.Id,
+                GroupeId = groupe.Id,
+                BrancheId = branche.Id,
+                AnneeReference = 2024,
+                LibelleAnnee = "2024-2025",
+                CotisationNationaleAjour = false,
+                DateInscription = new DateTime(2024, 9, 1)
+            },
+            new InscriptionAnnuelleScout
+            {
+                Id = Guid.NewGuid(),
+                ScoutId = scout.Id,
+                GroupeId = groupe.Id,
+                BrancheId = branche.Id,
+                AnneeReference = 2025,
+                LibelleAnnee = "2025-2026",
+                CotisationNationaleAjour = true,
+                DateInscription = new DateTime(2025, 9, 1)
+            });
+        await db.SaveChangesAsync();
+
+        var service = new ScoutService(db);
+        var results = await service.SearchAsync("Kone");
+        var result = results.Should().ContainSingle().Subject;
+
+        result.DerniereInscriptionAnnuelle.Should().Contain("2025-2026");
+        result.DerniereCotisationNationaleAjour.Should().BeTrue();
+        result.HistoriqueInscriptionsCount.Should().Be(2);
+    }
+
+    [Fact]
     public async Task ImportFromExcelAsync_Updates_Existing_Scout_When_Matricule_Exists()
     {
         await using var db = TestDbContextFactory.CreateDbContext();
@@ -162,7 +215,6 @@ public sealed class ScoutServiceIntegrationTests
         worksheet.Cell(1, 2).Value = "Nom";
         worksheet.Cell(1, 3).Value = "Prenom";
         worksheet.Cell(1, 4).Value = "DateNaissance";
-
         worksheet.Cell(1, 5).Value = "NumeroCarte";
 
         worksheet.Cell(2, 1).Value = "0583770X";
@@ -180,7 +232,7 @@ public sealed class ScoutServiceIntegrationTests
         result.CreatedCount.Should().Be(0);
         result.UpdatedCount.Should().Be(1);
         result.SkippedCount.Should().Be(0);
-        result.UpdatedMatricules.Should().ContainSingle().Which.Should().Be("0583770X");
+        result.UpdatedMatricules.Should().ContainSingle().Which.Should().Be("Awa Kone (0583770X)");
         result.Errors.Should().BeEmpty();
         db.Scouts.Should().HaveCount(1);
 
@@ -218,13 +270,13 @@ public sealed class ScoutServiceIntegrationTests
         worksheet.Cell(1, 4).Value = "DateNaissance";
         worksheet.Cell(1, 5).Value = "NumeroCarte";
 
-        worksheet.Cell(2, 1).Value = "0583772X";
+        worksheet.Cell(2, 1).Value = string.Empty;
         worksheet.Cell(2, 2).Value = "Kone";
         worksheet.Cell(2, 3).Value = "Awa";
         worksheet.Cell(2, 4).Value = new DateTime(2012, 5, 14);
         worksheet.Cell(2, 5).Value = "ASCCI-001";
 
-        worksheet.Cell(3, 1).Value = "0583773X";
+        worksheet.Cell(3, 1).Value = string.Empty;
         worksheet.Cell(3, 2).Value = "Yao";
         worksheet.Cell(3, 3).Value = "Kevin";
         worksheet.Cell(3, 4).Value = new DateTime(2013, 6, 10);
@@ -239,17 +291,17 @@ public sealed class ScoutServiceIntegrationTests
         result.CreatedCount.Should().Be(1);
         result.UpdatedCount.Should().Be(0);
         result.SkippedCount.Should().Be(1);
-        result.CreatedMatricules.Should().ContainSingle().Which.Should().Be("0583773X");
+        result.CreatedMatricules.Should().ContainSingle().Which.Should().Be("Kevin Yao (sans matricule)");
         result.Errors.Should().ContainSingle(e =>
             e.LineNumber == 2 &&
-            e.Matricule == "0583772X" &&
+            e.Matricule == null &&
             e.Message.Contains("Numero de carte deja existant"));
         db.Scouts.Should().HaveCount(2);
-        db.Scouts.Should().Contain(s => s.Matricule == "0583773X" && s.NumeroCarte == "ASCCI-002");
+        db.Scouts.Should().Contain(s => s.Nom == "Yao" && s.Prenom == "Kevin" && s.NumeroCarte == "ASCCI-002" && s.Matricule == null);
     }
 
     [Fact]
-    public async Task ImportFromExcelAsync_Maps_Fonction_And_CotisationNationale_Columns()
+    public async Task ImportFromExcelAsync_Maps_Fonction_And_Ignores_Manual_Cotisation_Column()
     {
         await using var db = TestDbContextFactory.CreateDbContext();
         var service = new ScoutService(db);
@@ -263,7 +315,7 @@ public sealed class ScoutServiceIntegrationTests
         worksheet.Cell(1, 5).Value = "Fonction";
         worksheet.Cell(1, 6).Value = "CotisationNationale";
 
-        worksheet.Cell(2, 1).Value = "0583778X";
+        worksheet.Cell(2, 1).Value = string.Empty;
         worksheet.Cell(2, 2).Value = "Kone";
         worksheet.Cell(2, 3).Value = "Awa";
         worksheet.Cell(2, 4).Value = new DateTime(2012, 5, 14);
@@ -279,9 +331,10 @@ public sealed class ScoutServiceIntegrationTests
         result.CreatedCount.Should().Be(1);
         result.SkippedCount.Should().Be(0);
 
-        var scout = await db.Scouts.SingleAsync(s => s.Matricule == "0583778X");
+        var scout = await db.Scouts.SingleAsync();
+        scout.Matricule.Should().BeNull();
         scout.Fonction.Should().Be("Cheftaine");
-        scout.AssuranceAnnuelle.Should().BeTrue();
+        scout.AssuranceAnnuelle.Should().BeFalse();
     }
 
     [Fact]

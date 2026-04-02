@@ -1,0 +1,81 @@
+﻿@using System.Globalization
+@using MangoTaika.Data.Entities
+@model List<ProgrammeAnnuelActivite>
+@{
+    ViewData["Title"] = "Calendrier annuel";
+    Layout = "_LayoutAdmin";
+    var annee = ViewBag.Annee is int currentYear ? currentYear : DateTime.UtcNow.Year;
+    var groupes = ViewBag.Groupes as List<Groupe> ?? new();
+    var selectedGroupeId = ViewBag.SelectedGroupeId as Guid?;
+    var culture = CultureInfo.GetCultureInfo("fr-FR");
+    var grouped = Model.GroupBy(a => a.DateActivite.Month).OrderBy(g => g.Key).ToList();
+}
+
+<div class="tracking-module tracking-module--programmes-calendar">
+    <section class="tracking-hero">
+        <div class="tracking-hero__content">
+            <span class="tracking-hero__eyebrow"><i class="bi bi-calendar-week"></i> Vue calendrier</span>
+            <h2 class="section-title tracking-hero__title mb-2"><i class="bi bi-calendar3 text-or"></i> Calendrier <span class="accent">annuel</span></h2>
+            <p class="tracking-hero__text mb-0">Vision chronologique des activites planifiees pour l'annee @annee.</p>
+            <div class="tracking-hero__chips">
+                <span class="tracking-chip"><i class="bi bi-list-task"></i> @Model.Count activite(s)</span>
+                <span class="tracking-chip tracking-chip--soft"><i class="bi bi-calendar3"></i> @grouped.Count mois renseignes</span>
+            </div>
+        </div>
+        <div class="tracking-hero__actions">
+            <div class="tracking-action-stack">
+                <a asp-action="Index" asp-route-annee="@annee" asp-route-groupeId="@selectedGroupeId" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i> Retour a la liste</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="tracking-panel tracking-panel--soft mb-4">
+        <form method="get" class="tracking-filter-form">
+            <div class="tracking-field"><label class="form-label">Annee</label><input type="number" class="form-control" name="annee" value="@annee" min="2000" max="2100" /></div>
+            <div class="tracking-field-wide"><label class="form-label">Entite</label><select class="form-select" name="groupeId"><option value="">-- Toutes --</option>@foreach (var groupe in groupes){<option value="@groupe.Id" selected="@(selectedGroupeId == groupe.Id ? "selected" : null)">@groupe.Nom</option>}</select></div>
+            <div class="tracking-field-action"><button class="btn btn-bleu w-100" type="submit"><i class="bi bi-filter-circle"></i> Actualiser</button></div>
+        </form>
+    </section>
+
+    @if (grouped.Any())
+    {
+        <div class="tracking-list-stack">
+            @foreach (var month in grouped)
+            {
+                <section class="tracking-panel">
+                    <div class="tracking-panel__header">
+                        <div>
+                            <h3 class="tracking-panel__title">@culture.DateTimeFormat.GetMonthName(month.Key)</h3>
+                            <p class="tracking-panel__text">@month.Count() activite(s) planifiee(s)</p>
+                        </div>
+                    </div>
+                    <div class="tracking-card-grid tracking-card-grid--compact">
+                        @foreach (var activite in month.OrderBy(a => a.DateActivite).ThenBy(a => a.OrdreAffichage))
+                        {
+                            <article class="tracking-card">
+                                <div class="tracking-card__header">
+                                    <div>
+                                        <h3 class="tracking-card__title">@activite.NomActivite</h3>
+                                        <div class="tracking-card__subtitle">@(activite.ProgrammeAnnuel.Groupe?.Nom ?? "District") - @activite.DateActivite.ToString("dd/MM/yyyy")</div>
+                                    </div>
+                                    <span class="tracking-chip tracking-chip--soft">@(activite.Branche?.Nom ?? activite.Cible ?? "Cible libre")</span>
+                                </div>
+                                <p class="tracking-card__summary">@activite.Description</p>
+                                <div class="tracking-meta-list">
+                                    <div class="tracking-meta-list__item"><i class="bi bi-bullseye"></i><span>@activite.Objectif</span></div>
+                                    <div class="tracking-meta-list__item"><i class="bi bi-geo-alt"></i><span>@(string.IsNullOrWhiteSpace(activite.Lieu) ? "Lieu a confirmer" : activite.Lieu)</span></div>
+                                    <div class="tracking-meta-list__item"><i class="bi bi-person-badge"></i><span>@activite.Responsable</span></div>
+                                    <div class="tracking-meta-list__item"><i class="bi bi-cash-stack"></i><span>@((activite.MontantParticipation ?? 0m).ToString("N0")) FCFA</span></div>
+                                </div>
+                            </article>
+                        }
+                    </div>
+                </section>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="tracking-empty-state"><i class="bi bi-calendar2-x"></i><div>Aucune activite planifiee pour cette selection.</div></div>
+    }
+</div>

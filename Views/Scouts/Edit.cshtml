@@ -1,4 +1,4 @@
-@model ScoutCreateDto
+﻿@model ScoutCreateDto
 @using System.Text.Json
 @using MangoTaika.Helpers
 @{
@@ -78,20 +78,18 @@
                     <div class="tab-pane fade show active" id="identite-tab">
                         <div class="row">
                             <div class="col-md-4 mb-3">
-                                <label asp-for="Matricule" class="form-label">Matricule</label>
-                                <input asp-for="Matricule" class="form-control" placeholder="Ex: 0583753X" />
-                                <span asp-validation-for="Matricule" class="text-danger small"></span>
-                                <small class="text-muted-custom">Format attendu : 0583753X.</small>
+                                <label class="form-label">Matricule</label>
+                                <div class="form-control d-flex align-items-center bg-light-subtle">@(string.IsNullOrWhiteSpace(Model?.Matricule) ? "Attribue lors de la premiere cotisation nationale" : Model!.Matricule)</div>
+                                <small class="text-muted-custom">Le matricule ne peut etre modifie que par le flux de cotisation nationale.</small>
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label asp-for="NumeroCarte" class="form-label">Numero de carte</label>
                                 <input asp-for="NumeroCarte" class="form-control" placeholder="Ex: ASCCI-001" />
                             </div>
-                            <div class="col-md-4 mb-3 d-flex align-items-end">
-                                <div class="form-check form-switch scout-switch mb-2">
-                                    <input asp-for="AssuranceAnnuelle" class="form-check-input" type="checkbox" />
-                                    <label asp-for="AssuranceAnnuelle" class="form-check-label">Cotisation nationale a jour</label>
-                                </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Cotisation nationale</label>
+                                <div class="form-control d-flex align-items-center bg-light-subtle">@(Model?.AssuranceAnnuelle == true ? "A jour" : "Non a jour")</div>
+                                <small class="text-muted-custom">Ce statut est synchronise uniquement par l'import national du district.</small>
                             </div>
                         </div>
 
@@ -401,3 +399,4 @@
     </script>
     <partial name="_ValidationScriptsPartial" />
 }
+

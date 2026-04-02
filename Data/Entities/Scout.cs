@@ -3,7 +3,7 @@
 public class Scout
 {
     public Guid Id { get; set; }
-    public string Matricule { get; set; } = string.Empty;
+    public string? Matricule { get; set; }
     public string Nom { get; set; } = string.Empty;
     public string Prenom { get; set; } = string.Empty;
     public DateTime DateNaissance { get; set; }
@@ -41,3 +41,4 @@ public class Scout
     public ICollection<SuiviAcademique> SuivisAcademiques { get; set; } = [];
     public ICollection<EtapeParcoursScout> EtapesParcours { get; set; } = [];
 }
+

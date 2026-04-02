@@ -1,4 +1,4 @@
-@using MangoTaika.Data.Entities
+﻿@using MangoTaika.Data.Entities
 @model InscriptionAnnuelleScout
 @{
     ViewData["Title"] = Model.Id == Guid.Empty ? "Nouvelle inscription annuelle" : "Modifier l'inscription annuelle";
@@ -31,7 +31,7 @@
                     <option value="">-- Selectionner un scout --</option>
                     @foreach (var scout in scouts)
                     {
-                        <option value="@scout.Id">@scout.Prenom @scout.Nom (@scout.Matricule)@(scout.Groupe != null ? $" - {scout.Groupe.Nom}" : string.Empty)</option>
+                        <option value="@scout.Id">@scout.Prenom @scout.Nom (@(string.IsNullOrWhiteSpace(scout.Matricule) ? "sans matricule" : scout.Matricule))@(scout.Groupe != null ? $" - {scout.Groupe.Nom}" : string.Empty)</option>
                     }
                 </select>
                 <span asp-validation-for="ScoutId" class="text-danger small"></span>
@@ -87,10 +87,9 @@
                 <span asp-validation-for="FonctionSnapshot" class="text-danger small"></span>
             </div>
             <div class="col-lg-6">
-                <div class="form-check form-switch mt-4">
-                    <input asp-for="CotisationNationaleAjour" class="form-check-input" />
-                    <label asp-for="CotisationNationaleAjour" class="form-check-label">Cotisation nationale a jour</label>
-                </div>
+                <label class="form-label">Cotisation nationale</label>
+                <div class="form-control d-flex align-items-center bg-light-subtle">@(Model.CotisationNationaleAjour ? "A jour" : "Non a jour")</div>
+                <small class="text-muted-custom">Ce statut est synchronise par l'import du fichier national et ne se modifie pas manuellement ici.</small>
             </div>
             <div class="col-12">
                 <label asp-for="Observations" class="form-label">Observations</label>
@@ -144,3 +143,5 @@
         })();
     </script>
 }
+
+

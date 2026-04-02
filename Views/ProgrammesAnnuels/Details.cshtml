@@ -1,16 +1,17 @@
-@using MangoTaika.Data.Entities
+﻿@using MangoTaika.Data.Entities
 @model ProgrammeAnnuel
 @{
     ViewData["Title"] = Model.Titre;
     Layout = "_LayoutAdmin";
-    var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
-
+    var canManage = ViewBag.CanManageProgram as bool? == true;
+    var canValidateDistrict = ViewBag.CanValidateDistrict as bool? == true;
     string statusClass = Model.Statut switch
     {
         StatutWorkflowDocument.Brouillon => "tracking-status-pill--draft",
         StatutWorkflowDocument.Soumis => "tracking-status-pill--pending",
         StatutWorkflowDocument.AReviser => "tracking-status-pill--revision",
         StatutWorkflowDocument.Valide => "tracking-status-pill--approved",
+        StatutWorkflowDocument.Rejete => "badge-rejetee",
         _ => "tracking-status-pill--draft"
     };
 }
@@ -18,33 +19,37 @@
 <div class="tracking-module tracking-module--programmes-details">
     <section class="tracking-hero tracking-hero--compact">
         <div class="tracking-hero__content">
-            <span class="tracking-hero__eyebrow"><i class="bi bi-compass"></i> Vision annuelle</span>
+            <span class="tracking-hero__eyebrow"><i class="bi bi-calendar2-event"></i> Programme annuel</span>
             <h2 class="section-title tracking-hero__title mb-2"><i class="bi bi-calendar-range text-or"></i> <span class="accent">@Model.Titre</span></h2>
             <p class="tracking-hero__text mb-0">@(Model.Groupe?.Nom ?? "District") - @Model.AnneeReference</p>
             <div class="tracking-hero__chips">
-                <span class="tracking-chip"><i class="bi bi-patch-check"></i> @Model.Statut</span>
-                <span class="tracking-chip tracking-chip--soft"><i class="bi bi-clock-history"></i> Cree le @Model.DateCreation.ToString("dd/MM/yyyy")</span>
+                <span class="tracking-chip"><i class="bi bi-list-task"></i> @Model.Activites.Count activite(s)</span>
+                <span class="tracking-chip tracking-chip--soft"><i class="bi bi-calendar3"></i> Cree le @Model.DateCreation.ToString("dd/MM/yyyy")</span>
+                <span class="tracking-chip tracking-chip--highlight"><i class="bi bi-cash-stack"></i> @Model.Activites.Sum(a => a.MontantParticipation ?? 0m).ToString("N0") FCFA</span>
             </div>
         </div>
         <div class="tracking-hero__actions">
             <div class="tracking-hero__focus">
-                <span>Createur</span>
-                <strong>@Model.Createur.Prenom @Model.Createur.Nom</strong>
-                <small>workflow annuel</small>
+                <span>Workflow</span>
+                <strong>@Model.Statut</strong>
+                <small>programme annuel structure</small>
             </div>
             <div class="tracking-action-stack">
+                <a asp-action="Calendrier" asp-route-annee="@Model.AnneeReference" asp-route-groupeId="@Model.GroupeId" class="btn btn-outline-or"><i class="bi bi-calendar-week"></i> Calendrier</a>
                 @if (canManage)
                 {
                     <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-bleu"><i class="bi bi-pencil"></i> Modifier</a>
-                    @if (Model.Statut is StatutWorkflowDocument.Brouillon or StatutWorkflowDocument.AReviser)
+                    @if (Model.Statut is StatutWorkflowDocument.Brouillon or StatutWorkflowDocument.AReviser or StatutWorkflowDocument.Rejete)
                     {
                         <form asp-action="Soumettre" asp-route-id="@Model.Id" method="post" class="d-inline">@Html.AntiForgeryToken()<button type="submit" class="btn btn-mango"><i class="bi bi-send"></i> Soumettre</button></form>
                     }
-                    @if (Model.Statut == StatutWorkflowDocument.Soumis)
-                    {
-                        <form asp-action="Valider" asp-route-id="@Model.Id" method="post" class="d-inline">@Html.AntiForgeryToken()<button type="submit" class="btn btn-mango"><i class="bi bi-check2-circle"></i> Valider</button></form>
-                        <form asp-action="DemanderRevision" asp-route-id="@Model.Id" method="post" class="d-inline">@Html.AntiForgeryToken()<button type="submit" class="btn btn-outline-or"><i class="bi bi-arrow-counterclockwise"></i> Revision</button></form>
-                    }
+                    <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer ce programme annuel ?');">@Html.AntiForgeryToken()<button type="submit" class="btn btn-outline-or"><i class="bi bi-trash"></i> Supprimer</button></form>
+                }
+                @if (canValidateDistrict && Model.Statut == StatutWorkflowDocument.Soumis)
+                {
+                    <form asp-action="Valider" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="const commentaire = prompt('Commentaire de validation (facultatif) :'); if (commentaire !== null) this.querySelector('[name=commentaire]').value = commentaire;">@Html.AntiForgeryToken()<input type="hidden" name="commentaire" /><button type="submit" class="btn btn-mango"><i class="bi bi-check2-circle"></i> Valider</button></form>
+                    <form asp-action="DemanderRevision" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="const commentaire = prompt('Modifications demandees :'); if (!commentaire) return false; this.querySelector('[name=commentaire]').value = commentaire;">@Html.AntiForgeryToken()<input type="hidden" name="commentaire" /><button type="submit" class="btn btn-outline-or"><i class="bi bi-arrow-counterclockwise"></i> Correction</button></form>
+                    <form asp-action="Rejeter" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="const commentaire = prompt('Motif du rejet :'); if (!commentaire) return false; this.querySelector('[name=commentaire]').value = commentaire;">@Html.AntiForgeryToken()<input type="hidden" name="commentaire" /><button type="submit" class="btn btn-outline-or"><i class="bi bi-x-octagon"></i> Rejeter</button></form>
                 }
                 <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i> Retour</a>
             </div>
@@ -55,7 +60,7 @@
         <div class="tracking-panel__header">
             <div>
                 <h3 class="tracking-panel__title">Etat du document</h3>
-                <p class="tracking-panel__text">Lecture rapide du statut, des commentaires et du porteur du programme.</p>
+                <p class="tracking-panel__text">Suivi de validation et remarques du district.</p>
             </div>
             <span class="tracking-status-pill @statusClass">@Model.Statut</span>
         </div>
@@ -65,7 +70,47 @@
         }
     </section>
 
-    <section class="tracking-panel"><div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Objectifs</h3><p class="tracking-panel__text">Intentions pedagogiques et resultat recherche.</p></div></div><div class="tracking-rich-text">@Model.Objectifs</div></section>
-    <section class="tracking-panel"><div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Calendrier synthese</h3><p class="tracking-panel__text">Temps forts prevus sur l'annee de reference.</p></div></div><div class="tracking-rich-text">@Model.CalendrierSynthese</div></section>
-    <section class="tracking-panel"><div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Observations</h3><p class="tracking-panel__text">Informations complementaires de cadrage.</p></div></div><div class="tracking-rich-text">@(string.IsNullOrWhiteSpace(Model.Observations) ? "Aucune observation." : Model.Observations)</div></section>
+    <section class="tracking-panel">
+        <div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Objectifs annuels</h3><p class="tracking-panel__text">Cap pedagogique et organisationnel du programme.</p></div></div>
+        <div class="tracking-rich-text">@Model.Objectifs</div>
+    </section>
+
+    <section class="tracking-panel tracking-table-shell">
+        <div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Activites du programme</h3><p class="tracking-panel__text">Chaque ligne reprend les informations demandees par le cahier des charges.</p></div></div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Activite</th>
+                        <th>Branche / cible</th>
+                        <th>Responsable</th>
+                        <th>Lieu</th>
+                        <th>Montant</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var activite in Model.Activites.OrderBy(a => a.DateActivite).ThenBy(a => a.OrdreAffichage))
+                {
+                    <tr>
+                        <td>@activite.DateActivite.ToString("dd/MM/yyyy")</td>
+                        <td><div class="fw-semibold" style="color:var(--bleu-logo);">@activite.NomActivite</div><small class="text-muted-custom">@activite.Description</small></td>
+                        <td>@(activite.Branche?.Nom ?? activite.Cible ?? "-" )</td>
+                        <td>@activite.Responsable<br /><small class="text-muted-custom">@activite.Objectif</small></td>
+                        <td>@(string.IsNullOrWhiteSpace(activite.Lieu) ? "-" : activite.Lieu)</td>
+                        <td>@((activite.MontantParticipation ?? 0m).ToString("N0")) FCFA</td>
+                    </tr>
+                }
+                @if (!Model.Activites.Any())
+                {
+                    <tr><td colspan="6" class="text-center py-5 text-muted-custom">Aucune activite enregistree dans ce programme.</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="tracking-panel"><div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Synthese calendrier</h3><p class="tracking-panel__text">Resume automatique des lignes planifiees.</p></div></div><div class="tracking-rich-text">@Model.CalendrierSynthese</div></section>
+
+    <section class="tracking-panel"><div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Observations</h3><p class="tracking-panel__text">Complements eventuels.</p></div></div><div class="tracking-rich-text">@(string.IsNullOrWhiteSpace(Model.Observations) ? "Aucune observation." : Model.Observations)</div></section>
 </div>

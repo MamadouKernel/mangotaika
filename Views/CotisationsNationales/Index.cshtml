@@ -1,4 +1,4 @@
-@model MangoTaika.DTOs.CotisationsNationalesIndexViewModel
+﻿@model MangoTaika.DTOs.CotisationsNationalesIndexViewModel
 @using MangoTaika.Data.Entities
 @{
     ViewData["Title"] = "Cotisations nationales";
@@ -52,7 +52,7 @@
             <div class="col-lg-8">
                 <label class="form-label">Fichier Excel (.xlsx)</label>
                 <input type="file" name="fichier" class="form-control" accept=".xlsx" required />
-                <small class="text-muted-custom">Le rapprochement se fait sur le matricule. Les colonnes Nom, Prenom et Montant sont optionnelles.</small>
+                <small class="text-muted-custom">Le matricule est optionnel. Sans matricule, le fichier doit fournir Nom, Prenom et DateNaissance pour permettre un premier rattachement fiable.</small>
             </div>
             <div class="col-lg-4 d-grid">
                 <button type="submit" class="btn btn-mango"><i class="bi bi-upload"></i> Importer le fichier national</button>

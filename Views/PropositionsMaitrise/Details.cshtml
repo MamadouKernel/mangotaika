@@ -1,15 +1,17 @@
-@using MangoTaika.Data.Entities
+﻿@using MangoTaika.Data.Entities
 @model PropositionMaitriseAnnuelle
 @{
     ViewData["Title"] = Model.Titre;
     Layout = "_LayoutAdmin";
-    var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+    var canManage = ViewBag.CanManageLeadershipPlan as bool? == true;
+    var canValidateDistrict = ViewBag.CanValidateDistrict as bool? == true;
     string statusClass = Model.Statut switch
     {
         StatutWorkflowDocument.Brouillon => "tracking-status-pill--draft",
         StatutWorkflowDocument.Soumis => "tracking-status-pill--pending",
         StatutWorkflowDocument.AReviser => "tracking-status-pill--revision",
         StatutWorkflowDocument.Valide => "tracking-status-pill--approved",
+        StatutWorkflowDocument.Rejete => "badge-rejetee",
         _ => "tracking-status-pill--draft"
     };
 }
@@ -17,42 +19,77 @@
 <div class="tracking-module tracking-module--maitrise-details">
     <section class="tracking-hero tracking-hero--compact">
         <div class="tracking-hero__content">
-            <span class="tracking-hero__eyebrow"><i class="bi bi-people-fill"></i> Projection annuelle</span>
+            <span class="tracking-hero__eyebrow"><i class="bi bi-people-fill"></i> Proposition annuelle</span>
             <h2 class="section-title tracking-hero__title mb-2"><i class="bi bi-people text-or"></i> <span class="accent">@Model.Titre</span></h2>
             <p class="tracking-hero__text mb-0">@Model.Groupe.Nom - @Model.AnneeReference</p>
             <div class="tracking-hero__chips">
-                <span class="tracking-chip"><i class="bi bi-patch-check"></i> @Model.Statut</span>
+                <span class="tracking-chip"><i class="bi bi-people"></i> @Model.Membres.Count chef(s)</span>
                 <span class="tracking-chip tracking-chip--soft"><i class="bi bi-calendar3"></i> Creee le @Model.DateCreation.ToString("dd/MM/yyyy")</span>
             </div>
         </div>
         <div class="tracking-hero__actions">
             <div class="tracking-hero__focus">
-                <span>Cadre</span>
-                <strong>@Model.Groupe.Nom</strong>
-                <small>proposition de maitrise annuelle</small>
+                <span>Workflow</span>
+                <strong>@Model.Statut</strong>
+                <small>validation district</small>
             </div>
             <div class="tracking-action-stack">
                 @if (canManage)
                 {
                     <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-bleu"><i class="bi bi-pencil"></i> Modifier</a>
-                    @if (Model.Statut is StatutWorkflowDocument.Brouillon or StatutWorkflowDocument.AReviser)
+                    @if (Model.Statut is StatutWorkflowDocument.Brouillon or StatutWorkflowDocument.AReviser or StatutWorkflowDocument.Rejete)
                     {
                         <form asp-action="Soumettre" asp-route-id="@Model.Id" method="post" class="d-inline">@Html.AntiForgeryToken()<button type="submit" class="btn btn-mango"><i class="bi bi-send"></i> Soumettre</button></form>
                     }
-                    @if (Model.Statut == StatutWorkflowDocument.Soumis)
-                    {
-                        <form asp-action="Valider" asp-route-id="@Model.Id" method="post" class="d-inline">@Html.AntiForgeryToken()<button type="submit" class="btn btn-mango"><i class="bi bi-check2-circle"></i> Valider</button></form>
-                        <form asp-action="DemanderRevision" asp-route-id="@Model.Id" method="post" class="d-inline">@Html.AntiForgeryToken()<button type="submit" class="btn btn-outline-or"><i class="bi bi-arrow-counterclockwise"></i> Revision</button></form>
-                    }
+                }
+                @if (canValidateDistrict && Model.Statut == StatutWorkflowDocument.Soumis)
+                {
+                    <form asp-action="Valider" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="const commentaire = prompt('Commentaire de validation (facultatif) :'); if (commentaire !== null) this.querySelector('[name=commentaire]').value = commentaire;">@Html.AntiForgeryToken()<input type="hidden" name="commentaire" /><button type="submit" class="btn btn-mango"><i class="bi bi-check2-circle"></i> Valider</button></form>
+                    <form asp-action="DemanderRevision" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="const commentaire = prompt('Modifications demandees :'); if (!commentaire) return false; this.querySelector('[name=commentaire]').value = commentaire;">@Html.AntiForgeryToken()<input type="hidden" name="commentaire" /><button type="submit" class="btn btn-outline-or"><i class="bi bi-arrow-counterclockwise"></i> Correction</button></form>
+                    <form asp-action="Rejeter" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="const commentaire = prompt('Motif du rejet :'); if (!commentaire) return false; this.querySelector('[name=commentaire]').value = commentaire;">@Html.AntiForgeryToken()<input type="hidden" name="commentaire" /><button type="submit" class="btn btn-outline-or"><i class="bi bi-x-octagon"></i> Rejeter</button></form>
                 }
                 <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i> Retour</a>
             </div>
         </div>
     </section>
 
-    <section class="tracking-panel tracking-panel--soft"><div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Etat de la proposition</h3><p class="tracking-panel__text">Suivi du workflow et remarques de validation.</p></div><span class="tracking-status-pill @statusClass">@Model.Statut</span></div>@if (!string.IsNullOrWhiteSpace(Model.CommentaireValidation)){<div class="alert alert-warning border-0 mb-0">@Model.CommentaireValidation</div>}</section>
-    <section class="tracking-panel"><div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Composition proposee</h3><p class="tracking-panel__text">Vision cible de l'encadrement.</p></div></div><div class="tracking-rich-text">@Model.CompositionProposee</div></section>
+    <section class="tracking-panel tracking-panel--soft"><div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Etat de la proposition</h3><p class="tracking-panel__text">Commentaires, validation ou rejet du district.</p></div><span class="tracking-status-pill @statusClass">@Model.Statut</span></div>@if (!string.IsNullOrWhiteSpace(Model.CommentaireValidation)){<div class="alert alert-warning border-0 mb-0">@Model.CommentaireValidation</div>}</section>
+
+    <section class="tracking-panel tracking-table-shell">
+        <div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Liste des chefs</h3><p class="tracking-panel__text">Chaque ligne reprend les informations obligatoires de la maitrise annuelle.</p></div></div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Fonction</th>
+                        <th>Branche</th>
+                        <th>Contact</th>
+                        <th>Niveau de formation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var membre in Model.Membres.OrderBy(m => m.OrdreAffichage))
+                {
+                    <tr>
+                        <td class="fw-semibold" style="color:var(--bleu-logo);">@membre.NomChef</td>
+                        <td>@membre.Fonction</td>
+                        <td>@(membre.Branche?.Nom ?? "Transverse")</td>
+                        <td>@membre.Contact</td>
+                        <td>@(string.IsNullOrWhiteSpace(membre.NiveauFormation) ? "Non renseigne" : membre.NiveauFormation)</td>
+                    </tr>
+                }
+                @if (!Model.Membres.Any())
+                {
+                    <tr><td colspan="5" class="text-center py-5 text-muted-custom">Aucun chef enregistre.</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
     <section class="tracking-panel"><div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Objectifs pedagogiques</h3><p class="tracking-panel__text">Intentions educatives et priorites d'animation.</p></div></div><div class="tracking-rich-text">@Model.ObjectifsPedagogiques</div></section>
-    <section class="tracking-panel"><div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Besoins de formation</h3><p class="tracking-panel__text">Montee en competence necessaire.</p></div></div><div class="tracking-rich-text">@(string.IsNullOrWhiteSpace(Model.BesoinsFormation) ? "Aucun besoin renseigne." : Model.BesoinsFormation)</div></section>
+    <section class="tracking-panel"><div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Besoins de formation</h3><p class="tracking-panel__text">Montee en competence necessaire pour l'equipe proposee.</p></div></div><div class="tracking-rich-text">@(string.IsNullOrWhiteSpace(Model.BesoinsFormation) ? "Aucun besoin renseigne." : Model.BesoinsFormation)</div></section>
+    <section class="tracking-panel"><div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Synthese de composition</h3><p class="tracking-panel__text">Resume automatique de la liste des chefs.</p></div></div><div class="tracking-rich-text">@Model.CompositionProposee</div></section>
     <section class="tracking-panel"><div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Observations</h3><p class="tracking-panel__text">Complements eventuels.</p></div></div><div class="tracking-rich-text">@(string.IsNullOrWhiteSpace(Model.Observations) ? "Aucune observation." : Model.Observations)</div></section>
 </div>

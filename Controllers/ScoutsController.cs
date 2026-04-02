@@ -1,4 +1,4 @@
-using MangoTaika.Data;
+﻿using MangoTaika.Data;
 using MangoTaika.DTOs;
 using MangoTaika.Helpers;
 using MangoTaika.Services;
@@ -113,7 +113,7 @@ public class ScoutsController(
             return View(dto);
         }
 
-        TempData["Success"] = $"Scout cree avec succes. Matricule attribue : {scout.Matricule}";
+        TempData["Success"] = "Scout cree avec succes. Le matricule sera attribue lors de la premiere cotisation nationale.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -328,3 +328,4 @@ public class ScoutsController(
             : null;
     }
 }
+

@@ -1,4 +1,4 @@
-@using MangoTaika.Data.Entities
+﻿@using MangoTaika.Data.Entities
 @model List<RapportActivite>
 @{
     ViewData["Title"] = "Rapports d'activite";
@@ -6,10 +6,12 @@
     var groupes = ViewBag.Groupes as List<Groupe> ?? new();
     var selectedGroupeId = ViewBag.SelectedGroupeId as Guid?;
     var selectedStatut = ViewBag.SelectedStatut as StatutWorkflowDocument?;
-    var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+    var canCreate = ViewBag.CanCreateReport as bool? == true;
+    var canEdit = ViewBag.CanEditReport as bool? == true;
     var brouillons = Model.Count(x => x.Statut == StatutWorkflowDocument.Brouillon || x.Statut == StatutWorkflowDocument.AReviser);
     var soumis = Model.Count(x => x.Statut == StatutWorkflowDocument.Soumis);
     var valides = Model.Count(x => x.Statut == StatutWorkflowDocument.Valide);
+    var rejetes = Model.Count(x => x.Statut == StatutWorkflowDocument.Rejete);
 
     string GetStatusClass(StatutWorkflowDocument statut) => statut switch
     {
@@ -17,6 +19,7 @@
         StatutWorkflowDocument.Soumis => "tracking-status-pill--pending",
         StatutWorkflowDocument.AReviser => "tracking-status-pill--revision",
         StatutWorkflowDocument.Valide => "tracking-status-pill--approved",
+        StatutWorkflowDocument.Rejete => "badge-rejetee",
         _ => "tracking-status-pill--draft"
     };
 }
@@ -26,7 +29,7 @@
         <div class="tracking-hero__content">
             <span class="tracking-hero__eyebrow"><i class="bi bi-journal-richtext"></i> Cloture terrain</span>
             <h2 class="section-title tracking-hero__title mb-2"><i class="bi bi-journal-richtext text-or"></i> Rapports d'<span class="accent">activite</span></h2>
-            <p class="tracking-hero__text mb-0">Une lecture plus propre des bilans post-activite pour suivre les retours terrain, les difficultes et les recommandations sans perdre le contexte de validation.</p>
+            <p class="tracking-hero__text mb-0">Bilans post-activite avec date de realisation, participants, resultats, difficultes, recommandations, pieces jointes et workflow de validation district.</p>
             <div class="tracking-hero__chips">
                 <span class="tracking-chip"><i class="bi bi-collection"></i> @Model.Count rapport(s)</span>
                 <span class="tracking-chip tracking-chip--soft"><i class="bi bi-send-check"></i> @soumis en attente</span>
@@ -35,12 +38,12 @@
         </div>
         <div class="tracking-hero__actions">
             <div class="tracking-hero__focus">
-                <span>Zone d'attention</span>
+                <span>Corrections</span>
                 <strong>@brouillons</strong>
                 <small>rapport(s) a completer ou reprendre</small>
             </div>
             <div class="tracking-action-stack">
-                @if (canManage)
+                @if (canCreate)
                 {
                     <a asp-action="Create" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Nouveau rapport</a>
                 }
@@ -52,7 +55,7 @@
         <article class="tracking-kpi tracking-kpi--olive"><i class="bi bi-pencil-square tracking-kpi__icon"></i><span class="tracking-kpi__label">Brouillons / revisions</span><strong class="tracking-kpi__value">@brouillons</strong><span class="tracking-kpi__meta">rapports a consolider</span></article>
         <article class="tracking-kpi tracking-kpi--gold"><i class="bi bi-hourglass-split tracking-kpi__icon"></i><span class="tracking-kpi__label">Soumis</span><strong class="tracking-kpi__value">@soumis</strong><span class="tracking-kpi__meta">en file de validation</span></article>
         <article class="tracking-kpi tracking-kpi--blue"><i class="bi bi-patch-check tracking-kpi__icon"></i><span class="tracking-kpi__label">Valides</span><strong class="tracking-kpi__value">@valides</strong><span class="tracking-kpi__meta">retours officiellement clos</span></article>
-        <article class="tracking-kpi tracking-kpi--rose"><i class="bi bi-diagram-3 tracking-kpi__icon"></i><span class="tracking-kpi__label">Entites</span><strong class="tracking-kpi__value">@Model.Select(x => x.Activite.GroupeId).Distinct().Count()</strong><span class="tracking-kpi__meta">perimetres representes</span></article>
+        <article class="tracking-kpi tracking-kpi--rose"><i class="bi bi-x-octagon tracking-kpi__icon"></i><span class="tracking-kpi__label">Rejetes</span><strong class="tracking-kpi__value">@rejetes</strong><span class="tracking-kpi__meta">a relancer si necessaire</span></article>
     </div>
 
     <section class="tracking-panel tracking-panel--soft">
@@ -85,14 +88,16 @@
     </section>
 
     <section class="tracking-panel tracking-table-shell">
-        <div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Tableau des rapports</h3><p class="tracking-panel__text">Vue compacte des activites closes et de leur avancement administratif.</p></div></div>
+        <div class="tracking-panel__header"><div><h3 class="tracking-panel__title">Tableau des rapports</h3><p class="tracking-panel__text">Vue compacte des activites closes, du nombre de participants, des pieces jointes et du statut de validation.</p></div></div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead>
                     <tr>
                         <th>Activite</th>
                         <th>Entite</th>
-                        <th>Date</th>
+                        <th>Realisation</th>
+                        <th>Participants</th>
+                        <th>Pieces</th>
                         <th>Statut</th>
                         <th class="text-end">Actions</th>
                     </tr>
@@ -101,14 +106,16 @@
                 @foreach (var rapport in Model)
                 {
                     <tr>
-                        <td><div class="fw-semibold" style="color:var(--bleu-logo);">@rapport.Activite.Titre</div><small class="text-muted-custom">@rapport.Activite.DateDebut.ToString("dd/MM/yyyy")</small></td>
+                        <td><div class="fw-semibold" style="color:var(--bleu-logo);">@rapport.Activite.Titre</div><small class="text-muted-custom">@rapport.ResumeExecutif</small></td>
                         <td>@(rapport.Activite.Groupe?.Nom ?? "District")</td>
-                        <td>@rapport.DateCreation.ToString("dd/MM/yyyy")</td>
+                        <td>@rapport.DateRealisation.ToString("dd/MM/yyyy")</td>
+                        <td>@rapport.NombreParticipants</td>
+                        <td>@rapport.PiecesJointes.Count</td>
                         <td><span class="tracking-status-pill @GetStatusClass(rapport.Statut)">@rapport.Statut</span></td>
                         <td class="text-end">
                             <div class="tracking-actions justify-content-end">
                                 <a asp-action="Details" asp-route-id="@rapport.Id" class="btn btn-outline-or"><i class="bi bi-eye"></i> Voir</a>
-                                @if (canManage)
+                                @if (canEdit && rapport.Statut != StatutWorkflowDocument.Valide)
                                 {
                                     <a asp-action="Edit" asp-route-id="@rapport.Id" class="btn btn-bleu"><i class="bi bi-pencil"></i> Modifier</a>
                                 }
@@ -118,7 +125,7 @@
                 }
                 @if (!Model.Any())
                 {
-                    <tr><td colspan="5" class="text-center py-5 text-muted-custom">Aucun rapport d'activite trouve.</td></tr>
+                    <tr><td colspan="7" class="text-center py-5 text-muted-custom">Aucun rapport d'activite trouve.</td></tr>
                 }
                 </tbody>
             </table>

@@ -2,11 +2,11 @@
 using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
 using MangoTaika.Helpers;
+using MangoTaika.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
-using MangoTaika.Hubs;
 using Microsoft.EntityFrameworkCore;
 
 namespace MangoTaika.Controllers;
@@ -19,51 +19,49 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
         var userId = Guid.Parse(userManager.GetUserId(User)!);
         var isAdmin = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
         var isSupervision = User.IsInRole("Superviseur") || User.IsInRole("Consultant");
+        var isDistrictReviewer = await EstValidateurDistrictAsync();
 
         var query = db.DemandesAutorisation
             .Include(d => d.Demandeur)
             .Include(d => d.Groupe)
+            .Include(d => d.Branche)
             .AsQueryable();
 
-        if (!isAdmin && !isSupervision)
+        if (!isAdmin && !isSupervision && !isDistrictReviewer)
+        {
             query = query.Where(d => d.DemandeurId == userId);
+        }
 
         var (page, ps) = ListPagination.Read(Request);
         var total = await query.CountAsync();
         var (p, pageSize, skip, totalPages) = ListPagination.Normalize(page, ps, total);
-        var demandes = await query.OrderByDescending(d => d.DateCreation).Skip(skip).Take(pageSize).ToListAsync();
+        var demandes = await query
+            .OrderByDescending(d => d.DateCreation)
+            .Skip(skip)
+            .Take(pageSize)
+            .ToListAsync();
 
-        ViewBag.PeutCreer = isAdmin || await EstScoutChef();
+        ViewBag.PeutCreer = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire") || await EstScoutChefAsync();
+        ViewBag.PeutValiderDistrict = isDistrictReviewer;
         ListPagination.SetViewData(ViewData, HttpContext, p, pageSize, total, totalPages);
         return View(demandes.Select(ToDto).ToList());
     }
 
-    /// <summary>
-    /// Vérifie si l'utilisateur courant est un scout avec une fonction d'encadrement (chef)
-    /// </summary>
-    private async Task<bool> EstScoutChef()
-    {
-        if (!User.IsInRole("Scout")) return false;
-        var userId = Guid.Parse(userManager.GetUserId(User)!);
-        var scout = await db.Scouts.FirstOrDefaultAsync(s => s.UserId == userId && s.IsActive);
-        if (scout?.Fonction is null) return false;
-        var fonctionUpper = scout.Fonction.ToUpperInvariant();
-        return fonctionUpper.Contains("CHEF") || fonctionUpper.Contains("COMMISSAIRE")
-            || fonctionUpper.Contains("ACD") || fonctionUpper.Contains("ACG")
-            || fonctionUpper.Contains("RESPONSABLE");
-    }
-
     public async Task<IActionResult> Create()
     {
-        // Seuls les admins/gestionnaires et les scouts chefs peuvent creer
         var isAdmin = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
-        if (!isAdmin && !await EstScoutChef())
+        var currentScout = await GetCurrentScoutAsync();
+        if (!isAdmin && !IsLeadershipScout(currentScout))
+        {
             return Forbid();
+        }
 
-        ViewBag.Groupes = await db.Groupes.Where(g => g.IsActive).ToListAsync();
+        await LoadFormDataAsync(currentScout, currentScout?.GroupeId);
         return View(new DemandeAutorisationCreateDto
         {
-            DateActivite = DateTime.Today
+            DateActivite = DateTime.Today,
+            GroupeId = !isAdmin ? currentScout?.GroupeId : null,
+            BrancheId = null
         });
     }
 
@@ -72,45 +70,58 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
     public async Task<IActionResult> Create(DemandeAutorisationCreateDto dto)
     {
         var isAdmin = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
-        if (!isAdmin && !await EstScoutChef())
+        var currentScout = await GetCurrentScoutAsync();
+        if (!isAdmin && !IsLeadershipScout(currentScout))
+        {
             return Forbid();
+        }
 
+        await ValiderCreationAsync(dto, isAdmin, currentScout);
         if (!ModelState.IsValid)
         {
-            ViewBag.Groupes = await db.Groupes.Where(g => g.IsActive).ToListAsync();
+            await LoadFormDataAsync(currentScout, dto.GroupeId);
             return View(dto);
         }
 
         var userId = Guid.Parse(userManager.GetUserId(User)!);
         var user = await userManager.FindByIdAsync(userId.ToString());
+        var groupe = dto.GroupeId.HasValue
+            ? await db.Groupes.FirstOrDefaultAsync(g => g.Id == dto.GroupeId.Value)
+            : null;
+        var branche = dto.BrancheId.HasValue
+            ? await db.Branches.FirstOrDefaultAsync(b => b.Id == dto.BrancheId.Value)
+            : null;
 
         var demande = new DemandeAutorisation
         {
             Id = Guid.NewGuid(),
-            Titre = dto.Titre,
-            Description = dto.Description,
+            Titre = dto.Titre.Trim(),
+            Description = NormalizeMultiline(dto.Description),
             TypeActivite = dto.TypeActivite,
-            DateActivite = DateTime.SpecifyKind(dto.DateActivite, DateTimeKind.Utc),
-            DateFin = dto.DateFin.HasValue ? DateTime.SpecifyKind(dto.DateFin.Value, DateTimeKind.Utc) : null,
-            Lieu = dto.Lieu,
+            DateActivite = DateTime.SpecifyKind(dto.DateActivite.Date, DateTimeKind.Utc),
+            DateFin = dto.DateFin.HasValue ? DateTime.SpecifyKind(dto.DateFin.Value.Date, DateTimeKind.Utc) : null,
+            Lieu = NormalizeValue(dto.Lieu),
             NombreParticipants = dto.NombreParticipants,
-            Objectifs = dto.Objectifs,
-            MoyensLogistiques = dto.MoyensLogistiques,
-            Budget = dto.Budget,
-            Observations = dto.Observations,
+            Objectifs = NormalizeMultiline(dto.Objectifs),
+            Responsables = NormalizeMultiline(dto.Responsables),
+            MoyensLogistiques = NormalizeMultiline(dto.MoyensLogistiques),
+            Budget = NormalizeValue(dto.Budget),
+            Observations = NormalizeMultiline(dto.Observations),
             GroupeId = dto.GroupeId,
+            BrancheId = dto.BrancheId,
             DemandeurId = userId,
-            Statut = StatutDemande.Initialisee
+            Statut = StatutDemande.Initialisee,
+            Groupe = groupe,
+            Branche = branche
         };
 
-        // Générer TDR
         demande.TdrContenu = GenererTdr(demande, user);
 
         db.DemandesAutorisation.Add(demande);
-        AjouterSuivi(demande, StatutDemande.Initialisee, StatutDemande.Initialisee, "Demande créée", user?.Prenom + " " + user?.Nom);
+        AjouterSuivi(demande, StatutDemande.Initialisee, StatutDemande.Initialisee, "Demande creee", BuildAuteurLabel(user));
         await db.SaveChangesAsync();
 
-        TempData["Success"] = "Demande d'autorisation créée. Le TDR a été généré.";
+        TempData["Success"] = "Demande d'autorisation creee. Elle peut maintenant etre soumise au commissaire de district.";
         return RedirectToAction(nameof(Details), new { id = demande.Id });
     }
 
@@ -120,19 +131,28 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
             .Include(d => d.Demandeur)
             .Include(d => d.Valideur)
             .Include(d => d.Groupe)
+            .Include(d => d.Branche)
             .Include(d => d.Suivis)
             .FirstOrDefaultAsync(d => d.Id == id);
-        if (demande is null) return NotFound();
-
-        // Les scouts ne voient que leurs propres demandes
-        var isAdmin = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
-        var isSupervision = User.IsInRole("Superviseur") || User.IsInRole("Consultant");
-        if (!isAdmin && !isSupervision)
+        if (demande is null)
         {
-            var userId = Guid.Parse(userManager.GetUserId(User)!);
-            if (demande.DemandeurId != userId) return Forbid();
+            return NotFound();
         }
 
+        var isAdmin = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+        var isSupervision = User.IsInRole("Superviseur") || User.IsInRole("Consultant");
+        var isDistrictReviewer = await EstValidateurDistrictAsync();
+        if (!isAdmin && !isSupervision && !isDistrictReviewer)
+        {
+            var userId = Guid.Parse(userManager.GetUserId(User)!);
+            if (demande.DemandeurId != userId)
+            {
+                return Forbid();
+            }
+        }
+
+        ViewBag.CanValidateDistrict = isDistrictReviewer;
+        ViewBag.CanSubmit = isAdmin || demande.DemandeurId == Guid.Parse(userManager.GetUserId(User)!);
         return View(ToDto(demande));
     }
 
@@ -141,110 +161,322 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Soumettre(Guid id)
     {
-        var isAdmin = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
-        if (!isAdmin && !await EstScoutChef())
-            return Forbid();
-
         var demande = await db.DemandesAutorisation.Include(d => d.Suivis).FirstOrDefaultAsync(d => d.Id == id);
-        if (demande is null) return NotFound();
-        if (demande.Statut != StatutDemande.Initialisee) return BadRequest();
+        if (demande is null)
+        {
+            return NotFound();
+        }
+
+        var isAdmin = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+        var currentScout = await GetCurrentScoutAsync();
+        if (!isAdmin && !IsLeadershipScout(currentScout))
+        {
+            return Forbid();
+        }
+
+        var currentUserId = Guid.Parse(userManager.GetUserId(User)!);
+        if (!isAdmin && demande.DemandeurId != currentUserId)
+        {
+            return Forbid();
+        }
+
+        if (demande.Statut != StatutDemande.Initialisee && demande.Statut != StatutDemande.EnRevision)
+        {
+            return BadRequest();
+        }
 
         var user = await userManager.GetUserAsync(User);
         var ancien = demande.Statut;
         demande.Statut = StatutDemande.Soumise;
-        AjouterSuivi(demande, ancien, StatutDemande.Soumise, "Demande soumise pour validation", user?.Prenom + " " + user?.Nom);
+        demande.MotifRejet = null;
+        AjouterSuivi(demande, ancien, StatutDemande.Soumise, "Demande soumise pour validation district", BuildAuteurLabel(user));
         await db.SaveChangesAsync();
 
-        await hub.Clients.All.SendAsync("RecevoirNotification", $"Nouvelle demande d'autorisation : {demande.Titre}");
-        TempData["Success"] = "Demande soumise pour validation.";
+        await hub.Clients.All.SendAsync("RecevoirNotification", $"Nouvelle demande d'autorisation d'activite : {demande.Titre}");
+        TempData["Success"] = "Demande soumise au commissaire de district.";
         return RedirectToAction(nameof(Details), new { id });
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> Valider(Guid id, string? commentaire)
     {
+        if (!await EstValidateurDistrictAsync())
+        {
+            return Forbid();
+        }
+
         var demande = await db.DemandesAutorisation.Include(d => d.Suivis).FirstOrDefaultAsync(d => d.Id == id);
-        if (demande is null) return NotFound();
+        if (demande is null)
+        {
+            return NotFound();
+        }
+
+        if (demande.Statut != StatutDemande.Soumise)
+        {
+            return BadRequest();
+        }
 
         var user = await userManager.GetUserAsync(User);
         var ancien = demande.Statut;
         demande.Statut = StatutDemande.Validee;
         demande.ValideurId = user?.Id;
         demande.DateValidation = DateTime.UtcNow;
-        AjouterSuivi(demande, ancien, StatutDemande.Validee, commentaire ?? "Demande validée", user?.Prenom + " " + user?.Nom);
+        demande.MotifRejet = null;
+        AjouterSuivi(demande, ancien, StatutDemande.Validee, NormalizeValue(commentaire) ?? "Demande validee par le commissaire de district", BuildAuteurLabel(user));
         await db.SaveChangesAsync();
 
-        await hub.Clients.User(demande.DemandeurId.ToString()).SendAsync("RecevoirNotification", $"Votre demande \"{demande.Titre}\" a été validée.");
-        TempData["Success"] = "Demande validée.";
+        await hub.Clients.User(demande.DemandeurId.ToString()).SendAsync("RecevoirNotification", $"Votre demande \"{demande.Titre}\" a ete validee.");
+        TempData["Success"] = "Demande validee.";
         return RedirectToAction(nameof(Details), new { id });
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> Rejeter(Guid id, string? motif)
     {
+        if (!await EstValidateurDistrictAsync())
+        {
+            return Forbid();
+        }
+
         var demande = await db.DemandesAutorisation.Include(d => d.Suivis).FirstOrDefaultAsync(d => d.Id == id);
-        if (demande is null) return NotFound();
+        if (demande is null)
+        {
+            return NotFound();
+        }
+
+        if (demande.Statut != StatutDemande.Soumise)
+        {
+            return BadRequest();
+        }
 
         var user = await userManager.GetUserAsync(User);
         var ancien = demande.Statut;
+        var motifNormalise = NormalizeValue(motif) ?? "Demande rejetee";
         demande.Statut = StatutDemande.Rejetee;
-        demande.MotifRejet = motif;
+        demande.MotifRejet = motifNormalise;
         demande.ValideurId = user?.Id;
         demande.DateValidation = DateTime.UtcNow;
-        AjouterSuivi(demande, ancien, StatutDemande.Rejetee, motif ?? "Demande rejetée", user?.Prenom + " " + user?.Nom);
+        AjouterSuivi(demande, ancien, StatutDemande.Rejetee, motifNormalise, BuildAuteurLabel(user));
         await db.SaveChangesAsync();
 
-        await hub.Clients.User(demande.DemandeurId.ToString()).SendAsync("RecevoirNotification", $"Votre demande \"{demande.Titre}\" a été rejetée.");
-        TempData["Success"] = "Demande rejetée.";
+        await hub.Clients.User(demande.DemandeurId.ToString()).SendAsync("RecevoirNotification", $"Votre demande \"{demande.Titre}\" a ete rejetee.");
+        TempData["Success"] = "Demande rejetee.";
         return RedirectToAction(nameof(Details), new { id });
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> Reviser(Guid id, string? commentaire)
     {
+        if (!await EstValidateurDistrictAsync())
+        {
+            return Forbid();
+        }
+
         var demande = await db.DemandesAutorisation.Include(d => d.Suivis).FirstOrDefaultAsync(d => d.Id == id);
-        if (demande is null) return NotFound();
+        if (demande is null)
+        {
+            return NotFound();
+        }
+
+        if (demande.Statut != StatutDemande.Soumise)
+        {
+            return BadRequest();
+        }
 
         var user = await userManager.GetUserAsync(User);
         var ancien = demande.Statut;
+        var commentaireNormalise = NormalizeValue(commentaire) ?? "Modification demandee par le commissaire de district";
         demande.Statut = StatutDemande.EnRevision;
-        AjouterSuivi(demande, ancien, StatutDemande.EnRevision, commentaire ?? "Demande renvoyée pour révision", user?.Prenom + " " + user?.Nom);
+        demande.MotifRejet = null;
+        demande.ValideurId = user?.Id;
+        AjouterSuivi(demande, ancien, StatutDemande.EnRevision, commentaireNormalise, BuildAuteurLabel(user));
         await db.SaveChangesAsync();
 
-        await hub.Clients.User(demande.DemandeurId.ToString()).SendAsync("RecevoirNotification", $"Votre demande \"{demande.Titre}\" nécessite des modifications.");
-        TempData["Success"] = "Demande renvoyée pour révision.";
+        await hub.Clients.User(demande.DemandeurId.ToString()).SendAsync("RecevoirNotification", $"Votre demande \"{demande.Titre}\" doit etre modifiee avant une nouvelle validation.");
+        TempData["Success"] = "Demande renvoyee pour modification.";
         return RedirectToAction(nameof(Details), new { id });
+    }
+
+    private async Task LoadFormDataAsync(Scout? currentScout, Guid? selectedGroupeId)
+    {
+        var isAdmin = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+
+        var groupesQuery = db.Groupes.Where(g => g.IsActive).OrderBy(g => g.Nom).AsQueryable();
+        if (!isAdmin && currentScout?.GroupeId is Guid scoutGroupeId)
+        {
+            groupesQuery = groupesQuery.Where(g => g.Id == scoutGroupeId);
+            selectedGroupeId ??= scoutGroupeId;
+        }
+
+        var branchesQuery = db.Branches.Where(b => b.IsActive).OrderBy(b => b.Nom).AsQueryable();
+        if (!isAdmin && currentScout?.GroupeId is Guid lockedGroupeId)
+        {
+            branchesQuery = branchesQuery.Where(b => b.GroupeId == lockedGroupeId);
+        }
+
+        ViewBag.Groupes = await groupesQuery.ToListAsync();
+        ViewBag.Branches = await branchesQuery.ToListAsync();
+        ViewBag.GroupeVerrouille = !isAdmin && currentScout?.GroupeId is not null;
+        ViewBag.GroupeSelectionne = selectedGroupeId;
+    }
+
+    private async Task ValiderCreationAsync(DemandeAutorisationCreateDto dto, bool isAdmin, Scout? currentScout)
+    {
+        if (!dto.GroupeId.HasValue)
+        {
+            ModelState.AddModelError(nameof(dto.GroupeId), "Le groupe concerne est obligatoire.");
+        }
+
+        if (!dto.BrancheId.HasValue)
+        {
+            ModelState.AddModelError(nameof(dto.BrancheId), "La branche concernee est obligatoire.");
+        }
+
+        Groupe? groupe = null;
+        if (dto.GroupeId.HasValue)
+        {
+            groupe = await db.Groupes.FirstOrDefaultAsync(g => g.Id == dto.GroupeId.Value && g.IsActive);
+            if (groupe is null)
+            {
+                ModelState.AddModelError(nameof(dto.GroupeId), "Le groupe selectionne est introuvable ou inactif.");
+            }
+        }
+
+        Branche? branche = null;
+        if (dto.BrancheId.HasValue)
+        {
+            branche = await db.Branches.FirstOrDefaultAsync(b => b.Id == dto.BrancheId.Value && b.IsActive);
+            if (branche is null)
+            {
+                ModelState.AddModelError(nameof(dto.BrancheId), "La branche selectionnee est introuvable ou inactive.");
+            }
+        }
+
+        if (groupe is not null && branche is not null && branche.GroupeId != groupe.Id)
+        {
+            ModelState.AddModelError(nameof(dto.BrancheId), "La branche concernee doit appartenir au groupe selectionne.");
+        }
+
+        if (!isAdmin)
+        {
+            if (currentScout?.GroupeId is null)
+            {
+                ModelState.AddModelError(nameof(dto.GroupeId), "Votre profil scout n'est rattache a aucun groupe.");
+            }
+            else if (dto.GroupeId != currentScout.GroupeId)
+            {
+                ModelState.AddModelError(nameof(dto.GroupeId), "Un chef de groupe ne peut soumettre que des demandes pour son propre groupe.");
+            }
+        }
+    }
+
+    private async Task<Scout?> GetCurrentScoutAsync()
+    {
+        var userId = userManager.GetUserId(User);
+        if (!Guid.TryParse(userId, out var parsedUserId))
+        {
+            return null;
+        }
+
+        return await db.Scouts
+            .Include(s => s.Groupe)
+            .Include(s => s.Branche)
+            .FirstOrDefaultAsync(s => s.UserId == parsedUserId && s.IsActive);
+    }
+
+    private async Task<bool> EstScoutChefAsync()
+    {
+        var scout = await GetCurrentScoutAsync();
+        return IsLeadershipScout(scout);
+    }
+
+    private async Task<bool> EstValidateurDistrictAsync()
+    {
+        var scout = await GetCurrentScoutAsync();
+        if (scout is null || scout.Groupe is null)
+        {
+            return false;
+        }
+
+        if (!IsDistrictEquipe(scout.Groupe.Nom))
+        {
+            return false;
+        }
+
+        return IsDistrictValidationFunction(scout.Fonction);
+    }
+
+    private static bool IsLeadershipScout(Scout? scout)
+    {
+        if (scout is null)
+        {
+            return false;
+        }
+
+        var normalizedFunction = DatabaseText.NormalizeSearchKey(scout.Fonction);
+        return normalizedFunction.Contains("CHEF", StringComparison.Ordinal)
+            || normalizedFunction.Contains("COMMISSAIRE", StringComparison.Ordinal)
+            || normalizedFunction.Contains("RESPONSABLE", StringComparison.Ordinal);
+    }
+
+    private static bool IsDistrictEquipe(string? groupeNom)
+    {
+        return DatabaseText.NormalizeSearchKey(groupeNom)
+            == DatabaseText.NormalizeSearchKey("Equipe de District Mango Taika");
+    }
+
+    private static bool IsDistrictValidationFunction(string? fonction)
+    {
+        var normalizedFunction = DatabaseText.NormalizeSearchKey(fonction);
+        return normalizedFunction == DatabaseText.NormalizeSearchKey("COMMISSAIRE DE DISTRICT (CD)")
+            || normalizedFunction == DatabaseText.NormalizeSearchKey("COMMISSAIRE DE DISTRICT ADJOINT (CDA)")
+            || normalizedFunction == DatabaseText.NormalizeSearchKey("ASSISTANT COMMISSAIRE DE DISTRICT (ACD)");
+    }
+
+    private static string? NormalizeValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private static string? NormalizeMultiline(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private static string BuildAuteurLabel(ApplicationUser? user)
+    {
+        return user is null ? "Systeme" : $"{user.Prenom} {user.Nom}".Trim();
     }
 
     private static string GenererTdr(DemandeAutorisation d, ApplicationUser? user)
     {
         return $"""
-        TERMES DE RÉFÉRENCE (TDR)
+        TERMES DE REFERENCE (TDR)
         ========================
-        Titre : {d.Titre}
-        Type d'activité : {d.TypeActivite}
+        Nom de l'activite : {d.Titre}
+        Type d'activite : {d.TypeActivite}
         Demandeur : {user?.Prenom} {user?.Nom}
-        Date : {d.DateActivite:dd/MM/yyyy}{(d.DateFin.HasValue ? $" au {d.DateFin:dd/MM/yyyy}" : "")}
-        Lieu : {d.Lieu ?? "À préciser"}
+        Groupe concerne : {d.Groupe?.Nom ?? "A preciser"}
+        Branche concernee : {d.Branche?.Nom ?? "A preciser"}
+        Date : {d.DateActivite:dd/MM/yyyy}{(d.DateFin.HasValue ? $" au {d.DateFin:dd/MM/yyyy}" : string.Empty)}
+        Lieu : {d.Lieu ?? "A preciser"}
         Nombre de participants : {d.NombreParticipants}
+        Responsables : {d.Responsables ?? "A preciser"}
 
         1. CONTEXTE ET JUSTIFICATION
-        {d.Description ?? "À compléter"}
+        {d.Description ?? "A completer"}
 
-        2. OBJECTIFS
-        {d.Objectifs ?? "À compléter"}
+        2. OBJECTIF
+        {d.Objectifs ?? "A completer"}
 
         3. MOYENS LOGISTIQUES
-        {d.MoyensLogistiques ?? "À compléter"}
+        {d.MoyensLogistiques ?? "A completer"}
 
-        4. BUDGET PRÉVISIONNEL
-        {d.Budget ?? "À compléter"}
+        4. BUDGET PREVISIONNEL
+        {d.Budget ?? "A completer"}
 
         5. OBSERVATIONS
         {d.Observations ?? "Aucune"}
@@ -275,6 +507,7 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
         Lieu = d.Lieu,
         NombreParticipants = d.NombreParticipants,
         Objectifs = d.Objectifs,
+        Responsables = d.Responsables,
         MoyensLogistiques = d.MoyensLogistiques,
         Budget = d.Budget,
         Observations = d.Observations,
@@ -287,6 +520,8 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
         NomValideur = d.Valideur != null ? $"{d.Valideur.Prenom} {d.Valideur.Nom}" : null,
         NomGroupe = d.Groupe?.Nom,
         GroupeId = d.GroupeId,
+        NomBranche = d.Branche?.Nom,
+        BrancheId = d.BrancheId,
         Suivis = d.Suivis.OrderBy(s => s.Date).Select(s => new SuiviDemandeDto
         {
             AncienStatut = s.AncienStatut,

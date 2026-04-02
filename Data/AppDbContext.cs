@@ -1,4 +1,4 @@
-using MangoTaika.Data.Entities;
+﻿using MangoTaika.Data.Entities;
 using MangoTaika.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -43,10 +43,14 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<LienReseauSocial> LiensReseauxSociaux => Set<LienReseauSocial>();
     public DbSet<SuiviAcademique> SuivisAcademiques => Set<SuiviAcademique>();
     public DbSet<EtapeParcoursScout> EtapesParcoursScouts => Set<EtapeParcoursScout>();
+    public DbSet<ModeleEtapeParcours> ModelesEtapesParcours => Set<ModeleEtapeParcours>();
     public DbSet<InscriptionAnnuelleScout> InscriptionsAnnuellesScouts => Set<InscriptionAnnuelleScout>();
     public DbSet<ProgrammeAnnuel> ProgrammesAnnuels => Set<ProgrammeAnnuel>();
+    public DbSet<ProgrammeAnnuelActivite> ProgrammesAnnuelsActivites => Set<ProgrammeAnnuelActivite>();
     public DbSet<RapportActivite> RapportsActivite => Set<RapportActivite>();
+    public DbSet<RapportActivitePieceJointe> RapportsActivitePiecesJointes => Set<RapportActivitePieceJointe>();
     public DbSet<PropositionMaitriseAnnuelle> PropositionsMaitriseAnnuelles => Set<PropositionMaitriseAnnuelle>();
+    public DbSet<PropositionMaitriseMembre> PropositionsMaitriseMembres => Set<PropositionMaitriseMembre>();
     public DbSet<CotisationNationaleImport> CotisationsNationalesImports => Set<CotisationNationaleImport>();
     public DbSet<CotisationNationaleImportLigne> CotisationsNationalesImportLignes => Set<CotisationNationaleImportLigne>();
 
@@ -83,7 +87,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.Property(s => s.NumeroCarte).HasColumnType("citext");
             e.HasIndex(s => s.Matricule)
                 .HasDatabaseName(PersistenceConstraints.ScoutsMatricule)
-                .IsUnique();
+                .IsUnique()
+                .HasFilter("\"Matricule\" IS NOT NULL");
             e.HasIndex(s => s.NumeroCarte)
                 .HasDatabaseName(PersistenceConstraints.ScoutsNumeroCarte)
                 .IsUnique()
@@ -196,6 +201,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasOne(d => d.Demandeur).WithMany().HasForeignKey(d => d.DemandeurId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(d => d.Valideur).WithMany().HasForeignKey(d => d.ValideurId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(d => d.Groupe).WithMany().HasForeignKey(d => d.GroupeId);
+            e.HasOne(d => d.Branche).WithMany().HasForeignKey(d => d.BrancheId).OnDelete(DeleteBehavior.SetNull);
             e.HasMany(d => d.Suivis).WithOne(s => s.Demande).HasForeignKey(s => s.DemandeId).OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -250,6 +256,22 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasOne(s => s.Scout).WithMany(sc => sc.SuivisAcademiques).HasForeignKey(s => s.ScoutId).OnDelete(DeleteBehavior.Cascade);
         });
 
+        // Parcours scout
+        builder.Entity<EtapeParcoursScout>(e =>
+        {
+            e.HasOne(p => p.Scout).WithMany(s => s.EtapesParcours).HasForeignKey(p => p.ScoutId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ModeleEtapeParcours>(e =>
+        {
+            e.HasOne(m => m.Branche).WithMany().HasForeignKey(m => m.BrancheId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(m => new { m.BrancheId, m.CodeEtape, m.IsActive })
+                .HasDatabaseName("IX_ModeleEtapeParcours_Branche_Code_Actif")
+                .HasFilter("\"CodeEtape\" IS NOT NULL");
+            e.HasIndex(m => new { m.BrancheId, m.OrdreAffichage, m.IsActive })
+                .HasDatabaseName("IX_ModeleEtapeParcours_Branche_Ordre_Actif");
+        });
+
         // Inscriptions annuelles
         builder.Entity<InscriptionAnnuelleScout>(e =>
         {
@@ -265,6 +287,13 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasOne(p => p.Groupe).WithMany().HasForeignKey(p => p.GroupeId).OnDelete(DeleteBehavior.SetNull);
             e.HasOne(p => p.Createur).WithMany().HasForeignKey(p => p.CreateurId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(p => p.Valideur).WithMany().HasForeignKey(p => p.ValideurId).OnDelete(DeleteBehavior.SetNull);
+            e.HasMany(p => p.Activites).WithOne(a => a.ProgrammeAnnuel).HasForeignKey(a => a.ProgrammeAnnuelId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ProgrammeAnnuelActivite>(e =>
+        {
+            e.HasIndex(a => new { a.ProgrammeAnnuelId, a.OrdreAffichage });
+            e.HasOne(a => a.Branche).WithMany().HasForeignKey(a => a.BrancheId).OnDelete(DeleteBehavior.SetNull);
         });
 
         // Rapport d'activite
@@ -274,6 +303,12 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasOne(r => r.Activite).WithMany().HasForeignKey(r => r.ActiviteId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(r => r.Createur).WithMany().HasForeignKey(r => r.CreateurId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(r => r.Valideur).WithMany().HasForeignKey(r => r.ValideurId).OnDelete(DeleteBehavior.SetNull);
+            e.HasMany(r => r.PiecesJointes).WithOne(p => p.RapportActivite).HasForeignKey(p => p.RapportActiviteId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<RapportActivitePieceJointe>(e =>
+        {
+            e.HasIndex(p => new { p.RapportActiviteId, p.DateAjout });
         });
 
         // Proposition annuelle de maitrise
@@ -283,6 +318,13 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasOne(p => p.Groupe).WithMany().HasForeignKey(p => p.GroupeId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(p => p.Createur).WithMany().HasForeignKey(p => p.CreateurId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(p => p.Valideur).WithMany().HasForeignKey(p => p.ValideurId).OnDelete(DeleteBehavior.SetNull);
+            e.HasMany(p => p.Membres).WithOne(m => m.PropositionMaitriseAnnuelle).HasForeignKey(m => m.PropositionMaitriseAnnuelleId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<PropositionMaitriseMembre>(e =>
+        {
+            e.HasIndex(m => new { m.PropositionMaitriseAnnuelleId, m.OrdreAffichage });
+            e.HasOne(m => m.Branche).WithMany().HasForeignKey(m => m.BrancheId).OnDelete(DeleteBehavior.SetNull);
         });
 
         // Imports de cotisations nationales
@@ -370,7 +412,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasMany(q => q.Reponses).WithOne(r => r.Question).HasForeignKey(r => r.QuestionId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        // InscriptionFormation — unique par scout/formation
+        // InscriptionFormation â€” unique par scout/formation
         builder.Entity<InscriptionFormation>(e =>
         {
             e.HasOne(i => i.Scout).WithMany().HasForeignKey(i => i.ScoutId).OnDelete(DeleteBehavior.Cascade);
@@ -400,7 +442,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasOne(m => m.Auteur).WithMany().HasForeignKey(m => m.AuteurId).OnDelete(DeleteBehavior.Restrict);
         });
 
-        // ProgressionLecon — unique par scout/leçon
+        // ProgressionLecon â€” unique par scout/leÃ§on
         builder.Entity<ProgressionLecon>(e =>
         {
             e.HasOne(p => p.Scout).WithMany().HasForeignKey(p => p.ScoutId).OnDelete(DeleteBehavior.Cascade);
@@ -413,7 +455,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasOne(t => t.Scout).WithMany().HasForeignKey(t => t.ScoutId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        // Seed des rôles
+        // Seed des rÃ´les
         var roleData = new (string Name, string Guid)[]
         {
             ("Administrateur", "a1b2c3d4-e5f6-7890-abcd-ef1234567890"),
@@ -435,6 +477,13 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         }
     }
 }
+
+
+
+
+
+
+
 
 
 

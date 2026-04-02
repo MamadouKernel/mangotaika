@@ -1,9 +1,10 @@
-@using MangoTaika.Data.Entities
+﻿@using MangoTaika.Data.Entities
 @model RapportActivite
 @{
     ViewData["Title"] = Model.Id == Guid.Empty ? "Nouveau rapport d'activite" : "Modifier le rapport d'activite";
     Layout = "_LayoutAdmin";
     var activites = ViewBag.Activites as List<Activite> ?? new();
+    var piecesExistantes = Model.PiecesJointes?.OrderByDescending(p => p.DateAjout).ToList() ?? new List<RapportActivitePieceJointe>();
 }
 
 <div class="tracking-module tracking-module--rapports-form">
@@ -11,13 +12,13 @@
         <div class="tracking-hero__content">
             <span class="tracking-hero__eyebrow"><i class="bi bi-journal-check"></i> Cloture d'une activite</span>
             <h2 class="section-title tracking-hero__title mb-2"><i class="bi bi-journal-richtext text-or"></i> <span class="accent">@ViewData["Title"]</span></h2>
-            <p class="tracking-hero__text mb-0">Formalisez les resultats, les difficultes et les recommandations dans un canevas unique, plus lisible pour la validation.</p>
+            <p class="tracking-hero__text mb-0">Le chef de groupe peut deposer le bilan, les difficultes, les resultats, les recommandations et les pieces jointes. Le commissaire de district peut demander correction puis valider.</p>
         </div>
         <div class="tracking-hero__actions">
             <div class="tracking-hero__focus">
-                <span>Nature du document</span>
-                <strong>Retour terrain</strong>
-                <small>choisissez une activite cloturee ou prete a etre analysee.</small>
+                <span>Flux</span>
+                <strong>Soumission district</strong>
+                <small>bilan, commentaires, correction puis resoumission</small>
             </div>
             <div class="tracking-action-stack">
                 <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i> Retour</a>
@@ -27,7 +28,7 @@
 
     <div class="tracking-form-layout">
         <section class="tracking-panel tracking-form-shell">
-            <form method="post">
+            <form method="post" enctype="multipart/form-data">
                 @Html.AntiForgeryToken()
                 @if (Model.Id != Guid.Empty)
                 {
@@ -36,7 +37,7 @@
                 <div asp-validation-summary="ModelOnly" class="text-danger small"></div>
                 <div class="tracking-form-grid">
                     <div class="tracking-form-col-12">
-                        <label asp-for="ActiviteId" class="form-label">Activite</label>
+                        <label asp-for="ActiviteId" class="form-label">Activite concernee</label>
                         <select asp-for="ActiviteId" class="form-select">
                             <option value="">-- Selectionner une activite cloturee --</option>
                             @foreach (var activite in activites)
@@ -45,11 +46,32 @@
                             }
                         </select>
                     </div>
-                    <div class="tracking-form-col-12"><label asp-for="ResumeExecutif" class="form-label">Resume executif</label><textarea asp-for="ResumeExecutif" class="form-control" rows="4"></textarea></div>
+                    <div class="tracking-form-col-6"><label asp-for="DateRealisation" class="form-label">Date de realisation</label><input asp-for="DateRealisation" class="form-control" type="date" /></div>
+                    <div class="tracking-form-col-6"><label asp-for="NombreParticipants" class="form-label">Nombre de participants</label><input asp-for="NombreParticipants" class="form-control" type="number" min="0" /></div>
+                    <div class="tracking-form-col-12"><label asp-for="ResumeExecutif" class="form-label">Resume de l'activite</label><textarea asp-for="ResumeExecutif" class="form-control" rows="4"></textarea></div>
                     <div class="tracking-form-col-12"><label asp-for="ResultatsObtenus" class="form-label">Resultats obtenus</label><textarea asp-for="ResultatsObtenus" class="form-control" rows="5"></textarea></div>
                     <div class="tracking-form-col-12"><label asp-for="DifficultesRencontrees" class="form-label">Difficultes rencontrees</label><textarea asp-for="DifficultesRencontrees" class="form-control" rows="5"></textarea></div>
                     <div class="tracking-form-col-12"><label asp-for="Recommandations" class="form-label">Recommandations</label><textarea asp-for="Recommandations" class="form-control" rows="5"></textarea></div>
                     <div class="tracking-form-col-12"><label asp-for="ObservationsComplementaires" class="form-label">Observations complementaires</label><textarea asp-for="ObservationsComplementaires" class="form-control" rows="4"></textarea></div>
+                    <div class="tracking-form-col-12">
+                        <label class="form-label">Pieces jointes eventuelles</label>
+                        <input type="file" name="piecesJointes" class="form-control" multiple />
+                    </div>
+                    @if (piecesExistantes.Any())
+                    {
+                        <div class="tracking-form-col-12">
+                            <label class="form-label">Pieces jointes deja enregistrees</label>
+                            <div class="tracking-list-stack">
+                                @foreach (var piece in piecesExistantes)
+                                {
+                                    <label class="tracking-inline-check">
+                                        <input type="checkbox" name="piecesASupprimer" value="@piece.Id" />
+                                        <span>Supprimer @piece.NomFichier</span>
+                                    </label>
+                                }
+                            </div>
+                        </div>
+                    }
                 </div>
                 <div class="tracking-actions">
                     <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Enregistrer</button>
@@ -59,8 +81,26 @@
         </section>
 
         <aside class="tracking-side-stack">
-            <div class="tracking-side-card"><span class="tracking-side-card__label"><i class="bi bi-lightbulb"></i> Angle attendu</span><h4>Un bilan exploitable</h4><p class="text-muted-custom mb-0">Mettez en evidence les resultats observes, les points de friction et les recommandations directement activables.</p></div>
-            <div class="tracking-side-card"><span class="tracking-side-card__label"><i class="bi bi-chat-left-text"></i> Bon reflexe</span><h5>Rester concret</h5><p class="text-muted-custom mb-0">Une phrase par idee forte vaut mieux qu'un bloc trop dense: cela facilite la lecture lors de la validation.</p></div>
+            <div class="tracking-side-card"><span class="tracking-side-card__label"><i class="bi bi-lightbulb"></i> Attendu</span><h4>Un bilan exploitable</h4><p class="text-muted-custom mb-0">Le rapport doit faire ressortir les resultats, les difficultes, les recommandations et les preuves documentaires utiles au district.</p></div>
+            <div class="tracking-side-card"><span class="tracking-side-card__label"><i class="bi bi-paperclip"></i> Pieces</span><h5>Conseil</h5><p class="text-muted-custom mb-0">Ajoutez les supports utiles: rapport PDF, photos, liste de presence ou tout autre justificatif lie a l'activite.</p></div>
         </aside>
     </div>
 </div>
+
+<style>
+    .tracking-list-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .tracking-inline-check {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-radius: 14px;
+        background: rgba(255,255,255,0.68);
+        border: 1px solid rgba(95,127,67,0.14);
+    }
+</style>

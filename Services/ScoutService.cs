@@ -1,4 +1,4 @@
-using ClosedXML.Excel;
+﻿using ClosedXML.Excel;
 using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
@@ -17,12 +17,15 @@ public class ScoutService(AppDbContext db) : IScoutService
 
     public async Task<List<ScoutDto>> GetAllAsync()
     {
-        return await db.Scouts
+        var scouts = await db.Scouts
             .Include(s => s.Groupe)
             .Include(s => s.Branche)
             .Where(s => s.IsActive)
-            .Select(s => ToDto(s))
             .ToListAsync();
+
+        var dtos = scouts.Select(ToDto).ToList();
+        await PopulateHistoryAsync(dtos);
+        return dtos;
     }
 
     public async Task<ScoutDto?> GetByIdAsync(Guid id)
@@ -31,24 +34,31 @@ public class ScoutService(AppDbContext db) : IScoutService
             .Include(s => s.Groupe)
             .Include(s => s.Branche)
             .FirstOrDefaultAsync(s => s.Id == id);
-        return scout is null ? null : ToDto(scout);
+        if (scout is null)
+        {
+            return null;
+        }
+
+        var dto = ToDto(scout);
+        await PopulateHistoryAsync([dto]);
+        return dto;
     }
 
     public async Task<ScoutDto> CreateAsync(ScoutCreateDto dto)
     {
-        var matricule = ScoutMatriculeFormat.Normalize(dto.Matricule);
+        var requestedMatricule = ScoutMatriculeFormat.NormalizeOptional(dto.Matricule);
         var nom = NormalizeRequired(dto.Nom, "Le nom est requis.");
         var prenom = NormalizeRequired(dto.Prenom, "Le prenom est requis.");
         var dateNaissance = NormalizeDateNaissance(dto.DateNaissance);
         var numeroCarte = NormalizeOptional(dto.NumeroCarte);
-        await EnsureUniqueMatriculeAsync(matricule);
+        ValidateManualMatriculeInput(requestedMatricule);
         await EnsureUniqueNumeroCarteAsync(numeroCarte);
         await ValidateAffectationAsync(dto.GroupeId, dto.BrancheId);
 
         var scout = new Scout
         {
             Id = Guid.NewGuid(),
-            Matricule = matricule,
+            Matricule = null,
             Nom = nom,
             Prenom = prenom,
             DateNaissance = DateTime.SpecifyKind(dateNaissance, DateTimeKind.Utc),
@@ -66,7 +76,7 @@ public class ScoutService(AppDbContext db) : IScoutService
             ContactUrgenceRelation = NormalizeOptional(dto.ContactUrgenceRelation),
             ContactUrgenceTelephone = NormalizeOptional(dto.ContactUrgenceTelephone),
             PhotoUrl = NormalizeOptional(dto.PhotoUrl),
-            AssuranceAnnuelle = dto.AssuranceAnnuelle,
+            AssuranceAnnuelle = false,
             AdresseGeographique = NormalizeOptional(dto.AdresseGeographique),
             GroupeId = dto.GroupeId,
             BrancheId = dto.BrancheId
@@ -81,16 +91,16 @@ public class ScoutService(AppDbContext db) : IScoutService
         var scout = await db.Scouts.FindAsync(id);
         if (scout is null) return false;
 
-        var matricule = ScoutMatriculeFormat.Normalize(dto.Matricule);
+        var requestedMatricule = ScoutMatriculeFormat.NormalizeOptional(dto.Matricule);
         var nom = NormalizeRequired(dto.Nom, "Le nom est requis.");
         var prenom = NormalizeRequired(dto.Prenom, "Le prenom est requis.");
         var dateNaissance = NormalizeDateNaissance(dto.DateNaissance);
         var numeroCarte = NormalizeOptional(dto.NumeroCarte);
-        await EnsureUniqueMatriculeAsync(matricule, id);
+        ValidateManualMatriculeInput(requestedMatricule, scout.Matricule);
         await EnsureUniqueNumeroCarteAsync(numeroCarte, id);
         await ValidateAffectationAsync(dto.GroupeId, dto.BrancheId);
 
-        scout.Matricule = matricule;
+        scout.Matricule = ScoutMatriculeFormat.NormalizeOptional(scout.Matricule);
         scout.Nom = nom;
         scout.Prenom = prenom;
         scout.DateNaissance = DateTime.SpecifyKind(dateNaissance, DateTimeKind.Utc);
@@ -108,7 +118,6 @@ public class ScoutService(AppDbContext db) : IScoutService
         scout.ContactUrgenceRelation = NormalizeOptional(dto.ContactUrgenceRelation);
         scout.ContactUrgenceTelephone = NormalizeOptional(dto.ContactUrgenceTelephone);
         scout.PhotoUrl = NormalizeOptional(dto.PhotoUrl);
-        scout.AssuranceAnnuelle = dto.AssuranceAnnuelle;
         scout.AdresseGeographique = NormalizeOptional(dto.AdresseGeographique);
         scout.GroupeId = dto.GroupeId;
         scout.BrancheId = dto.BrancheId;
@@ -130,32 +139,37 @@ public class ScoutService(AppDbContext db) : IScoutService
         var query = db.Scouts
             .Include(s => s.Groupe)
             .Include(s => s.Branche)
+            .Where(s => s.IsActive)
             .AsQueryable();
 
+        List<Scout> scouts;
         if (db.Database.IsNpgsql())
         {
             var pattern = DatabaseText.ToNormalizedContainsPattern(terme);
-            query = query.Where(s =>
-                EF.Functions.Like(PostgresTextFunctions.NormalizeSearch(s.Nom), pattern) ||
-                EF.Functions.Like(PostgresTextFunctions.NormalizeSearch(s.Prenom), pattern) ||
-                EF.Functions.Like(PostgresTextFunctions.NormalizeSearch(s.Matricule), pattern) ||
-                (s.NumeroCarte != null && EF.Functions.Like(PostgresTextFunctions.NormalizeSearch(s.NumeroCarte), pattern)) ||
-                (s.District != null && EF.Functions.Like(PostgresTextFunctions.NormalizeSearch(s.District), pattern)));
-
-            return await query.Select(s => ToDto(s)).ToListAsync();
+            scouts = await query.Where(s =>
+                    EF.Functions.Like(PostgresTextFunctions.NormalizeSearch(s.Nom), pattern) ||
+                    EF.Functions.Like(PostgresTextFunctions.NormalizeSearch(s.Prenom), pattern) ||
+                    EF.Functions.Like(PostgresTextFunctions.NormalizeSearch(s.Matricule), pattern) ||
+                    (s.NumeroCarte != null && EF.Functions.Like(PostgresTextFunctions.NormalizeSearch(s.NumeroCarte), pattern)) ||
+                    (s.District != null && EF.Functions.Like(PostgresTextFunctions.NormalizeSearch(s.District), pattern)))
+                .ToListAsync();
+        }
+        else
+        {
+            var normalizedTerm = DatabaseText.NormalizeSearchKey(terme);
+            scouts = (await query.ToListAsync())
+                .Where(s =>
+                    DatabaseText.ContainsNormalized(s.Nom, normalizedTerm) ||
+                    DatabaseText.ContainsNormalized(s.Prenom, normalizedTerm) ||
+                    DatabaseText.ContainsNormalized(s.Matricule, normalizedTerm) ||
+                    DatabaseText.ContainsNormalized(s.NumeroCarte, normalizedTerm) ||
+                    DatabaseText.ContainsNormalized(s.District, normalizedTerm))
+                .ToList();
         }
 
-        var normalizedTerm = DatabaseText.NormalizeSearchKey(terme);
-        var scouts = await query.ToListAsync();
-        return scouts
-            .Where(s =>
-                DatabaseText.ContainsNormalized(s.Nom, normalizedTerm) ||
-                DatabaseText.ContainsNormalized(s.Prenom, normalizedTerm) ||
-                DatabaseText.ContainsNormalized(s.Matricule, normalizedTerm) ||
-                DatabaseText.ContainsNormalized(s.NumeroCarte, normalizedTerm) ||
-                DatabaseText.ContainsNormalized(s.District, normalizedTerm))
-            .Select(ToDto)
-            .ToList();
+        var dtos = scouts.Select(ToDto).ToList();
+        await PopulateHistoryAsync(dtos);
+        return dtos;
     }
 
     public async Task<ScoutImportResultDto> ImportFromExcelAsync(Stream fileStream)
@@ -191,7 +205,7 @@ public class ScoutService(AppDbContext db) : IScoutService
                     cell => cell.Address.ColumnNumber,
                     StringComparer.OrdinalIgnoreCase);
 
-            var requiredHeaders = new[] { "matricule", "nom", "prenom", "datenaissance" };
+            var requiredHeaders = new[] { "nom", "prenom", "datenaissance" };
             var missingHeaders = requiredHeaders.Where(h => !headerMap.ContainsKey(h)).ToList();
             if (missingHeaders.Count != 0)
             {
@@ -227,9 +241,13 @@ public class ScoutService(AppDbContext db) : IScoutService
                 .Where(s => !string.IsNullOrWhiteSpace(s.NumeroCarte))
                 .GroupBy(s => NormalizeLookup(s.NumeroCarte))
                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+            var existingScoutsByIdentity = existingScouts
+                .GroupBy(s => BuildScoutIdentityKey(s.Nom, s.Prenom, s.DateNaissance))
+                .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
 
             var seenMatricules = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var seenNumeroCartes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var seenIdentityKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             var lastRow = worksheet.LastRowUsed()?.RowNumber() ?? 1;
             for (var rowNumber = 2; rowNumber <= lastRow; rowNumber++)
@@ -241,7 +259,7 @@ public class ScoutService(AppDbContext db) : IScoutService
                 }
 
                 var rowErrors = new List<string>();
-                var matricule = ScoutMatriculeFormat.Normalize(ReadString(row, headerMap, "matricule"));
+                var matricule = ScoutMatriculeFormat.NormalizeOptional(ReadString(row, headerMap, "matricule"));
                 var nom = ReadString(row, headerMap, "nom");
                 var prenom = ReadString(row, headerMap, "prenom");
                 var lieuNaissance = NormalizeOptional(ReadString(row, headerMap, "lieunaissance"));
@@ -255,28 +273,6 @@ public class ScoutService(AppDbContext db) : IScoutService
                 var adresse = NormalizeOptional(ReadString(row, headerMap, "adressegeographique"));
                 var groupeNom = NormalizeOptional(ReadString(row, headerMap, "groupe"));
                 var brancheNom = NormalizeOptional(ReadString(row, headerMap, "branche"));
-                var assurance = ReadOptionalBoolean(row, headerMap, "cotisationnationale", "assuranceannuelle");
-
-                Scout? existingScout = null;
-                var matriculeKey = NormalizeLookup(matricule);
-
-                if (string.IsNullOrWhiteSpace(matricule))
-                {
-                    rowErrors.Add("Matricule obligatoire.");
-                }
-                else if (!ScoutMatriculeFormat.IsValid(matricule))
-                {
-                    rowErrors.Add($"Matricule invalide: {matricule}. Format attendu: {ScoutMatriculeFormat.Example}.");
-                }
-                else
-                {
-                    if (!seenMatricules.Add(matriculeKey))
-                    {
-                        rowErrors.Add($"Matricule duplique dans le fichier: {matricule}.");
-                    }
-
-                    existingScoutsByMatricule.TryGetValue(matriculeKey, out existingScout);
-                }
 
                 if (string.IsNullOrWhiteSpace(nom))
                 {
@@ -290,6 +286,61 @@ public class ScoutService(AppDbContext db) : IScoutService
                 if (!TryReadDate(row, headerMap, "datenaissance", out var dateNaissance))
                 {
                     rowErrors.Add("Date de naissance invalide.");
+                }
+
+                var identityKey = string.Empty;
+                if (rowErrors.Count == 0)
+                {
+                    identityKey = BuildScoutIdentityKey(nom!, prenom!, dateNaissance);
+                    if (!seenIdentityKeys.Add(identityKey))
+                    {
+                        rowErrors.Add("Scout duplique dans le fichier pour la meme identite.");
+                    }
+                }
+
+                Scout? existingScout = null;
+                var matchedByMatricule = false;
+                var matriculeKey = NormalizeLookup(matricule);
+
+                if (!string.IsNullOrWhiteSpace(matricule))
+                {
+                    if (!ScoutMatriculeFormat.IsValid(matricule))
+                    {
+                        rowErrors.Add($"Matricule invalide: {matricule}. Format attendu: {ScoutMatriculeFormat.Example}.");
+                    }
+                    else
+                    {
+                        if (!seenMatricules.Add(matriculeKey))
+                        {
+                            rowErrors.Add($"Matricule duplique dans le fichier: {matricule}.");
+                        }
+
+                        if (existingScoutsByMatricule.TryGetValue(matriculeKey, out var scoutTrouveParMatricule))
+                        {
+                            existingScout = scoutTrouveParMatricule;
+                            matchedByMatricule = true;
+                        }
+                    }
+                }
+
+                if (existingScout is null && !string.IsNullOrWhiteSpace(identityKey))
+                {
+                    if (existingScoutsByIdentity.TryGetValue(identityKey, out var scoutsMemeIdentite))
+                    {
+                        if (scoutsMemeIdentite.Count == 1)
+                        {
+                            existingScout = scoutsMemeIdentite[0];
+                        }
+                        else if (scoutsMemeIdentite.Count > 1)
+                        {
+                            rowErrors.Add("Plusieurs scouts existants correspondent a cette identite. Utilisez le matricule deja attribue.");
+                        }
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(matricule) && !matchedByMatricule)
+                {
+                    rowErrors.Add("Le matricule ne peut pas etre attribue manuellement. Laissez cette colonne vide tant que la premiere cotisation nationale n'a pas ete importee.");
                 }
 
                 Groupe? providedGroupe = null;
@@ -327,15 +378,15 @@ public class ScoutService(AppDbContext db) : IScoutService
 
                 if (rowErrors.Count != 0)
                 {
-                result.Errors.Add(new ScoutImportErrorDto
-                {
-                    LineNumber = rowNumber,
-                    Matricule = matricule,
-                    Message = string.Join(" ", rowErrors)
-                });
-                result.SkippedCount++;
-                continue;
-            }
+                    result.Errors.Add(new ScoutImportErrorDto
+                    {
+                        LineNumber = rowNumber,
+                        Matricule = matricule,
+                        Message = string.Join(" ", rowErrors)
+                    });
+                    result.SkippedCount++;
+                    continue;
+                }
 
                 var isUpdate = existingScout is not null;
                 var scout = existingScout ?? new Scout
@@ -343,13 +394,14 @@ public class ScoutService(AppDbContext db) : IScoutService
                     Id = Guid.NewGuid()
                 };
                 var previousNumeroCarteKey = NormalizeLookup(scout.NumeroCarte);
+                var previousIdentityKey = BuildScoutIdentityKey(scout.Nom, scout.Prenom, scout.DateNaissance);
                 var snapshot = isUpdate ? CaptureImportSnapshot(scout) : null;
 
                 ApplyImportValuesToScout(
                     scout,
                     new ScoutImportValues
                     {
-                        Matricule = matricule!,
+                        Matricule = existingScout?.Matricule,
                         Nom = nom!.Trim(),
                         Prenom = prenom!.Trim(),
                         DateNaissance = DateTime.SpecifyKind(dateNaissance, DateTimeKind.Utc),
@@ -361,7 +413,6 @@ public class ScoutService(AppDbContext db) : IScoutService
                         District = district,
                         NumeroCarte = numeroCarte,
                         Fonction = fonction,
-                        AssuranceAnnuelle = assurance,
                         AdresseGeographique = adresse,
                         GroupeId = effectiveGroupe?.Id,
                         BrancheId = effectiveBranche?.Id
@@ -378,10 +429,15 @@ public class ScoutService(AppDbContext db) : IScoutService
                 }
 
                 var currentNumeroCarteKey = NormalizeLookup(scout.NumeroCarte);
+                var currentIdentityKey = BuildScoutIdentityKey(scout.Nom, scout.Prenom, scout.DateNaissance);
                 try
                 {
                     await SaveChangesAsync();
-                    existingScoutsByMatricule[matriculeKey] = scout;
+
+                    if (!string.IsNullOrWhiteSpace(scout.Matricule))
+                    {
+                        existingScoutsByMatricule[NormalizeLookup(scout.Matricule)] = scout;
+                    }
 
                     if (!string.IsNullOrWhiteSpace(previousNumeroCarteKey)
                         && !string.Equals(previousNumeroCarteKey, currentNumeroCarteKey, StringComparison.OrdinalIgnoreCase)
@@ -396,14 +452,36 @@ public class ScoutService(AppDbContext db) : IScoutService
                         existingScoutsByNumeroCarte[currentNumeroCarteKey] = scout;
                     }
 
+                    if (!string.IsNullOrWhiteSpace(previousIdentityKey)
+                        && existingScoutsByIdentity.TryGetValue(previousIdentityKey, out var previousIdentityScouts))
+                    {
+                        previousIdentityScouts.RemoveAll(s => s.Id == scout.Id);
+                        if (previousIdentityScouts.Count == 0)
+                        {
+                            existingScoutsByIdentity.Remove(previousIdentityKey);
+                        }
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(currentIdentityKey))
+                    {
+                        if (!existingScoutsByIdentity.TryGetValue(currentIdentityKey, out var currentIdentityScouts))
+                        {
+                            currentIdentityScouts = [];
+                            existingScoutsByIdentity[currentIdentityKey] = currentIdentityScouts;
+                        }
+
+                        currentIdentityScouts.RemoveAll(s => s.Id == scout.Id);
+                        currentIdentityScouts.Add(scout);
+                    }
+
                     if (isUpdate)
                     {
-                        result.UpdatedMatricules.Add(scout.Matricule);
+                        result.UpdatedMatricules.Add(BuildScoutImportDisplayLabel(scout));
                         result.UpdatedCount++;
                     }
                     else
                     {
-                        result.CreatedMatricules.Add(scout.Matricule);
+                        result.CreatedMatricules.Add(BuildScoutImportDisplayLabel(scout));
                         result.CreatedCount++;
                     }
                 }
@@ -462,7 +540,7 @@ public class ScoutService(AppDbContext db) : IScoutService
         {
             "Matricule", "Nom", "Prenom", "DateNaissance", "LieuNaissance", "Sexe",
             "Telephone", "Email", "RegionScoute", "District", "NumeroCarte",
-            "Fonction", "CotisationNationale", "AdresseGeographique", "Groupe", "Branche"
+            "Fonction", "AdresseGeographique", "Groupe", "Branche"
         };
 
         for (var i = 0; i < headers.Length; i++)
@@ -472,7 +550,7 @@ public class ScoutService(AppDbContext db) : IScoutService
             worksheet.Cell(1, i + 1).Style.Fill.BackgroundColor = XLColor.FromHtml("#EAF4D7");
         }
 
-        worksheet.Cell(2, 1).Value = ScoutMatriculeFormat.Example;
+        worksheet.Cell(2, 1).Value = string.Empty;
         worksheet.Cell(2, 2).Value = "Doe";
         worksheet.Cell(2, 3).Value = "Jean";
         worksheet.Cell(2, 4).Value = new DateTime(2012, 5, 14);
@@ -484,21 +562,20 @@ public class ScoutService(AppDbContext db) : IScoutService
         worksheet.Cell(2, 10).Value = "District MANGO TAIKA";
         worksheet.Cell(2, 11).Value = "ASCCI-001";
         worksheet.Cell(2, 12).Value = "Scout";
-        worksheet.Cell(2, 13).Value = "Oui";
-        worksheet.Cell(2, 14).Value = "Cocody Angre";
-        worksheet.Cell(2, 15).Value = "Groupe Saint-Michel";
-        worksheet.Cell(2, 16).Value = "Louveteaux";
+        worksheet.Cell(2, 13).Value = "Cocody Angre";
+        worksheet.Cell(2, 14).Value = "Groupe Saint-Michel";
+        worksheet.Cell(2, 15).Value = "Louveteaux";
         worksheet.Cell(2, 4).Style.DateFormat.Format = "dd/MM/yyyy";
         worksheet.Columns().AdjustToContents();
         worksheet.SheetView.FreezeRows(1);
 
         var guide = workbook.Worksheets.Add("Guide");
         guide.Cell("A1").Value = "Colonnes obligatoires";
-        guide.Cell("A2").Value = "Matricule, Nom, Prenom, DateNaissance";
+        guide.Cell("A2").Value = "Nom, Prenom, DateNaissance";
         guide.Cell("A4").Value = "Regles";
-        guide.Cell("A5").Value = $"Le matricule doit respecter le format {ScoutMatriculeFormat.Example}.";
-        guide.Cell("A6").Value = "Groupe et Branche doivent correspondre aux noms deja presents dans l'application.";
-        guide.Cell("A7").Value = "CotisationNationale accepte: Oui, Non, True, False, 1, 0.";
+        guide.Cell("A5").Value = $"La colonne Matricule est optionnelle et ne sert qu'a retrouver un scout deja cotise au format {ScoutMatriculeFormat.Example}.";
+        guide.Cell("A6").Value = "Un nouveau scout peut etre importe sans matricule. Le matricule est attribue lors de la premiere cotisation nationale.";
+        guide.Cell("A7").Value = "Groupe et Branche doivent correspondre aux noms deja presents dans l'application.";
         guide.Cell("A8").Value = "La colonne Fonction du fichier renseigne directement le champ Fonction du scout.";
         guide.Cell("A9").Value = "DateNaissance peut etre au format Excel date ou jj/MM/aaaa.";
         guide.Columns().AdjustToContents();
@@ -535,8 +612,52 @@ public class ScoutService(AppDbContext db) : IScoutService
         GroupeId = s.GroupeId,
         BrancheId = s.BrancheId,
         NomGroupe = s.Groupe?.Nom,
-        NomBranche = s.Branche?.Nom
+        NomBranche = s.Branche?.Nom,
+        DerniereInscriptionAnnuelle = null,
+        DerniereCotisationNationaleAjour = null,
+        HistoriqueInscriptionsCount = 0
     };
+
+    private async Task PopulateHistoryAsync(List<ScoutDto> scouts)
+    {
+        if (scouts.Count == 0)
+        {
+            return;
+        }
+
+        var scoutIds = scouts.Select(s => s.Id).Distinct().ToList();
+        var inscriptions = await db.InscriptionsAnnuellesScouts.AsNoTracking()
+            .Include(i => i.Groupe)
+            .Include(i => i.Branche)
+            .Where(i => scoutIds.Contains(i.ScoutId))
+            .OrderByDescending(i => i.AnneeReference)
+            .ThenByDescending(i => i.DateInscription)
+            .Select(i => new
+            {
+                i.ScoutId,
+                i.LibelleAnnee,
+                i.CotisationNationaleAjour,
+                GroupeNom = i.Groupe != null ? i.Groupe.Nom : null,
+                BrancheNom = i.Branche != null ? i.Branche.Nom : null
+            })
+            .ToListAsync();
+
+        var byScout = inscriptions.GroupBy(i => i.ScoutId).ToDictionary(g => g.Key, g => g.ToList());
+        foreach (var scout in scouts)
+        {
+            if (!byScout.TryGetValue(scout.Id, out var history) || history.Count == 0)
+            {
+                continue;
+            }
+
+            var latest = history[0];
+            scout.DerniereInscriptionAnnuelle = string.IsNullOrWhiteSpace(latest.GroupeNom)
+                ? latest.LibelleAnnee
+                : $"{latest.LibelleAnnee} - {latest.GroupeNom}{(string.IsNullOrWhiteSpace(latest.BrancheNom) ? string.Empty : $" / {latest.BrancheNom}")}";
+            scout.DerniereCotisationNationaleAjour = latest.CotisationNationaleAjour;
+            scout.HistoriqueInscriptionsCount = history.Count;
+        }
+    }
 
     private static string ReadString(IXLRow row, IDictionary<string, int> headerMap, string header)
     {
@@ -621,6 +742,18 @@ public class ScoutService(AppDbContext db) : IScoutService
         return $"{groupeId:N}:{NormalizeLookup(brancheNom)}";
     }
 
+    private static string BuildScoutIdentityKey(string? nom, string? prenom, DateTime dateNaissance)
+    {
+        return $"{NormalizeLookup(nom)}|{NormalizeLookup(prenom)}|{dateNaissance:yyyyMMdd}";
+    }
+
+    private static string BuildScoutImportDisplayLabel(Scout scout)
+    {
+        var identity = $"{scout.Prenom} {scout.Nom}".Trim();
+        return string.IsNullOrWhiteSpace(scout.Matricule)
+            ? $"{identity} (sans matricule)"
+            : $"{identity} ({scout.Matricule})";
+    }
     private static Groupe? ResolveImportGroupe(Scout? existingScout, Groupe? providedGroupe)
     {
         return providedGroupe ?? (existingScout?.GroupeId is Guid existingGroupeId
@@ -718,7 +851,7 @@ public class ScoutService(AppDbContext db) : IScoutService
         ScoutImportValues values,
         bool preserveExistingOptionalValues)
     {
-        scout.Matricule = values.Matricule;
+        scout.Matricule = values.Matricule ?? (preserveExistingOptionalValues ? scout.Matricule : null);
         scout.Nom = values.Nom;
         scout.Prenom = values.Prenom;
         scout.DateNaissance = values.DateNaissance;
@@ -730,26 +863,49 @@ public class ScoutService(AppDbContext db) : IScoutService
         scout.District = preserveExistingOptionalValues ? values.District ?? scout.District : values.District;
         scout.NumeroCarte = preserveExistingOptionalValues ? values.NumeroCarte ?? scout.NumeroCarte : values.NumeroCarte;
         scout.Fonction = preserveExistingOptionalValues ? values.Fonction ?? scout.Fonction : values.Fonction;
-        scout.AssuranceAnnuelle = values.AssuranceAnnuelle ?? (preserveExistingOptionalValues ? scout.AssuranceAnnuelle : false);
+        scout.AssuranceAnnuelle = preserveExistingOptionalValues ? scout.AssuranceAnnuelle : false;
         scout.AdresseGeographique = preserveExistingOptionalValues ? values.AdresseGeographique ?? scout.AdresseGeographique : values.AdresseGeographique;
         scout.GroupeId = values.GroupeId ?? (preserveExistingOptionalValues ? scout.GroupeId : null);
         scout.BrancheId = values.BrancheId ?? (preserveExistingOptionalValues ? scout.BrancheId : null);
     }
 
-    private async Task EnsureUniqueMatriculeAsync(string matricule, Guid? currentId = null)
+    private async Task EnsureUniqueMatriculeAsync(string? matricule, Guid? currentId = null)
     {
+        if (string.IsNullOrWhiteSpace(matricule))
+        {
+            return;
+        }
+
         var exists = db.Database.IsNpgsql()
             ? await db.Scouts.AnyAsync(s =>
                 s.Id != currentId &&
+                s.Matricule != null &&
                 s.Matricule == matricule)
             : await db.Scouts.AnyAsync(s =>
                 s.Id != currentId &&
+                s.Matricule != null &&
                 s.Matricule.ToUpper() == DatabaseText.NormalizeCaseInsensitiveKey(matricule));
 
         if (exists)
         {
             throw new InvalidOperationException("Le matricule existe deja.");
         }
+    }
+
+    private static void ValidateManualMatriculeInput(string? requestedMatricule, string? existingMatricule = null)
+    {
+        if (string.IsNullOrWhiteSpace(requestedMatricule))
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(existingMatricule)
+            && string.Equals(ScoutMatriculeFormat.Normalize(existingMatricule), requestedMatricule, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("Le matricule est attribue automatiquement lors de la premiere cotisation nationale.");
     }
 
     private async Task EnsureUniqueNumeroCarteAsync(string? numeroCarte, Guid? currentId = null)
@@ -862,7 +1018,7 @@ public class ScoutService(AppDbContext db) : IScoutService
 
     private sealed record ScoutImportValues
     {
-        public string Matricule { get; init; } = string.Empty;
+        public string? Matricule { get; init; }
         public string Nom { get; init; } = string.Empty;
         public string Prenom { get; init; } = string.Empty;
         public DateTime DateNaissance { get; init; }
@@ -874,14 +1030,13 @@ public class ScoutService(AppDbContext db) : IScoutService
         public string? District { get; init; }
         public string? NumeroCarte { get; init; }
         public string? Fonction { get; init; }
-        public bool? AssuranceAnnuelle { get; init; }
         public string? AdresseGeographique { get; init; }
         public Guid? GroupeId { get; init; }
         public Guid? BrancheId { get; init; }
     }
 
     private sealed record ScoutImportSnapshot(
-        string Matricule,
+        string? Matricule,
         string Nom,
         string Prenom,
         DateTime DateNaissance,
@@ -899,4 +1054,10 @@ public class ScoutService(AppDbContext db) : IScoutService
         Guid? BrancheId,
         bool IsActive);
 }
+
+
+
+
+
+
 

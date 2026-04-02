@@ -1,10 +1,11 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace MangoTaika.Data.Entities;
 
 public class EtapeParcoursScout
 {
     public Guid Id { get; set; }
+
     public Guid ScoutId { get; set; }
     public Scout Scout { get; set; } = null!;
 
@@ -15,7 +16,9 @@ public class EtapeParcoursScout
     [StringLength(100)]
     public string? CodeEtape { get; set; }
 
-    public int OrdreAffichage { get; set; }
+    [Range(1, int.MaxValue)]
+    public int OrdreAffichage { get; set; } = 1;
+
     public DateTime? DateValidation { get; set; }
     public DateTime? DatePrevisionnelle { get; set; }
 

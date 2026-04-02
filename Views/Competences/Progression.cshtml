@@ -1,266 +1,453 @@
-@model MangoTaika.Data.Entities.Scout
+﻿@model MangoTaika.DTOs.ScoutProgressionViewModel
 @using MangoTaika.Data.Entities
+@using MangoTaika.DTOs
 @{
-    ViewData["Title"] = $"Progression - {Model.Prenom} {Model.Nom}";
+    var scout = Model.Scout;
+    ViewData["Title"] = $"Progression - {scout.Prenom} {scout.Nom}";
     Layout = "_LayoutAdmin";
-    var activites = ViewBag.ActivitesParticipees as List<ParticipantActivite> ?? new();
-    var etapesValidees = ViewBag.EtapesValidees as List<EtapeParcoursScout> ?? new();
-    var etapesRestantes = ViewBag.EtapesRestantes as List<EtapeParcoursScout> ?? new();
-    var prochaineEtape = ViewBag.ProchaineEtape as EtapeParcoursScout;
-    var etapes = Model.EtapesParcours.OrderBy(e => e.OrdreAffichage).ThenBy(e => e.NomEtape).ToList();
-    var prochainePosition = etapes.Any() ? etapes.Max(e => e.OrdreAffichage) + 1 : 1;
+
+    var etapes = Model.Etapes.OrderBy(e => e.OrdreAffichage).ThenBy(e => e.NomEtape).ToList();
+    var etapesValidees = Model.EtapesValidees;
+    var etapesRestantes = Model.EtapesRestantes.OrderBy(e => e.OrdreAffichage).ThenBy(e => e.NomEtape).ToList();
+    var referentiel = Model.ReferentielEtapes.OrderBy(e => e.OrdreAffichage).ThenBy(e => e.NomEtape).ToList();
+    var activites = Model.ActivitesParticipees;
+    var progressionPercent = etapes.Count > 0 ? (int)Math.Round((double)etapesValidees.Count / etapes.Count * 100d) : 0;
+    var derniereEtapeValidee = etapesValidees.OrderByDescending(e => e.DateValidation ?? DateTime.MinValue).FirstOrDefault();
+    var canManageJourney = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+    var matriculeLabel = string.IsNullOrWhiteSpace(scout.Matricule) ? "Matricule en attente" : scout.Matricule;
+
+    string StepState(ScoutParcoursEtapeViewModel etape)
+    {
+        if (etape.DateValidation.HasValue) return "Validee";
+        if (etape.DatePrevisionnelle.HasValue) return "Planifiee";
+        return "Restante";
+    }
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="section-title mb-0"><i class="bi bi-graph-up-arrow text-or"></i> Progression de <span class="accent">@Model.Prenom @Model.Nom</span></h2>
-    <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i> Retour</a>
-</div>
-
-<div class="card-3d p-4 mb-4">
-    <div class="row align-items-center">
-        <div class="col-md-2 text-center">
-            @if (!string.IsNullOrEmpty(Model.PhotoUrl))
-            {
-                <img src="@Model.PhotoUrl" alt="Photo" style="width:80px;height:80px;object-fit:cover;border-radius:50%;border:3px solid var(--vert-pastel);" />
-            }
-            else
-            {
-                <div style="width:80px;height:80px;border-radius:50%;background:var(--vert-logo);display:flex;align-items:center;justify-content:center;margin:0 auto;"><i class="bi bi-person-fill" style="font-size:2rem;color:#fff;"></i></div>
-            }
-        </div>
-        <div class="col-md-10">
-            <div class="row">
-                <div class="col-md-3"><small class="text-muted-custom">Matricule</small><p style="font-weight:600;color:var(--bleu-logo);">@Model.Matricule</p></div>
-                <div class="col-md-3"><small class="text-muted-custom">Groupe</small><p>@(Model.Groupe?.Nom ?? "-")</p></div>
-                <div class="col-md-3"><small class="text-muted-custom">Branche</small><p>@(Model.Branche?.Nom ?? "-")</p></div>
-                <div class="col-md-3"><small class="text-muted-custom">Inscrit le</small><p>@Model.DateInscription.ToString("dd/MM/yyyy")</p></div>
+<div class="progression-shell">
+    <section class="journey-hero">
+        <div>
+            <span class="journey-kicker"><i class="bi bi-signpost-split"></i> Parcours scout</span>
+            <h1>Progression de @scout.Prenom @scout.Nom</h1>
+            <p>Le systeme suit les etapes validees, deduit automatiquement les etapes restantes a partir du referentiel de la branche et permet d'enregistrer les prochaines echeances.</p>
+            <div class="journey-meta">
+                <span><i class="bi bi-person-vcard"></i> @matriculeLabel</span>
+                <span><i class="bi bi-diagram-3"></i> @(scout.Groupe?.Nom ?? "Groupe non defini")</span>
+                <span><i class="bi bi-compass"></i> @(scout.Branche?.Nom ?? "Branche non definie")</span>
+                <span><i class="bi bi-calendar3"></i> Inscrit le @scout.DateInscription.ToString("dd/MM/yyyy")</span>
             </div>
         </div>
-    </div>
-</div>
-
-<div class="row g-3 mb-4">
-    <div class="col-md-4"><div class="card-3d p-3 text-center"><small class="text-muted-custom">Etapes validees</small><h3 style="color:#10b981;">@etapesValidees.Count</h3></div></div>
-    <div class="col-md-4"><div class="card-3d p-3 text-center"><small class="text-muted-custom">Etapes restantes</small><h3 style="color:#f59e0b;">@etapesRestantes.Count</h3></div></div>
-    <div class="col-md-4"><div class="card-3d p-3 text-center"><small class="text-muted-custom">Prochaine etape</small><h6 style="color:var(--bleu-logo);">@(prochaineEtape?.NomEtape ?? "Non planifiee")</h6><div class="small text-muted-custom">@(prochaineEtape?.DatePrevisionnelle?.ToString("dd/MM/yyyy") ?? "A definir")</div></div></div>
-</div>
-
-<div class="card-3d p-4 mb-4">
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
-        <div>
-            <h5 class="mb-1"><i class="bi bi-signpost-split text-or"></i> Parcours scout</h5>
-            <p class="text-muted-custom mb-0">Le cahier de charge demande un suivi des etapes validees, des etapes restantes et des dates previsionnelles.</p>
+        <div class="journey-score">
+            <strong>@progressionPercent%</strong>
+            <span>parcours valide</span>
+            <small>@(derniereEtapeValidee?.NomEtape ?? "Aucune etape validee")</small>
+            <a asp-action="Index" class="btn btn-outline-light btn-sm mt-3"><i class="bi bi-arrow-left"></i> Retour</a>
         </div>
-        <span class="badge-3d badge-soumise">Situation actuelle: @(etapesValidees.LastOrDefault()?.NomEtape ?? "Aucune etape validee")</span>
+    </section>
+
+    <div class="journey-kpis">
+        <article><span>Etapes validees</span><strong>@etapesValidees.Count</strong><small>jalons franchis</small></article>
+        <article><span>Etapes restantes</span><strong>@etapesRestantes.Count</strong><small>reste a planifier ou valider</small></article>
+        <article><span>Referentiel officiel</span><strong>@referentiel.Count</strong><small>etapes de branche definies</small></article>
+        <article><span>Activites</span><strong>@activites.Count</strong><small>participations enregistrees</small></article>
     </div>
 
-    @if (etapes.Any())
-    {
-        <div class="table-responsive mb-4">
-            <table class="table-modern">
-                <thead>
-                    <tr>
-                        <th>Ordre</th>
-                        <th>Etape</th>
-                        <th>Validation</th>
-                        <th>Prevision</th>
-                        <th>Statut</th>
-                        <th>Observations</th>
-                        <th>Mise a jour</th>
-                    </tr>
-                </thead>
-                <tbody>
+    <section class="journey-panel">
+        <div class="journey-panel__head">
+            <div>
+                <h2>Parcours scout detaille</h2>
+                <p>Chaque etape enregistre son nom, sa date de validation et sa date previsionnelle si elle est encore a venir.</p>
+            </div>
+            <span class="journey-badge">Prochaine etape: @(Model.ProchaineEtape?.NomEtape ?? "A definir")</span>
+        </div>
+
+        @if (!Model.AUnReferentiel)
+        {
+            <div class="alert alert-warning journey-alert mb-4">
+                Aucun referentiel officiel n'est encore defini pour cette branche. Ajoute-le ci-dessous pour que les etapes restantes soient calculees automatiquement.
+            </div>
+        }
+
+        @if (etapes.Any())
+        {
+            <div class="journey-rail mb-4">
                 @foreach (var etape in etapes)
                 {
-                    var estValidee = etape.DateValidation.HasValue;
-                    <tr>
-                        <td>@etape.OrdreAffichage</td>
-                        <td style="font-weight:600;color:var(--bleu-logo);">@etape.NomEtape</td>
-                        <td>@(etape.DateValidation?.ToString("dd/MM/yyyy") ?? "-")</td>
-                        <td>@(etape.DatePrevisionnelle?.ToString("dd/MM/yyyy") ?? "-")</td>
-                        <td><span class="badge-3d @(estValidee ? "badge-approuvee" : "badge-soumise")">@(estValidee ? "Validee" : "Restante")</span></td>
-                        <td>@(string.IsNullOrWhiteSpace(etape.Observations) ? "-" : etape.Observations)</td>
-                        <td style="min-width:260px;">
-                            <form asp-action="MettreAJourEtapeParcours" method="post" class="d-flex flex-column gap-2">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="id" value="@etape.Id" />
-                                <div class="d-flex gap-2">
-                                    <input name="ordreAffichage" class="form-control form-control-sm" type="number" min="1" value="@etape.OrdreAffichage" />
-                                    <input name="dateValidation" class="form-control form-control-sm" type="date" value="@(etape.DateValidation?.ToString("yyyy-MM-dd"))" />
-                                    <input name="datePrevisionnelle" class="form-control form-control-sm" type="date" value="@(etape.DatePrevisionnelle?.ToString("yyyy-MM-dd"))" />
-                                </div>
-                                <textarea name="observations" class="form-control form-control-sm" rows="2" placeholder="Observations">@etape.Observations</textarea>
-                                <div class="d-flex gap-2 justify-content-end">
-                                    <button type="submit" class="btn btn-sm btn-mango"><i class="bi bi-check-lg"></i></button>
-                                </div>
-                            </form>
-                            <form asp-action="SupprimerEtapeParcours" asp-route-id="@etape.Id" method="post" class="mt-2 d-flex justify-content-end" onsubmit="return confirm('Supprimer cette etape ?')">
-                                @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;"><i class="bi bi-trash"></i></button>
-                            </form>
-                        </td>
-                    </tr>
-                }
-                </tbody>
-            </table>
-        </div>
-    }
-    else
-    {
-        <div class="text-muted-custom mb-4">Aucune etape du parcours n'est encore enregistree pour ce scout.</div>
-    }
-
-    <div class="p-3" style="background:var(--fond-carte);border-radius:12px;">
-        <h6 style="color:var(--bleu-logo);"><i class="bi bi-plus-circle"></i> Ajouter une etape du parcours</h6>
-        <form asp-action="AjouterEtapeParcours" method="post" class="row g-2 align-items-end mt-2">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="ScoutId" value="@Model.Id" />
-            <div class="col-lg-3"><label class="form-label small">Nom de l'etape</label><input name="NomEtape" class="form-control" placeholder="Promesse, badge, passage..." required /></div>
-            <div class="col-lg-1"><label class="form-label small">Ordre</label><input name="OrdreAffichage" class="form-control" type="number" min="1" value="@prochainePosition" /></div>
-            <div class="col-lg-2"><label class="form-label small">Date validation</label><input name="DateValidation" class="form-control" type="date" /></div>
-            <div class="col-lg-2"><label class="form-label small">Date previsionnelle</label><input name="DatePrevisionnelle" class="form-control" type="date" /></div>
-            <div class="col-lg-3"><label class="form-label small">Observations</label><input name="Observations" class="form-control" placeholder="Notes ou objectif" /></div>
-            <div class="col-auto"><button type="submit" class="btn btn-mango btn-sm"><i class="bi bi-check-lg"></i></button></div>
-        </form>
-    </div>
-</div>
-
-<div class="row g-4">
-    <div class="col-md-6">
-        <div class="card-3d p-4 h-100">
-            <h5><i class="bi bi-award-fill text-or"></i> Competences (@Model.Competences.Count)</h5>
-            @if (Model.Competences.Any())
-            {
-                <div class="mt-3">
-                @foreach (var c in Model.Competences.OrderByDescending(x => x.DateObtention))
-                {
-                    var couleur = c.Niveau switch { "Expert" => "#10b981", "Avance" => "#3b82f6", "Intermediaire" => "#eab308", _ => "#94a3b8" };
-                    <div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background:var(--fond-carte);border-radius:10px;">
+                    <article class="journey-step @(etape.DateValidation.HasValue ? "journey-step--done" : etape.DatePrevisionnelle.HasValue ? "journey-step--planned" : string.Empty)">
+                        <div class="journey-step__index">@etape.OrdreAffichage</div>
                         <div>
-                            <span style="font-weight:600;color:var(--bleu-logo);">@c.Nom</span>
-                            <small class="text-muted-custom ms-1">(@c.Type)</small>
-                            <br /><small class="text-muted-custom">@c.DateObtention.ToString("dd/MM/yyyy")</small>
+                            <strong>@etape.NomEtape</strong>
+                            <span>@StepState(etape)</span>
+                            <small>Validation: @(etape.DateValidation?.ToString("dd/MM/yyyy") ?? "-") · Prevision: @(etape.DatePrevisionnelle?.ToString("dd/MM/yyyy") ?? "-")</small>
                         </div>
-                        <span class="badge" style="background:@(couleur)20;color:@couleur;border:1px solid @(couleur)40;border-radius:10px;">@c.Niveau</span>
-                    </div>
+                    </article>
                 }
-                </div>
-            }
-            else
-            {
-                <p class="text-muted-custom mt-3">Aucune competence enregistree.</p>
-            }
-        </div>
-    </div>
+            </div>
 
-    <div class="col-md-6">
-        <div class="card-3d p-4 h-100">
-            <h5><i class="bi bi-clock-history text-or"></i> Historique des fonctions (@Model.HistoriqueFonctions.Count)</h5>
-            @if (Model.HistoriqueFonctions.Any())
-            {
-                <div class="mt-3">
-                @foreach (var h in Model.HistoriqueFonctions.OrderByDescending(x => x.DateDebut))
-                {
-                    <div class="d-flex gap-3 p-2 mb-2" style="background:var(--fond-carte);border-radius:10px;">
-                        <div style="min-width:4px;background:var(--vert-logo);border-radius:4px;"></div>
-                        <div>
-                            <span style="font-weight:600;color:var(--bleu-logo);">@h.Fonction</span>
-                            @if (h.Groupe != null)
-                            {
-                                <small class="text-muted-custom"> - @h.Groupe.Nom</small>
-                            }
-                            <br /><small class="text-muted-custom">@h.DateDebut.ToString("dd/MM/yyyy") -> @(h.DateFin?.ToString("dd/MM/yyyy") ?? "En cours")</small>
-                        </div>
-                    </div>
-                }
-                </div>
-            }
-            else
-            {
-                <p class="text-muted-custom mt-3">Aucun historique.</p>
-            }
-        </div>
-    </div>
-</div>
-
-<div class="card-3d p-4 mt-4">
-    <h5><i class="bi bi-mortarboard-fill text-or"></i> Suivi academique (@Model.SuivisAcademiques.Count)</h5>
-    @if (Model.SuivisAcademiques.Any())
-    {
-        <div class="table-responsive mt-3">
-            <table class="table-modern">
-                <thead><tr><th>Annee scolaire</th><th>Etablissement</th><th>Niveau</th><th>Classe</th><th>Moyenne</th><th>Mention</th><th>Redoublant</th><th></th></tr></thead>
-                <tbody>
-                    @foreach (var sa in Model.SuivisAcademiques.OrderByDescending(x => x.AnneeScolaire))
-                    {
-                        var couleurMoy = sa.MoyenneGenerale switch { >= 16 => "#10b981", >= 14 => "#3b82f6", >= 10 => "#eab308", _ => "#f87171" };
+            <div class="table-responsive">
+                <table class="table table-hover align-middle journey-table">
+                    <thead>
                         <tr>
-                            <td style="font-weight:600;">@sa.AnneeScolaire</td>
-                            <td>@(sa.Etablissement ?? "-")</td>
-                            <td>@sa.NiveauScolaire</td>
-                            <td>@(sa.Classe ?? "-")</td>
-                            <td><span style="font-weight:700;color:@(sa.MoyenneGenerale.HasValue ? couleurMoy : "#94a3b8");">@(sa.MoyenneGenerale?.ToString("F2") ?? "-")</span></td>
-                            <td>@(sa.Mention ?? "-")</td>
-                            <td>@(sa.EstRedoublant ? "Oui" : "Non")</td>
+                            <th>Ordre</th>
+                            <th>Etape</th>
+                            <th>Source</th>
+                            <th>Validation</th>
+                            <th>Prevision</th>
+                            <th>Statut</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var etape in etapes)
+                    {
+                        <tr>
+                            <td>@etape.OrdreAffichage</td>
                             <td>
-                                <form asp-action="SupprimerSuiviAcademique" asp-route-id="@sa.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer ?')">
-                                    @Html.AntiForgeryToken()
-                                    <button class="btn btn-sm p-0 px-1" style="color:#f87171;"><i class="bi bi-trash"></i></button>
-                                </form>
+                                <strong>@etape.NomEtape</strong>
+                                @if (!string.IsNullOrWhiteSpace(etape.Observations))
+                                {
+                                    <small class="d-block text-muted mt-1">@etape.Observations</small>
+                                }
+                            </td>
+                            <td><span class="journey-pill @(etape.EstIssueReferentiel ? "journey-pill--official" : "journey-pill--custom")">@(etape.EstIssueReferentiel ? "Referentiel" : "Personnalisee")</span></td>
+                            <td>@(etape.DateValidation?.ToString("dd/MM/yyyy") ?? "-")</td>
+                            <td>@(etape.DatePrevisionnelle?.ToString("dd/MM/yyyy") ?? "-")</td>
+                            <td><span class="journey-pill journey-pill--state">@StepState(etape)</span></td>
+                            <td class="journey-table__action">
+                                @if (canManageJourney)
+                                {
+                                    <form asp-action="EnregistrerEtapeParcours" method="post" class="journey-inline-form">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="ScoutId" value="@scout.Id" />
+                                        @if (etape.EtapeParcoursId.HasValue)
+                                        {
+                                            <input type="hidden" name="EtapeParcoursId" value="@etape.EtapeParcoursId" />
+                                        }
+                                        @if (etape.ModeleEtapeParcoursId.HasValue)
+                                        {
+                                            <input type="hidden" name="ModeleEtapeParcoursId" value="@etape.ModeleEtapeParcoursId" />
+                                        }
+                                        <input type="hidden" name="NomEtape" value="@etape.NomEtape" />
+                                        <input type="hidden" name="CodeEtape" value="@etape.CodeEtape" />
+                                        <input type="hidden" name="EstObligatoire" value="@(etape.EstObligatoire ? "true" : "false")" />
+                                        <input name="OrdreAffichage" class="form-control form-control-sm" type="number" min="1" value="@etape.OrdreAffichage" />
+                                        <input name="DateValidation" class="form-control form-control-sm" type="date" value="@(etape.DateValidation?.ToString("yyyy-MM-dd"))" />
+                                        <input name="DatePrevisionnelle" class="form-control form-control-sm" type="date" value="@(etape.DatePrevisionnelle?.ToString("yyyy-MM-dd"))" />
+                                        <textarea name="Observations" class="form-control form-control-sm" rows="2" placeholder="Observations">@etape.Observations</textarea>
+                                        <div class="d-flex gap-2 justify-content-end flex-wrap">
+                                            <button type="submit" class="btn btn-sm btn-mango">@(etape.ExistePourScout ? "Mettre a jour" : "Planifier")</button>
+                                            @if (etape.EtapeParcoursId.HasValue)
+                                            {
+                                                <button type="submit" formaction="@Url.Action("SupprimerEtapeParcours", "Competences", new { id = etape.EtapeParcoursId })" formmethod="post" class="btn btn-sm btn-outline-danger" onclick="return confirm('Supprimer cette etape ?')">Supprimer</button>
+                                            }
+                                        </div>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">Consultation seule</span>
+                                }
                             </td>
                         </tr>
                     }
-                </tbody>
-            </table>
-        </div>
-    }
-    else
-    {
-        <p class="text-muted-custom mt-3">Aucun suivi academique enregistre.</p>
-    }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="journey-empty">Aucune etape n'est encore enregistree pour ce scout.</div>
+        }
 
-    <div class="mt-3 p-3" style="background:var(--fond-carte);border-radius:12px;">
-        <h6 style="color:var(--bleu-logo);"><i class="bi bi-plus-circle"></i> Ajouter un suivi</h6>
-        <form asp-controller="Competences" asp-action="AjouterSuiviAcademique" method="post" class="row g-2 align-items-end mt-2">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="ScoutId" value="@Model.Id" />
-            <div class="col-md-2"><label class="form-label small">Annee scolaire</label><input name="AnneeScolaire" class="form-control" placeholder="2025-2026" required /></div>
-            <div class="col-md-2"><label class="form-label small">Etablissement</label><input name="Etablissement" class="form-control" /></div>
-            <div class="col-md-2"><label class="form-label small">Niveau</label><input name="NiveauScolaire" class="form-control" placeholder="CM2, 6eme..." required /></div>
-            <div class="col-md-1"><label class="form-label small">Classe</label><input name="Classe" class="form-control" placeholder="A, B..." /></div>
-            <div class="col-md-1"><label class="form-label small">Moyenne</label><input name="MoyenneGenerale" class="form-control" type="number" step="0.01" min="0" max="20" /></div>
-            <div class="col-md-1"><label class="form-label small">Mention</label><input name="Mention" class="form-control" placeholder="Bien..." /></div>
-            <div class="col-md-1"><label class="form-label small">Redoublant</label><select name="EstRedoublant" class="form-select"><option value="false">Non</option><option value="true">Oui</option></select></div>
-            <div class="col-auto"><button type="submit" class="btn btn-mango btn-sm"><i class="bi bi-check-lg"></i></button></div>
-        </form>
+        @if (canManageJourney)
+        {
+            <div class="journey-form-card mt-4">
+                <h3>Ajouter une etape personnalisee</h3>
+                <form asp-action="AjouterEtapeParcours" method="post" class="row g-3 mt-1">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="ScoutId" value="@scout.Id" />
+                    <div class="col-lg-4"><label class="form-label">Nom de l'etape</label><input name="NomEtape" class="form-control" required /></div>
+                    <div class="col-lg-2"><label class="form-label">Code</label><input name="CodeEtape" class="form-control" /></div>
+                    <div class="col-lg-2"><label class="form-label">Ordre</label><input name="OrdreAffichage" class="form-control" type="number" min="1" value="@Model.ProchainePosition" /></div>
+                    <div class="col-lg-2"><label class="form-label">Validation</label><input name="DateValidation" class="form-control" type="date" /></div>
+                    <div class="col-lg-2"><label class="form-label">Prevision</label><input name="DatePrevisionnelle" class="form-control" type="date" /></div>
+                    <div class="col-12"><label class="form-label">Observations</label><input name="Observations" class="form-control" /></div>
+                    <div class="col-12 d-flex justify-content-end"><button type="submit" class="btn btn-mango">Ajouter l'etape</button></div>
+                </form>
+            </div>
+        }
+    </section>
+
+    <div class="row g-4">
+        <div class="col-xl-6">
+            <section class="journey-panel h-100">
+                <div class="journey-panel__head">
+                    <div>
+                        <h2>Etapes restantes identifiees</h2>
+                        <p>Le systeme deduit ces etapes a partir du referentiel officiel de la branche et des validations deja saisies.</p>
+                    </div>
+                    <span class="journey-badge">@etapesRestantes.Count restante(s)</span>
+                </div>
+                @if (etapesRestantes.Any())
+                {
+                    <div class="journey-list">
+                        @foreach (var etape in etapesRestantes)
+                        {
+                            <article class="journey-list__item">
+                                <div>
+                                    <strong>@etape.NomEtape</strong>
+                                    <small>Ordre @etape.OrdreAffichage · @(etape.EstIssueReferentiel ? "officielle" : "personnalisee")</small>
+                                </div>
+                                <span>@(etape.DatePrevisionnelle?.ToString("dd/MM/yyyy") ?? "A definir")</span>
+                            </article>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="journey-empty journey-empty--compact">Toutes les etapes connues sont validees.</div>
+                }
+            </section>
+        </div>
+        <div class="col-xl-6">
+            <section class="journey-panel h-100">
+                <div class="journey-panel__head">
+                    <div>
+                        <h2>Referentiel officiel de la branche</h2>
+                        <p>Ce referentiel definit les etapes standards du parcours et permet d'identifier automatiquement les etapes restantes.</p>
+                    </div>
+                    <span class="journey-badge">@referentiel.Count modele(s)</span>
+                </div>
+
+                @if (referentiel.Any())
+                {
+                    <div class="journey-list">
+                        @foreach (var modeleEtape in referentiel)
+                        {
+                            <article class="journey-list__item journey-list__item--stacked">
+                                <div>
+                                    <strong>@modeleEtape.NomEtape</strong>
+                                    <small>Ordre @modeleEtape.OrdreAffichage · @(string.IsNullOrWhiteSpace(modeleEtape.CodeEtape) ? "Sans code" : modeleEtape.CodeEtape)</small>
+                                    @if (!string.IsNullOrWhiteSpace(modeleEtape.Description))
+                                    {
+                                        <small class="d-block mt-1">@modeleEtape.Description</small>
+                                    }
+                                </div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <span class="journey-pill journey-pill--official">@(modeleEtape.EstObligatoire ? "Obligatoire" : "Optionnelle")</span>
+                                    @if (canManageJourney)
+                                    {
+                                        <form asp-action="SupprimerModeleEtapeParcours" method="post" onsubmit="return confirm('Retirer cette etape du referentiel ?')">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@modeleEtape.Id" />
+                                            <input type="hidden" name="scoutId" value="@scout.Id" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Retirer</button>
+                                        </form>
+                                    }
+                                </div>
+                            </article>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="journey-empty journey-empty--compact">Aucune etape officielle n'est encore definie pour cette branche.</div>
+                }
+
+                @if (canManageJourney && scout.BrancheId.HasValue)
+                {
+                    <div class="journey-form-card mt-4">
+                        <h3>Ajouter une etape au referentiel</h3>
+                        <form asp-action="AjouterModeleEtapeParcours" method="post" class="row g-3 mt-1">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="ScoutId" value="@scout.Id" />
+                            <input type="hidden" name="BrancheId" value="@scout.BrancheId" />
+                            <div class="col-lg-4"><label class="form-label">Nom de l'etape</label><input name="NomEtape" class="form-control" required /></div>
+                            <div class="col-lg-2"><label class="form-label">Code</label><input name="CodeEtape" class="form-control" /></div>
+                            <div class="col-lg-2"><label class="form-label">Ordre</label><input name="OrdreAffichage" class="form-control" type="number" min="1" value="@(referentiel.Any() ? referentiel.Max(x => x.OrdreAffichage) + 1 : 1)" /></div>
+                            <div class="col-lg-2"><label class="form-label">Obligatoire</label><select name="EstObligatoire" class="form-select"><option value="true">Oui</option><option value="false">Non</option></select></div>
+                            <div class="col-12"><label class="form-label">Description</label><textarea name="Description" class="form-control" rows="2"></textarea></div>
+                            <div class="col-12 d-flex justify-content-end"><button type="submit" class="btn btn-mango">Ajouter au referentiel</button></div>
+                        </form>
+                    </div>
+                }
+            </section>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-xl-6">
+            <section class="journey-panel h-100">
+                <div class="journey-panel__head">
+                    <div>
+                        <h2>Competences et fonctions</h2>
+                        <p>Vue rapide sur les competences documentees et l'historique des responsabilites.</p>
+                    </div>
+                    <span class="journey-badge">@scout.Competences.Count competence(s)</span>
+                </div>
+                <div class="journey-list">
+                    @foreach (var competence in scout.Competences.OrderByDescending(c => c.DateObtention).Take(5))
+                    {
+                        <article class="journey-list__item">
+                            <div>
+                                <strong>@competence.Nom</strong>
+                                <small>@competence.Type · @competence.DateObtention.ToString("dd/MM/yyyy")</small>
+                            </div>
+                            <span>@competence.Niveau</span>
+                        </article>
+                    }
+                    @foreach (var historique in scout.HistoriqueFonctions.OrderByDescending(h => h.DateDebut).Take(5))
+                    {
+                        <article class="journey-list__item">
+                            <div>
+                                <strong>@historique.Fonction</strong>
+                                <small>@(historique.Groupe?.Nom ?? "District") · @historique.DateDebut.ToString("dd/MM/yyyy")</small>
+                            </div>
+                            <span>@(historique.DateFin?.ToString("dd/MM/yyyy") ?? "En cours")</span>
+                        </article>
+                    }
+                    @if (!scout.Competences.Any() && !scout.HistoriqueFonctions.Any())
+                    {
+                        <div class="journey-empty journey-empty--compact">Aucune competence ni fonction enregistree.</div>
+                    }
+                </div>
+            </section>
+        </div>
+        <div class="col-xl-6">
+            <section class="journey-panel h-100">
+                <div class="journey-panel__head">
+                    <div>
+                        <h2>Suivi academique et activites</h2>
+                        <p>Elements de contexte pour la lecture globale du parcours du scout.</p>
+                    </div>
+                    <span class="journey-badge">@activites.Count activite(s)</span>
+                </div>
+                <div class="journey-list">
+                    @foreach (var suivi in scout.SuivisAcademiques.OrderByDescending(s => s.AnneeScolaire).Take(4))
+                    {
+                        <article class="journey-list__item">
+                            <div>
+                                <strong>@suivi.AnneeScolaire</strong>
+                                <small>@suivi.NiveauScolaire · @(suivi.Etablissement ?? "Etablissement non renseigne")</small>
+                            </div>
+                            <span>@(suivi.MoyenneGenerale?.ToString("F2") ?? "-")</span>
+                        </article>
+                    }
+                    @foreach (var activite in activites.Take(4))
+                    {
+                        <article class="journey-list__item">
+                            <div>
+                                <strong>@activite.Activite.Titre</strong>
+                                <small>@activite.Activite.DateDebut.ToString("dd/MM/yyyy") · @(activite.Activite.Groupe?.Nom ?? "District")</small>
+                            </div>
+                            <span>@activite.Presence</span>
+                        </article>
+                    }
+                    @if (!scout.SuivisAcademiques.Any() && !activites.Any())
+                    {
+                        <div class="journey-empty journey-empty--compact">Aucun suivi complementaire enregistre.</div>
+                    }
+                </div>
+            </section>
+        </div>
     </div>
 </div>
 
-<div class="card-3d p-4 mt-4">
-    <h5><i class="bi bi-calendar-event-fill text-or"></i> Activites participees (@activites.Count)</h5>
-    @if (activites.Any())
-    {
-        <div class="table-responsive mt-3">
-            <table class="table-modern">
-                <thead><tr><th>Activite</th><th>Type</th><th>Date</th><th>Groupe</th><th>Presence</th></tr></thead>
-                <tbody>
-                    @foreach (var p in activites)
-                    {
-                        <tr>
-                            <td>@p.Activite.Titre</td>
-                            <td><span class="badge bg-secondary bg-opacity-25" style="color:var(--bleu-logo);border-radius:10px;font-size:0.7rem;">@p.Activite.Type</span></td>
-                            <td>@p.Activite.DateDebut.ToString("dd/MM/yyyy")</td>
-                            <td>@(p.Activite.Groupe?.Nom ?? "District")</td>
-                            <td><span class="badge-3d badge-@(p.Presence == StatutPresence.Present ? "validee" : p.Presence == StatutPresence.Absent ? "rejetee" : "soumise")" style="font-size:0.7rem;">@p.Presence</span></td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+<style>
+    .progression-shell { display: flex; flex-direction: column; gap: 1.5rem; }
+    .journey-hero {
+        display: grid; grid-template-columns: minmax(0, 1.7fr) 220px; gap: 1.5rem;
+        padding: 1.75rem; border-radius: 28px; color: #fff;
+        background: linear-gradient(135deg, #2f3d45, #62824f);
+        box-shadow: 0 24px 50px rgba(47, 61, 69, 0.14);
     }
-    else
-    {
-        <p class="text-muted-custom mt-3">Aucune participation enregistree.</p>
+    .journey-kicker {
+        display: inline-flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem;
+        padding: 0.45rem 0.85rem; border-radius: 999px; background: rgba(255,255,255,0.12);
+        font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
     }
-</div>
-
+    .journey-hero h1 { margin: 0 0 0.65rem; font-size: clamp(2rem, 4vw, 3rem); font-weight: 800; }
+    .journey-hero p { margin: 0; max-width: 780px; color: rgba(255,255,255,0.82); }
+    .journey-meta { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 1.2rem; }
+    .journey-meta span {
+        display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.65rem 0.9rem;
+        border-radius: 16px; background: rgba(255,255,255,0.12); font-weight: 600;
+    }
+    .journey-score {
+        display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+        padding: 1.25rem; border-radius: 24px; background: rgba(255,255,255,0.1);
+    }
+    .journey-score strong { font-size: 2.8rem; line-height: 1; font-weight: 900; }
+    .journey-score span { margin-top: 0.4rem; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.8rem; }
+    .journey-score small { margin-top: 0.6rem; color: rgba(255,255,255,0.8); }
+    .journey-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
+    .journey-kpis article {
+        padding: 1.15rem 1.2rem; border-radius: 22px; background: #fff; border: 1px solid rgba(214,224,205,0.9);
+        box-shadow: 0 18px 30px rgba(47, 61, 69, 0.06);
+    }
+    .journey-kpis span, .journey-kpis small { display: block; }
+    .journey-kpis span { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: #6d7d70; font-weight: 700; }
+    .journey-kpis strong { display: block; margin: 0.55rem 0 0.25rem; font-size: 2rem; color: var(--bleu-logo); }
+    .journey-kpis small { color: var(--texte-secondaire); }
+    .journey-panel {
+        padding: 1.4rem; border-radius: 24px; background: #fff; border: 1px solid rgba(214,224,205,0.9);
+        box-shadow: 0 20px 32px rgba(47, 61, 69, 0.06);
+    }
+    .journey-panel__head { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; margin-bottom: 1rem; }
+    .journey-panel__head h2 { margin: 0 0 0.25rem; font-size: 1.25rem; color: var(--bleu-logo); font-weight: 800; }
+    .journey-panel__head p { margin: 0; color: var(--texte-secondaire); }
+    .journey-badge {
+        display: inline-flex; align-items: center; justify-content: center; padding: 0.5rem 0.8rem;
+        border-radius: 999px; background: rgba(89,117,55,0.1); color: var(--vert-logo);
+        font-size: 0.78rem; font-weight: 800; text-transform: uppercase; white-space: nowrap;
+    }
+    .journey-alert { border-radius: 18px; }
+    .journey-rail { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.85rem; }
+    .journey-step {
+        display: grid; grid-template-columns: 44px 1fr; gap: 0.9rem; padding: 1rem; border-radius: 18px;
+        background: linear-gradient(180deg, rgba(251,252,248,1), rgba(246,249,242,1)); border: 1px solid rgba(207,217,196,0.9);
+    }
+    .journey-step--done { border-color: rgba(89,117,55,0.32); }
+    .journey-step--planned { border-color: rgba(74,110,141,0.28); }
+    .journey-step__index {
+        display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px;
+        background: rgba(49,62,69,0.08); color: var(--bleu-logo); font-weight: 900;
+    }
+    .journey-step strong, .journey-step span, .journey-step small { display: block; }
+    .journey-step strong { color: var(--bleu-logo); margin-bottom: 0.2rem; }
+    .journey-step span, .journey-step small { color: var(--texte-secondaire); }
+    .journey-table thead th { color: var(--bleu-logo); white-space: nowrap; }
+    .journey-table__action { min-width: 280px; }
+    .journey-inline-form { display: grid; gap: 0.45rem; }
+    .journey-pill {
+        display: inline-flex; align-items: center; justify-content: center; padding: 0.38rem 0.72rem;
+        border-radius: 999px; font-size: 0.72rem; font-weight: 800; border: 1px solid transparent;
+    }
+    .journey-pill--official { background: rgba(89,117,55,0.1); color: var(--vert-logo); border-color: rgba(89,117,55,0.2); }
+    .journey-pill--custom, .journey-pill--state { background: rgba(49,62,69,0.08); color: var(--bleu-logo); border-color: rgba(49,62,69,0.12); }
+    .journey-form-card {
+        padding: 1.1rem; border-radius: 20px; background: linear-gradient(180deg, rgba(251,252,248,1), rgba(245,248,241,1));
+        border: 1px solid rgba(207,217,196,0.8);
+    }
+    .journey-form-card h3 { margin: 0 0 0.5rem; font-size: 1.05rem; color: var(--bleu-logo); font-weight: 800; }
+    .journey-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .journey-list__item {
+        display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.95rem 1rem;
+        border-radius: 18px; background: linear-gradient(180deg, rgba(251,252,248,1), rgba(246,249,242,1)); border: 1px solid rgba(207,217,196,0.88);
+    }
+    .journey-list__item--stacked { align-items: flex-start; }
+    .journey-list__item strong, .journey-list__item small { display: block; }
+    .journey-list__item strong { color: var(--bleu-logo); margin-bottom: 0.2rem; }
+    .journey-list__item small { color: var(--texte-secondaire); }
+    .journey-empty {
+        padding: 2rem 1rem; border-radius: 18px; text-align: center; color: var(--texte-secondaire);
+        background: linear-gradient(180deg, rgba(251,252,248,1), rgba(246,249,242,1)); border: 1px dashed rgba(207,217,196,0.9);
+    }
+    .journey-empty--compact { padding: 1rem; }
+    @@media (max-width: 1199.98px) { .journey-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @@media (max-width: 991.98px) {
+        .journey-hero { grid-template-columns: 1fr; }
+        .journey-panel__head, .journey-list__item { flex-direction: column; align-items: flex-start; }
+    }
+    @@media (max-width: 767.98px) { .journey-kpis { grid-template-columns: 1fr; } }
+</style>

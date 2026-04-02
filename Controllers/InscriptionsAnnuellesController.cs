@@ -1,4 +1,4 @@
-using MangoTaika.Data;
+﻿using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.Helpers;
 using Microsoft.AspNetCore.Authorization;
@@ -77,6 +77,7 @@ public class InscriptionsAnnuellesController(AppDbContext db, UserManager<Applic
             if (scout is not null)
             {
                 ApplySnapshotFromScout(model, scout, overwrite: true);
+                model.CotisationNationaleAjour = model.AnneeReference == DateTime.UtcNow.Year && scout.AssuranceAnnuelle;
             }
         }
 
@@ -90,6 +91,11 @@ public class InscriptionsAnnuellesController(AppDbContext db, UserManager<Applic
     public async Task<IActionResult> Create(InscriptionAnnuelleScout model)
     {
         var scout = await ValidateModelAsync(model);
+        if (scout is not null)
+        {
+            model.CotisationNationaleAjour = model.AnneeReference == DateTime.UtcNow.Year && scout.AssuranceAnnuelle;
+        }
+
         if (!ModelState.IsValid || scout is null)
         {
             await LoadReferenceDataAsync(model.ScoutId, model.GroupeId, model.BrancheId);
@@ -108,7 +114,6 @@ public class InscriptionsAnnuellesController(AppDbContext db, UserManager<Applic
         }
 
         db.InscriptionsAnnuellesScouts.Add(model);
-        await SyncScoutCotisationAsync(model.ScoutId, model.AnneeReference, model.CotisationNationaleAjour);
         await db.SaveChangesAsync();
         TempData["Success"] = "Inscription annuelle enregistree.";
         return RedirectToAction(nameof(Details), new { id = model.Id });
@@ -144,6 +149,7 @@ public class InscriptionsAnnuellesController(AppDbContext db, UserManager<Applic
         if (inscription is null) return NotFound();
 
         var scout = await ValidateModelAsync(model, id);
+        model.CotisationNationaleAjour = inscription.CotisationNationaleAjour;
         if (!ModelState.IsValid || scout is null)
         {
             model.Id = id;
@@ -157,7 +163,6 @@ public class InscriptionsAnnuellesController(AppDbContext db, UserManager<Applic
         inscription.DateInscription = EnsureUtc(model.DateInscription == default ? inscription.DateInscription : model.DateInscription);
         inscription.Statut = model.Statut;
         inscription.InscriptionParoissialeValidee = model.InscriptionParoissialeValidee;
-        inscription.CotisationNationaleAjour = model.CotisationNationaleAjour;
         inscription.Observations = model.Observations?.Trim();
         inscription.GroupeId = model.GroupeId;
         inscription.BrancheId = model.BrancheId;
@@ -175,7 +180,6 @@ public class InscriptionsAnnuellesController(AppDbContext db, UserManager<Applic
             inscription.ValideParId = null;
         }
 
-        await SyncScoutCotisationAsync(inscription.ScoutId, inscription.AnneeReference, inscription.CotisationNationaleAjour);
         await db.SaveChangesAsync();
         TempData["Success"] = "Inscription annuelle mise a jour.";
         return RedirectToAction(nameof(Details), new { id });
@@ -192,7 +196,6 @@ public class InscriptionsAnnuellesController(AppDbContext db, UserManager<Applic
         inscription.Statut = StatutInscriptionAnnuelle.Validee;
         inscription.DateValidation = DateTime.UtcNow;
         inscription.ValideParId = CurrentUserId;
-        await SyncScoutCotisationAsync(inscription.ScoutId, inscription.AnneeReference, inscription.CotisationNationaleAjour);
         await db.SaveChangesAsync();
 
         TempData["Success"] = "Inscription annuelle validee.";
@@ -282,20 +285,6 @@ public class InscriptionsAnnuellesController(AppDbContext db, UserManager<Applic
         if (overwrite || string.IsNullOrWhiteSpace(inscription.FonctionSnapshot))
         {
             inscription.FonctionSnapshot = string.IsNullOrWhiteSpace(scout.Fonction) ? null : scout.Fonction.Trim();
-        }
-    }
-
-    private async Task SyncScoutCotisationAsync(Guid scoutId, int anneeReference, bool cotisationAjour)
-    {
-        if (anneeReference != DateTime.UtcNow.Year)
-        {
-            return;
-        }
-
-        var scout = await db.Scouts.FirstOrDefaultAsync(s => s.Id == scoutId && s.IsActive);
-        if (scout is not null)
-        {
-            scout.AssuranceAnnuelle = cotisationAjour;
         }
     }
 

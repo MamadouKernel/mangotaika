@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.Hubs;
@@ -85,6 +85,7 @@ builder.Services.AddScoped<ISmsService, SmsService>();
 builder.Services.AddScoped<IFormationService, FormationService>();
 builder.Services.AddScoped<IFileUploadService, FileUploadService>();
 builder.Services.AddScoped<INotificationDispatchService, NotificationDispatchService>();
+builder.Services.AddScoped<OperationalAccessService>();
 
 builder.Services.AddAntiforgery(options =>
 {

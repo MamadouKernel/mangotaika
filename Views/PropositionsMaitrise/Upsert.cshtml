@@ -1,24 +1,30 @@
-@using MangoTaika.Data.Entities
+﻿@using MangoTaika.Data.Entities
 @model PropositionMaitriseAnnuelle
 @{
     ViewData["Title"] = Model.Id == Guid.Empty ? "Nouvelle proposition de maitrise" : "Modifier la proposition de maitrise";
     Layout = "_LayoutAdmin";
     var groupes = ViewBag.Groupes as List<Groupe> ?? new();
-    var referenceYear = Model.AnneeReference > 0 ? Model.AnneeReference : DateTime.UtcNow.Year;
+    var branches = ViewBag.Branches as List<Branche> ?? new();
+    var membres = (Model.Membres?.OrderBy(m => m.OrdreAffichage).ToList() ?? new List<PropositionMaitriseMembre>());
+    if (!membres.Any())
+    {
+        membres.Add(new PropositionMaitriseMembre { OrdreAffichage = 1 });
+    }
+    var formAction = Model.Id == Guid.Empty ? Url.Action("Create") : Url.Action("Edit", new { id = Model.Id });
 }
 
 <div class="tracking-module tracking-module--maitrise-form">
     <section class="tracking-hero tracking-hero--compact">
         <div class="tracking-hero__content">
-            <span class="tracking-hero__eyebrow"><i class="bi bi-diagram-3"></i> Preparation de l'encadrement</span>
+            <span class="tracking-hero__eyebrow"><i class="bi bi-diagram-3"></i> Encadrement annuel</span>
             <h2 class="section-title tracking-hero__title mb-2"><i class="bi bi-people text-or"></i> <span class="accent">@ViewData["Title"]</span></h2>
-            <p class="tracking-hero__text mb-0">Structurez l'equipe de maitrise, les objectifs pedagogiques et les besoins de montee en competence dans un canevas unique.</p>
+            <p class="tracking-hero__text mb-0">La proposition de maitrise doit presenter, pour l'annee paroissiale, la liste des chefs, leur fonction, leur branche, leur contact et leur niveau de formation.</p>
         </div>
         <div class="tracking-hero__actions">
             <div class="tracking-hero__focus">
-                <span>Reference</span>
-                <strong>@referenceYear</strong>
-                <small>annee a preparer avec l'entite concernee.</small>
+                <span>Equipe</span>
+                <strong>@membres.Count membre(s)</strong>
+                <small>liste structuree des chefs proposes</small>
             </div>
             <div class="tracking-action-stack">
                 <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i> Retour</a>
@@ -28,22 +34,54 @@
 
     <div class="tracking-form-layout">
         <section class="tracking-panel tracking-form-shell">
-            <form method="post">
+            <form method="post" action="@formAction">
                 @Html.AntiForgeryToken()
                 @if (Model.Id != Guid.Empty)
                 {
                     <input type="hidden" asp-for="Id" />
                 }
-                <div asp-validation-summary="ModelOnly" class="text-danger small"></div>
-                <div class="tracking-form-grid">
-                    <div class="tracking-form-col-5"><label asp-for="GroupeId" class="form-label">Entite</label><select asp-for="GroupeId" class="form-select"><option value="">-- Selectionner une entite --</option>@foreach (var groupe in groupes){<option value="@groupe.Id">@groupe.Nom</option>}</select></div>
-                    <div class="tracking-form-col-2"><label asp-for="AnneeReference" class="form-label">Annee</label><input asp-for="AnneeReference" class="form-control" /></div>
+                <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+                <div class="tracking-form-grid mb-4">
+                    <div class="tracking-form-col-5"><label asp-for="GroupeId" class="form-label">Entite</label><select asp-for="GroupeId" class="form-select" id="maitriseGroupeId"><option value="">-- Selectionner une entite --</option>@foreach (var groupe in groupes){<option value="@groupe.Id">@groupe.Nom</option>}</select></div>
+                    <div class="tracking-form-col-2"><label asp-for="AnneeReference" class="form-label">Annee</label><input asp-for="AnneeReference" class="form-control" min="2000" max="2100" /></div>
                     <div class="tracking-form-col-5"><label asp-for="Titre" class="form-label">Titre</label><input asp-for="Titre" class="form-control" /></div>
-                    <div class="tracking-form-col-12"><label asp-for="CompositionProposee" class="form-label">Composition proposee</label><textarea asp-for="CompositionProposee" class="form-control" rows="7"></textarea></div>
-                    <div class="tracking-form-col-12"><label asp-for="ObjectifsPedagogiques" class="form-label">Objectifs pedagogiques</label><textarea asp-for="ObjectifsPedagogiques" class="form-control" rows="5"></textarea></div>
-                    <div class="tracking-form-col-12"><label asp-for="BesoinsFormation" class="form-label">Besoins de formation</label><textarea asp-for="BesoinsFormation" class="form-control" rows="4"></textarea></div>
-                    <div class="tracking-form-col-12"><label asp-for="Observations" class="form-label">Observations</label><textarea asp-for="Observations" class="form-control" rows="4"></textarea></div>
+                    <div class="tracking-form-col-12"><label asp-for="ObjectifsPedagogiques" class="form-label">Objectifs pedagogiques</label><textarea asp-for="ObjectifsPedagogiques" class="form-control" rows="4"></textarea></div>
+                    <div class="tracking-form-col-12"><label asp-for="BesoinsFormation" class="form-label">Besoins de formation</label><textarea asp-for="BesoinsFormation" class="form-control" rows="3"></textarea></div>
+                    <div class="tracking-form-col-12"><label asp-for="Observations" class="form-label">Observations</label><textarea asp-for="Observations" class="form-control" rows="3"></textarea></div>
                 </div>
+
+                <div class="tracking-panel tracking-panel--soft mb-4">
+                    <div class="tracking-panel__header">
+                        <div>
+                            <h3 class="tracking-panel__title">Liste des chefs</h3>
+                            <p class="tracking-panel__text">Renseignez la fonction, la branche, le contact et le niveau de formation de chaque chef propose.</p>
+                        </div>
+                        <button type="button" class="btn btn-outline-or" id="addMaitriseMember"><i class="bi bi-plus-lg"></i> Ajouter un chef</button>
+                    </div>
+
+                    <div id="maitriseMembers" class="tracking-list-stack">
+                        @for (var i = 0; i < membres.Count; i++)
+                        {
+                            var membre = membres[i];
+                            <div class="programme-row card-3d p-3">
+                                <input type="hidden" name="Membres[@i].Id" value="@membre.Id" />
+                                <div class="programme-row__head">
+                                    <h4>Chef @(i + 1)</h4>
+                                    <button type="button" class="btn btn-sm btn-outline-or" data-remove-member><i class="bi bi-trash"></i> Retirer</button>
+                                </div>
+                                <div class="tracking-form-grid">
+                                    <div class="tracking-form-col-4"><label class="form-label">Nom du chef</label><input class="form-control" name="Membres[@i].NomChef" value="@membre.NomChef" /></div>
+                                    <div class="tracking-form-col-4"><label class="form-label">Fonction</label><input class="form-control" name="Membres[@i].Fonction" value="@membre.Fonction" placeholder="Ex: Chef de groupe, CU, CUA" /></div>
+                                    <div class="tracking-form-col-4"><label class="form-label">Branche</label><select class="form-select" name="Membres[@i].BrancheId" data-maitrise-branch-select><option value="">-- Aucune / transverse --</option>@foreach (var branche in branches){<option value="@branche.Id" data-groupe-id="@branche.GroupeId" selected="@(membre.BrancheId == branche.Id ? "selected" : null)">@branche.Nom</option>}</select></div>
+                                    <div class="tracking-form-col-4"><label class="form-label">Contact</label><input class="form-control" name="Membres[@i].Contact" value="@membre.Contact" placeholder="Telephone ou email" /></div>
+                                    <div class="tracking-form-col-4"><label class="form-label">Niveau de formation</label><input class="form-control" name="Membres[@i].NiveauFormation" value="@membre.NiveauFormation" placeholder="Ex: Niveau 1, Niveau 2" /></div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
                 <div class="tracking-actions">
                     <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Enregistrer</button>
                     <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
@@ -52,8 +90,107 @@
         </section>
 
         <aside class="tracking-side-stack">
-            <div class="tracking-side-card"><span class="tracking-side-card__label"><i class="bi bi-lightbulb"></i> Bon angle</span><h4>Parler equipe</h4><p class="text-muted-custom mb-0">Decrivez la composition et les besoins en formation de maniere operationnelle pour faciliter l'arbitrage annuel.</p></div>
-            <div class="tracking-side-card"><span class="tracking-side-card__label"><i class="bi bi-mortarboard"></i> Formation</span><h5>Conseil</h5><p class="text-muted-custom mb-0">Mettez en avant les manques prioritaires de competences plutot qu'une liste trop large de souhaits.</p></div>
+            <div class="tracking-side-card"><span class="tracking-side-card__label"><i class="bi bi-lightbulb"></i> Attendu</span><h4>Une maitrise lisible</h4><p class="text-muted-custom mb-0">Le district doit pouvoir relire rapidement les noms, fonctions, branches et besoins de formation de l'equipe proposee.</p></div>
+            <div class="tracking-side-card"><span class="tracking-side-card__label"><i class="bi bi-mortarboard"></i> Formation</span><h5>Conseil</h5><p class="text-muted-custom mb-0">Renseignez le niveau de formation pour faire ressortir les besoins prioritaires de montee en competence.</p></div>
         </aside>
     </div>
 </div>
+
+<script type="text/template" id="maitriseMemberTemplate">
+<div class="programme-row card-3d p-3">
+    <input type="hidden" name="Membres[__index__].Id" value="" />
+    <div class="programme-row__head">
+        <h4>Chef __order__</h4>
+        <button type="button" class="btn btn-sm btn-outline-or" data-remove-member><i class="bi bi-trash"></i> Retirer</button>
+    </div>
+    <div class="tracking-form-grid">
+        <div class="tracking-form-col-4"><label class="form-label">Nom du chef</label><input class="form-control" name="Membres[__index__].NomChef" value="" /></div>
+        <div class="tracking-form-col-4"><label class="form-label">Fonction</label><input class="form-control" name="Membres[__index__].Fonction" value="" placeholder="Ex: Chef de groupe, CU, CUA" /></div>
+        <div class="tracking-form-col-4"><label class="form-label">Branche</label><select class="form-select" name="Membres[__index__].BrancheId" data-maitrise-branch-select><option value="">-- Aucune / transverse --</option>@foreach (var branche in branches){<option value="@branche.Id" data-groupe-id="@branche.GroupeId">@branche.Nom</option>}</select></div>
+        <div class="tracking-form-col-4"><label class="form-label">Contact</label><input class="form-control" name="Membres[__index__].Contact" value="" placeholder="Telephone ou email" /></div>
+        <div class="tracking-form-col-4"><label class="form-label">Niveau de formation</label><input class="form-control" name="Membres[__index__].NiveauFormation" value="" placeholder="Ex: Niveau 1, Niveau 2" /></div>
+    </div>
+</div>
+</script>
+
+<script>
+    (() => {
+        const container = document.getElementById('maitriseMembers');
+        const template = document.getElementById('maitriseMemberTemplate');
+        const addButton = document.getElementById('addMaitriseMember');
+        const groupSelect = document.getElementById('maitriseGroupeId');
+
+        if (!container || !template || !addButton) {
+            return;
+        }
+
+        const reindexRows = () => {
+            Array.from(container.querySelectorAll('.programme-row')).forEach((row, index) => {
+                const title = row.querySelector('h4');
+                if (title) {
+                    title.textContent = `Chef ${index + 1}`;
+                }
+
+                row.querySelectorAll('input[name], select[name], textarea[name]').forEach((field) => {
+                    const name = field.getAttribute('name');
+                    if (!name) {
+                        return;
+                    }
+
+                    field.setAttribute('name', name.replace(/Membres\[\d+\]/, `Membres[${index}]`));
+                });
+            });
+        };
+
+        const syncBranchSelect = (select) => {
+            const selectedGroup = groupSelect ? groupSelect.value : '';
+            Array.from(select.options).forEach((option) => {
+                if (!option.value) {
+                    option.hidden = false;
+                    return;
+                }
+
+                option.hidden = !!selectedGroup && option.dataset.groupeId !== selectedGroup;
+            });
+
+            const selectedOption = select.selectedOptions[0];
+            if (selectedOption && selectedOption.value && selectedGroup && selectedOption.dataset.groupeId !== selectedGroup) {
+                select.value = '';
+            }
+        };
+
+        const syncAllBranchSelects = () => {
+            container.querySelectorAll('[data-maitrise-branch-select]').forEach((select) => syncBranchSelect(select));
+        };
+
+        addButton.addEventListener('click', () => {
+            const nextIndex = container.querySelectorAll('.programme-row').length;
+            const html = template.innerHTML
+                .replace(/__index__/g, nextIndex)
+                .replace(/__order__/g, nextIndex + 1);
+            container.insertAdjacentHTML('beforeend', html);
+            reindexRows();
+            syncAllBranchSelects();
+        });
+
+        container.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-remove-member]');
+            if (!button) {
+                return;
+            }
+
+            const rows = container.querySelectorAll('.programme-row');
+            if (rows.length === 1) {
+                return;
+            }
+
+            button.closest('.programme-row')?.remove();
+            reindexRows();
+        });
+
+        groupSelect?.addEventListener('change', syncAllBranchSelects);
+        reindexRows();
+        syncAllBranchSelects();
+    })();
+</script>
+

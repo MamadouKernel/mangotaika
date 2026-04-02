@@ -3,6 +3,7 @@ using System;
 using MangoTaika.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MangoTaika.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260402025945_EnforceScoutBusinessRules")]
+    partial class EnforceScoutBusinessRules
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -580,9 +583,6 @@ namespace MangoTaika.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("BrancheId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("Budget")
                         .HasColumnType("text");
 
@@ -625,9 +625,6 @@ namespace MangoTaika.Migrations
                     b.Property<string>("Observations")
                         .HasColumnType("text");
 
-                    b.Property<string>("Responsables")
-                        .HasColumnType("text");
-
                     b.Property<int>("Statut")
                         .HasColumnType("integer");
 
@@ -645,8 +642,6 @@ namespace MangoTaika.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("BrancheId");
 
                     b.HasIndex("DemandeurId");
 
@@ -1394,49 +1389,6 @@ namespace MangoTaika.Migrations
                     b.ToTable("MessagesTicket");
                 });
 
-            modelBuilder.Entity("MangoTaika.Data.Entities.ModeleEtapeParcours", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("BrancheId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("CodeEtape")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<bool>("EstObligatoire")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("NomEtape")
-                        .IsRequired()
-                        .HasMaxLength(180)
-                        .HasColumnType("character varying(180)");
-
-                    b.Property<int>("OrdreAffichage")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BrancheId", "CodeEtape", "IsActive")
-                        .HasDatabaseName("IX_ModeleEtapeParcours_Branche_Code_Actif")
-                        .HasFilter("\"CodeEtape\" IS NOT NULL");
-
-                    b.HasIndex("BrancheId", "OrdreAffichage", "IsActive")
-                        .HasDatabaseName("IX_ModeleEtapeParcours_Branche_Ordre_Actif");
-
-                    b.ToTable("ModelesEtapesParcours");
-                });
-
             modelBuilder.Entity("MangoTaika.Data.Entities.ModuleFormation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1693,64 +1645,6 @@ namespace MangoTaika.Migrations
                     b.ToTable("ProgrammesAnnuels");
                 });
 
-            modelBuilder.Entity("MangoTaika.Data.Entities.ProgrammeAnnuelActivite", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("BrancheId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Cible")
-                        .HasMaxLength(180)
-                        .HasColumnType("character varying(180)");
-
-                    b.Property<DateTime>("DateActivite")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(2500)
-                        .HasColumnType("character varying(2500)");
-
-                    b.Property<string>("Lieu")
-                        .HasMaxLength(250)
-                        .HasColumnType("character varying(250)");
-
-                    b.Property<decimal?>("MontantParticipation")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("NomActivite")
-                        .IsRequired()
-                        .HasMaxLength(180)
-                        .HasColumnType("character varying(180)");
-
-                    b.Property<string>("Objectif")
-                        .IsRequired()
-                        .HasMaxLength(1500)
-                        .HasColumnType("character varying(1500)");
-
-                    b.Property<int>("OrdreAffichage")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("ProgrammeAnnuelId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Responsable")
-                        .IsRequired()
-                        .HasMaxLength(180)
-                        .HasColumnType("character varying(180)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BrancheId");
-
-                    b.HasIndex("ProgrammeAnnuelId", "OrdreAffichage");
-
-                    b.ToTable("ProgrammesAnnuelsActivites");
-                });
-
             modelBuilder.Entity("MangoTaika.Data.Entities.ProgressionLecon", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1897,49 +1791,6 @@ namespace MangoTaika.Migrations
                     b.ToTable("PropositionsMaitriseAnnuelles");
                 });
 
-            modelBuilder.Entity("MangoTaika.Data.Entities.PropositionMaitriseMembre", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("BrancheId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Contact")
-                        .IsRequired()
-                        .HasMaxLength(180)
-                        .HasColumnType("character varying(180)");
-
-                    b.Property<string>("Fonction")
-                        .IsRequired()
-                        .HasMaxLength(180)
-                        .HasColumnType("character varying(180)");
-
-                    b.Property<string>("NiveauFormation")
-                        .HasMaxLength(180)
-                        .HasColumnType("character varying(180)");
-
-                    b.Property<string>("NomChef")
-                        .IsRequired()
-                        .HasMaxLength(180)
-                        .HasColumnType("character varying(180)");
-
-                    b.Property<int>("OrdreAffichage")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("PropositionMaitriseAnnuelleId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BrancheId");
-
-                    b.HasIndex("PropositionMaitriseAnnuelleId", "OrdreAffichage");
-
-                    b.ToTable("PropositionsMaitriseMembres");
-                });
-
             modelBuilder.Entity("MangoTaika.Data.Entities.QuestionQuiz", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2015,9 +1866,6 @@ namespace MangoTaika.Migrations
                     b.Property<DateTime>("DateCreation")
                         .HasColumnType("timestamp without time zone");
 
-                    b.Property<DateTime>("DateRealisation")
-                        .HasColumnType("timestamp without time zone");
-
                     b.Property<DateTime?>("DateSoumission")
                         .HasColumnType("timestamp without time zone");
 
@@ -2028,9 +1876,6 @@ namespace MangoTaika.Migrations
                         .IsRequired()
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
-
-                    b.Property<int>("NombreParticipants")
-                        .HasColumnType("integer");
 
                     b.Property<string>("ObservationsComplementaires")
                         .HasMaxLength(2000)
@@ -2067,39 +1912,6 @@ namespace MangoTaika.Migrations
                     b.HasIndex("ValideurId");
 
                     b.ToTable("RapportsActivite");
-                });
-
-            modelBuilder.Entity("MangoTaika.Data.Entities.RapportActivitePieceJointe", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("DateAjout")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("NomFichier")
-                        .IsRequired()
-                        .HasMaxLength(260)
-                        .HasColumnType("character varying(260)");
-
-                    b.Property<Guid>("RapportActiviteId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("TypeMime")
-                        .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
-
-                    b.Property<string>("UrlFichier")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RapportActiviteId", "DateAjout");
-
-                    b.ToTable("RapportsActivitePiecesJointes");
                 });
 
             modelBuilder.Entity("MangoTaika.Data.Entities.ReponseQuiz", b =>
@@ -3057,11 +2869,6 @@ namespace MangoTaika.Migrations
 
             modelBuilder.Entity("MangoTaika.Data.Entities.DemandeAutorisation", b =>
                 {
-                    b.HasOne("MangoTaika.Data.Entities.Branche", "Branche")
-                        .WithMany()
-                        .HasForeignKey("BrancheId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("MangoTaika.Data.Entities.ApplicationUser", "Demandeur")
                         .WithMany()
                         .HasForeignKey("DemandeurId")
@@ -3076,8 +2883,6 @@ namespace MangoTaika.Migrations
                         .WithMany()
                         .HasForeignKey("ValideurId")
                         .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Branche");
 
                     b.Navigation("Demandeur");
 
@@ -3339,16 +3144,6 @@ namespace MangoTaika.Migrations
                     b.Navigation("Ticket");
                 });
 
-            modelBuilder.Entity("MangoTaika.Data.Entities.ModeleEtapeParcours", b =>
-                {
-                    b.HasOne("MangoTaika.Data.Entities.Branche", "Branche")
-                        .WithMany()
-                        .HasForeignKey("BrancheId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Branche");
-                });
-
             modelBuilder.Entity("MangoTaika.Data.Entities.ModuleFormation", b =>
                 {
                     b.HasOne("MangoTaika.Data.Entities.Formation", "Formation")
@@ -3415,24 +3210,6 @@ namespace MangoTaika.Migrations
                     b.Navigation("Valideur");
                 });
 
-            modelBuilder.Entity("MangoTaika.Data.Entities.ProgrammeAnnuelActivite", b =>
-                {
-                    b.HasOne("MangoTaika.Data.Entities.Branche", "Branche")
-                        .WithMany()
-                        .HasForeignKey("BrancheId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("MangoTaika.Data.Entities.ProgrammeAnnuel", "ProgrammeAnnuel")
-                        .WithMany("Activites")
-                        .HasForeignKey("ProgrammeAnnuelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Branche");
-
-                    b.Navigation("ProgrammeAnnuel");
-                });
-
             modelBuilder.Entity("MangoTaika.Data.Entities.ProgressionLecon", b =>
                 {
                     b.HasOne("MangoTaika.Data.Entities.Lecon", "Lecon")
@@ -3496,24 +3273,6 @@ namespace MangoTaika.Migrations
                     b.Navigation("Valideur");
                 });
 
-            modelBuilder.Entity("MangoTaika.Data.Entities.PropositionMaitriseMembre", b =>
-                {
-                    b.HasOne("MangoTaika.Data.Entities.Branche", "Branche")
-                        .WithMany()
-                        .HasForeignKey("BrancheId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("MangoTaika.Data.Entities.PropositionMaitriseAnnuelle", "PropositionMaitriseAnnuelle")
-                        .WithMany("Membres")
-                        .HasForeignKey("PropositionMaitriseAnnuelleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Branche");
-
-                    b.Navigation("PropositionMaitriseAnnuelle");
-                });
-
             modelBuilder.Entity("MangoTaika.Data.Entities.QuestionQuiz", b =>
                 {
                     b.HasOne("MangoTaika.Data.Entities.Quiz", "Quiz")
@@ -3560,17 +3319,6 @@ namespace MangoTaika.Migrations
                     b.Navigation("Createur");
 
                     b.Navigation("Valideur");
-                });
-
-            modelBuilder.Entity("MangoTaika.Data.Entities.RapportActivitePieceJointe", b =>
-                {
-                    b.HasOne("MangoTaika.Data.Entities.RapportActivite", "RapportActivite")
-                        .WithMany("PiecesJointes")
-                        .HasForeignKey("RapportActiviteId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("RapportActivite");
                 });
 
             modelBuilder.Entity("MangoTaika.Data.Entities.ReponseQuiz", b =>
@@ -3933,19 +3681,9 @@ namespace MangoTaika.Migrations
                     b.Navigation("Quiz");
                 });
 
-            modelBuilder.Entity("MangoTaika.Data.Entities.ProgrammeAnnuel", b =>
-                {
-                    b.Navigation("Activites");
-                });
-
             modelBuilder.Entity("MangoTaika.Data.Entities.ProjetAGR", b =>
                 {
                     b.Navigation("Transactions");
-                });
-
-            modelBuilder.Entity("MangoTaika.Data.Entities.PropositionMaitriseAnnuelle", b =>
-                {
-                    b.Navigation("Membres");
                 });
 
             modelBuilder.Entity("MangoTaika.Data.Entities.QuestionQuiz", b =>
@@ -3958,11 +3696,6 @@ namespace MangoTaika.Migrations
                     b.Navigation("Questions");
 
                     b.Navigation("Tentatives");
-                });
-
-            modelBuilder.Entity("MangoTaika.Data.Entities.RapportActivite", b =>
-                {
-                    b.Navigation("PiecesJointes");
                 });
 
             modelBuilder.Entity("MangoTaika.Data.Entities.Scout", b =>

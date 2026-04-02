@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace MangoTaika.Data.Entities;
 
@@ -7,7 +7,8 @@ public enum StatutWorkflowDocument
     Brouillon,
     Soumis,
     AReviser,
-    Valide
+    Valide,
+    Rejete
 }
 
 public enum StatutInscriptionAnnuelle
@@ -72,6 +73,37 @@ public class ProgrammeAnnuel
     public ApplicationUser Createur { get; set; } = null!;
     public Guid? ValideurId { get; set; }
     public ApplicationUser? Valideur { get; set; }
+    public ICollection<ProgrammeAnnuelActivite> Activites { get; set; } = [];
+}
+
+public class ProgrammeAnnuelActivite
+{
+    public Guid Id { get; set; }
+    public Guid ProgrammeAnnuelId { get; set; }
+    public ProgrammeAnnuel ProgrammeAnnuel { get; set; } = null!;
+    [Required]
+    [StringLength(180)]
+    public string NomActivite { get; set; } = string.Empty;
+    public Guid? BrancheId { get; set; }
+    public Branche? Branche { get; set; }
+    [StringLength(180)]
+    public string? Cible { get; set; }
+    [Required]
+    [StringLength(1500)]
+    public string Objectif { get; set; } = string.Empty;
+    [StringLength(250)]
+    public string? Lieu { get; set; }
+    public DateTime DateActivite { get; set; }
+    [Required]
+    [StringLength(180)]
+    public string Responsable { get; set; } = string.Empty;
+    [Required]
+    [StringLength(2500)]
+    public string Description { get; set; } = string.Empty;
+    [Range(0, 1000000000)]
+    public decimal? MontantParticipation { get; set; }
+    [Range(1, 999)]
+    public int OrdreAffichage { get; set; } = 1;
 }
 
 public class RapportActivite
@@ -79,6 +111,9 @@ public class RapportActivite
     public Guid Id { get; set; }
     public Guid ActiviteId { get; set; }
     public Activite Activite { get; set; } = null!;
+    public DateTime DateRealisation { get; set; } = DateTime.UtcNow;
+    [Range(0, 50000)]
+    public int NombreParticipants { get; set; }
     [Required]
     [StringLength(2000)]
     public string ResumeExecutif { get; set; } = string.Empty;
@@ -103,6 +138,23 @@ public class RapportActivite
     public ApplicationUser Createur { get; set; } = null!;
     public Guid? ValideurId { get; set; }
     public ApplicationUser? Valideur { get; set; }
+    public ICollection<RapportActivitePieceJointe> PiecesJointes { get; set; } = [];
+}
+
+public class RapportActivitePieceJointe
+{
+    public Guid Id { get; set; }
+    public Guid RapportActiviteId { get; set; }
+    public RapportActivite RapportActivite { get; set; } = null!;
+    [Required]
+    [StringLength(260)]
+    public string NomFichier { get; set; } = string.Empty;
+    [Required]
+    [StringLength(500)]
+    public string UrlFichier { get; set; } = string.Empty;
+    [StringLength(150)]
+    public string? TypeMime { get; set; }
+    public DateTime DateAjout { get; set; } = DateTime.UtcNow;
 }
 
 public class PropositionMaitriseAnnuelle
@@ -135,5 +187,27 @@ public class PropositionMaitriseAnnuelle
     public ApplicationUser Createur { get; set; } = null!;
     public Guid? ValideurId { get; set; }
     public ApplicationUser? Valideur { get; set; }
+    public ICollection<PropositionMaitriseMembre> Membres { get; set; } = [];
 }
 
+public class PropositionMaitriseMembre
+{
+    public Guid Id { get; set; }
+    public Guid PropositionMaitriseAnnuelleId { get; set; }
+    public PropositionMaitriseAnnuelle PropositionMaitriseAnnuelle { get; set; } = null!;
+    [Required]
+    [StringLength(180)]
+    public string NomChef { get; set; } = string.Empty;
+    [Required]
+    [StringLength(180)]
+    public string Fonction { get; set; } = string.Empty;
+    public Guid? BrancheId { get; set; }
+    public Branche? Branche { get; set; }
+    [Required]
+    [StringLength(180)]
+    public string Contact { get; set; } = string.Empty;
+    [StringLength(180)]
+    public string? NiveauFormation { get; set; }
+    [Range(1, 999)]
+    public int OrdreAffichage { get; set; } = 1;
+}

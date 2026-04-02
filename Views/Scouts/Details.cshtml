@@ -1,4 +1,4 @@
-@using MangoTaika.Data.Entities
+﻿@using MangoTaika.Data.Entities
 @model ScoutDto
 @{
     ViewData["Title"] = $"{Model.Prenom} {Model.Nom}";
@@ -33,7 +33,7 @@
                         <i class="bi bi-person-circle"></i>
                     </div>
                 }
-                <span class="badge-3d badge-soumise">@Model.Matricule</span>
+                <span class="badge-3d badge-soumise">@(string.IsNullOrWhiteSpace(Model.Matricule) ? "Sans matricule" : Model.Matricule)</span>
                 <strong class="scout-profile-card__name">@Model.Prenom @Model.Nom</strong>
                 <span class="scout-profile-card__role">@(Model.Fonction ?? "Fonction non renseignee")</span>
                 <div class="scout-profile-card__status">
@@ -43,7 +43,7 @@
                     }
                     else
                     {
-                        <span class="badge-3d badge-rejetee">Cotisation non a jour</span>
+                        <span class="badge-3d badge-rejetee">@(string.IsNullOrWhiteSpace(Model.Matricule) ? "En attente de cotisation" : "Cotisation non a jour")</span>
                     }
                 </div>
             </div>
@@ -283,3 +283,4 @@
         color: var(--vert-logo);
     }
 </style>
+

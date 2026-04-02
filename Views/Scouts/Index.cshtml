@@ -1,4 +1,4 @@
-@using MangoTaika.Data.Entities
+﻿@using MangoTaika.Data.Entities
 @model List<ScoutDto>
 @{
     ViewData["Title"] = "Scouts";
@@ -170,7 +170,7 @@
             <div class="card-3d p-4 h-100 d-flex flex-column">
                 <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
                     <h5 class="text-or mb-0">@s.Prenom @s.Nom</h5>
-                    <span class="badge-3d badge-soumise flex-shrink-0">@s.Matricule</span>
+                    <span class="badge-3d badge-soumise flex-shrink-0">@(string.IsNullOrWhiteSpace(s.Matricule) ? "Sans matricule" : s.Matricule)</span>
                 </div>
                 <p class="text-muted-custom small mb-3">@(s.Fonction ?? "-")</p>
                 <div class="d-flex flex-column gap-1 mb-3 flex-grow-1" style="font-size:0.85rem;">
@@ -179,6 +179,8 @@
                     <span><i class="bi bi-building text-or"></i> @(s.NomGroupe ?? "-")</span>
                     <span><i class="bi bi-diagram-3-fill text-or"></i> @(s.NomBranche ?? "-")</span>
                     <span><i class="bi bi-shield-check text-bleu"></i> Cotisation nationale : @(s.AssuranceAnnuelle ? "A jour" : "Non")</span>
+                    <span><i class="bi bi-journal-check text-bleu"></i> Derniere inscription : @(s.DerniereInscriptionAnnuelle ?? "Aucune inscription annuelle")@((s.DerniereCotisationNationaleAjour.HasValue ? $" - {(s.DerniereCotisationNationaleAjour.Value ? "cotisation a jour" : "cotisation non a jour")}" : string.Empty))</span>
+                    <span><i class="bi bi-clock-history text-or"></i> Historique : @s.HistoriqueInscriptionsCount inscription(s)</span>
                 </div>
                 <div class="d-flex flex-wrap gap-2 mt-auto">
                     <a asp-action="Details" asp-route-id="@s.Id" class="btn btn-sm btn-outline-or" title="Voir">
@@ -215,7 +217,7 @@
             <div class="scout-import-modal__header">
                 <div>
                     <h5 id="scoutsImportModalTitle" class="mb-1"><i class="bi bi-upload text-bleu"></i> Nouveau scout par importation</h5>
-                    <p class="text-muted-custom mb-0">Importez un fichier `.xlsx` base sur le modele officiel. Les scouts existants sont mis a jour par matricule, les nouveaux sont crees.</p>
+                    <p class="text-muted-custom mb-0">Importez un fichier `.xlsx` base sur le modele officiel. Les scouts existants sont mis a jour par matricule ou, s'il est absent, par identite. Les nouveaux sont crees sans matricule.</p>
                 </div>
                 <button type="button" class="btn btn-sm btn-outline-or" data-close-import-modal aria-label="Fermer">
                     <i class="bi bi-x-lg"></i>
@@ -228,8 +230,8 @@
             }
 
             <div class="scout-import-modal__hint">
-                <span class="badge-3d badge-soumise">Colonnes obligatoires : Matricule, Nom, Prenom, DateNaissance</span>
-                <span class="small text-muted-custom">La colonne Fonction du fichier alimente directement le champ `Fonction` du scout.</span>
+                <span class="badge-3d badge-soumise">Colonnes obligatoires : Nom, Prenom, DateNaissance</span>
+                <span class="small text-muted-custom">Le matricule est optionnel et ne sert qu'a retrouver un scout deja cotise. La colonne Fonction alimente directement le champ `Fonction`.</span>
                 <a asp-action="DownloadImportTemplate" class="btn btn-sm btn-outline-or">
                     <i class="bi bi-file-earmark-excel"></i> Telecharger le modele Excel
                 </a>
@@ -465,5 +467,8 @@
         })();
     </script>
 }
+
+
+
 
 
