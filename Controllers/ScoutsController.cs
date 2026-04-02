@@ -12,6 +12,7 @@ namespace MangoTaika.Controllers;
 [Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant")]
 public class ScoutsController(
     IScoutService scoutService,
+    IScoutQrService scoutQrService,
     AppDbContext db,
     IMemoryCache memoryCache,
     IFileUploadService fileUploadService) : Controller
@@ -234,6 +235,8 @@ public class ScoutsController(
         {
             return NotFound();
         }
+
+        ViewBag.ScoutQrValue = scoutQrService.GenerateScoutCode(id);
 
         ViewBag.InscriptionsAnnuelles = await db.InscriptionsAnnuellesScouts.AsNoTracking()
             .Include(i => i.Groupe)

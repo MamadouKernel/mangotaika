@@ -4,66 +4,486 @@
     var annee = (int)ViewBag.Annee;
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="section-title mb-0"><i class="bi bi-bar-chart-fill text-or"></i> Reporting & <span class="accent">Statistiques</span></h2>
-    <div class="d-flex gap-2">
-        <a asp-action="ExportScouts" class="btn btn-mango btn-sm"><i class="bi bi-file-earmark-excel"></i> Export Scouts</a>
-        <a asp-action="ExportFinances" asp-route-annee="@annee" class="btn btn-mango btn-sm"><i class="bi bi-file-earmark-excel"></i> Export Finances @annee</a>
-        <a asp-action="ExportActivites" class="btn btn-mango btn-sm"><i class="bi bi-file-earmark-excel"></i> Export Activités</a>
+<div class="reporting-page">
+    <section class="reporting-hero card-3d">
+        <div class="reporting-hero__content">
+            <span class="reporting-hero__eyebrow">
+                <i class="bi bi-stars"></i>
+                Cockpit analytique @annee
+            </span>
+            <h2 class="section-title mb-2">
+                <i class="bi bi-bar-chart-fill text-or"></i>
+                Reporting & <span class="accent">statistiques</span>
+            </h2>
+            <p class="reporting-hero__text text-muted-custom mb-0">
+                Un tableau de bord unifie pour suivre les effectifs, les activites, les finances, les tickets et la dynamique des inscriptions sur l'annee en cours.
+            </p>
+
+            <div class="reporting-hero__chips">
+                <span class="reporting-chip"><i class="bi bi-diagram-3"></i> Lecture par branche et par groupe</span>
+                <span class="reporting-chip"><i class="bi bi-cash-stack"></i> Suivi budgetaire mensuel</span>
+                <span class="reporting-chip reporting-chip--highlight"><i class="bi bi-lightning-charge"></i> Tendances calculees en direct</span>
+            </div>
+        </div>
+
+        <div class="reporting-hero__actions">
+            <a asp-action="ExportScouts" class="btn btn-mango"><i class="bi bi-file-earmark-excel"></i> Export Scouts</a>
+            <a asp-action="ExportFinances" asp-route-annee="@annee" class="btn btn-outline-or"><i class="bi bi-wallet2"></i> Export Finances @annee</a>
+            <a asp-action="ExportActivites" class="btn btn-outline-or"><i class="bi bi-calendar-event"></i> Export Activites</a>
+        </div>
+    </section>
+
+    <div class="row g-3">
+        <div class="col-xxl-2 col-lg-4 col-md-6">
+            <article class="reporting-kpi reporting-kpi--forest h-100">
+                <span class="reporting-kpi__label">Scouts suivis</span>
+                <strong id="reportingTotalScouts">-</strong>
+                <small>effectif cumule sur les branches</small>
+            </article>
+        </div>
+        <div class="col-xxl-2 col-lg-4 col-md-6">
+            <article class="reporting-kpi reporting-kpi--slate h-100">
+                <span class="reporting-kpi__label">Groupes actifs</span>
+                <strong id="reportingTotalGroupes">-</strong>
+                <small>groupes avec scouts actifs</small>
+            </article>
+        </div>
+        <div class="col-xxl-2 col-lg-4 col-md-6">
+            <article class="reporting-kpi reporting-kpi--olive h-100">
+                <span class="reporting-kpi__label">Solde annuel</span>
+                <strong id="reportingBalance">-</strong>
+                <small>recettes moins depenses</small>
+            </article>
+        </div>
+        <div class="col-xxl-2 col-lg-4 col-md-6">
+            <article class="reporting-kpi reporting-kpi--sand h-100">
+                <span class="reporting-kpi__label">Activites</span>
+                <strong id="reportingActivities">-</strong>
+                <small>typologies cumulees</small>
+            </article>
+        </div>
+        <div class="col-xxl-2 col-lg-4 col-md-6">
+            <article class="reporting-kpi reporting-kpi--steel h-100">
+                <span class="reporting-kpi__label">Tickets</span>
+                <strong id="reportingTickets">-</strong>
+                <small>tous statuts confondus</small>
+            </article>
+        </div>
+        <div class="col-xxl-2 col-lg-4 col-md-6">
+            <article class="reporting-kpi reporting-kpi--mint h-100">
+                <span class="reporting-kpi__label">Inscriptions @annee</span>
+                <strong id="reportingInscriptions">-</strong>
+                <small>nouveaux scouts sur l'annee</small>
+            </article>
+        </div>
+    </div>
+
+    <section class="card-3d reporting-insights">
+        <article class="reporting-insight">
+            <span class="reporting-insight__label">Branche dominante</span>
+            <strong id="reportingTopBranche">-</strong>
+            <small id="reportingTopBrancheDetail">En attente de calcul</small>
+        </article>
+        <article class="reporting-insight">
+            <span class="reporting-insight__label">Groupe leader</span>
+            <strong id="reportingTopGroupe">-</strong>
+            <small id="reportingTopGroupeDetail">En attente de calcul</small>
+        </article>
+        <article class="reporting-insight">
+            <span class="reporting-insight__label">Signal operationnel</span>
+            <strong id="reportingSignal">-</strong>
+            <small id="reportingSignalDetail">En attente de calcul</small>
+        </article>
+    </section>
+
+    <div class="row g-4">
+        <div class="col-xl-7">
+            <section class="card-3d reporting-chart-card h-100">
+                <div class="reporting-chart-card__head">
+                    <div>
+                        <h3>Scouts par branche</h3>
+                        <p>Lecture consolidee sur les 6 branches canoniques du district.</p>
+                    </div>
+                    <span class="reporting-chart-card__tag">Effectifs</span>
+                </div>
+                <div class="reporting-chart-card__canvas">
+                    <canvas id="chartBranche" height="250"></canvas>
+                </div>
+            </section>
+        </div>
+        <div class="col-xl-5">
+            <section class="card-3d reporting-chart-card h-100">
+                <div class="reporting-chart-card__head">
+                    <div>
+                        <h3>Scouts par groupe</h3>
+                        <p>Comparaison directe des entites avec effectif actif.</p>
+                    </div>
+                    <span class="reporting-chart-card__tag">Repartition</span>
+                </div>
+                <div class="reporting-chart-card__canvas reporting-chart-card__canvas--tall">
+                    <canvas id="chartGroupe" height="280"></canvas>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-xl-8">
+            <section class="card-3d reporting-chart-card h-100">
+                <div class="reporting-chart-card__head">
+                    <div>
+                        <h3>Finances mensuelles @annee</h3>
+                        <p>Evolution conjointe des recettes et depenses pour lire la trajectoire budgetaire.</p>
+                    </div>
+                    <span class="reporting-chart-card__tag">FCFA</span>
+                </div>
+                <div class="reporting-chart-card__canvas">
+                    <canvas id="chartFinances" height="220"></canvas>
+                </div>
+            </section>
+        </div>
+        <div class="col-xl-4">
+            <section class="card-3d reporting-chart-card h-100">
+                <div class="reporting-chart-card__head">
+                    <div>
+                        <h3>Activites par type</h3>
+                        <p>Panorama des formats les plus frequents.</p>
+                    </div>
+                    <span class="reporting-chart-card__tag">Programmation</span>
+                </div>
+                <div class="reporting-chart-card__canvas">
+                    <canvas id="chartActivites" height="250"></canvas>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-xl-6">
+            <section class="card-3d reporting-chart-card h-100">
+                <div class="reporting-chart-card__head">
+                    <div>
+                        <h3>Tickets par statut</h3>
+                        <p>Lecture rapide de la charge support et de la resolution.</p>
+                    </div>
+                    <span class="reporting-chart-card__tag">Support</span>
+                </div>
+                <div class="reporting-chart-card__canvas">
+                    <canvas id="chartTickets" height="250"></canvas>
+                </div>
+            </section>
+        </div>
+        <div class="col-xl-6">
+            <section class="card-3d reporting-chart-card h-100">
+                <div class="reporting-chart-card__head">
+                    <div>
+                        <h3>Nouvelles inscriptions @annee</h3>
+                        <p>Dynamique mensuelle de l'acquisition de nouveaux scouts.</p>
+                    </div>
+                    <span class="reporting-chart-card__tag">Croissance</span>
+                </div>
+                <div class="reporting-chart-card__canvas">
+                    <canvas id="chartInscriptions" height="250"></canvas>
+                </div>
+            </section>
+        </div>
     </div>
 </div>
 
-<div class="row g-4 mb-4">
-    <div class="col-md-6">
-        <div class="card-3d p-4">
-            <h6 style="color:var(--bleu-logo);"><i class="bi bi-pie-chart-fill"></i> Scouts par branche</h6>
-            <canvas id="chartBranche" height="250"></canvas>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card-3d p-4">
-            <h6 style="color:var(--bleu-logo);"><i class="bi bi-bar-chart-fill"></i> Scouts par groupe</h6>
-            <canvas id="chartGroupe" height="250"></canvas>
-        </div>
-    </div>
-</div>
+<style>
+    .reporting-page {
+        display: flex;
+        flex-direction: column;
+        gap: 1.75rem;
+    }
 
-<div class="row g-4 mb-4">
-    <div class="col-md-8">
-        <div class="card-3d p-4">
-            <h6 style="color:var(--bleu-logo);"><i class="bi bi-graph-up"></i> Finances mensuelles @annee (FCFA)</h6>
-            <canvas id="chartFinances" height="200"></canvas>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card-3d p-4">
-            <h6 style="color:var(--bleu-logo);"><i class="bi bi-calendar-event"></i> Activités par type</h6>
-            <canvas id="chartActivites" height="250"></canvas>
-        </div>
-    </div>
-</div>
+    .reporting-hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+        gap: 1.5rem;
+        padding: 2rem;
+        border-radius: 28px;
+        background:
+            radial-gradient(circle at top right, rgba(216, 230, 188, 0.22), transparent 30%),
+            linear-gradient(135deg, rgba(49, 62, 69, 0.98), rgba(89, 117, 55, 0.94));
+        border-color: rgba(89, 117, 55, 0.16);
+        overflow: hidden;
+    }
 
-<div class="row g-4 mb-4">
-    <div class="col-md-6">
-        <div class="card-3d p-4">
-            <h6 style="color:var(--bleu-logo);"><i class="bi bi-ticket-detailed"></i> Tickets par statut</h6>
-            <canvas id="chartTickets" height="250"></canvas>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card-3d p-4">
-            <h6 style="color:var(--bleu-logo);"><i class="bi bi-person-plus"></i> Nouvelles inscriptions @annee</h6>
-            <canvas id="chartInscriptions" height="250"></canvas>
-        </div>
-    </div>
-</div>
+    .reporting-hero::after {
+        content: "";
+        position: absolute;
+        inset: auto -4rem -5rem auto;
+        width: 230px;
+        height: 230px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.06);
+        pointer-events: none;
+    }
+
+    .reporting-hero__content,
+    .reporting-hero__actions {
+        position: relative;
+        z-index: 1;
+    }
+
+    .reporting-hero .section-title,
+    .reporting-hero .section-title .accent,
+    .reporting-hero .text-or {
+        color: #fff !important;
+        -webkit-text-fill-color: #fff;
+    }
+
+    .reporting-hero__eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        padding: 0.55rem 0.95rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        color: rgba(255, 255, 255, 0.94);
+        font-size: 0.82rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 1rem;
+    }
+
+    .reporting-hero__text {
+        color: rgba(255, 255, 255, 0.82) !important;
+        font-size: 1.01rem;
+        line-height: 1.7;
+        max-width: 760px;
+    }
+
+    .reporting-hero__chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 1.4rem;
+    }
+
+    .reporting-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        padding: 0.75rem 1rem;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        font-weight: 600;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+
+    .reporting-chip--highlight {
+        background: linear-gradient(135deg, rgba(222, 235, 197, 0.22), rgba(255, 255, 255, 0.14));
+    }
+
+    .reporting-hero__actions {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: stretch;
+        gap: 0.8rem;
+    }
+
+    .reporting-hero__actions .btn {
+        justify-content: center;
+    }
+
+    .reporting-kpi {
+        position: relative;
+        overflow: hidden;
+        padding: 1.3rem 1.15rem;
+        border-radius: 22px;
+        color: #fff;
+        min-height: 164px;
+        box-shadow: 0 18px 32px rgba(49, 62, 69, 0.1);
+    }
+
+    .reporting-kpi::after {
+        content: "";
+        position: absolute;
+        inset: auto -30px -36px auto;
+        width: 115px;
+        height: 115px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .reporting-kpi > * {
+        position: relative;
+        z-index: 1;
+    }
+
+    .reporting-kpi strong {
+        display: block;
+        margin: 0.55rem 0 0.4rem;
+        font-size: 2rem;
+        line-height: 1;
+        font-weight: 900;
+        letter-spacing: -0.05em;
+    }
+
+    .reporting-kpi small,
+    .reporting-kpi__label {
+        display: block;
+        color: rgba(255, 255, 255, 0.84);
+    }
+
+    .reporting-kpi__label {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 700;
+    }
+
+    .reporting-kpi--forest { background: linear-gradient(135deg, #5f8241, #3c4f34); }
+    .reporting-kpi--slate { background: linear-gradient(135deg, #556979, #34434d); }
+    .reporting-kpi--olive { background: linear-gradient(135deg, #7a9441, #53642d); }
+    .reporting-kpi--sand { background: linear-gradient(135deg, #b9974d, #8a7236); }
+    .reporting-kpi--steel { background: linear-gradient(135deg, #51646d, #2f3d45); }
+    .reporting-kpi--mint { background: linear-gradient(135deg, #6e9a5c, #456645); }
+
+    .reporting-insights {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+        padding: 1.2rem;
+        border-radius: 24px;
+        background: linear-gradient(180deg, rgba(252, 253, 249, 1), rgba(245, 248, 241, 1));
+    }
+
+    .reporting-insight {
+        padding: 1rem 1.1rem;
+        border-radius: 18px;
+        background: #fff;
+        border: 1px solid rgba(207, 217, 196, 0.9);
+        box-shadow: 0 12px 24px rgba(49, 62, 69, 0.05);
+    }
+
+    .reporting-insight__label {
+        display: block;
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--texte-secondaire);
+        margin-bottom: 0.45rem;
+        font-weight: 700;
+    }
+
+    .reporting-insight strong {
+        display: block;
+        color: var(--bleu-logo);
+        font-size: 1.15rem;
+        font-weight: 800;
+        margin-bottom: 0.25rem;
+    }
+
+    .reporting-insight small {
+        color: var(--texte-secondaire);
+    }
+
+    .reporting-chart-card {
+        padding: 1.4rem;
+        border-radius: 24px;
+        height: 100%;
+    }
+
+    .reporting-chart-card__head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1.2rem;
+    }
+
+    .reporting-chart-card__head h3 {
+        margin: 0 0 0.25rem;
+        color: var(--bleu-logo);
+        font-size: 1.2rem;
+        font-weight: 800;
+    }
+
+    .reporting-chart-card__head p {
+        margin: 0;
+        color: var(--texte-secondaire);
+        font-size: 0.92rem;
+        line-height: 1.6;
+    }
+
+    .reporting-chart-card__tag {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.45rem 0.8rem;
+        border-radius: 999px;
+        background: rgba(89, 117, 55, 0.1);
+        color: var(--vert-logo);
+        font-size: 0.76rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        white-space: nowrap;
+    }
+
+    .reporting-chart-card__canvas {
+        position: relative;
+        min-height: 260px;
+        padding: 0.75rem;
+        border-radius: 20px;
+        background: linear-gradient(180deg, rgba(251, 252, 248, 1), rgba(244, 247, 239, 1));
+        border: 1px solid rgba(207, 217, 196, 0.7);
+    }
+
+    .reporting-chart-card__canvas--tall {
+        min-height: 305px;
+    }
+
+    @@media (max-width: 1199.98px) {
+        .reporting-hero {
+            grid-template-columns: 1fr;
+        }
+
+        .reporting-hero__actions {
+            flex-direction: row;
+            flex-wrap: wrap;
+        }
+
+        .reporting-insights {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @@media (max-width: 767.98px) {
+        .reporting-hero {
+            padding: 1.5rem;
+            border-radius: 24px;
+        }
+
+        .reporting-hero__chips,
+        .reporting-hero__actions {
+            flex-direction: column;
+        }
+
+        .reporting-chart-card__head {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .reporting-kpi strong {
+            font-size: 1.75rem;
+        }
+    }
+</style>
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
     <script>
-        var colors = ['#597537','#8ab55a','#3b82f6','#eab308','#f87171','#8b5cf6','#06b6d4','#f59e0b','#10b981','#ec4899'];
-        var moisNoms = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-        var brancheShortLabels = {
+        const palette = ['#597537', '#8ab55a', '#3b82f6', '#d4a247', '#f87171', '#8b5cf6', '#06b6d4', '#4a6e8d', '#10b981', '#ec4899'];
+        const ticketPalette = ['#3b82f6', '#eab308', '#f59e0b', '#10b981', '#94a3b8', '#ef4444'];
+        const moisNoms = ['', 'Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aou', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const brancheShortLabels = {
             'BRANCHE OISILLON (4 - 7 ANS) - LA COLONIE': 'Oisillons (4 - 7 ans)',
             'BRANCHE LOUVETEAU (8 - 11 ANS) - LA MEUTE': 'Louveteaux (8 - 11 ans)',
             'BRANCHE ECLAIREUR (12 - 14 ANS) - LA TROUPE': 'Eclaireurs (12 - 14 ans)',
@@ -72,20 +492,92 @@
             'LES BENEVOLES - Adultes Dans le Scoutisme (ADS)': 'Adultes (ADS)'
         };
 
-        var brancheData = JSON.parse('@Html.Raw(ViewBag.ScoutsParBrancheJson)');
-        var groupeData = JSON.parse('@Html.Raw(ViewBag.ScoutsParGroupeJson)');
-        var finData = JSON.parse('@Html.Raw(ViewBag.FinancesMensuellesJson)');
-        var typeData = JSON.parse('@Html.Raw(ViewBag.ActivitesParTypeJson)');
-        var statutData = JSON.parse('@Html.Raw(ViewBag.TicketsParStatutJson)');
-        var insData = JSON.parse('@Html.Raw(ViewBag.InscriptionsParMoisJson)');
-        var brancheChartData = brancheData.map(function (entry) {
-            return {
-                Nom: entry.Nom,
-                NomCourt: brancheShortLabels[entry.Nom] || entry.Nom,
-                Count: entry.Count
-            };
-        });
-        var totalBrancheScouts = brancheChartData.reduce(function (sum, entry) { return sum + entry.Count; }, 0);
+        const brancheData = JSON.parse('@Html.Raw(ViewBag.ScoutsParBrancheJson)');
+        const groupeData = JSON.parse('@Html.Raw(ViewBag.ScoutsParGroupeJson)');
+        const finData = JSON.parse('@Html.Raw(ViewBag.FinancesMensuellesJson)');
+        const typeData = JSON.parse('@Html.Raw(ViewBag.ActivitesParTypeJson)');
+        const statutData = JSON.parse('@Html.Raw(ViewBag.TicketsParStatutJson)');
+        const insData = JSON.parse('@Html.Raw(ViewBag.InscriptionsParMoisJson)');
+
+        const brancheChartData = brancheData.map(entry => ({
+            Nom: entry.Nom,
+            NomCourt: brancheShortLabels[entry.Nom] || entry.Nom,
+            Count: Number(entry.Count || 0)
+        }));
+
+        function sumBy(items, selector) {
+            return items.reduce((sum, item) => sum + Number(selector(item) || 0), 0);
+        }
+
+        function maxBy(items, selector) {
+            if (!items.length) {
+                return null;
+            }
+
+            return items.reduce((best, current) => selector(current) > selector(best) ? current : best);
+        }
+
+        function formatInt(value) {
+            return new Intl.NumberFormat('fr-FR').format(value || 0);
+        }
+
+        function formatCurrency(value) {
+            return `${new Intl.NumberFormat('fr-FR').format(value || 0)} FCFA`;
+        }
+
+        function setText(id, value) {
+            const target = document.getElementById(id);
+            if (target) {
+                target.textContent = value;
+            }
+        }
+
+        const totalScouts = sumBy(brancheChartData, x => x.Count);
+        const totalGroupes = groupeData.length;
+        const totalRecettes = sumBy(finData, x => x.Recettes);
+        const totalDepenses = sumBy(finData, x => x.Depenses);
+        const totalActivites = sumBy(typeData, x => x.Count);
+        const totalTickets = sumBy(statutData, x => x.Count);
+        const totalInscriptions = sumBy(insData, x => x.Count);
+        const soldeAnnuel = totalRecettes - totalDepenses;
+
+        const topBranche = maxBy(brancheChartData, x => x.Count);
+        const topGroupe = maxBy(groupeData, x => Number(x.Count || 0));
+        const topTicketStatut = maxBy(statutData, x => Number(x.Count || 0));
+        const picFinancier = maxBy(finData, x => Number(x.Recettes || 0) + Number(x.Depenses || 0));
+
+        setText('reportingTotalScouts', formatInt(totalScouts));
+        setText('reportingTotalGroupes', formatInt(totalGroupes));
+        setText('reportingBalance', formatCurrency(soldeAnnuel));
+        setText('reportingActivities', formatInt(totalActivites));
+        setText('reportingTickets', formatInt(totalTickets));
+        setText('reportingInscriptions', formatInt(totalInscriptions));
+
+        setText('reportingTopBranche', topBranche ? topBranche.NomCourt : 'Aucune branche');
+        setText('reportingTopBrancheDetail', topBranche ? `${formatInt(topBranche.Count)} scout(s)` : 'Aucune donnee exploitable');
+        setText('reportingTopGroupe', topGroupe ? topGroupe.Nom : 'Aucun groupe');
+        setText('reportingTopGroupeDetail', topGroupe ? `${formatInt(topGroupe.Count)} scout(s) actifs` : 'Aucune donnee exploitable');
+        setText('reportingSignal', topTicketStatut ? topTicketStatut.Statut : 'RAS');
+        setText(
+            'reportingSignalDetail',
+            picFinancier
+                ? `Pic d'activite en ${moisNoms[picFinancier.Mois] || picFinancier.Mois} | ${formatInt(topTicketStatut ? topTicketStatut.Count : 0)} ticket(s)`
+                : 'Aucun volume notable detecte'
+        );
+
+        Chart.defaults.color = '#627286';
+        Chart.defaults.font.family = "'Poppins', 'Segoe UI', sans-serif";
+        Chart.defaults.borderColor = 'rgba(198, 208, 188, 0.35)';
+
+        const totalBrancheScouts = totalScouts;
+        const financeCanvas = document.getElementById('chartFinances');
+        const financeCtx = financeCanvas.getContext('2d');
+        const recetteGradient = financeCtx.createLinearGradient(0, 0, 0, 220);
+        recetteGradient.addColorStop(0, 'rgba(89,117,55,0.35)');
+        recetteGradient.addColorStop(1, 'rgba(89,117,55,0.02)');
+        const depenseGradient = financeCtx.createLinearGradient(0, 0, 0, 220);
+        depenseGradient.addColorStop(0, 'rgba(248,113,113,0.30)');
+        depenseGradient.addColorStop(1, 'rgba(248,113,113,0.02)');
 
         new Chart(document.getElementById('chartBranche'), {
             type: 'doughnut',
@@ -93,28 +585,29 @@
                 labels: brancheChartData.map(x => x.NomCourt),
                 datasets: [{
                     data: brancheChartData.map(x => x.Count),
-                    backgroundColor: colors.slice(0, brancheChartData.length),
+                    backgroundColor: palette.slice(0, brancheChartData.length),
                     borderColor: '#ffffff',
-                    borderWidth: 2,
-                    hoverOffset: 10
+                    borderWidth: 3,
+                    hoverOffset: 12
                 }]
             },
             options: {
                 responsive: true,
-                cutout: '60%',
+                maintainAspectRatio: false,
+                cutout: '63%',
                 plugins: {
                     legend: {
                         position: 'bottom',
                         labels: {
                             boxWidth: 14,
                             boxHeight: 14,
-                            padding: 16,
+                            padding: 18,
                             font: { size: 12 },
                             generateLabels: function (chart) {
-                                var dataset = chart.data.datasets[0];
+                                const dataset = chart.data.datasets[0];
                                 return chart.data.labels.map(function (label, index) {
                                     return {
-                                        text: label + ' (' + dataset.data[index] + ')',
+                                        text: `${label} (${dataset.data[index]})`,
                                         fillStyle: dataset.backgroundColor[index],
                                         strokeStyle: dataset.borderColor,
                                         lineWidth: dataset.borderWidth,
@@ -128,11 +621,9 @@
                     tooltip: {
                         callbacks: {
                             label: function (context) {
-                                var entry = brancheChartData[context.dataIndex];
-                                var percent = totalBrancheScouts === 0
-                                    ? 0
-                                    : Math.round((entry.Count / totalBrancheScouts) * 100);
-                                return entry.Nom + ' : ' + entry.Count + ' scouts (' + percent + '%)';
+                                const entry = brancheChartData[context.dataIndex];
+                                const percent = totalBrancheScouts === 0 ? 0 : Math.round((entry.Count / totalBrancheScouts) * 100);
+                                return `${entry.Nom} : ${entry.Count} scout(s) (${percent}%)`;
                             }
                         }
                     }
@@ -144,9 +635,30 @@
             type: 'bar',
             data: {
                 labels: groupeData.map(x => x.Nom),
-                datasets: [{ label: 'Scouts', data: groupeData.map(x => x.Count), backgroundColor: '#8ab55a', borderRadius: 8 }]
+                datasets: [{
+                    label: 'Scouts',
+                    data: groupeData.map(x => x.Count),
+                    backgroundColor: '#8ab55a',
+                    borderRadius: 10,
+                    borderSkipped: false,
+                    maxBarThickness: 28
+                }]
             },
-            options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } } }
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 }
+                    },
+                    y: {
+                        grid: { display: false }
+                    }
+                }
+            }
         });
 
         new Chart(document.getElementById('chartFinances'), {
@@ -154,38 +666,104 @@
             data: {
                 labels: finData.map(f => moisNoms[f.Mois]),
                 datasets: [
-                    { label: 'Recettes', data: finData.map(f => f.Recettes), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: true, tension: 0.3 },
-                    { label: 'Dépenses', data: finData.map(f => f.Depenses), borderColor: '#f87171', backgroundColor: 'rgba(248,113,113,0.1)', fill: true, tension: 0.3 }
+                    {
+                        label: 'Recettes',
+                        data: finData.map(f => f.Recettes),
+                        borderColor: '#597537',
+                        backgroundColor: recetteGradient,
+                        pointBackgroundColor: '#597537',
+                        pointRadius: 4,
+                        fill: true,
+                        tension: 0.35
+                    },
+                    {
+                        label: 'Depenses',
+                        data: finData.map(f => f.Depenses),
+                        borderColor: '#f87171',
+                        backgroundColor: depenseGradient,
+                        pointBackgroundColor: '#f87171',
+                        pointRadius: 4,
+                        fill: true,
+                        tension: 0.35
+                    }
                 ]
             },
-            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function (value) { return formatInt(value); }
+                        }
+                    }
+                }
+            }
         });
 
         new Chart(document.getElementById('chartActivites'), {
-            type: 'pie',
+            type: 'polarArea',
             data: {
                 labels: typeData.map(x => x.Type),
-                datasets: [{ data: typeData.map(x => x.Count), backgroundColor: colors }]
+                datasets: [{
+                    data: typeData.map(x => x.Count),
+                    backgroundColor: palette.map(color => `${color}CC`),
+                    borderColor: '#ffffff',
+                    borderWidth: 2
+                }]
             },
-            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } },
+                scales: { r: { ticks: { precision: 0 }, grid: { color: 'rgba(198,208,188,0.3)' } } }
+            }
         });
 
         new Chart(document.getElementById('chartTickets'), {
             type: 'doughnut',
             data: {
                 labels: statutData.map(x => x.Statut),
-                datasets: [{ data: statutData.map(x => x.Count), backgroundColor: ['#3b82f6','#eab308','#f59e0b','#10b981','#94a3b8'] }]
+                datasets: [{
+                    data: statutData.map(x => x.Count),
+                    backgroundColor: ticketPalette,
+                    borderColor: '#ffffff',
+                    borderWidth: 3,
+                    hoverOffset: 10
+                }]
             },
-            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '62%',
+                plugins: { legend: { position: 'bottom' } }
+            }
         });
 
         new Chart(document.getElementById('chartInscriptions'), {
             type: 'bar',
             data: {
                 labels: insData.map(i => moisNoms[i.Mois]),
-                datasets: [{ label: 'Inscriptions', data: insData.map(i => i.Count), backgroundColor: '#597537', borderRadius: 8 }]
+                datasets: [{
+                    label: 'Inscriptions',
+                    data: insData.map(i => i.Count),
+                    backgroundColor: '#597537',
+                    borderRadius: 10,
+                    borderSkipped: false,
+                    maxBarThickness: 38
+                }]
             },
-            options: { responsive: true, plugins: { legend: { display: false } } }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { precision: 0 } },
+                    x: { grid: { display: false } }
+                }
+            }
         });
     </script>
 }

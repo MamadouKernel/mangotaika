@@ -4,6 +4,7 @@
     ViewData["Title"] = $"{Model.Prenom} {Model.Nom}";
     Layout = "_LayoutAdmin";
     var inscriptions = ViewBag.InscriptionsAnnuelles as List<InscriptionAnnuelleScout> ?? new();
+    var scoutQrValue = ViewBag.ScoutQrValue as string ?? string.Empty;
     var contactUrgence = string.IsNullOrWhiteSpace(Model.ContactUrgenceNom)
         ? "Aucun contact d'urgence renseigne"
         : $"{Model.ContactUrgenceNom} {(string.IsNullOrWhiteSpace(Model.ContactUrgenceRelation) ? string.Empty : $"({Model.ContactUrgenceRelation})")}".Trim();
@@ -12,6 +13,9 @@
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <h2 class="section-title mb-0"><i class="bi bi-person-fill text-or"></i> @Model.Prenom <span class="accent">@Model.Nom</span></h2>
     <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-or" data-bs-toggle="modal" data-bs-target="#scoutQrModal" title="QR du scout">
+            <i class="bi bi-qr-code"></i> QR du scout
+        </button>
         <a asp-controller="InscriptionsAnnuelles" asp-action="Create" asp-route-scoutId="@Model.Id" class="btn btn-bleu" title="Inscription annuelle">
             <i class="bi bi-journal-check"></i>
         </a>
@@ -46,6 +50,9 @@
                         <span class="badge-3d badge-rejetee">@(string.IsNullOrWhiteSpace(Model.Matricule) ? "En attente de cotisation" : "Cotisation non a jour")</span>
                     }
                 </div>
+                <button type="button" class="btn btn-outline-or scout-profile-card__qr-btn" data-bs-toggle="modal" data-bs-target="#scoutQrModal">
+                    <i class="bi bi-qr-code"></i> Afficher le QR terrain
+                </button>
             </div>
         </div>
 
@@ -169,6 +176,38 @@
     }
 </div>
 
+<div class="modal fade" id="scoutQrModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content scout-qr-modal">
+            <div class="modal-header border-0">
+                <div>
+                    <h5 class="modal-title mb-1">QR d'identification du scout</h5>
+                    <small class="text-muted-custom">A utiliser sur la page de presence d'une activite pour reconnaitre ce scout automatiquement.</small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div id="scoutIdentityQrCode" class="scout-qr-code"></div>
+                <div class="scout-qr-summary mb-3">
+                    <strong>@Model.Prenom @Model.Nom</strong>
+                    <span>@(string.IsNullOrWhiteSpace(Model.Matricule) ? "Sans matricule - QR securise par identifiant interne" : Model.Matricule)</span>
+                    <span>@(Model.NomGroupe ?? "Groupe non renseigne")</span>
+                    <span>@(Model.NomBranche ?? "Branche non renseignee")</span>
+                </div>
+                <div class="presence-qr-linkbox mb-3">
+                    <span class="presence-qr-linkbox__label">Code scout</span>
+                    <code class="presence-qr-linkbox__value">@scoutQrValue</code>
+                </div>
+                <div class="d-flex justify-content-center gap-2 flex-wrap">
+                    <button type="button" class="btn btn-outline-or" id="copyScoutQrCode" data-scout-code="@scoutQrValue">
+                        <i class="bi bi-copy"></i> Copier le code scout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
     .scout-details-shell {
         overflow: hidden;
@@ -217,6 +256,10 @@
     .scout-profile-card__status {
         display: flex;
         justify-content: center;
+    }
+
+    .scout-profile-card__qr-btn {
+        width: 100%;
     }
 
     .scout-details-grid {
@@ -282,5 +325,159 @@
     .detail-block__footer strong {
         color: var(--vert-logo);
     }
+
+    .scout-qr-modal {
+        border-radius: 24px;
+        border: 1px solid rgba(95, 127, 67, 0.14);
+    }
+
+    .scout-qr-code {
+        min-height: 260px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .scout-qr-code > div {
+        padding: 16px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.94);
+        border: 1px solid rgba(95, 127, 67, 0.14);
+    }
+
+    .scout-qr-summary {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        color: #607086;
+    }
+
+    .scout-qr-summary strong {
+        font-size: 1.08rem;
+        color: var(--bleu-logo);
+    }
+
+    .presence-qr-linkbox {
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: rgba(95, 127, 67, 0.08);
+        border: 1px solid rgba(95, 127, 67, 0.18);
+        text-align: left;
+    }
+
+    .presence-qr-linkbox__label {
+        display: block;
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #718096;
+        margin-bottom: 6px;
+    }
+
+    .presence-qr-linkbox__value {
+        display: block;
+        white-space: normal;
+        word-break: break-word;
+        color: var(--bleu-logo);
+        background: transparent;
+        padding: 0;
+    }
+
+    .scout-qr-fallback {
+        width: 220px;
+        min-height: 220px;
+        padding: 20px;
+        border-radius: 22px;
+        border: 1px dashed rgba(95, 127, 67, 0.35);
+        background: rgba(95, 127, 67, 0.06);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        text-align: center;
+        color: #56667a;
+    }
+
+    .scout-qr-fallback i {
+        font-size: 2rem;
+        color: #5f7f43;
+    }
+
+    .scout-qr-fallback strong {
+        color: var(--bleu-logo);
+        font-size: 1.05rem;
+    }
+
+    .scout-qr-fallback span {
+        font-size: 0.92rem;
+        line-height: 1.45;
+    }
 </style>
 
+@section Scripts {
+    <script src="~/js/qrcode.min.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            var qrModal = document.getElementById('scoutQrModal');
+            var qrContainer = document.getElementById('scoutIdentityQrCode');
+            var copyButton = document.getElementById('copyScoutQrCode');
+            var scoutQrValue = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(scoutQrValue));
+
+            function renderFallbackQr() {
+                if (!qrContainer) {
+                    return;
+                }
+
+                var fallback = document.createElement('div');
+                fallback.className = 'scout-qr-fallback';
+                fallback.innerHTML = '<i class="bi bi-qr-code"></i><strong>QR indisponible</strong><span>Utilisez le code scout affiche juste en dessous pour le pointage.</span>';
+                qrContainer.replaceChildren(fallback);
+            }
+
+            function renderQr() {
+                if (!qrContainer || !scoutQrValue) {
+                    return;
+                }
+
+                qrContainer.replaceChildren();
+
+                if (typeof QRCode !== 'undefined') {
+                    new QRCode(qrContainer, {
+                        text: scoutQrValue,
+                        width: 220,
+                        height: 220,
+                        colorDark: '#2b3d31',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                    return;
+                }
+
+                renderFallbackQr();
+            }
+
+            if (qrModal) {
+                qrModal.addEventListener('shown.bs.modal', renderQr);
+            }
+
+            if (copyButton) {
+                copyButton.addEventListener('click', async function () {
+                    if (!scoutQrValue) {
+                        return;
+                    }
+
+                    try {
+                        await navigator.clipboard.writeText(scoutQrValue);
+                        copyButton.innerHTML = '<i class="bi bi-check2"></i> Code copie';
+                        window.setTimeout(function () {
+                            copyButton.innerHTML = '<i class="bi bi-copy"></i> Copier le code scout';
+                        }, 1800);
+                    } catch (error) {
+                        window.prompt('Copiez ce code scout :', scoutQrValue);
+                    }
+                });
+            }
+        })();
+    </script>
+}

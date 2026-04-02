@@ -74,6 +74,7 @@ builder.Services.AddHttpClient("Twilio");
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IGeocodingService, GeocodingService>();
 builder.Services.AddScoped<IScoutService, ScoutService>();
+builder.Services.AddScoped<IScoutQrService, ScoutQrService>();
 builder.Services.AddScoped<IGroupeService, GroupeService>();
 builder.Services.AddScoped<DistrictBranchInheritanceService>();
 builder.Services.AddScoped<IActiviteService, ActiviteService>();
@@ -124,7 +125,7 @@ app.Use(async (context, next) =>
     headers["X-Frame-Options"] = "DENY";
     headers["X-XSS-Protection"] = "1; mode=block";
     headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
-    headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+    headers["Permissions-Policy"] = "camera=(self), microphone=(), geolocation=()";
     headers["Content-Security-Policy"] =
         "default-src 'self'; " +
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; " +

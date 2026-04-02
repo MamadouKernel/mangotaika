@@ -1,28 +1,851 @@
+﻿@using System.Globalization
 @model List<MangoTaika.DTOs.FormationDto>
-@{ ViewData["Title"] = "Statistiques formations"; Layout = "_LayoutAdmin";
-    var stats = ViewBag.Stats as Dictionary<Guid, MangoTaika.DTOs.FormationStatsDto>; }
+@{
+    ViewData["Title"] = "Statistiques formations";
+    Layout = "_LayoutAdmin";
+    var stats = ViewBag.Stats as Dictionary<Guid, MangoTaika.DTOs.FormationStatsDto>;
+    var formations = Model ?? new List<MangoTaika.DTOs.FormationDto>();
 
-<h2><i class="bi bi-bar-chart"></i> Statistiques des formations</h2>
+    MangoTaika.DTOs.FormationStatsDto ResolveStats(Guid formationId)
+    {
+        if (stats != null && stats.TryGetValue(formationId, out var currentStats) && currentStats != null)
+        {
+            return currentStats;
+        }
 
-<div class="table-responsive mt-3">
-    <table class="table table-hover">
-        <thead class="table-dark">
-            <tr><th>Formation</th><th>Inscrits</th><th>Terminées</th><th>En cours</th><th>Taux réussite</th></tr>
-        </thead>
-        <tbody>
-            @foreach (var f in Model)
-            {
-                var s = stats?[f.Id];
-                <tr>
-                    <td><a asp-action="Details" asp-route-id="@f.Id">@f.Titre</a></td>
-                    <td>@s?.TotalInscrits</td>
-                    <td>@s?.Terminees</td>
-                    <td>@s?.EnCours</td>
-                    <td>@s?.TauxReussite%</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+        return new MangoTaika.DTOs.FormationStatsDto();
+    }
+
+    string FormatPercent(double value)
+    {
+        return value.ToString("0.#", CultureInfo.InvariantCulture);
+    }
+
+    string GetStatusLabel(MangoTaika.DTOs.FormationStatsDto currentStats)
+    {
+        if (currentStats.TotalInscrits <= 0)
+        {
+            return "Aucune inscription";
+        }
+
+        if (currentStats.Terminees >= currentStats.TotalInscrits && currentStats.TotalInscrits > 0)
+        {
+            return "Boucle terminee";
+        }
+
+        if (currentStats.Terminees > 0 && currentStats.EnCours > 0)
+        {
+            return "Mixte";
+        }
+
+        if (currentStats.EnCours > 0)
+        {
+            return "En progression";
+        }
+
+        return "A suivre";
+    }
+
+    string GetStatusClass(MangoTaika.DTOs.FormationStatsDto currentStats)
+    {
+        if (currentStats.TotalInscrits <= 0)
+        {
+            return "is-idle";
+        }
+
+        if (currentStats.Terminees >= currentStats.TotalInscrits && currentStats.TotalInscrits > 0)
+        {
+            return "is-complete";
+        }
+
+        if (currentStats.Terminees > 0 && currentStats.EnCours > 0)
+        {
+            return "is-mixed";
+        }
+
+        if (currentStats.EnCours > 0)
+        {
+            return "is-progress";
+        }
+
+        return "is-watch";
+    }
+
+    var formationRows = formations.Select(f => new
+    {
+        Formation = f,
+        Stats = ResolveStats(f.Id)
+    }).ToList();
+
+    var totalFormations = formationRows.Count;
+    var totalInscrits = formationRows.Sum(x => x.Stats.TotalInscrits);
+    var totalTerminees = formationRows.Sum(x => x.Stats.Terminees);
+    var totalEnCours = formationRows.Sum(x => x.Stats.EnCours);
+    var activeFormations = formationRows.Count(x => x.Stats.EnCours > 0 || x.Stats.Terminees > 0);
+    var globalSuccessRate = totalInscrits > 0 ? (double)totalTerminees / totalInscrits * 100d : 0d;
+    var topFormation = formationRows
+        .OrderByDescending(x => x.Stats.TauxReussite)
+        .ThenByDescending(x => x.Stats.Terminees)
+        .ThenByDescending(x => x.Stats.TotalInscrits)
+        .FirstOrDefault();
+    var topFormationTitle = topFormation != null && topFormation.Stats.TotalInscrits > 0
+        ? topFormation.Formation.Titre
+        : "Aucune tendance exploitable";
+    var topFormationDetail = topFormation != null && topFormation.Stats.TotalInscrits > 0
+        ? $"{FormatPercent(topFormation.Stats.TauxReussite)}% de reussite"
+        : "Les inscriptions apparaitront ici des qu'une progression sera remontee.";
+}
+
+<div class="formations-stats-page">
+    <section class="formations-stats-hero card-3d mb-4">
+        <div class="formations-stats-hero__content">
+            <span class="formations-stats-hero__eyebrow">
+                <i class="bi bi-graph-up-arrow"></i>
+                Vue analytique des apprentissages
+            </span>
+            <h2 class="section-title mb-2">
+                <i class="bi bi-bar-chart-line text-or"></i>
+                Statistiques des <span class="accent">formations</span>
+            </h2>
+            <p class="formations-stats-hero__text text-muted-custom mb-0">
+                Une lecture plus claire des inscriptions, de l'avancement des parcours et de la performance globale des formations.
+            </p>
+
+            <div class="formations-stats-hero__chips">
+                <span class="formations-stats-chip">
+                    <i class="bi bi-journal-richtext"></i>
+                    @totalFormations formation(s) sur cette page
+                </span>
+                <span class="formations-stats-chip">
+                    <i class="bi bi-lightning-charge"></i>
+                    @activeFormations formation(s) avec activite
+                </span>
+                <span class="formations-stats-chip formations-stats-chip--highlight">
+                    <i class="bi bi-trophy"></i>
+                    @topFormationTitle
+                </span>
+            </div>
+        </div>
+
+        <div class="formations-stats-hero__focus">
+            <div class="formations-stats-orbit">
+                <div class="formations-stats-orbit__inner">
+                    <span class="formations-stats-orbit__value">@FormatPercent(globalSuccessRate)%</span>
+                    <span class="formations-stats-orbit__label">taux global</span>
+                </div>
+            </div>
+            <div class="formations-stats-hero__focus-card">
+                <span class="formations-stats-hero__focus-label">Formation leader</span>
+                <strong>@topFormationTitle</strong>
+                <small>@topFormationDetail</small>
+            </div>
+        </div>
+    </section>
+
+    <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card-3d bg-scouts formations-kpi h-100">
+                <div class="d-flex justify-content-between align-items-start gap-3">
+                    <div>
+                        <p>Formations affichees</p>
+                        <h2>@totalFormations</h2>
+                        <span class="formations-kpi__hint">Panorama de la page</span>
+                    </div>
+                    <i class="bi bi-mortarboard-fill stat-icon"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card-3d bg-groupes formations-kpi h-100">
+                <div class="d-flex justify-content-between align-items-start gap-3">
+                    <div>
+                        <p>Inscriptions suivies</p>
+                        <h2>@totalInscrits</h2>
+                        <span class="formations-kpi__hint">Toutes formations confondues</span>
+                    </div>
+                    <i class="bi bi-people-fill stat-icon"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card-3d bg-activites formations-kpi h-100">
+                <div class="d-flex justify-content-between align-items-start gap-3">
+                    <div>
+                        <p>Parcours termines</p>
+                        <h2>@totalTerminees</h2>
+                        <span class="formations-kpi__hint">Objectifs deja atteints</span>
+                    </div>
+                    <i class="bi bi-check2-circle stat-icon"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card-3d formations-kpi formations-kpi--custom h-100">
+                <div class="d-flex justify-content-between align-items-start gap-3">
+                    <div>
+                        <p>En cours</p>
+                        <h2>@totalEnCours</h2>
+                        <span class="formations-kpi__hint">Parcours encore actifs</span>
+                    </div>
+                    <i class="bi bi-hourglass-split stat-icon"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <section class="card-3d formations-stats-shell">
+        <div class="formations-stats-shell__header">
+            <div>
+                <h3 class="formations-stats-shell__title mb-1">Performance par formation</h3>
+                <p class="text-muted-custom mb-0">Chaque ligne combine le volume, l'avancement et le niveau de reussite pour accelerer la lecture.</p>
+            </div>
+            <div class="formations-stats-shell__legend">
+                <span><i class="bi bi-dot"></i> progression</span>
+                <span><i class="bi bi-dot"></i> performance</span>
+            </div>
+        </div>
+
+        @if (formationRows.Any())
+        {
+            <div class="table-responsive">
+                <table class="table formations-stats-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Formation</th>
+                            <th>Inscrits</th>
+                            <th>Terminees</th>
+                            <th>En cours</th>
+                            <th>Taux de reussite</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in formationRows)
+                        {
+                            var successRate = Math.Max(0d, Math.Min(100d, row.Stats.TauxReussite));
+                            var completedRate = row.Stats.TotalInscrits > 0 ? (double)row.Stats.Terminees / row.Stats.TotalInscrits * 100d : 0d;
+                            var inProgressRate = row.Stats.TotalInscrits > 0 ? (double)row.Stats.EnCours / row.Stats.TotalInscrits * 100d : 0d;
+                            <tr>
+                                <td>
+                                    <div class="formations-stats-table__title-wrap">
+                                        <a asp-action="Details" asp-route-id="@row.Formation.Id" class="formations-stats-table__link">@row.Formation.Titre</a>
+                                        <div class="formations-stats-table__meta">
+                                            <span><i class="bi bi-bookmark-star"></i> @row.Formation.Niveau</span>
+                                            <span><i class="bi bi-collection-play"></i> @row.Formation.NombreModules module(s)</span>
+                                            <span><i class="bi bi-clock"></i> @row.Formation.DureeEstimeeHeures h</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="formations-stats-count">
+                                        <strong>@row.Stats.TotalInscrits</strong>
+                                        <span>inscrits</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="formations-stats-metric">
+                                        <span class="formations-stats-metric__value">@row.Stats.Terminees</span>
+                                        <small>@FormatPercent(completedRate)% du volume</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="formations-stats-metric formations-stats-metric--progress">
+                                        <span class="formations-stats-metric__value">@row.Stats.EnCours</span>
+                                        <small>@FormatPercent(inProgressRate)% du volume</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="formations-stats-performance">
+                                        <div class="formations-stats-performance__top">
+                                            <span class="formations-stats-performance__value">@FormatPercent(successRate)%</span>
+                                            <span class="formations-stats-status @GetStatusClass(row.Stats)">@GetStatusLabel(row.Stats)</span>
+                                        </div>
+                                        <div class="formations-stats-progress">
+                                            <span class="formations-stats-progress__fill" style="width:@(FormatPercent(successRate))%;"></span>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="formations-stats-mobile d-lg-none">
+                @foreach (var row in formationRows)
+                {
+                    var successRate = Math.Max(0d, Math.Min(100d, row.Stats.TauxReussite));
+                    <article class="formations-stats-mobile__card">
+                        <div class="formations-stats-mobile__top">
+                            <div>
+                                <a asp-action="Details" asp-route-id="@row.Formation.Id" class="formations-stats-table__link">@row.Formation.Titre</a>
+                                <div class="formations-stats-mobile__meta">@row.Formation.Niveau · @row.Formation.NombreModules module(s)</div>
+                            </div>
+                            <span class="formations-stats-status @GetStatusClass(row.Stats)">@GetStatusLabel(row.Stats)</span>
+                        </div>
+                        <div class="formations-stats-mobile__grid">
+                            <div>
+                                <span>Inscrits</span>
+                                <strong>@row.Stats.TotalInscrits</strong>
+                            </div>
+                            <div>
+                                <span>Terminees</span>
+                                <strong>@row.Stats.Terminees</strong>
+                            </div>
+                            <div>
+                                <span>En cours</span>
+                                <strong>@row.Stats.EnCours</strong>
+                            </div>
+                            <div>
+                                <span>Reussite</span>
+                                <strong>@FormatPercent(successRate)%</strong>
+                            </div>
+                        </div>
+                        <div class="formations-stats-progress mt-3">
+                            <span class="formations-stats-progress__fill" style="width:@(FormatPercent(successRate))%;"></span>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="formations-stats-empty">
+                <div class="formations-stats-empty__icon"><i class="bi bi-inboxes"></i></div>
+                <h4>Aucune statistique a afficher</h4>
+                <p class="text-muted-custom mb-0">Les donnees remonteront ici des que des formations et des inscriptions seront disponibles.</p>
+            </div>
+        }
+    </section>
 </div>
 
 <partial name="_ListPagination" />
+
+<style>
+    .formations-stats-page {
+        display: flex;
+        flex-direction: column;
+        gap: 1.75rem;
+    }
+
+    .formations-stats-hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.9fr);
+        gap: 1.5rem;
+        padding: 2rem;
+        border-radius: 28px;
+        border-color: rgba(89, 117, 55, 0.16);
+        background:
+            radial-gradient(circle at top right, rgba(123, 154, 74, 0.22), transparent 32%),
+            linear-gradient(135deg, rgba(49, 62, 69, 0.98), rgba(76, 106, 43, 0.94));
+        color: #fff;
+        overflow: hidden;
+    }
+
+    .formations-stats-hero::after {
+        content: "";
+        position: absolute;
+        inset: auto -4rem -5rem auto;
+        width: 220px;
+        height: 220px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.06);
+        pointer-events: none;
+    }
+
+    .formations-stats-hero .section-title,
+    .formations-stats-hero .section-title .accent,
+    .formations-stats-hero .text-or {
+        color: #fff !important;
+        -webkit-text-fill-color: #fff;
+    }
+
+    .formations-stats-hero__content,
+    .formations-stats-hero__focus {
+        position: relative;
+        z-index: 1;
+    }
+
+    .formations-stats-hero__eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        padding: 0.55rem 0.95rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        color: rgba(255, 255, 255, 0.92);
+        font-size: 0.82rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        margin-bottom: 1rem;
+    }
+
+    .formations-stats-hero__text {
+        max-width: 740px;
+        color: rgba(255, 255, 255, 0.82) !important;
+        font-size: 1.02rem;
+        line-height: 1.7;
+    }
+
+    .formations-stats-hero__chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 1.4rem;
+    }
+
+    .formations-stats-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.7rem 1rem;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        font-weight: 600;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+
+    .formations-stats-chip--highlight {
+        background: linear-gradient(135deg, rgba(216, 232, 189, 0.24), rgba(255, 255, 255, 0.16));
+        color: #f4f9e9;
+    }
+
+    .formations-stats-hero__focus {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1.25rem;
+    }
+
+    .formations-stats-orbit {
+        width: 184px;
+        height: 184px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: conic-gradient(from 180deg, rgba(255, 255, 255, 0.2), rgba(214, 232, 177, 0.95));
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
+        padding: 14px;
+    }
+
+    .formations-stats-orbit__inner {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: rgba(50, 63, 70, 0.92);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 1rem;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+
+    .formations-stats-orbit__value {
+        font-size: 2.2rem;
+        line-height: 1;
+        font-weight: 900;
+        letter-spacing: -0.04em;
+    }
+
+    .formations-stats-orbit__label {
+        margin-top: 0.45rem;
+        color: rgba(255, 255, 255, 0.75);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .formations-stats-hero__focus-card {
+        width: 100%;
+        max-width: 320px;
+        padding: 1rem 1.1rem;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.12);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+        backdrop-filter: blur(10px);
+    }
+
+    .formations-stats-hero__focus-card strong {
+        display: block;
+        font-size: 1.05rem;
+        margin-bottom: 0.3rem;
+    }
+
+    .formations-stats-hero__focus-card small,
+    .formations-stats-hero__focus-label {
+        display: block;
+        color: rgba(255, 255, 255, 0.74);
+    }
+
+    .formations-stats-hero__focus-label {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.4rem;
+    }
+
+    .formations-kpi {
+        border-radius: 22px;
+        box-shadow: 0 16px 34px rgba(49, 62, 69, 0.12);
+    }
+
+    .formations-kpi h2 {
+        margin-top: 0.35rem;
+    }
+
+    .formations-kpi__hint {
+        color: rgba(255, 255, 255, 0.75);
+        font-size: 0.84rem;
+    }
+
+    .formations-kpi--custom {
+        background: linear-gradient(135deg, #546f7f, #2f3c43);
+        box-shadow: 0 2px 8px rgba(47, 60, 67, 0.22);
+    }
+
+    .formations-stats-shell {
+        padding: 1.5rem 1.5rem 0;
+        border-radius: 26px;
+        overflow: hidden;
+    }
+
+    .formations-stats-shell__header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        padding-bottom: 1.35rem;
+    }
+
+    .formations-stats-shell__title {
+        color: var(--bleu-logo);
+        font-weight: 800;
+        font-size: 1.45rem;
+    }
+
+    .formations-stats-shell__legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.9rem;
+        color: var(--texte-secondaire);
+        font-size: 0.86rem;
+        white-space: nowrap;
+    }
+
+    .formations-stats-shell__legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+    }
+
+    .formations-stats-shell__legend .bi-dot:first-child {
+        color: var(--vert-logo);
+    }
+
+    .formations-stats-shell__legend span:last-child .bi-dot {
+        color: var(--bleu-logo);
+    }
+
+    .formations-stats-table thead th {
+        padding: 1rem 1rem;
+        border: 0;
+        background: linear-gradient(180deg, rgba(245, 247, 241, 0.95), rgba(239, 243, 233, 0.95));
+        color: var(--bleu-logo);
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 800;
+    }
+
+    .formations-stats-table thead th:first-child {
+        border-top-left-radius: 18px;
+    }
+
+    .formations-stats-table thead th:last-child {
+        border-top-right-radius: 18px;
+    }
+
+    .formations-stats-table tbody tr {
+        transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .formations-stats-table tbody tr:hover {
+        background: rgba(245, 248, 239, 0.8);
+    }
+
+    .formations-stats-table tbody td {
+        padding: 1.15rem 1rem;
+        border-color: rgba(207, 217, 196, 0.9);
+        vertical-align: middle;
+    }
+
+    .formations-stats-table__title-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
+        min-width: 280px;
+    }
+
+    .formations-stats-table__link {
+        color: var(--bleu-logo);
+        text-decoration: none;
+        font-size: 1.04rem;
+        font-weight: 800;
+    }
+
+    .formations-stats-table__link:hover {
+        color: var(--vert-logo);
+    }
+
+    .formations-stats-table__meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem 1rem;
+        font-size: 0.83rem;
+        color: var(--texte-secondaire);
+    }
+
+    .formations-stats-table__meta span {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .formations-stats-count,
+    .formations-stats-metric {
+        display: inline-flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        min-width: 96px;
+    }
+
+    .formations-stats-count strong,
+    .formations-stats-metric__value {
+        font-size: 1.6rem;
+        line-height: 1;
+        font-weight: 900;
+        color: var(--bleu-logo);
+    }
+
+    .formations-stats-count span,
+    .formations-stats-metric small {
+        color: var(--texte-secondaire);
+        font-size: 0.8rem;
+    }
+
+    .formations-stats-metric--progress .formations-stats-metric__value {
+        color: var(--vert-logo);
+    }
+
+    .formations-stats-performance {
+        min-width: 220px;
+    }
+
+    .formations-stats-performance__top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 0.7rem;
+    }
+
+    .formations-stats-performance__value {
+        font-size: 1.3rem;
+        font-weight: 900;
+        color: var(--vert-logo);
+    }
+
+    .formations-stats-status {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.42rem 0.7rem;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .formations-stats-status.is-idle {
+        background: rgba(108, 122, 131, 0.12);
+        color: #667781;
+    }
+
+    .formations-stats-status.is-complete {
+        background: rgba(89, 117, 55, 0.12);
+        color: var(--vert-logo);
+    }
+
+    .formations-stats-status.is-progress {
+        background: rgba(74, 110, 141, 0.12);
+        color: #416b8b;
+    }
+
+    .formations-stats-status.is-mixed {
+        background: rgba(194, 143, 58, 0.14);
+        color: #946920;
+    }
+
+    .formations-stats-status.is-watch {
+        background: rgba(49, 62, 69, 0.1);
+        color: var(--bleu-logo);
+    }
+
+    .formations-stats-progress {
+        height: 10px;
+        border-radius: 999px;
+        background: rgba(205, 215, 192, 0.45);
+        overflow: hidden;
+    }
+
+    .formations-stats-progress__fill {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #87a74b, #445d69);
+    }
+
+    .formations-stats-mobile {
+        display: none;
+        padding: 1rem 0 1.25rem;
+    }
+
+    .formations-stats-mobile__card {
+        border: 1px solid rgba(206, 215, 195, 0.95);
+        border-radius: 20px;
+        padding: 1rem;
+        background: linear-gradient(180deg, rgba(252, 253, 250, 1), rgba(246, 249, 242, 1));
+        box-shadow: 0 12px 24px rgba(49, 62, 69, 0.06);
+    }
+
+    .formations-stats-mobile__card + .formations-stats-mobile__card {
+        margin-top: 0.9rem;
+    }
+
+    .formations-stats-mobile__top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .formations-stats-mobile__meta {
+        margin-top: 0.25rem;
+        color: var(--texte-secondaire);
+        font-size: 0.82rem;
+    }
+
+    .formations-stats-mobile__grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.85rem;
+        margin-top: 1rem;
+    }
+
+    .formations-stats-mobile__grid span {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--texte-secondaire);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.15rem;
+    }
+
+    .formations-stats-mobile__grid strong {
+        font-size: 1.15rem;
+        color: var(--bleu-logo);
+    }
+
+    .formations-stats-empty {
+        padding: 3.5rem 1.5rem 3rem;
+        text-align: center;
+    }
+
+    .formations-stats-empty__icon {
+        width: 76px;
+        height: 76px;
+        margin: 0 auto 1rem;
+        border-radius: 24px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, rgba(89, 117, 55, 0.12), rgba(49, 62, 69, 0.12));
+        color: var(--vert-logo);
+        font-size: 1.8rem;
+    }
+
+    .formations-stats-empty h4 {
+        color: var(--bleu-logo);
+        font-weight: 800;
+        margin-bottom: 0.45rem;
+    }
+
+    @@media (max-width: 1199.98px) {
+        .formations-stats-hero {
+            grid-template-columns: 1fr;
+        }
+
+        .formations-stats-hero__focus {
+            flex-direction: row;
+            justify-content: flex-start;
+        }
+    }
+
+    @@media (max-width: 991.98px) {
+        .formations-stats-hero {
+            padding: 1.5rem;
+            border-radius: 24px;
+        }
+
+        .formations-stats-hero__chips {
+            flex-direction: column;
+        }
+
+        .formations-stats-shell {
+            padding: 1.25rem 1.1rem 0;
+        }
+
+        .formations-stats-shell__header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .formations-stats-table {
+            display: none;
+        }
+
+        .formations-stats-mobile {
+            display: block;
+        }
+    }
+
+    @@media (max-width: 767.98px) {
+        .formations-stats-hero__focus {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .formations-stats-orbit {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto;
+        }
+
+        .formations-stats-hero .section-title {
+            font-size: 1.9rem;
+        }
+
+        .formations-kpi h2 {
+            font-size: 2.3rem;
+        }
+
+        .formations-stats-mobile__top {
+            flex-direction: column;
+        }
+    }
+</style>

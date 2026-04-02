@@ -1,4 +1,4 @@
-using MangoTaika.Data.Entities;
+﻿using MangoTaika.Data.Entities;
 
 namespace MangoTaika.DTOs;
 
@@ -65,4 +65,24 @@ public class CommentaireActiviteDto
     public string Contenu { get; set; } = string.Empty;
     public string? TypeAction { get; set; }
     public DateTime DateCreation { get; set; }
+}
+
+public class PresenceScoutScanRequest
+{
+    public string ScannedCode { get; set; } = string.Empty;
+}
+
+public class PresenceScoutScanResponse
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public Guid? ParticipantId { get; set; }
+    public string? ScoutName { get; set; }
+    public string? Matricule { get; set; }
+    public string? PreviousPresence { get; set; }
+    public string? CurrentPresence { get; set; }
+    public int Presents { get; set; }
+    public int Absents { get; set; }
+    public int Excuses { get; set; }
+    public int Pending { get; set; }
 }

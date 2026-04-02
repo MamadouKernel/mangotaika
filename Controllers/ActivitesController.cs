@@ -1,4 +1,4 @@
-using MangoTaika.Data;
+﻿using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
 using MangoTaika.Helpers;
@@ -13,6 +13,7 @@ namespace MangoTaika.Controllers;
 [Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant")]
 public class ActivitesController(
     IActiviteService activiteService,
+    IScoutQrService scoutQrService,
     UserManager<ApplicationUser> userManager,
     AppDbContext db,
     IWebHostEnvironment env) : Controller
@@ -416,6 +417,115 @@ public class ActivitesController(
         await db.SaveChangesAsync();
         TempData["Success"] = "Commentaire ajoute.";
         return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    public async Task<IActionResult> ScannerScoutQr(Guid id, [FromBody] PresenceScoutScanRequest request)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.ScannedCode))
+        {
+            return BadRequest(new PresenceScoutScanResponse
+            {
+                Success = false,
+                Message = "Scannez un QR scout ou saisissez un matricule valide."
+            });
+        }
+
+        if (!await db.Activites.AnyAsync(a => a.Id == id))
+        {
+            return NotFound(new PresenceScoutScanResponse
+            {
+                Success = false,
+                Message = "Activite introuvable."
+            });
+        }
+
+        var (scout, errorMessage) = await ResolveScoutFromScannedCodeAsync(request.ScannedCode);
+        if (scout is null)
+        {
+            return BadRequest(new PresenceScoutScanResponse
+            {
+                Success = false,
+                Message = errorMessage ?? "Scout introuvable."
+            });
+        }
+
+        var participant = await db.ParticipantsActivite
+            .Include(p => p.Scout)
+            .FirstOrDefaultAsync(p => p.ActiviteId == id && p.ScoutId == scout.Id);
+
+        if (participant is null)
+        {
+            return NotFound(new PresenceScoutScanResponse
+            {
+                Success = false,
+                Message = $"{scout.Prenom} {scout.Nom} n'est pas inscrit a cette activite."
+            });
+        }
+
+        var previousPresence = participant.Presence;
+        participant.Presence = StatutPresence.Present;
+        await db.SaveChangesAsync();
+
+        var counts = await db.ParticipantsActivite
+            .Where(p => p.ActiviteId == id)
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Presents = g.Count(p => p.Presence == StatutPresence.Present),
+                Absents = g.Count(p => p.Presence == StatutPresence.Absent),
+                Excuses = g.Count(p => p.Presence == StatutPresence.Excuse),
+                Pending = g.Count(p => p.Presence == StatutPresence.Inscrit)
+            })
+            .FirstAsync();
+
+        var message = previousPresence == StatutPresence.Present
+            ? $"{scout.Prenom} {scout.Nom} etait deja marque present."
+            : $"{scout.Prenom} {scout.Nom} a ete marque present.";
+
+        return Json(new PresenceScoutScanResponse
+        {
+            Success = true,
+            Message = message,
+            ParticipantId = participant.Id,
+            ScoutName = $"{scout.Prenom} {scout.Nom}",
+            Matricule = scout.Matricule,
+            PreviousPresence = previousPresence.ToString(),
+            CurrentPresence = StatutPresence.Present.ToString(),
+            Presents = counts.Presents,
+            Absents = counts.Absents,
+            Excuses = counts.Excuses,
+            Pending = counts.Pending
+        });
+    }
+
+    private async Task<(Scout? Scout, string? ErrorMessage)> ResolveScoutFromScannedCodeAsync(string scannedCode)
+    {
+        var rawValue = scannedCode.Trim();
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return (null, "Scannez un QR scout ou saisissez un matricule valide.");
+        }
+
+        if (rawValue.StartsWith("MTSCOUT:", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!scoutQrService.TryReadScoutId(rawValue, out var scoutId))
+            {
+                return (null, "Le QR scout scanne est invalide ou corrompu.");
+            }
+
+            var scoutByQr = await db.Scouts.FirstOrDefaultAsync(s => s.Id == scoutId && s.IsActive);
+            return scoutByQr is null
+                ? (null, "Le QR scout ne correspond a aucun profil actif.")
+                : (scoutByQr, null);
+        }
+
+        var normalizedMatricule = rawValue.ToUpperInvariant();
+        var scoutByMatricule = await db.Scouts.FirstOrDefaultAsync(s => s.IsActive && s.Matricule != null && s.Matricule.ToUpper() == normalizedMatricule);
+        return scoutByMatricule is null
+            ? (null, "Aucun scout actif ne correspond a ce matricule ou code.")
+            : (scoutByMatricule, null);
     }
 
     [HttpPost, ValidateAntiForgeryToken]

@@ -6,6 +6,7 @@
     var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
     var presenceUrl = ViewBag.PresenceUrl as string ?? string.Empty;
     var detailsUrl = Url.Action("Details", "Activites", new { id = Model.Id }) ?? string.Empty;
+    var scoutScanUrl = Url.Action("ScannerScoutQr", "Activites", new { id = Model.Id }) ?? string.Empty;
     var totalParticipants = Model.Participants.Count;
     var inscrits = Model.Participants.Count(p => p.Presence == StatutPresence.Inscrit);
     var presents = Model.Participants.Count(p => p.Presence == StatutPresence.Present);
@@ -19,8 +20,8 @@
             <span class="tracking-hero__eyebrow"><i class="bi bi-phone"></i> Pointage terrain</span>
             <h2 class="section-title tracking-hero__title mb-2"><i class="bi bi-qr-code-scan text-or"></i> Page de presence <span class="accent">@Model.Titre</span></h2>
             <p class="tracking-hero__text mb-0">
-                Cette page sert uniquement au pointage rapide des participants deja ajoutes a l'activite.
-                Ouvre-la directement ou via le QR de la fiche activite pour marquer Present, Absent ou Excuse.
+                Cette page sert au pointage rapide des participants deja ajoutes a l'activite.
+                Tu peux scanner le QR personnel d'un scout ou saisir son matricule pour le marquer present sans faire defiler la liste.
             </p>
             <div class="tracking-hero__chips">
                 <span class="tracking-chip"><i class="bi bi-calendar3"></i> @Model.DateDebut.ToString("dd/MM/yyyy HH:mm")</span>
@@ -32,7 +33,7 @@
             <div class="tracking-hero__focus">
                 <span>Statut activite</span>
                 <strong>@Model.Statut</strong>
-                <small>Page de pointage rapide</small>
+                <small>Scan QR scout ou pointage manuel</small>
             </div>
             <div class="tracking-action-stack">
                 <button type="button" class="btn btn-outline-or" id="copyPresencePageLink" data-presence-url="@presenceUrl">
@@ -47,25 +48,25 @@
         <article class="tracking-kpi tracking-kpi--olive">
             <i class="bi bi-person-check tracking-kpi__icon"></i>
             <span class="tracking-kpi__label">Presents</span>
-            <strong class="tracking-kpi__value">@presents</strong>
+            <strong class="tracking-kpi__value" data-presence-count="presents">@presents</strong>
             <span class="tracking-kpi__meta">participants confirmes sur le terrain</span>
         </article>
         <article class="tracking-kpi tracking-kpi--rose">
             <i class="bi bi-person-x tracking-kpi__icon"></i>
             <span class="tracking-kpi__label">Absents</span>
-            <strong class="tracking-kpi__value">@absents</strong>
+            <strong class="tracking-kpi__value" data-presence-count="absents">@absents</strong>
             <span class="tracking-kpi__meta">participants signales absents</span>
         </article>
         <article class="tracking-kpi tracking-kpi--gold">
             <i class="bi bi-person-exclamation tracking-kpi__icon"></i>
             <span class="tracking-kpi__label">Excuses</span>
-            <strong class="tracking-kpi__value">@excuses</strong>
+            <strong class="tracking-kpi__value" data-presence-count="excuses">@excuses</strong>
             <span class="tracking-kpi__meta">participants absents mais justifies</span>
         </article>
         <article class="tracking-kpi tracking-kpi--blue">
             <i class="bi bi-hourglass-split tracking-kpi__icon"></i>
             <span class="tracking-kpi__label">A pointer</span>
-            <strong class="tracking-kpi__value">@inscrits</strong>
+            <strong class="tracking-kpi__value" data-presence-count="pending">@inscrits</strong>
             <span class="tracking-kpi__meta">participants encore en statut Inscrit</span>
         </article>
     </div>
@@ -74,7 +75,7 @@
         <div class="tracking-panel__header">
             <div>
                 <h3 class="tracking-panel__title">Comment utiliser cette page</h3>
-                <p class="tracking-panel__text">Le flux est simple : preparer la liste sur la fiche activite, puis pointer ici depuis la page de presence.</p>
+                <p class="tracking-panel__text">Deux modes coexistent : scan du QR personnel du scout ou pointage manuel dans la liste.</p>
             </div>
         </div>
         <div class="presence-guide__grid">
@@ -88,19 +89,64 @@
             <article class="presence-guide__step">
                 <span class="presence-guide__step-index">2</span>
                 <div>
-                    <strong>Partager le lien ou le QR</strong>
-                    <p>Depuis la fiche activite, le QR ouvre directement cette page de pointage.</p>
+                    <strong>Scanner le scout</strong>
+                    <p>Ouvre le QR du scout sur sa fiche, puis scanne-le ici pour retrouver automatiquement sa ligne de presence.</p>
                 </div>
             </article>
             <article class="presence-guide__step">
                 <span class="presence-guide__step-index">3</span>
                 <div>
-                    <strong>Pointer chaque participant</strong>
-                    <p>Utilise les boutons Present, Absent ou Excuse pour mettre a jour la situation de terrain en direct.</p>
+                    <strong>Marquer present</strong>
+                    <p>Le scout est marque Present si son profil fait deja partie des participants de l'activite.</p>
                 </div>
             </article>
         </div>
     </section>
+
+    @if (canManage)
+    {
+        <section class="tracking-panel tracking-panel--soft presence-scan-panel">
+            <div class="tracking-panel__header">
+                <div>
+                    <h3 class="tracking-panel__title">Scanner un scout</h3>
+                    <p class="tracking-panel__text">Scanne le QR du profil scout ou saisis directement son matricule pour le marquer present.</p>
+                </div>
+            </div>
+            <form id="presenceScanSecurityForm" class="d-none">
+                @Html.AntiForgeryToken()
+            </form>
+            <div class="presence-scan-layout" id="presenceScanPanel">
+                <div class="presence-scan-viewfinder" id="presenceScannerStage">
+                    <video id="scoutQrScannerVideo" class="presence-scan-video" autoplay muted playsinline></video>
+                    <div class="presence-scan-placeholder" id="presenceScannerPlaceholder">
+                        <i class="bi bi-camera"></i>
+                        <strong>Camera de scan</strong>
+                        <span>Active la camera pour scanner le QR personnel d'un scout.</span>
+                    </div>
+                    <div class="presence-scan-overlay" aria-hidden="true"></div>
+                </div>
+                <div class="presence-scan-actions">
+                    <div class="d-flex gap-2 flex-wrap mb-3">
+                        <button type="button" class="btn btn-bleu" id="startScoutScanner"><i class="bi bi-camera-video"></i> Activer la camera</button>
+                        <button type="button" class="btn btn-outline-or" id="stopScoutScanner" disabled><i class="bi bi-stop-circle"></i> Arreter</button>
+                    </div>
+                    <form id="manualScoutScanForm" class="presence-manual-form">
+                        <label for="manualScoutCode" class="form-label">Matricule ou code scout</label>
+                        <div class="input-group">
+                            <input type="text" id="manualScoutCode" class="form-control" placeholder="Ex: 0583753X ou code scout" autocomplete="off" />
+                            <button type="submit" class="btn btn-outline-or">Valider</button>
+                        </div>
+                    </form>
+                    <div id="scanFeedback" class="alert alert-secondary mb-0 mt-3 presence-scan-feedback">
+                        Pret pour le pointage. Scanne un QR scout ou saisis un matricule.
+                    </div>
+                    <small class="text-muted-custom mt-3 d-block" id="scannerCapabilityHint">
+                        Si la camera n'est pas disponible sur ce navigateur, utilise la saisie du matricule comme secours.
+                    </small>
+                </div>
+            </div>
+        </section>
+    }
 
     @if (!canManage)
     {
@@ -120,7 +166,7 @@
                             ? "tracking-status-pill--pending"
                             : "tracking-status-pill--draft";
 
-                <article class="tracking-card presence-card">
+                <article class="tracking-card presence-card" data-participant-id="@participant.Id" data-scout-id="@participant.ScoutId">
                     <div class="tracking-card__header">
                         <div>
                             <h3 class="tracking-card__title">@participant.NomComplet</h3>
@@ -129,7 +175,7 @@
                                 @(string.IsNullOrWhiteSpace(participant.NomBranche) ? string.Empty : $" - {participant.NomBranche}")
                             </div>
                         </div>
-                        <span class="tracking-status-pill @badgeClass">@participant.Presence</span>
+                        <span class="tracking-status-pill @badgeClass" data-presence-badge>@participant.Presence</span>
                     </div>
 
                     @if (canManage)
@@ -230,6 +276,99 @@
         background: linear-gradient(135deg, #5f7f43, #8eaa62);
     }
 
+    .presence-scan-layout {
+        display: grid;
+        grid-template-columns: minmax(280px, 1.1fr) minmax(260px, 0.9fr);
+        gap: 20px;
+        align-items: start;
+    }
+
+    .presence-scan-viewfinder {
+        position: relative;
+        min-height: 280px;
+        border-radius: 24px;
+        overflow: hidden;
+        background: linear-gradient(135deg, rgba(34, 53, 71, 0.96), rgba(95, 127, 67, 0.9));
+        border: 1px solid rgba(95, 127, 67, 0.16);
+    }
+
+    .presence-scan-video {
+        width: 100%;
+        height: 100%;
+        min-height: 280px;
+        object-fit: cover;
+        display: none;
+    }
+
+    .presence-scan-viewfinder.is-live .presence-scan-video {
+        display: block;
+    }
+
+    .presence-scan-viewfinder.is-live .presence-scan-placeholder {
+        display: none;
+    }
+
+    .presence-scan-placeholder {
+        position: absolute;
+        inset: 0;
+        padding: 28px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.92);
+    }
+
+    .presence-scan-placeholder i {
+        font-size: 2.35rem;
+        color: #d7e8b9;
+    }
+
+    .presence-scan-placeholder strong {
+        font-size: 1.12rem;
+    }
+
+    .presence-scan-overlay {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        background:
+            linear-gradient(rgba(255,255,255,0.18), rgba(255,255,255,0.18)) center / 70% 2px no-repeat,
+            linear-gradient(rgba(255,255,255,0.18), rgba(255,255,255,0.18)) center / 2px 70% no-repeat;
+    }
+
+    .presence-scan-viewfinder.is-live .presence-scan-overlay {
+        opacity: 1;
+    }
+
+    .presence-scan-actions {
+        padding: 18px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(95, 127, 67, 0.12);
+    }
+
+    .presence-manual-form .form-label {
+        font-weight: 700;
+        color: var(--bleu-logo);
+    }
+
+    .presence-scan-feedback {
+        min-height: 72px;
+        display: flex;
+        align-items: center;
+    }
+
+    .presence-card--scanned {
+        box-shadow: 0 0 0 2px rgba(95, 127, 67, 0.18), 0 18px 38px rgba(95, 127, 67, 0.12);
+        transform: translateY(-2px);
+        transition: all 0.22s ease;
+    }
+
     .tracking-empty-state--rich {
         text-align: center;
         padding: 42px 24px;
@@ -269,12 +408,235 @@
         gap: 10px;
         flex-wrap: wrap;
     }
+
+    @@media (max-width: 991.98px) {
+        .presence-scan-layout {
+            grid-template-columns: 1fr;
+        }
+    }
 </style>
 
 @section Scripts {
     <script>
         (function () {
             var copyButtons = document.querySelectorAll('[data-presence-url]');
+            var scanPanel = document.getElementById('presenceScanPanel');
+            var scanUrl = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(scoutScanUrl));
+            var securityForm = document.getElementById('presenceScanSecurityForm');
+            var requestToken = securityForm ? securityForm.querySelector('input[name="__RequestVerificationToken"]')?.value : '';
+            var video = document.getElementById('scoutQrScannerVideo');
+            var stage = document.getElementById('presenceScannerStage');
+            var startButton = document.getElementById('startScoutScanner');
+            var stopButton = document.getElementById('stopScoutScanner');
+            var manualForm = document.getElementById('manualScoutScanForm');
+            var manualInput = document.getElementById('manualScoutCode');
+            var feedback = document.getElementById('scanFeedback');
+            var capabilityHint = document.getElementById('scannerCapabilityHint');
+            var detector = null;
+            var stream = null;
+            var scanning = false;
+            var processing = false;
+            var animationFrameId = 0;
+
+            function setFeedback(type, message) {
+                if (!feedback) {
+                    return;
+                }
+
+                feedback.className = 'alert mb-0 mt-3 presence-scan-feedback';
+                feedback.classList.add(type === 'success'
+                    ? 'alert-success'
+                    : type === 'danger'
+                        ? 'alert-danger'
+                        : type === 'warning'
+                            ? 'alert-warning'
+                            : 'alert-secondary');
+                feedback.textContent = message;
+            }
+
+            function updateCount(name, value) {
+                var target = document.querySelector('[data-presence-count="' + name + '"]');
+                if (target) {
+                    target.textContent = value;
+                }
+            }
+
+            function updateParticipantCard(data) {
+                if (!data || !data.participantId) {
+                    return;
+                }
+
+                var card = document.querySelector('[data-participant-id="' + data.participantId + '"]');
+                if (!card) {
+                    return;
+                }
+
+                var badge = card.querySelector('[data-presence-badge]');
+                if (badge) {
+                    badge.textContent = 'Present';
+                    badge.classList.remove('tracking-status-pill--rejected', 'tracking-status-pill--pending', 'tracking-status-pill--draft');
+                    badge.classList.add('tracking-status-pill--approved');
+                }
+
+                card.classList.add('presence-card--scanned');
+                window.setTimeout(function () {
+                    card.classList.remove('presence-card--scanned');
+                }, 1800);
+            }
+
+            function stopScanner() {
+                scanning = false;
+                processing = false;
+
+                if (animationFrameId) {
+                    window.cancelAnimationFrame(animationFrameId);
+                    animationFrameId = 0;
+                }
+
+                if (stream) {
+                    stream.getTracks().forEach(function (track) { track.stop(); });
+                    stream = null;
+                }
+
+                if (video) {
+                    video.pause();
+                    video.srcObject = null;
+                }
+
+                if (stage) {
+                    stage.classList.remove('is-live');
+                }
+
+                if (startButton) {
+                    startButton.disabled = false;
+                }
+
+                if (stopButton) {
+                    stopButton.disabled = true;
+                }
+            }
+
+            async function submitScannedCode(rawValue) {
+                var code = (rawValue || '').trim();
+                if (!code || !scanUrl) {
+                    return;
+                }
+
+                try {
+                    var response = await fetch(scanUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': requestToken || ''
+                        },
+                        body: JSON.stringify({ scannedCode: code })
+                    });
+
+                    var data = await response.json();
+
+                    if (!response.ok || !data.success) {
+                        setFeedback(response.status === 404 ? 'warning' : 'danger', data.message || 'Le scan a echoue.');
+                        return;
+                    }
+
+                    updateParticipantCard(data);
+                    updateCount('presents', data.presents);
+                    updateCount('absents', data.absents);
+                    updateCount('excuses', data.excuses);
+                    updateCount('pending', data.pending);
+                    setFeedback('success', data.message);
+
+                    if (manualInput) {
+                        manualInput.value = '';
+                    }
+                } catch (error) {
+                    setFeedback('danger', 'Impossible de transmettre le resultat du scan pour le moment.');
+                }
+            }
+
+            async function scanLoop() {
+                if (!scanning || !video || !detector) {
+                    return;
+                }
+
+                if (processing) {
+                    animationFrameId = window.requestAnimationFrame(scanLoop);
+                    return;
+                }
+
+                if (video.readyState < 2) {
+                    animationFrameId = window.requestAnimationFrame(scanLoop);
+                    return;
+                }
+
+                try {
+                    var barcodes = await detector.detect(video);
+                    if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+                        processing = true;
+                        stopScanner();
+                        await submitScannedCode(barcodes[0].rawValue);
+                        return;
+                    }
+                } catch (error) {
+                    setFeedback('danger', 'Erreur pendant le scan camera. Utilisez le matricule comme secours.');
+                    stopScanner();
+                    return;
+                }
+
+                animationFrameId = window.requestAnimationFrame(scanLoop);
+            }
+
+            async function startScanner() {
+                if (!scanPanel || !video) {
+                    return;
+                }
+
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    setFeedback('warning', 'La camera n est pas disponible sur cet appareil. Utilisez la saisie du matricule.');
+                    return;
+                }
+
+                if (!('BarcodeDetector' in window)) {
+                    setFeedback('warning', 'Le scan QR integre n est pas supporte sur ce navigateur. Utilisez Chrome ou la saisie du matricule.');
+                    return;
+                }
+
+                try {
+                    var formats = typeof BarcodeDetector.getSupportedFormats === 'function'
+                        ? await BarcodeDetector.getSupportedFormats()
+                        : ['qr_code'];
+
+                    if (formats.indexOf('qr_code') === -1) {
+                        setFeedback('warning', 'Le navigateur ne sait pas decoder les QR codes. Utilisez la saisie du matricule.');
+                        return;
+                    }
+
+                    detector = new BarcodeDetector({ formats: ['qr_code'] });
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: { ideal: 'environment' } },
+                        audio: false
+                    });
+
+                    video.srcObject = stream;
+                    await video.play();
+                    scanning = true;
+                    processing = false;
+                    if (stage) {
+                        stage.classList.add('is-live');
+                    }
+                    if (startButton) {
+                        startButton.disabled = true;
+                    }
+                    if (stopButton) {
+                        stopButton.disabled = false;
+                    }
+                    setFeedback('secondary', 'Camera active. Placez le QR du scout dans le cadre.');
+                    animationFrameId = window.requestAnimationFrame(scanLoop);
+                } catch (error) {
+                    stopScanner();
+                    setFeedback('danger', 'Impossible d activer la camera. Verifiez les permissions du navigateur.');
+                }
+            }
 
             copyButtons.forEach(function (button) {
                 button.addEventListener('click', async function () {
@@ -295,6 +657,33 @@
                     }
                 });
             });
+
+            if (startButton) {
+                startButton.addEventListener('click', startScanner);
+            }
+
+            if (stopButton) {
+                stopButton.addEventListener('click', stopScanner);
+            }
+
+            if (manualForm) {
+                manualForm.addEventListener('submit', async function (event) {
+                    event.preventDefault();
+                    var code = manualInput ? manualInput.value.trim() : '';
+                    if (!code) {
+                        setFeedback('warning', 'Saisissez un matricule ou un code scout avant validation.');
+                        return;
+                    }
+
+                    await submitScannedCode(code);
+                });
+            }
+
+            if (capabilityHint && !('BarcodeDetector' in window)) {
+                capabilityHint.textContent = 'Ce navigateur ne supporte pas le scan QR integre. Utilisez Chrome/Edge ou saisissez le matricule.';
+            }
+
+            window.addEventListener('beforeunload', stopScanner);
         })();
     </script>
 }
