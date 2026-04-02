@@ -1,4 +1,4 @@
-@model ActiviteDto
+﻿@model ActiviteDto
 @using MangoTaika.Data.Entities
 @{
     ViewData["Title"] = Model.Titre;
@@ -434,8 +434,17 @@
             </div>
             <div class="modal-body text-center">
                 <div id="presenceQrCode" class="presence-qr-code"></div>
-                <p class="small text-muted-custom mb-2">@presenceUrl</p>
-                <a href="@presenceUrl" class="btn btn-outline-or">Ouvrir la page de presence</a>
+                <p class="small text-muted-custom mb-2">Partage ce QR avec l'appareil de pointage pour ouvrir directement la page de presence.</p>
+                <div class="presence-qr-linkbox mb-3">
+                    <span class="presence-qr-linkbox__label">Lien de pointage</span>
+                    <code class="presence-qr-linkbox__value">@presenceUrl</code>
+                </div>
+                <div class="d-flex justify-content-center gap-2 flex-wrap">
+                    <button type="button" class="btn btn-outline-or" id="copyPresenceLink" data-presence-url="@presenceUrl">
+                        <i class="bi bi-copy"></i> Copier le lien
+                    </button>
+                    <a href="@presenceUrl" class="btn btn-outline-or">Ouvrir la page de presence</a>
+                </div>
             </div>
         </div>
     </div>
@@ -492,23 +501,101 @@
         background: rgba(255, 255, 255, 0.94);
         border: 1px solid rgba(95, 127, 67, 0.14);
     }
+
+    .presence-qr-linkbox {
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: rgba(95, 127, 67, 0.08);
+        border: 1px solid rgba(95, 127, 67, 0.18);
+        text-align: left;
+    }
+
+    .presence-qr-linkbox__label {
+        display: block;
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #718096;
+        margin-bottom: 6px;
+    }
+
+    .presence-qr-linkbox__value {
+        display: block;
+        white-space: normal;
+        word-break: break-word;
+        color: var(--bleu-logo);
+        background: transparent;
+        padding: 0;
+    }
 </style>
 
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script>
         (function () {
+            var qrModal = document.getElementById('presenceQrModal');
             var qrContainer = document.getElementById('presenceQrCode');
+            var copyButton = document.getElementById('copyPresenceLink');
             var presenceUrl = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(presenceUrl));
 
-            if (qrContainer && presenceUrl && typeof QRCode !== 'undefined') {
-                new QRCode(qrContainer, {
-                    text: presenceUrl,
-                    width: 220,
-                    height: 220,
-                    colorDark: '#2b3d31',
-                    colorLight: '#ffffff',
-                    correctLevel: QRCode.CorrectLevel.H
+            function renderFallbackQr() {
+                if (!qrContainer || !presenceUrl) {
+                    return;
+                }
+
+                var img = document.createElement('img');
+                img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(presenceUrl);
+                img.alt = 'QR code de presence';
+                img.width = 220;
+                img.height = 220;
+                img.loading = 'lazy';
+                img.referrerPolicy = 'no-referrer';
+                qrContainer.replaceChildren(img);
+            }
+
+            function renderQr() {
+                if (!qrContainer || !presenceUrl) {
+                    return;
+                }
+
+                qrContainer.replaceChildren();
+
+                if (typeof QRCode !== 'undefined') {
+                    new QRCode(qrContainer, {
+                        text: presenceUrl,
+                        width: 220,
+                        height: 220,
+                        colorDark: '#2b3d31',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                    return;
+                }
+
+                renderFallbackQr();
+            }
+
+            if (qrModal) {
+                qrModal.addEventListener('shown.bs.modal', renderQr);
+            } else {
+                renderQr();
+            }
+
+            if (copyButton) {
+                copyButton.addEventListener('click', async function () {
+                    if (!presenceUrl) {
+                        return;
+                    }
+
+                    try {
+                        await navigator.clipboard.writeText(presenceUrl);
+                        copyButton.innerHTML = '<i class="bi bi-check2"></i> Lien copie';
+                        window.setTimeout(function () {
+                            copyButton.innerHTML = '<i class="bi bi-copy"></i> Copier le lien';
+                        }, 1800);
+                    } catch (error) {
+                        window.prompt('Copiez ce lien de pointage :', presenceUrl);
+                    }
                 });
             }
         })();
