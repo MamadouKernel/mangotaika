@@ -20,6 +20,7 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
         var isAdmin = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
         var isSupervision = User.IsInRole("Superviseur") || User.IsInRole("Consultant");
         var isDistrictReviewer = await EstValidateurDistrictAsync();
+        var canValidateRequests = User.IsInRole("Administrateur") || isDistrictReviewer;
 
         var query = db.DemandesAutorisation
             .Include(d => d.Demandeur)
@@ -27,7 +28,7 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
             .Include(d => d.Branche)
             .AsQueryable();
 
-        if (!isAdmin && !isSupervision && !isDistrictReviewer)
+        if (!isAdmin && !isSupervision && !canValidateRequests)
         {
             query = query.Where(d => d.DemandeurId == userId);
         }
@@ -42,7 +43,7 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
             .ToListAsync();
 
         ViewBag.PeutCreer = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire") || await EstScoutChefAsync();
-        ViewBag.PeutValiderDistrict = isDistrictReviewer;
+        ViewBag.PeutValiderDistrict = canValidateRequests;
         ListPagination.SetViewData(ViewData, HttpContext, p, pageSize, total, totalPages);
         return View(demandes.Select(ToDto).ToList());
     }
@@ -142,7 +143,8 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
         var isAdmin = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
         var isSupervision = User.IsInRole("Superviseur") || User.IsInRole("Consultant");
         var isDistrictReviewer = await EstValidateurDistrictAsync();
-        if (!isAdmin && !isSupervision && !isDistrictReviewer)
+        var canValidateRequests = User.IsInRole("Administrateur") || isDistrictReviewer;
+        if (!isAdmin && !isSupervision && !canValidateRequests)
         {
             var userId = Guid.Parse(userManager.GetUserId(User)!);
             if (demande.DemandeurId != userId)
@@ -151,7 +153,7 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
             }
         }
 
-        ViewBag.CanValidateDistrict = isDistrictReviewer;
+        ViewBag.CanValidateDistrict = canValidateRequests;
         ViewBag.CanSubmit = isAdmin || demande.DemandeurId == Guid.Parse(userManager.GetUserId(User)!);
         return View(ToDto(demande));
     }
@@ -201,7 +203,8 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Valider(Guid id, string? commentaire)
     {
-        if (!await EstValidateurDistrictAsync())
+        var isPlatformAdmin = User.IsInRole("Administrateur");
+        if (!isPlatformAdmin && !await EstValidateurDistrictAsync())
         {
             return Forbid();
         }
@@ -223,7 +226,7 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
         demande.ValideurId = user?.Id;
         demande.DateValidation = DateTime.UtcNow;
         demande.MotifRejet = null;
-        AjouterSuivi(demande, ancien, StatutDemande.Validee, NormalizeValue(commentaire) ?? "Demande validee par le commissaire de district", BuildAuteurLabel(user));
+        AjouterSuivi(demande, ancien, StatutDemande.Validee, NormalizeValue(commentaire) ?? (isPlatformAdmin ? "Validation exceptionnelle par administrateur" : "Demande validee par le commissaire de district"), BuildAuteurLabel(user));
         await db.SaveChangesAsync();
 
         await hub.Clients.User(demande.DemandeurId.ToString()).SendAsync("RecevoirNotification", $"Votre demande \"{demande.Titre}\" a ete validee.");
@@ -235,7 +238,8 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Rejeter(Guid id, string? motif)
     {
-        if (!await EstValidateurDistrictAsync())
+        var isPlatformAdmin = User.IsInRole("Administrateur");
+        if (!isPlatformAdmin && !await EstValidateurDistrictAsync())
         {
             return Forbid();
         }
@@ -253,7 +257,7 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
 
         var user = await userManager.GetUserAsync(User);
         var ancien = demande.Statut;
-        var motifNormalise = NormalizeValue(motif) ?? "Demande rejetee";
+        var motifNormalise = NormalizeValue(motif) ?? (isPlatformAdmin ? "Rejet exceptionnel par administrateur" : "Demande rejetee");
         demande.Statut = StatutDemande.Rejetee;
         demande.MotifRejet = motifNormalise;
         demande.ValideurId = user?.Id;
@@ -270,7 +274,8 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Reviser(Guid id, string? commentaire)
     {
-        if (!await EstValidateurDistrictAsync())
+        var isPlatformAdmin = User.IsInRole("Administrateur");
+        if (!isPlatformAdmin && !await EstValidateurDistrictAsync())
         {
             return Forbid();
         }
@@ -288,7 +293,7 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
 
         var user = await userManager.GetUserAsync(User);
         var ancien = demande.Statut;
-        var commentaireNormalise = NormalizeValue(commentaire) ?? "Modification demandee par le commissaire de district";
+        var commentaireNormalise = NormalizeValue(commentaire) ?? (isPlatformAdmin ? "Modification exceptionnelle demandee par administrateur" : "Modification demandee par le commissaire de district");
         demande.Statut = StatutDemande.EnRevision;
         demande.MotifRejet = null;
         demande.ValideurId = user?.Id;
@@ -532,3 +537,5 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
         }).ToList()
     };
 }
+
+
