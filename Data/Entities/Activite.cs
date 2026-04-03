@@ -1,4 +1,4 @@
-namespace MangoTaika.Data.Entities;
+﻿namespace MangoTaika.Data.Entities;
 
 public class Activite
 {
@@ -13,6 +13,7 @@ public class Activite
     public string? NomResponsable { get; set; }
     public StatutActivite Statut { get; set; } = StatutActivite.Brouillon;
     public string? MotifRejet { get; set; }
+    public DateTime? DateCloturePointage { get; set; }
     public bool EstSupprime { get; set; } = false;
     public DateTime DateCreation { get; set; } = DateTime.UtcNow;
 
@@ -46,3 +47,4 @@ public enum StatutActivite
     Terminee,
     Archivee
 }
+

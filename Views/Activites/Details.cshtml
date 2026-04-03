@@ -9,7 +9,10 @@
     var presenceUrl = ViewBag.PresenceUrl as string ?? string.Empty;
     var participantIds = Model.Participants.Select(p => p.ScoutId).ToHashSet();
     var scoutsDisponibles = scouts.Where(s => !participantIds.Contains(s.Id)).ToList();
-    var presenceBadgeClass = Model.Statut == StatutActivite.EnCours || Model.Statut == StatutActivite.Terminee ? "badge-approuvee" : "badge-soumise";
+    var pointageDisponible = Model.Statut == StatutActivite.EnCours || Model.Statut == StatutActivite.Terminee;
+    var pointageCloture = Model.PointageCloture;
+    var pointageBadgeClass = pointageCloture ? "badge-rejetee" : pointageDisponible ? "badge-approuvee" : "badge-soumise";
+    var pointageLabel = pointageCloture ? "Pointage cloture" : pointageDisponible ? "Pointage ouvert" : "Pointage en attente";
 }
 
 <div class="tracking-module tracking-module--activity-detail">
@@ -21,7 +24,7 @@
             <div class="tracking-hero__chips">
                 <span class="tracking-chip"><i class="bi bi-patch-check"></i> @Model.Statut</span>
                 <span class="tracking-chip tracking-chip--soft"><i class="bi bi-bookmark-star"></i> @Model.Type</span>
-                <span class="tracking-chip tracking-chip--highlight"><i class="bi bi-qr-code-scan"></i> Presence QR dispo</span>
+                <span class="tracking-chip tracking-chip--highlight"><i class="bi bi-qr-code-scan"></i> @pointageLabel</span>
             </div>
         </div>
         <div class="tracking-hero__actions">
@@ -45,7 +48,7 @@
         <div class="d-flex align-items-center gap-2 flex-wrap">
             <span class="badge-3d badge-@Model.Statut.ToString().ToLower()" style="font-size: 0.85rem;">@Model.Statut</span>
             <span class="badge bg-secondary bg-opacity-25" style="color: var(--bleu-logo); border-radius: 10px;">@Model.Type</span>
-            <span class="badge-3d @presenceBadgeClass">Presence QR dispo</span>
+            <span class="badge-3d @pointageBadgeClass">@pointageLabel</span>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             @if (canManage && Model.Statut == StatutActivite.Brouillon)
@@ -127,8 +130,8 @@
         <div class="col-md-3">
             <div class="activite-kpi-card activite-kpi-card--qr">
                 <span>Pointage</span>
-                <strong>QR code</strong>
-                <small>Scan direct pour marquer les presences</small>
+                <strong>@pointageLabel</strong>
+                <small>@(pointageCloture ? "Presences verrouillees" : pointageDisponible ? "Corrections autorisees jusqu'a cloture" : "En attente du demarrage")</small>
             </div>
         </div>
     </div>
@@ -148,6 +151,22 @@
                 </button>
             }
             <a asp-action="Presence" asp-route-id="@Model.Id" class="btn btn-outline-or"><i class="bi bi-phone"></i> Page presence</a>
+            @if (canManage && pointageDisponible && !pointageCloture)
+            {
+                <form asp-action="CloturerPointage" asp-route-id="@Model.Id" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="returnAction" value="Details" />
+                    <button type="submit" class="btn btn-mango"><i class="bi bi-lock"></i> Cloturer le pointage</button>
+                </form>
+            }
+            else if (canManage && pointageCloture && Model.Statut != StatutActivite.Archivee)
+            {
+                <form asp-action="ReouvrirPointage" asp-route-id="@Model.Id" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="returnAction" value="Details" />
+                    <button type="submit" class="btn btn-outline-or"><i class="bi bi-unlock"></i> Reouvrir le pointage</button>
+                </form>
+            }
             @if (rapportActivite is null)
             {
                 <a asp-controller="RapportsActivite" asp-action="Create" asp-route-activiteId="@Model.Id" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Creer le rapport</a>
@@ -193,7 +212,7 @@
     </div>
 
     <div class="tab-pane fade" id="participants">
-        @if (canManage && Model.Statut != StatutActivite.Archivee && scoutsDisponibles.Any())
+        @if (canManage && Model.Statut != StatutActivite.Archivee && !pointageCloture && scoutsDisponibles.Any())
         {
             <div class="card-3d p-3 mb-3">
                 <form asp-action="AjouterParticipant" asp-route-id="@Model.Id" method="post" class="d-flex gap-2 align-items-end">
@@ -211,6 +230,10 @@
                     <button type="submit" class="btn btn-mango" title="Ajouter un participant"><i class="bi bi-person-plus"></i></button>
                 </form>
             </div>
+        }
+        @if (pointageCloture)
+        {
+            <div class="alert alert-secondary mb-3">Le pointage de cette activite est cloture. Reouvre-le depuis l'en-tete pour ajuster les presences ou la liste des participants.</div>
         }
 
         @if (Model.Participants.Any())
@@ -235,7 +258,7 @@
                                     <td>@p.NomComplet</td>
                                     <td>@(p.NomBranche ?? "-")</td>
                                     <td>
-                                        @if (canManage && (Model.Statut == StatutActivite.EnCours || Model.Statut == StatutActivite.Terminee))
+                                        @if (canManage && pointageDisponible && !pointageCloture)
                                         {
                                             <form asp-action="MarquerPresence" asp-route-id="@Model.Id" method="post" class="d-inline">
                                                 @Html.AntiForgeryToken()
@@ -254,7 +277,7 @@
                                         }
                                     </td>
                                     <td>
-                                        @if (canManage && Model.Statut != StatutActivite.Archivee)
+                                        @if (canManage && Model.Statut != StatutActivite.Archivee && !pointageCloture)
                                         {
                                             <form asp-action="RetirerParticipant" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="return confirm('Retirer ce participant ?')">
                                                 @Html.AntiForgeryToken()

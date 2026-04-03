@@ -15,6 +15,8 @@ public class ActiviteDto
     public string? NomResponsable { get; set; }
     public StatutActivite Statut { get; set; }
     public string? MotifRejet { get; set; }
+    public DateTime? DateCloturePointage { get; set; }
+    public bool PointageCloture => DateCloturePointage.HasValue;
     public string? NomGroupe { get; set; }
     public Guid? GroupeId { get; set; }
     public string? NomCreateur { get; set; }

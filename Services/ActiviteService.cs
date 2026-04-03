@@ -1,4 +1,4 @@
-using MangoTaika.Data;
+﻿using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +28,7 @@ public class ActiviteService(AppDbContext db) : IActiviteService
                 BudgetPrevisionnel = a.BudgetPrevisionnel,
                 NomResponsable = a.NomResponsable,
                 Statut = a.Statut,
+                DateCloturePointage = a.DateCloturePointage,
                 NomGroupe = a.Groupe != null ? a.Groupe.Nom : null,
                 GroupeId = a.GroupeId,
                 NomCreateur = a.Createur.Prenom + " " + a.Createur.Nom,
@@ -62,6 +63,7 @@ public class ActiviteService(AppDbContext db) : IActiviteService
             NomResponsable = a.NomResponsable,
             Statut = a.Statut,
             MotifRejet = a.MotifRejet,
+            DateCloturePointage = a.DateCloturePointage,
             NomGroupe = a.Groupe?.Nom,
             GroupeId = a.GroupeId,
             NomCreateur = $"{a.Createur.Prenom} {a.Createur.Nom}",
@@ -120,8 +122,8 @@ public class ActiviteService(AppDbContext db) : IActiviteService
             Id = Guid.NewGuid(),
             ActiviteId = activite.Id,
             AuteurId = createurId,
-            Contenu = "Activité créée.",
-            TypeAction = "Création"
+            Contenu = "ActivitÃ© crÃ©Ã©e.",
+            TypeAction = "CrÃ©ation"
         });
 
         await db.SaveChangesAsync();
@@ -163,3 +165,4 @@ public class ActiviteService(AppDbContext db) : IActiviteService
         return true;
     }
 }
+

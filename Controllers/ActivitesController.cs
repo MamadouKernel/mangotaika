@@ -330,6 +330,15 @@ public class ActivitesController(
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> AjouterParticipant(Guid id, Guid scoutId)
     {
+        var activite = await db.Activites.FirstOrDefaultAsync(a => a.Id == id && !a.EstSupprime);
+        if (activite is null) return NotFound();
+
+        if (activite.DateCloturePointage.HasValue)
+        {
+            TempData["Warning"] = "Le pointage est cloture. Reouvrez-le avant de modifier la liste des participants.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
         var exists = await db.ParticipantsActivite.AnyAsync(p => p.ActiviteId == id && p.ScoutId == scoutId);
         if (exists)
         {
@@ -355,13 +364,22 @@ public class ActivitesController(
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> RetirerParticipant(Guid id, Guid participantId)
     {
-        var participant = await db.ParticipantsActivite.FindAsync(participantId);
+        var activite = await db.Activites.FirstOrDefaultAsync(a => a.Id == id && !a.EstSupprime);
+        if (activite is null) return NotFound();
+
+        if (activite.DateCloturePointage.HasValue)
+        {
+            TempData["Warning"] = "Le pointage est cloture. Reouvrez-le avant de retirer un participant.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        var participant = await db.ParticipantsActivite.FirstOrDefaultAsync(p => p.Id == participantId && p.ActiviteId == id);
         if (participant is not null)
         {
             db.ParticipantsActivite.Remove(participant);
+            await db.SaveChangesAsync();
         }
 
-        await db.SaveChangesAsync();
         TempData["Success"] = "Participant retire.";
         return RedirectToAction(nameof(Details), new { id });
     }
@@ -370,7 +388,22 @@ public class ActivitesController(
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> MarquerPresence(Guid id, Guid participantId, StatutPresence presence)
     {
-        var participant = await db.ParticipantsActivite.FindAsync(participantId);
+        var activite = await db.Activites.FirstOrDefaultAsync(a => a.Id == id && !a.EstSupprime);
+        if (activite is null) return NotFound();
+
+        if (!PointageEstAccessible(activite))
+        {
+            TempData["Warning"] = "Le pointage n'est disponible que pour une activite en cours ou terminee.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        if (activite.DateCloturePointage.HasValue)
+        {
+            TempData["Warning"] = "Le pointage est cloture. Reouvrez-le avant de modifier une presence.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        var participant = await db.ParticipantsActivite.FirstOrDefaultAsync(p => p.Id == participantId && p.ActiviteId == id);
         if (participant is not null)
         {
             participant.Presence = presence;
@@ -385,7 +418,22 @@ public class ActivitesController(
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> PresenceRapide(Guid id, Guid participantId, StatutPresence presence)
     {
-        var participant = await db.ParticipantsActivite.FindAsync(participantId);
+        var activite = await db.Activites.FirstOrDefaultAsync(a => a.Id == id && !a.EstSupprime);
+        if (activite is null) return NotFound();
+
+        if (!PointageEstAccessible(activite))
+        {
+            TempData["Warning"] = "Le pointage n'est disponible que pour une activite en cours ou terminee.";
+            return RedirectToAction(nameof(Presence), new { id });
+        }
+
+        if (activite.DateCloturePointage.HasValue)
+        {
+            TempData["Warning"] = "Le pointage est cloture. Reouvrez-le avant de modifier une presence.";
+            return RedirectToAction(nameof(Presence), new { id });
+        }
+
+        var participant = await db.ParticipantsActivite.FirstOrDefaultAsync(p => p.Id == participantId && p.ActiviteId == id);
         if (participant is not null)
         {
             participant.Presence = presence;
@@ -394,6 +442,74 @@ public class ActivitesController(
 
         TempData["Success"] = "Presence mise a jour.";
         return RedirectToAction(nameof(Presence), new { id });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    public async Task<IActionResult> CloturerPointage(Guid id, string? returnAction)
+    {
+        var activite = await db.Activites.FirstOrDefaultAsync(a => a.Id == id && !a.EstSupprime);
+        if (activite is null) return NotFound();
+
+        if (!PointageEstAccessible(activite))
+        {
+            TempData["Warning"] = "Le pointage ne peut etre cloture qu'une fois l'activite en cours ou terminee.";
+            return RedirectToActivityPage(id, returnAction);
+        }
+
+        if (activite.DateCloturePointage.HasValue)
+        {
+            TempData["Warning"] = "Le pointage est deja cloture.";
+            return RedirectToActivityPage(id, returnAction);
+        }
+
+        activite.DateCloturePointage = DateTime.UtcNow;
+        db.CommentairesActivite.Add(new CommentaireActivite
+        {
+            Id = Guid.NewGuid(),
+            ActiviteId = id,
+            AuteurId = UserId,
+            Contenu = "Pointage cloture. Les presences sont maintenant verrouillees.",
+            TypeAction = "Pointage"
+        });
+        await db.SaveChangesAsync();
+
+        TempData["Success"] = "Pointage cloture. Les presences sont verrouillees jusqu'a reouverture.";
+        return RedirectToActivityPage(id, returnAction);
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    public async Task<IActionResult> ReouvrirPointage(Guid id, string? returnAction)
+    {
+        var activite = await db.Activites.FirstOrDefaultAsync(a => a.Id == id && !a.EstSupprime);
+        if (activite is null) return NotFound();
+
+        if (!activite.DateCloturePointage.HasValue)
+        {
+            TempData["Warning"] = "Le pointage est deja ouvert.";
+            return RedirectToActivityPage(id, returnAction);
+        }
+
+        if (activite.Statut == StatutActivite.Archivee)
+        {
+            TempData["Warning"] = "Une activite archivee ne peut plus reouvrir son pointage.";
+            return RedirectToActivityPage(id, returnAction);
+        }
+
+        activite.DateCloturePointage = null;
+        db.CommentairesActivite.Add(new CommentaireActivite
+        {
+            Id = Guid.NewGuid(),
+            ActiviteId = id,
+            AuteurId = UserId,
+            Contenu = "Pointage reouvert pour correction des presences.",
+            TypeAction = "Pointage"
+        });
+        await db.SaveChangesAsync();
+
+        TempData["Success"] = "Pointage reouvert. Les presences peuvent de nouveau etre ajustees.";
+        return RedirectToActivityPage(id, returnAction);
     }
 
     [HttpPost, ValidateAntiForgeryToken]
@@ -432,12 +548,31 @@ public class ActivitesController(
             });
         }
 
-        if (!await db.Activites.AnyAsync(a => a.Id == id))
+        var activite = await db.Activites.FirstOrDefaultAsync(a => a.Id == id && !a.EstSupprime);
+        if (activite is null)
         {
             return NotFound(new PresenceScoutScanResponse
             {
                 Success = false,
                 Message = "Activite introuvable."
+            });
+        }
+
+        if (!PointageEstAccessible(activite))
+        {
+            return Conflict(new PresenceScoutScanResponse
+            {
+                Success = false,
+                Message = "Le pointage n'est disponible que pour une activite en cours ou terminee."
+            });
+        }
+
+        if (activite.DateCloturePointage.HasValue)
+        {
+            return Conflict(new PresenceScoutScanResponse
+            {
+                Success = false,
+                Message = "Le pointage est cloture. Reouvrez-le avant de scanner un scout."
             });
         }
 
@@ -498,6 +633,18 @@ public class ActivitesController(
             Excuses = counts.Excuses,
             Pending = counts.Pending
         });
+    }
+
+    private static bool PointageEstAccessible(Activite activite)
+    {
+        return activite.Statut == StatutActivite.EnCours || activite.Statut == StatutActivite.Terminee;
+    }
+
+    private IActionResult RedirectToActivityPage(Guid id, string? returnAction)
+    {
+        return string.Equals(returnAction, nameof(Details), StringComparison.OrdinalIgnoreCase)
+            ? RedirectToAction(nameof(Details), new { id })
+            : RedirectToAction(nameof(Presence), new { id });
     }
 
     private async Task<(Scout? Scout, string? ErrorMessage)> ResolveScoutFromScannedCodeAsync(string scannedCode)
