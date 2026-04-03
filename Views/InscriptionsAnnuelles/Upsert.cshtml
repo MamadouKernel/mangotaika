@@ -1,4 +1,4 @@
-﻿@using MangoTaika.Data.Entities
+@using MangoTaika.Data.Entities
 @model InscriptionAnnuelleScout
 @{
     ViewData["Title"] = Model.Id == Guid.Empty ? "Nouvelle inscription annuelle" : "Modifier l'inscription annuelle";
@@ -6,6 +6,7 @@
     var scouts = ViewBag.Scouts as List<Scout> ?? new();
     var groupes = ViewBag.Groupes as List<Groupe> ?? new();
     var branches = ViewBag.Branches as List<Branche> ?? new();
+    var isCreate = Model.Id == Guid.Empty;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -25,15 +26,25 @@
         }
         <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
         <div class="row g-3">
-            <div class="col-lg-6">
+            <div class="col-lg-6" data-searchable-select-wrapper>
                 <label asp-for="ScoutId" class="form-label">Scout</label>
-                <select asp-for="ScoutId" class="form-select">
+                <input type="search" class="form-control form-control-sm mb-2" placeholder="Rechercher un scout par nom, prenom, matricule..." data-select-search-input />
+                <select asp-for="ScoutId" class="form-select" data-searchable-select>
                     <option value="">-- Selectionner un scout --</option>
                     @foreach (var scout in scouts)
                     {
-                        <option value="@scout.Id">@scout.Prenom @scout.Nom (@(string.IsNullOrWhiteSpace(scout.Matricule) ? "sans matricule" : scout.Matricule))@(scout.Groupe != null ? $" - {scout.Groupe.Nom}" : string.Empty)</option>
+                        <option value="@scout.Id"
+                                data-group="@(scout.GroupeId?.ToString() ?? string.Empty)"
+                                data-branch="@(scout.BrancheId?.ToString() ?? string.Empty)"
+                                data-fonction="@(scout.Fonction ?? string.Empty)"
+                                data-cotisation="@scout.AssuranceAnnuelle.ToString().ToLowerInvariant()"
+                                data-search-label="@($"{scout.Prenom} {scout.Nom} {scout.Matricule} {scout.Groupe?.Nom} {scout.Branche?.Nom} {scout.Fonction}")">
+                            @scout.Prenom @scout.Nom (@(string.IsNullOrWhiteSpace(scout.Matricule) ? "sans matricule" : scout.Matricule))@(scout.Groupe != null ? $" - {scout.Groupe.Nom}" : string.Empty)
+                        </option>
                     }
                 </select>
+                <small class="text-muted-custom" data-select-search-empty hidden>Aucun scout correspondant.</small>
+                <small class="text-muted-custom d-block mt-2">Le groupe, la branche et la fonction de l'annee se remplissent automatiquement a partir du scout choisi. Vous pouvez ensuite ajuster le snapshot si besoin.</small>
                 <span asp-validation-for="ScoutId" class="text-danger small"></span>
             </div>
             <div class="col-lg-3">
@@ -88,7 +99,7 @@
             </div>
             <div class="col-lg-6">
                 <label class="form-label">Cotisation nationale</label>
-                <div class="form-control d-flex align-items-center bg-light-subtle">@(Model.CotisationNationaleAjour ? "A jour" : "Non a jour")</div>
+                <div id="InscriptionCotisationLabel" class="form-control d-flex align-items-center bg-light-subtle">@(Model.CotisationNationaleAjour ? "A jour" : "Non a jour")</div>
                 <small class="text-muted-custom">Ce statut est synchronise par l'import du fichier national et ne se modifie pas manuellement ici.</small>
             </div>
             <div class="col-12">
@@ -109,6 +120,15 @@
         (() => {
             const groupeSelect = document.getElementById('GroupeId');
             const brancheSelect = document.getElementById('BrancheId');
+            const scoutSelect = document.getElementById('ScoutId');
+            const fonctionInput = document.getElementById('FonctionSnapshot');
+            const cotisationLabel = document.getElementById('InscriptionCotisationLabel');
+            const anneeInput = document.getElementById('AnneeReference');
+            const libelleInput = document.getElementById('LibelleAnnee');
+            const isCreate = @isCreate.ToString().ToLowerInvariant();
+            const currentYear = new Date().getUTCFullYear();
+            let lastAutoLabel = libelleInput ? libelleInput.value : '';
+
             if (!groupeSelect || !brancheSelect) {
                 return;
             }
@@ -138,10 +158,82 @@
                 }
             };
 
+            const computeAnnualLabel = (yearValue) => {
+                const year = Number.parseInt(yearValue, 10);
+                if (!Number.isFinite(year)) {
+                    return '';
+                }
+
+                return `${year}-${year + 1}`;
+            };
+
+            const syncYearLabel = () => {
+                if (!libelleInput || !anneeInput || !isCreate) {
+                    return;
+                }
+
+                const computed = computeAnnualLabel(anneeInput.value);
+                if (!computed) {
+                    return;
+                }
+
+                if (!libelleInput.value || libelleInput.value === lastAutoLabel) {
+                    libelleInput.value = computed;
+                }
+
+                lastAutoLabel = computed;
+            };
+
+            const syncCotisationPreview = () => {
+                if (!isCreate || !scoutSelect || !cotisationLabel || !anneeInput) {
+                    return;
+                }
+
+                const selectedScout = scoutSelect.selectedOptions[0];
+                const annualYear = Number.parseInt(anneeInput.value, 10);
+                const isCurrentCotisation = selectedScout && selectedScout.dataset.cotisation === 'true' && annualYear === currentYear;
+                cotisationLabel.textContent = isCurrentCotisation ? 'A jour' : 'Non a jour';
+            };
+
+            const syncScoutSnapshot = () => {
+                if (!scoutSelect) {
+                    return;
+                }
+
+                const selectedScout = scoutSelect.selectedOptions[0];
+                if (!selectedScout || !selectedScout.value) {
+                    groupeSelect.value = '';
+                    syncBranches();
+                    brancheSelect.value = '';
+                    if (fonctionInput) {
+                        fonctionInput.value = '';
+                    }
+                    syncCotisationPreview();
+                    return;
+                }
+
+                groupeSelect.value = selectedScout.dataset.group || '';
+                syncBranches();
+                brancheSelect.value = selectedScout.dataset.branch || '';
+                if (fonctionInput) {
+                    fonctionInput.value = selectedScout.dataset.fonction || '';
+                }
+                syncCotisationPreview();
+            };
+
             groupeSelect.addEventListener('change', syncBranches);
             syncBranches();
+
+            if (scoutSelect) {
+                scoutSelect.addEventListener('change', syncScoutSnapshot);
+            }
+
+            if (anneeInput) {
+                anneeInput.addEventListener('input', () => {
+                    syncYearLabel();
+                    syncCotisationPreview();
+                });
+            }
         })();
     </script>
 }
-
-

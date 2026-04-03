@@ -1,4 +1,5 @@
 @using MangoTaika.Data.Entities
+@using MangoTaika.DTOs
 @model List<InscriptionAnnuelleScout>
 @{
     ViewData["Title"] = "Inscriptions annuelles";
@@ -10,6 +11,10 @@
     var selectedStatut = ViewBag.SelectedStatut as StatutInscriptionAnnuelle?;
     var annee = ViewBag.Annee is int currentYear ? currentYear : DateTime.UtcNow.Year;
     var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+    var importError = ViewBag.ImportError as string;
+    var importReport = ViewBag.ImportReport as InscriptionAnnuelleImportResultDto;
+    var totalFiltered = ViewData["PaginationTotal"] is int total ? total : Model.Count;
+    var shouldOpenImportModal = !string.IsNullOrWhiteSpace(importError);
 }
 
 <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
@@ -19,11 +24,83 @@
     </div>
     @if (canManage)
     {
-        <a asp-action="Create" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Nouvelle inscription</a>
+        <div class="d-flex flex-wrap gap-2 annual-toolbar">
+            <a asp-action="DownloadImportTemplate" class="btn btn-outline-or">
+                <i class="bi bi-file-earmark-excel"></i> Modele Excel
+            </a>
+            <button type="button" class="btn btn-outline-or" data-open-annual-import-modal>
+                <i class="bi bi-cloud-arrow-up"></i> Inscription par importation
+            </button>
+            <a asp-action="Create" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Nouvelle inscription</a>
+        </div>
     }
 </div>
 
-<div class="card-3d p-4 mb-4">
+@if (!string.IsNullOrWhiteSpace(importError))
+{
+    <div class="alert alert-danger border-0 mb-3">@importError</div>
+}
+
+@if (importReport is not null)
+{
+    <div class="alert alert-warning border-0 mb-3">
+        <div class="fw-semibold">
+            @importReport.CreatedCount creee(s), @importReport.UpdatedCount mise(s) a jour, @importReport.SkippedCount ligne(s) ignoree(s).
+        </div>
+
+        @if (importReport.CreatedEntries.Any())
+        {
+            <details class="mt-3" open>
+                <summary class="fw-semibold">Inscriptions creees (@importReport.CreatedEntries.Count)</summary>
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    @foreach (var entry in importReport.CreatedEntries)
+                    {
+                        <span class="badge-3d badge-soumise">@entry</span>
+                    }
+                </div>
+            </details>
+        }
+
+        @if (importReport.UpdatedEntries.Any())
+        {
+            <details class="mt-3" open>
+                <summary class="fw-semibold">Inscriptions mises a jour (@importReport.UpdatedEntries.Count)</summary>
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    @foreach (var entry in importReport.UpdatedEntries)
+                    {
+                        <span class="badge-3d badge-validee">@entry</span>
+                    }
+                </div>
+            </details>
+        }
+
+        @if (importReport.Errors.Any())
+        {
+            <details class="mt-3" open>
+                <summary class="fw-semibold">Lignes non enregistrees (@importReport.Errors.Count)</summary>
+                <ul class="mb-0 mt-2 ps-3">
+                    @foreach (var error in importReport.Errors)
+                    {
+                        <li>@error.DisplayMessage</li>
+                    }
+                </ul>
+            </details>
+        }
+    </div>
+}
+
+<div class="card-3d p-4 mb-4 annual-filters-card">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+        <div>
+            <h5 class="mb-1"><i class="bi bi-funnel text-bleu"></i> Filtres de consultation</h5>
+            <p class="text-muted-custom mb-0">Consultez l'annee de reference voulue, puis affinez par groupe, branche et statut.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="badge-3d badge-validee">@totalFiltered inscription(s) visible(s)</span>
+            <a asp-action="Index" class="btn btn-sm btn-outline-or">Reinitialiser</a>
+        </div>
+    </div>
+
     <form method="get" class="row g-3">
         <div class="col-lg-3">
             <label class="form-label">Annee</label>
@@ -111,4 +188,169 @@
     </div>
 </div>
 
+@if (canManage)
+{
+    <div class="annual-import-modal @(shouldOpenImportModal ? "is-open" : string.Empty)" id="annualImportModal" data-open-on-load="@shouldOpenImportModal.ToString().ToLowerInvariant()" aria-hidden="@(!shouldOpenImportModal).ToString().ToLowerInvariant()">
+        <div class="annual-import-modal__backdrop" data-close-annual-import-modal></div>
+        <div class="annual-import-modal__dialog card-3d" role="dialog" aria-modal="true" aria-labelledby="annualImportModalTitle">
+            <div class="annual-import-modal__header">
+                <div>
+                    <h5 id="annualImportModalTitle" class="mb-1"><i class="bi bi-upload text-bleu"></i> Inscriptions annuelles par importation</h5>
+                    <p class="text-muted-custom mb-0">Importez un fichier `.xlsx` pour creer ou mettre a jour les inscriptions annuelles d'une annee donnee. Le fichier rapproche uniquement des scouts deja presents dans l'application.</p>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-or" data-close-annual-import-modal aria-label="Fermer">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(importError))
+            {
+                <div class="alert alert-danger border-0 mb-3">@importError</div>
+            }
+
+            <div class="annual-import-modal__hint">
+                <span class="badge-3d badge-soumise">Rapprochement par Matricule ou Nom + Prenom + DateNaissance</span>
+                <span class="small text-muted-custom">Le fichier ne cree pas de nouveaux scouts. Il cree ou met a jour des inscriptions annuelles pour des scouts deja actifs.</span>
+                <a asp-action="DownloadImportTemplate" class="btn btn-sm btn-outline-or">
+                    <i class="bi bi-file-earmark-excel"></i> Telecharger le modele Excel
+                </a>
+            </div>
+
+            <form asp-action="ImportExcel" method="post" enctype="multipart/form-data" class="row g-3 align-items-end mt-1">
+                @Html.AntiForgeryToken()
+                <div class="col-lg-4">
+                    <label for="anneeImport" class="form-label">Annee d'import</label>
+                    <input id="anneeImport" name="anneeReference" type="number" class="form-control" value="@annee" min="2000" max="2100" required />
+                </div>
+                <div class="col-lg-8">
+                    <label for="fichierImportAnnuel" class="form-label">Fichier Excel</label>
+                    <input id="fichierImportAnnuel" name="fichier" type="file" class="form-control" accept=".xlsx" required />
+                </div>
+                <div class="col-12 d-flex justify-content-end">
+                    <button type="submit" class="btn btn-bleu">
+                        <i class="bi bi-upload"></i> Importer les inscriptions
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
 @await Html.PartialAsync("_ListPagination")
+
+<style>
+    .annual-toolbar .btn {
+        min-height: 46px;
+    }
+
+    .annual-filters-card {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .annual-filters-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at top right, rgba(138, 181, 90, 0.12), transparent 34%);
+        pointer-events: none;
+    }
+
+    .annual-filters-card > * {
+        position: relative;
+        z-index: 1;
+    }
+
+    .annual-import-modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        z-index: 1200;
+    }
+
+    .annual-import-modal.is-open {
+        display: block;
+    }
+
+    .annual-import-modal__backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(17, 24, 39, 0.48);
+        backdrop-filter: blur(6px);
+    }
+
+    .annual-import-modal__dialog {
+        position: relative;
+        z-index: 1;
+        width: min(780px, calc(100vw - 32px));
+        margin: 6vh auto 0;
+        padding: 24px;
+        max-height: 88vh;
+        overflow-y: auto;
+    }
+
+    .annual-import-modal__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 18px;
+    }
+
+    .annual-import-modal__hint {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+    }
+
+    body.annual-modal-open {
+        overflow: hidden;
+    }
+
+    @@media (max-width: 768px) {
+        .annual-import-modal__dialog {
+            width: calc(100vw - 20px);
+            margin-top: 3vh;
+            padding: 18px;
+        }
+    }
+</style>
+
+@section Scripts {
+    <script>
+        (() => {
+            const body = document.body;
+            const importModal = document.getElementById('annualImportModal');
+            const openButtons = document.querySelectorAll('[data-open-annual-import-modal]');
+
+            if (importModal) {
+                const setImportModalOpen = (open) => {
+                    importModal.classList.toggle('is-open', open);
+                    importModal.setAttribute('aria-hidden', open ? 'false' : 'true');
+                    body.classList.toggle('annual-modal-open', open);
+                };
+
+                openButtons.forEach((button) => {
+                    button.addEventListener('click', () => setImportModalOpen(true));
+                });
+
+                importModal.querySelectorAll('[data-close-annual-import-modal]').forEach((button) => {
+                    button.addEventListener('click', () => setImportModalOpen(false));
+                });
+
+                document.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape' && importModal.classList.contains('is-open')) {
+                        setImportModalOpen(false);
+                    }
+                });
+
+                if (importModal.dataset.openOnLoad === 'true') {
+                    setImportModalOpen(true);
+                }
+            }
+        })();
+    </script>
+}
