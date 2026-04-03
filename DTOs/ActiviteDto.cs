@@ -74,11 +74,18 @@ public class PresenceScoutScanRequest
     public string ScannedCode { get; set; } = string.Empty;
 }
 
+public class PresenceScoutAddRequest
+{
+    public Guid ScoutId { get; set; }
+}
+
 public class PresenceScoutScanResponse
 {
     public bool Success { get; set; }
     public string Message { get; set; } = string.Empty;
     public Guid? ParticipantId { get; set; }
+    public Guid? ScoutId { get; set; }
+    public bool CanAddParticipant { get; set; }
     public string? ScoutName { get; set; }
     public string? Matricule { get; set; }
     public string? PreviousPresence { get; set; }

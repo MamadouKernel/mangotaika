@@ -13,6 +13,7 @@
     var pointageCloture = Model.PointageCloture;
     var pointageBadgeClass = pointageCloture ? "badge-rejetee" : pointageDisponible ? "badge-approuvee" : "badge-soumise";
     var pointageLabel = pointageCloture ? "Pointage cloture" : pointageDisponible ? "Pointage ouvert" : "Pointage en attente";
+    var activiteTermineeAvecPointageOuvert = Model.Statut == StatutActivite.Terminee && !pointageCloture;
 }
 
 <div class="tracking-module tracking-module--activity-detail">
@@ -178,6 +179,20 @@
         </div>
     </div>
 </div>
+
+    @if (activiteTermineeAvecPointageOuvert)
+    {
+        <div class="alert alert-warning mt-3 mb-0">
+            L'activite est terminee, mais le pointage reste ouvert pour les derniers ajustements.
+            Cloture-le quand la liste finale des presents, absents et excuses est consolidee.
+        </div>
+    }
+    else if (pointageCloture)
+    {
+        <div class="alert alert-secondary mt-3 mb-0">
+            Le pointage est deja cloture. Les presences sont verrouillees jusqu'a une reouverture manuelle.
+        </div>
+    }
 
 <ul class="nav nav-tabs tracking-tabs mb-3" role="tablist">
     <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#infos" style="color: var(--bleu-logo);"><i class="bi bi-info-circle"></i> Informations</a></li>

@@ -7,6 +7,7 @@
     var presenceUrl = ViewBag.PresenceUrl as string ?? string.Empty;
     var detailsUrl = Url.Action("Details", "Activites", new { id = Model.Id }) ?? string.Empty;
     var scoutScanUrl = Url.Action("ScannerScoutQr", "Activites", new { id = Model.Id }) ?? string.Empty;
+    var addParticipantFromScanUrl = Url.Action("AjouterParticipantEtMarquerPresent", "Activites", new { id = Model.Id }) ?? string.Empty;
     var totalParticipants = Model.Participants.Count;
     var inscrits = Model.Participants.Count(p => p.Presence == StatutPresence.Inscrit);
     var presents = Model.Participants.Count(p => p.Presence == StatutPresence.Present);
@@ -86,7 +87,7 @@
                 <span class="presence-guide__step-index">1</span>
                 <div>
                     <strong>Ajouter les participants</strong>
-                    <p>La fiche activite sert a inscrire les scouts a suivre. Cette page ne cree pas de participants.</p>
+                    <p>La fiche activite reste l'endroit normal pour preparer la liste. Ici, l'ajout d'un participant depuis un scan reste une exception terrain.</p>
                 </div>
             </article>
             <article class="presence-guide__step">
@@ -119,7 +120,7 @@
             <div class="tracking-panel__header">
                 <div>
                     <h3 class="tracking-panel__title">Workflow de pointage</h3>
-                    <p class="tracking-panel__text">Le pointage reste modifiable tant qu'il est ouvert. Une fois cloture, le scan QR, la saisie du matricule et les changements de statut sont verrouilles.</p>
+                    <p class="tracking-panel__text">Le pointage reste modifiable tant qu'il est ouvert. En cas de scout present mais non inscrit, cette page peut l'ajouter en exception terrain avant de le marquer present. Une fois cloture, le scan QR, la saisie du matricule et les changements de statut sont verrouilles.</p>
                 </div>
                 <div class="d-flex gap-2 flex-wrap">
                     @if (pointageDisponible && !pointageCloture)
@@ -160,7 +161,7 @@
                 <div class="tracking-panel__header">
                     <div>
                         <h3 class="tracking-panel__title">Scanner un scout</h3>
-                        <p class="tracking-panel__text">Scanne le QR du profil scout ou saisis directement son matricule pour le marquer present.</p>
+                        <p class="tracking-panel__text">Scanne le QR du profil scout ou saisis directement son matricule pour le marquer present. Si le scout n'etait pas prepare dans la liste, un ajout tardif pourra etre propose.</p>
                     </div>
                 </div>
                 <form id="presenceScanSecurityForm" class="d-none">
@@ -191,6 +192,7 @@
                         <div id="scanFeedback" class="alert alert-secondary mb-0 mt-3 presence-scan-feedback">
                             Pret pour le pointage. Scanne un QR scout ou saisis un matricule.
                         </div>
+                        <div id="scanActionArea" class="mt-3"></div>
                         <small class="text-muted-custom mt-3 d-block" id="scannerCapabilityHint">
                             Si la camera n'est pas disponible sur ce navigateur, utilise la saisie du matricule comme secours.
                         </small>
@@ -415,6 +417,27 @@
         align-items: center;
     }
 
+    .presence-scan-action {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: rgba(95, 127, 67, 0.08);
+        border: 1px dashed rgba(95, 127, 67, 0.3);
+    }
+
+    .presence-scan-action__text {
+        flex: 1 1 240px;
+        color: var(--bleu-logo);
+    }
+
+    .presence-scan-action__text strong {
+        display: block;
+        margin-bottom: 4px;
+    }
+
     .presence-card--scanned {
         box-shadow: 0 0 0 2px rgba(95, 127, 67, 0.18), 0 18px 38px rgba(95, 127, 67, 0.12);
         transform: translateY(-2px);
@@ -475,6 +498,7 @@
             var copyButtons = document.querySelectorAll('[data-presence-url]');
             var scanPanel = document.getElementById('presenceScanPanel');
             var scanUrl = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(scoutScanUrl));
+            var addParticipantUrl = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(addParticipantFromScanUrl));
             var securityForm = document.getElementById('presenceScanSecurityForm');
             var requestToken = securityForm ? securityForm.querySelector('input[name="__RequestVerificationToken"]')?.value : '';
             var video = document.getElementById('scoutQrScannerVideo');
@@ -485,6 +509,7 @@
             var manualInput = document.getElementById('manualScoutCode');
             var feedback = document.getElementById('scanFeedback');
             var capabilityHint = document.getElementById('scannerCapabilityHint');
+            var actionArea = document.getElementById('scanActionArea');
             var detector = null;
             var stream = null;
             var scanning = false;
@@ -531,11 +556,73 @@
                     badge.classList.add('tracking-status-pill--approved');
                 }
 
-
                 card.classList.add('presence-card--scanned');
                 window.setTimeout(function () {
                     card.classList.remove('presence-card--scanned');
                 }, 1800);
+            }
+
+            function clearScanActionArea() {
+                if (actionArea) {
+                    actionArea.innerHTML = '';
+                }
+            }
+
+            function renderAddParticipantAction(data) {
+                if (!actionArea || !data || !data.canAddParticipant || !data.scoutId) {
+                    return;
+                }
+
+                clearScanActionArea();
+
+                var wrapper = document.createElement('div');
+                wrapper.className = 'presence-scan-action';
+
+                var text = document.createElement('div');
+                text.className = 'presence-scan-action__text';
+                text.innerHTML =
+                    '<strong>Participant non inscrit</strong>' +
+                    '<span>' + (data.scoutName || 'Ce scout') + ' n etait pas dans la liste. Tu peux l ajouter maintenant puis le marquer present.</span>';
+
+                var button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'btn btn-outline-or';
+                button.innerHTML = '<i class="bi bi-person-plus"></i> Ajouter puis marquer present';
+
+                button.addEventListener('click', async function () {
+                    button.disabled = true;
+
+                    try {
+                        var response = await fetch(addParticipantUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': requestToken || ''
+                            },
+                            body: JSON.stringify({ scoutId: data.scoutId })
+                        });
+
+                        var payload = await response.json();
+                        if (!response.ok || !payload.success) {
+                            setFeedback(response.status === 404 || response.status === 409 ? 'warning' : 'danger', payload.message || "Impossible d'ajouter le scout a l'activite.");
+                            button.disabled = false;
+                            return;
+                        }
+
+                        clearScanActionArea();
+                        setFeedback('success', payload.message);
+                        window.setTimeout(function () {
+                            window.location.reload();
+                        }, 450);
+                    } catch (error) {
+                        setFeedback('danger', "Impossible d'ajouter le scout a l'activite pour le moment.");
+                        button.disabled = false;
+                    }
+                });
+
+                wrapper.appendChild(text);
+                wrapper.appendChild(button);
+                actionArea.appendChild(wrapper);
             }
 
             function stopScanner() {
@@ -576,6 +663,8 @@
                     return;
                 }
 
+                clearScanActionArea();
+
                 try {
                     var response = await fetch(scanUrl, {
                         method: 'POST',
@@ -590,9 +679,13 @@
 
                     if (!response.ok || !data.success) {
                         setFeedback(response.status === 404 || response.status === 409 ? 'warning' : 'danger', data.message || 'Le scan a echoue.');
+                        if (response.status === 409 && data.canAddParticipant) {
+                            renderAddParticipantAction(data);
+                        }
                         return;
                     }
 
+                    clearScanActionArea();
                     updateParticipantCard(data);
                     updateCount('presents', data.presents);
                     updateCount('absents', data.absents);
@@ -741,4 +834,3 @@
         })();
     </script>
 }
-

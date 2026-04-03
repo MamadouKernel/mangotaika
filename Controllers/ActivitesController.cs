@@ -235,6 +235,19 @@ public class ActivitesController(
     {
         var a = await db.Activites.FindAsync(id);
         if (a is null || (a.Statut != StatutActivite.Terminee && a.Statut != StatutActivite.Rejetee)) return NotFound();
+
+        if (a.Statut == StatutActivite.Terminee && !a.DateCloturePointage.HasValue)
+        {
+            a.DateCloturePointage = DateTime.UtcNow;
+            db.CommentairesActivite.Add(new CommentaireActivite
+            {
+                Id = Guid.NewGuid(),
+                ActiviteId = id,
+                AuteurId = UserId,
+                Contenu = "Pointage cloture automatiquement lors de l'archivage de l'activite.",
+                TypeAction = "Pointage"
+            });
+        }
         a.Statut = StatutActivite.Archivee;
         db.CommentairesActivite.Add(new CommentaireActivite
         {
@@ -592,10 +605,14 @@ public class ActivitesController(
 
         if (participant is null)
         {
-            return NotFound(new PresenceScoutScanResponse
+            return Conflict(new PresenceScoutScanResponse
             {
                 Success = false,
-                Message = $"{scout.Prenom} {scout.Nom} n'est pas inscrit a cette activite."
+                CanAddParticipant = true,
+                ScoutId = scout.Id,
+                ScoutName = $"{scout.Prenom} {scout.Nom}",
+                Matricule = scout.Matricule,
+                Message = $"{scout.Prenom} {scout.Nom} n'est pas inscrit a cette activite. Vous pouvez l'ajouter puis le marquer present."
             });
         }
 
@@ -624,6 +641,119 @@ public class ActivitesController(
             Success = true,
             Message = message,
             ParticipantId = participant.Id,
+            ScoutId = scout.Id,
+            ScoutName = $"{scout.Prenom} {scout.Nom}",
+            Matricule = scout.Matricule,
+            PreviousPresence = previousPresence.ToString(),
+            CurrentPresence = StatutPresence.Present.ToString(),
+            Presents = counts.Presents,
+            Absents = counts.Absents,
+            Excuses = counts.Excuses,
+            Pending = counts.Pending
+        });
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    public async Task<IActionResult> AjouterParticipantEtMarquerPresent(Guid id, [FromBody] PresenceScoutAddRequest request)
+    {
+        if (request is null || request.ScoutId == Guid.Empty)
+        {
+            return BadRequest(new PresenceScoutScanResponse
+            {
+                Success = false,
+                Message = "Le scout a ajouter n'est pas valide."
+            });
+        }
+
+        var activite = await db.Activites.FirstOrDefaultAsync(a => a.Id == id && !a.EstSupprime);
+        if (activite is null)
+        {
+            return NotFound(new PresenceScoutScanResponse
+            {
+                Success = false,
+                Message = "Activite introuvable."
+            });
+        }
+
+        if (!PointageEstAccessible(activite))
+        {
+            return Conflict(new PresenceScoutScanResponse
+            {
+                Success = false,
+                Message = "Le pointage n'est disponible que pour une activite en cours ou terminee."
+            });
+        }
+
+        if (activite.DateCloturePointage.HasValue)
+        {
+            return Conflict(new PresenceScoutScanResponse
+            {
+                Success = false,
+                Message = "Le pointage est cloture. Reouvrez-le avant d'ajouter un participant tardif."
+            });
+        }
+
+        var scout = await db.Scouts.FirstOrDefaultAsync(s => s.Id == request.ScoutId && s.IsActive);
+        if (scout is null)
+        {
+            return NotFound(new PresenceScoutScanResponse
+            {
+                Success = false,
+                Message = "Scout introuvable ou inactif."
+            });
+        }
+
+        var participant = await db.ParticipantsActivite
+            .Include(p => p.Scout)
+            .FirstOrDefaultAsync(p => p.ActiviteId == id && p.ScoutId == scout.Id);
+
+        var previousPresence = StatutPresence.Inscrit;
+        if (participant is null)
+        {
+            participant = new ParticipantActivite
+            {
+                Id = Guid.NewGuid(),
+                ActiviteId = id,
+                ScoutId = scout.Id,
+                Presence = StatutPresence.Present
+            };
+            db.ParticipantsActivite.Add(participant);
+            db.CommentairesActivite.Add(new CommentaireActivite
+            {
+                Id = Guid.NewGuid(),
+                ActiviteId = id,
+                AuteurId = UserId,
+                Contenu = $"Participant tardif ajoute puis marque present : {scout.Prenom} {scout.Nom}.",
+                TypeAction = "Pointage"
+            });
+        }
+        else
+        {
+            previousPresence = participant.Presence;
+            participant.Presence = StatutPresence.Present;
+        }
+
+        await db.SaveChangesAsync();
+
+        var counts = await db.ParticipantsActivite
+            .Where(p => p.ActiviteId == id)
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Presents = g.Count(p => p.Presence == StatutPresence.Present),
+                Absents = g.Count(p => p.Presence == StatutPresence.Absent),
+                Excuses = g.Count(p => p.Presence == StatutPresence.Excuse),
+                Pending = g.Count(p => p.Presence == StatutPresence.Inscrit)
+            })
+            .FirstAsync();
+
+        return Json(new PresenceScoutScanResponse
+        {
+            Success = true,
+            Message = $"{scout.Prenom} {scout.Nom} a ete ajoute a l'activite puis marque present.",
+            ParticipantId = participant.Id,
+            ScoutId = scout.Id,
             ScoutName = $"{scout.Prenom} {scout.Nom}",
             Matricule = scout.Matricule,
             PreviousPresence = previousPresence.ToString(),
@@ -684,3 +814,4 @@ public class ActivitesController(
         return RedirectToAction(nameof(Index));
     }
 }
+
