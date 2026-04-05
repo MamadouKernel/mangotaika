@@ -133,12 +133,12 @@ public sealed class GroupeServiceIntegrationTests
         dto.NombreMembres.Should().Be(4);
         dto.NombreFilles.Should().Be(2);
         dto.NombreGarcons.Should().Be(2);
-        dto.Jeunes.Total.Should().Be(2);
-        dto.Jeunes.NombreFeminin.Should().Be(1);
-        dto.Jeunes.NombreMasculin.Should().Be(1);
-        dto.Adultes.Total.Should().Be(2);
-        dto.Adultes.NombreFeminin.Should().Be(1);
-        dto.Adultes.NombreMasculin.Should().Be(1);
+        dto.Jeunes.Total.Should().Be(4);
+        dto.Jeunes.NombreFeminin.Should().Be(2);
+        dto.Jeunes.NombreMasculin.Should().Be(2);
+        dto.Adultes.Total.Should().Be(0);
+        dto.Adultes.NombreFeminin.Should().Be(0);
+        dto.Adultes.NombreMasculin.Should().Be(0);
 
         dto.BranchesScouts.Should().HaveCount(2);
         dto.BranchesScouts.Should().ContainSingle(b =>
@@ -153,8 +153,8 @@ public sealed class GroupeServiceIntegrationTests
             b.NombreScouts == 2 &&
             b.NombreFilles == 1 &&
             b.NombreGarcons == 1 &&
-            b.Jeunes.Total == 0 &&
-            b.Adultes.Total == 2);
+            b.Jeunes.Total == 2 &&
+            b.Adultes.Total == 0);
     }
 
     private static Scout CreateScout(Guid groupeId, Guid brancheId, string matricule, DateTime dateNaissance, string sexe)
@@ -225,4 +225,5 @@ public sealed class GroupeServiceIntegrationTests
         inheritedBranches.Should().OnlyContain(b => b.ChefUniteId == null && b.NomChefUnite == null);
     }
 }
+
 

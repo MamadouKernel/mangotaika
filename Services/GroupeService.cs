@@ -10,10 +10,33 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
 {
     public async Task<List<GroupeDto>> GetAllAsync()
     {
-        return await db.Groupes
+        var groupes = await db.Groupes
             .Include(g => g.Responsable)
             .Where(g => g.IsActive)
-            .Select(g => new GroupeDto
+            .OrderBy(g => g.Nom)
+            .ToListAsync();
+
+        var groupeIds = groupes.Select(g => g.Id).ToList();
+        var scouts = await db.Scouts
+            .Include(s => s.Branche)
+            .Where(s => s.IsActive && s.GroupeId.HasValue && groupeIds.Contains(s.GroupeId.Value))
+            .ToListAsync();
+        var branches = await db.Branches
+            .Where(b => b.IsActive && groupeIds.Contains(b.GroupeId))
+            .ToListAsync();
+
+        return groupes.Select(g =>
+        {
+            var groupScouts = scouts.Where(s => s.GroupeId == g.Id).ToList();
+            var chefGroupeScout = FindChefGroupeScout(g, groupScouts);
+            var groupBranches = branches
+                .Where(b => b.GroupeId == g.Id)
+                .OrderBy(b => BranchOrdering.GetSortWeight(b.Nom))
+                .ThenBy(b => b.AgeMin ?? int.MaxValue)
+                .ThenBy(b => b.Nom)
+                .ToList();
+
+            return new GroupeDto
             {
                 Id = g.Id,
                 Nom = g.Nom,
@@ -22,27 +45,30 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
                 Latitude = g.Latitude,
                 Longitude = g.Longitude,
                 Adresse = g.Adresse,
-                NomChefGroupe = g.NomChefGroupe != null && g.NomChefGroupe != string.Empty
-                    ? g.NomChefGroupe
-                    : (g.Responsable != null ? g.Responsable.Prenom + " " + g.Responsable.Nom : null),
-                ResponsableId = g.ResponsableId,
-                ContactChefGroupe = NormalizeOptional(g.Responsable != null ? g.Responsable.PhoneNumber : null),
-                ResponsablePhotoUrl = NormalizeOptional(g.Responsable != null ? g.Responsable.PhotoUrl : null),
-                NombreMembres = db.Scouts.Count(s => s.GroupeId == g.Id && s.IsActive),
-                BranchesScouts = db.Branches
-                    .Where(b => b.GroupeId == g.Id && b.IsActive)
-                    .Select(b => new BrancheScoutCountDto
+                NomChefGroupe = chefGroupeScout != null
+                    ? BuildScoutDisplayName(chefGroupeScout)
+                    : BuildChefGroupeName(
+                        g.NomChefGroupe,
+                        g.Responsable != null ? $"{g.Responsable.Prenom} {g.Responsable.Nom}" : null),
+                ChefGroupeScoutId = chefGroupeScout?.Id,
+                ResponsableId = chefGroupeScout?.UserId ?? g.ResponsableId,
+                ContactChefGroupe = NormalizeOptional(chefGroupeScout?.Telephone) ?? NormalizeOptional(g.Responsable?.PhoneNumber),
+                ResponsablePhotoUrl = NormalizeOptional(chefGroupeScout?.PhotoUrl) ?? NormalizeOptional(g.Responsable?.PhotoUrl),
+                NombreMembres = groupScouts.Count,
+                BranchesScouts = groupBranches.Select(b =>
+                {
+                    var branchScouts = groupScouts.Where(s => s.BrancheId == b.Id).ToList();
+                    return new BrancheScoutCountDto
                     {
                         Nom = b.Nom,
-                        NombreScouts = db.Scouts.Count(s => s.BrancheId == b.Id && s.IsActive),
-                        NombreFilles = db.Scouts.Count(s => s.BrancheId == b.Id && s.IsActive && (
-                            s.Sexe == "F" || s.Sexe == "Feminin" || s.Sexe == "Fille")),
-                        NombreGarcons = db.Scouts.Count(s => s.BrancheId == b.Id && s.IsActive && (
-                            s.Sexe == "M" || s.Sexe == "Masculin" || s.Sexe == "Garcon")),
+                        NombreScouts = branchScouts.Count,
+                        NombreFilles = branchScouts.Count(s => ClassifySexe(s.Sexe) == SexeCategory.Feminin),
+                        NombreGarcons = branchScouts.Count(s => ClassifySexe(s.Sexe) == SexeCategory.Masculin),
                         NomChefUnite = b.NomChefUnite
-                    }).ToList()
-            })
-            .ToListAsync();
+                    };
+                }).ToList()
+            };
+        }).ToList();
     }
 
     public async Task<GroupeDto?> GetByIdAsync(Guid id)
@@ -285,6 +311,8 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
     {
         var eligibleScouts = scouts
             .Where(s => IsChefGroupeScout(s, groupe))
+            .OrderBy(s => s.Nom)
+            .ThenBy(s => s.Prenom)
             .ToList();
 
         if (groupe.ResponsableId.HasValue)
@@ -296,7 +324,8 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
             }
         }
 
-        return eligibleScouts.FirstOrDefault(s => MatchesChefGroupeName(groupe.NomChefGroupe, s));
+        return eligibleScouts.FirstOrDefault(s => MatchesChefGroupeName(groupe.NomChefGroupe, s))
+            ?? eligibleScouts.FirstOrDefault();
     }
 
     private async Task<Scout?> GetChefGroupeScoutAsync(Groupe groupe, Guid? chefGroupeScoutId)
@@ -409,16 +438,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
 
     private static bool IsJeune(Scout scout)
     {
-        var today = DateTime.UtcNow.Date;
-        var birthDate = scout.DateNaissance.Date;
-        var age = today.Year - birthDate.Year;
-
-        if (birthDate > today.AddYears(-age))
-        {
-            age--;
-        }
-
-        return age < 18;
+        return ScoutTerritoryClassification.IsJeuneScout(scout);
     }
 
     private static SexeCategory ClassifySexe(string? sexe)
@@ -440,6 +460,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
         Masculin
     }
 }
+
 
 
 

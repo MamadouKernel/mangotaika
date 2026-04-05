@@ -138,10 +138,18 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
         dto.NombreScouts = scouts.Count;
         dto.NombreFilles = scouts.Count(s => ClassifySexe(s.Sexe) == SexeCategory.Feminin);
         dto.NombreGarcons = scouts.Count(s => ClassifySexe(s.Sexe) == SexeCategory.Masculin);
-        dto.Jeunes = BuildRepartition(scouts.Where(IsJeune));
-        dto.Adultes = BuildRepartition(scouts.Where(s => !IsJeune(s)));
 
         var relatedBranchesById = relatedBranches.ToDictionary(b => b.Id);
+        bool IsScoutJeune(Scout scout)
+        {
+            var brancheNom = scout.BrancheId.HasValue && relatedBranchesById.TryGetValue(scout.BrancheId.Value, out var branche)
+                ? branche.Nom
+                : selectedBranche.Nom;
+            return ScoutTerritoryClassification.IsJeuneScout(scout, brancheNom);
+        }
+
+        dto.Jeunes = BuildRepartition(scouts.Where(IsScoutJeune));
+        dto.Adultes = BuildRepartition(scouts.Where(s => !IsScoutJeune(s)));
 
         dto.TotauxParGroupes = relatedBranches
             .GroupBy(b => b.GroupeId)
@@ -161,10 +169,10 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
                     NombreScouts = groupScouts.Count,
                     NombreFilles = groupScouts.Count(s => ClassifySexe(s.Sexe) == SexeCategory.Feminin),
                     NombreGarcons = groupScouts.Count(s => ClassifySexe(s.Sexe) == SexeCategory.Masculin),
-                    NombreJeunes = groupScouts.Count(IsJeune),
-                    NombreAdultes = groupScouts.Count(s => !IsJeune(s)),
-                    Jeunes = BuildRepartition(groupScouts.Where(IsJeune)),
-                    Adultes = BuildRepartition(groupScouts.Where(s => !IsJeune(s)))
+                    NombreJeunes = groupScouts.Count(IsScoutJeune),
+                    NombreAdultes = groupScouts.Count(s => !IsScoutJeune(s)),
+                    Jeunes = BuildRepartition(groupScouts.Where(IsScoutJeune)),
+                    Adultes = BuildRepartition(groupScouts.Where(s => !IsScoutJeune(s)))
                 };
             })
             .OrderBy(summary => summary.NomGroupe)
@@ -362,19 +370,7 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
         return repartition;
     }
 
-    private static bool IsJeune(Scout scout)
-    {
-        var today = DateTime.UtcNow.Date;
-        var birthDate = scout.DateNaissance.Date;
-        var age = today.Year - birthDate.Year;
 
-        if (birthDate > today.AddYears(-age))
-        {
-            age--;
-        }
-
-        return age < 18;
-    }
 
     private static SexeCategory ClassifySexe(string? sexe)
     {
@@ -395,6 +391,8 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
         Masculin
     }
 }
+
+
 
 
 
