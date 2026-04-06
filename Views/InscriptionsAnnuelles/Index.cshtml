@@ -1,4 +1,4 @@
-@using MangoTaika.Data.Entities
+﻿@using MangoTaika.Data.Entities
 @using MangoTaika.DTOs
 @model List<InscriptionAnnuelleScout>
 @{
@@ -15,6 +15,10 @@
     var importReport = ViewBag.ImportReport as InscriptionAnnuelleImportResultDto;
     var totalFiltered = ViewData["PaginationTotal"] is int total ? total : Model.Count;
     var shouldOpenImportModal = !string.IsNullOrWhiteSpace(importError);
+    const int importPreviewLimit = 12;
+    var createdPreview = importReport?.CreatedEntries.Take(importPreviewLimit).ToList() ?? [];
+    var updatedPreview = importReport?.UpdatedEntries.Take(importPreviewLimit).ToList() ?? [];
+    var errorPreview = importReport?.Errors.Take(importPreviewLimit).ToList() ?? [];
 }
 
 <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
@@ -43,47 +47,117 @@
 
 @if (importReport is not null)
 {
-    <div class="alert alert-warning border-0 mb-3">
-        <div class="fw-semibold">
-            @importReport.CreatedCount creee(s), @importReport.UpdatedCount mise(s) a jour, @importReport.SkippedCount ligne(s) ignoree(s).
+    <div class="card-3d p-4 mb-4 annual-import-report">
+        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+            <div>
+                <span class="annual-import-report__eyebrow">
+                    <i class="bi bi-cloud-check"></i> Rapport d'import
+                </span>
+                <h5 class="mb-1">Import annuel termine</h5>
+                <p class="text-muted-custom mb-0">
+                    @importReport.CreatedCount creation(s), @importReport.UpdatedCount mise(s) a jour et @importReport.SkippedCount ligne(s) non integree(s).
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <span class="badge-3d badge-soumise">@importReport.CreatedCount creee(s)</span>
+                <span class="badge-3d badge-validee">@importReport.UpdatedCount mise(s) a jour</span>
+                <span class="badge-3d badge-danger-soft">@importReport.SkippedCount ignoree(s)</span>
+            </div>
+        </div>
+
+        <div class="annual-import-report__metrics">
+            <article class="annual-import-report__metric annual-import-report__metric--created">
+                <span class="annual-import-report__metric-label">Creees</span>
+                <strong>@importReport.CreatedCount</strong>
+                <small>Nouvelles inscriptions annuelles ajoutees.</small>
+            </article>
+            <article class="annual-import-report__metric annual-import-report__metric--updated">
+                <span class="annual-import-report__metric-label">Mises a jour</span>
+                <strong>@importReport.UpdatedCount</strong>
+                <small>Inscriptions existantes synchronisees.</small>
+            </article>
+            <article class="annual-import-report__metric annual-import-report__metric--skipped">
+                <span class="annual-import-report__metric-label">Ignorees</span>
+                <strong>@importReport.SkippedCount</strong>
+                <small>Lignes a corriger avant reimport.</small>
+            </article>
         </div>
 
         @if (importReport.CreatedEntries.Any())
         {
-            <details class="mt-3" open>
+            <details class="mt-3 annual-import-report__details">
                 <summary class="fw-semibold">Inscriptions creees (@importReport.CreatedEntries.Count)</summary>
-                <div class="d-flex flex-wrap gap-2 mt-2">
-                    @foreach (var entry in importReport.CreatedEntries)
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    @foreach (var entry in createdPreview)
                     {
                         <span class="badge-3d badge-soumise">@entry</span>
                     }
                 </div>
+                @if (importReport.CreatedEntries.Count > importPreviewLimit)
+                {
+                    <div id="annual-created-rest" class="d-none d-flex flex-wrap gap-2 mt-2">
+                        @foreach (var entry in importReport.CreatedEntries.Skip(importPreviewLimit))
+                        {
+                            <span class="badge-3d badge-soumise">@entry</span>
+                        }
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-or mt-3" data-annual-toggle="annual-created-rest" data-annual-more-label="Voir les @(importReport.CreatedEntries.Count - importPreviewLimit) autres" data-annual-less-label="Masquer la liste">
+                        Voir les @(importReport.CreatedEntries.Count - importPreviewLimit) autres
+                    </button>
+                }
             </details>
         }
 
         @if (importReport.UpdatedEntries.Any())
         {
-            <details class="mt-3" open>
+            <details class="mt-3 annual-import-report__details">
                 <summary class="fw-semibold">Inscriptions mises a jour (@importReport.UpdatedEntries.Count)</summary>
-                <div class="d-flex flex-wrap gap-2 mt-2">
-                    @foreach (var entry in importReport.UpdatedEntries)
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    @foreach (var entry in updatedPreview)
                     {
                         <span class="badge-3d badge-validee">@entry</span>
                     }
                 </div>
+                @if (importReport.UpdatedEntries.Count > importPreviewLimit)
+                {
+                    <div id="annual-updated-rest" class="d-none d-flex flex-wrap gap-2 mt-2">
+                        @foreach (var entry in importReport.UpdatedEntries.Skip(importPreviewLimit))
+                        {
+                            <span class="badge-3d badge-validee">@entry</span>
+                        }
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-or mt-3" data-annual-toggle="annual-updated-rest" data-annual-more-label="Voir les @(importReport.UpdatedEntries.Count - importPreviewLimit) autres" data-annual-less-label="Masquer la liste">
+                        Voir les @(importReport.UpdatedEntries.Count - importPreviewLimit) autres
+                    </button>
+                }
             </details>
         }
 
         @if (importReport.Errors.Any())
         {
-            <details class="mt-3" open>
+            <details class="mt-3 annual-import-report__details annual-import-report__details--errors">
                 <summary class="fw-semibold">Lignes non enregistrees (@importReport.Errors.Count)</summary>
-                <ul class="mb-0 mt-2 ps-3">
-                    @foreach (var error in importReport.Errors)
+                <p class="text-muted-custom small mt-3 mb-2">
+                    Ces lignes n'ont pas ete integrees. En general, il faut verifier le rapprochement avec un scout deja existant, le groupe ou la branche du fichier.
+                </p>
+                <ul class="mb-0 mt-2 ps-3 annual-import-report__errors">
+                    @foreach (var error in errorPreview)
                     {
                         <li>@error.DisplayMessage</li>
                     }
                 </ul>
+                @if (importReport.Errors.Count > importPreviewLimit)
+                {
+                    <ul id="annual-errors-rest" class="d-none mt-2 ps-3 annual-import-report__errors">
+                        @foreach (var error in importReport.Errors.Skip(importPreviewLimit))
+                        {
+                            <li>@error.DisplayMessage</li>
+                        }
+                    </ul>
+                    <button type="button" class="btn btn-sm btn-outline-danger mt-3" data-annual-toggle="annual-errors-rest" data-annual-more-label="Voir les @(importReport.Errors.Count - importPreviewLimit) autres erreurs" data-annual-less-label="Masquer les erreurs">
+                        Voir les @(importReport.Errors.Count - importPreviewLimit) autres erreurs
+                    </button>
+                }
             </details>
         }
     </div>
@@ -261,6 +335,106 @@
         z-index: 1;
     }
 
+    .annual-import-report {
+        background: linear-gradient(135deg, rgba(255, 249, 224, 0.96), rgba(255, 252, 242, 0.98));
+        border: 1px solid rgba(184, 152, 47, 0.22);
+    }
+
+    .annual-import-report__eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(95, 132, 46, 0.12);
+        color: #5f842e;
+        font-size: 0.85rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+    }
+
+    .annual-import-report__metrics {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 20px;
+    }
+
+    .annual-import-report__metric {
+        padding: 18px;
+        border-radius: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: rgba(255, 255, 255, 0.72);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .annual-import-report__metric strong {
+        font-size: 2rem;
+        line-height: 1;
+        color: #1f2937;
+    }
+
+    .annual-import-report__metric small {
+        color: #64748b;
+    }
+
+    .annual-import-report__metric-label {
+        font-size: 0.82rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: #64748b;
+    }
+
+    .annual-import-report__metric--created {
+        box-shadow: inset 0 0 0 1px rgba(141, 181, 95, 0.18);
+    }
+
+    .annual-import-report__metric--updated {
+        box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.14);
+    }
+
+    .annual-import-report__metric--skipped {
+        box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.14);
+    }
+
+    .annual-import-report__details {
+        margin-top: 18px;
+        padding: 16px 18px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+
+    .annual-import-report__details summary {
+        cursor: pointer;
+        list-style: none;
+    }
+
+    .annual-import-report__details summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .annual-import-report__details--errors {
+        border-color: rgba(239, 68, 68, 0.2);
+        background: rgba(255, 250, 250, 0.85);
+    }
+
+    .annual-import-report__errors {
+        display: grid;
+        gap: 8px;
+    }
+
+    .badge-danger-soft {
+        background: rgba(239, 68, 68, 0.12);
+        color: #b91c1c;
+        border: 1px solid rgba(239, 68, 68, 0.18);
+    }
+
     .annual-import-modal {
         position: fixed;
         inset: 0;
@@ -311,6 +485,10 @@
     }
 
     @@media (max-width: 768px) {
+        .annual-import-report__metrics {
+            grid-template-columns: 1fr;
+        }
+
         .annual-import-modal__dialog {
             width: calc(100vw - 20px);
             margin-top: 3vh;
@@ -351,6 +529,23 @@
                     setImportModalOpen(true);
                 }
             }
+
+            document.querySelectorAll('[data-annual-toggle]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    const targetId = button.getAttribute('data-annual-toggle');
+                    const target = targetId ? document.getElementById(targetId) : null;
+                    if (!target) {
+                        return;
+                    }
+
+                    const isHidden = target.classList.contains('d-none');
+                    target.classList.toggle('d-none', !isHidden);
+                    button.textContent = isHidden
+                        ? (button.dataset.annualLessLabel || 'Masquer')
+                        : (button.dataset.annualMoreLabel || 'Voir plus');
+                });
+            });
         })();
     </script>
 }
+

@@ -1,6 +1,7 @@
 ﻿using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
+using MangoTaika.Helpers;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
@@ -86,7 +87,17 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
 
     private async Task FillEncadrementDashboardAsync(DashboardDto dto, bool includeMessages, bool includePartenaires)
     {
-        dto.TotalScouts = await db.Scouts.CountAsync(s => s.IsActive);
+        var activeScouts = await db.Scouts
+            .AsNoTracking()
+            .Include(s => s.Branche)
+            .Where(s => s.IsActive)
+            .ToListAsync();
+
+        dto.TotalScouts = activeScouts.Count;
+        dto.TotalJeunes = activeScouts.Count(s => ScoutTerritoryClassification.IsJeuneScout(s));
+        dto.TotalAdultes = dto.TotalScouts - dto.TotalJeunes;
+        dto.TotalFilles = activeScouts.Count(IsFemaleScout);
+        dto.TotalGarcons = activeScouts.Count(IsMaleScout);
         dto.TotalGroupes = await db.Groupes.CountAsync(g => g.IsActive);
         dto.TotalBranches = await db.Branches.CountAsync(b => b.IsActive);
         dto.ActivitesEnCours = await db.Activites.CountAsync(a => !a.EstSupprime && (a.Statut == StatutActivite.Validee || a.Statut == StatutActivite.EnCours));
@@ -146,6 +157,28 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
                 NomGroupe = a.Groupe != null ? a.Groupe.Nom : null
             })
             .ToListAsync();
+    }
+
+    private static bool IsFemaleScout(Scout scout)
+    {
+        var sexe = DatabaseText.NormalizeSearchKey(scout.Sexe);
+        return sexe == "F"
+            || sexe == "FEMININ"
+            || sexe == "FEMININE"
+            || sexe == "FILLE"
+            || sexe == "FEMME"
+            || sexe == "GIRL";
+    }
+
+    private static bool IsMaleScout(Scout scout)
+    {
+        var sexe = DatabaseText.NormalizeSearchKey(scout.Sexe);
+        return sexe == "M"
+            || sexe == "MASCULIN"
+            || sexe == "MASCULINE"
+            || sexe == "GARCON"
+            || sexe == "HOMME"
+            || sexe == "BOY";
     }
 
     private async Task FillScoutDashboardAsync(DashboardDto dto, Guid? userId)

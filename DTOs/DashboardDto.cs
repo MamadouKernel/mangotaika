@@ -9,6 +9,10 @@ public class DashboardDto
     public string SousTitreBienvenue { get; set; } = string.Empty;
     public string? MessageInfo { get; set; }
     public int TotalScouts { get; set; }
+    public int TotalJeunes { get; set; }
+    public int TotalAdultes { get; set; }
+    public int TotalFilles { get; set; }
+    public int TotalGarcons { get; set; }
     public int TotalGroupes { get; set; }
     public int TotalBranches { get; set; }
     public int ActivitesEnCours { get; set; }

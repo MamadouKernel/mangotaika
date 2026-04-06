@@ -380,7 +380,7 @@ public class CotisationsNationalesController(AppDbContext db, UserManager<Applic
                     ImportId = import.Id,
                     Import = import,
                     ScoutId = scout?.Id,
-                    Matricule = raisons.Count == 0 ? matriculeRapproche : matriculeImporte,
+                    Matricule = raisons.Count == 0 ? (matriculeRapproche ?? string.Empty) : (matriculeImporte ?? string.Empty),
                     NomImporte = string.IsNullOrWhiteSpace(nomComplet)
                         ? (scout is null ? null : $"{scout.Prenom} {scout.Nom}".Trim())
                         : nomComplet,
@@ -441,7 +441,7 @@ public class CotisationsNationalesController(AppDbContext db, UserManager<Applic
                     ImportId = import.Id,
                     Import = import,
                     ScoutId = scout.Id,
-                    Matricule = scout.Matricule,
+                    Matricule = scout.Matricule ?? string.Empty,
                     NomImporte = $"{scout.Prenom} {scout.Nom}".Trim(),
                     Statut = StatutLigneCotisationNationale.NonAjour,
                     Motif = "Absent du fichier national.",

@@ -83,7 +83,7 @@ public class ActiviteService(AppDbContext db) : IActiviteService
                 Id = p.Id,
                 ScoutId = p.ScoutId,
                 NomComplet = $"{p.Scout.Prenom} {p.Scout.Nom}",
-                Matricule = p.Scout.Matricule,
+                Matricule = p.Scout.Matricule ?? string.Empty,
                 NomBranche = p.Scout.Branche?.Nom,
                 Presence = p.Presence
             }).OrderBy(p => p.NomComplet).ToList(),

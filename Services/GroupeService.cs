@@ -146,7 +146,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
                 .ThenBy(x => x.Scout.Prenom)
                 .Select(x => new GroupeMembreDto
                 {
-                    Matricule = x.Scout.Matricule,
+                    Matricule = x.Scout.Matricule ?? string.Empty,
                     Nom = x.Scout.Nom,
                     Prenoms = x.Scout.Prenom,
                     Branche = x.Branche,

@@ -28,33 +28,56 @@
 
 @if (isAdminGest)
 {
-    <div class="row g-4 mb-4">
-        <div class="col-md-3 col-6">
-            <div class="stat-card-3d bg-scouts">
-                <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
-                <h2>@Model.TotalScouts</h2>
-                <p>Scouts actifs</p>
+    <div class="row g-4 mb-4 dashboard-priority-row">
+        <div class="col-12 col-xl-6">
+            <div class="stat-card-3d bg-scouts stat-card-3d--feature h-100">
+                <div class="dashboard-feature-top">
+                    <div>
+                        <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+                        <span class="dashboard-feature-kicker">Lecture prioritaire</span>
+                        <p class="dashboard-feature-title">Scouts actifs</p>
+                    </div>
+                    <h2>@Model.TotalScouts</h2>
+                </div>
+                <div class="dashboard-feature-breakdown">
+                    <div class="dashboard-feature-breakdown__item">
+                        <span>Jeunes</span>
+                        <strong>@Model.TotalJeunes</strong>
+                    </div>
+                    <div class="dashboard-feature-breakdown__item">
+                        <span>Adultes</span>
+                        <strong>@Model.TotalAdultes</strong>
+                    </div>
+                    <div class="dashboard-feature-breakdown__item">
+                        <span>Filles</span>
+                        <strong>@Model.TotalFilles</strong>
+                    </div>
+                    <div class="dashboard-feature-breakdown__item">
+                        <span>Garcons</span>
+                        <strong>@Model.TotalGarcons</strong>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="col-md-3 col-6">
-            <div class="stat-card-3d bg-groupes">
-                <div class="stat-icon"><i class="bi bi-building"></i></div>
-                <h2>@Model.TotalGroupes</h2>
-                <p>Groupes</p>
-            </div>
-        </div>
-        <div class="col-md-3 col-6">
-            <div class="stat-card-3d bg-activites">
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="stat-card-3d bg-activites h-100">
                 <div class="stat-icon"><i class="bi bi-calendar-event-fill"></i></div>
                 <h2>@Model.ActivitesEnCours</h2>
                 <p>Activites ouvertes</p>
             </div>
         </div>
-        <div class="col-md-3 col-6">
-            <div class="stat-card-3d bg-tickets">
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="stat-card-3d bg-tickets h-100">
                 <div class="stat-icon"><i class="bi bi-ticket-detailed-fill"></i></div>
                 <h2>@Model.TicketsOuverts</h2>
                 <p>Tickets ouverts</p>
+            </div>
+        </div>
+        <div class="col-12 col-md-4 col-xl-2">
+            <div class="stat-card-3d bg-groupes h-100">
+                <div class="stat-icon"><i class="bi bi-building"></i></div>
+                <h2>@Model.TotalGroupes</h2>
+                <p>Groupes</p>
             </div>
         </div>
     </div>
@@ -257,33 +280,56 @@ else if (isAgentSupport)
 }
 else if (isSupervision)
 {
-    <div class="row g-4 mb-4">
-        <div class="col-md-3 col-6">
-            <div class="stat-card-3d bg-scouts">
-                <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
-                <h2>@Model.TotalScouts</h2>
-                <p>Scouts suivis</p>
+    <div class="row g-4 mb-4 dashboard-priority-row">
+        <div class="col-12 col-xl-6">
+            <div class="stat-card-3d bg-scouts stat-card-3d--feature h-100">
+                <div class="dashboard-feature-top">
+                    <div>
+                        <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+                        <span class="dashboard-feature-kicker">Lecture prioritaire</span>
+                        <p class="dashboard-feature-title">Scouts suivis</p>
+                    </div>
+                    <h2>@Model.TotalScouts</h2>
+                </div>
+                <div class="dashboard-feature-breakdown">
+                    <div class="dashboard-feature-breakdown__item">
+                        <span>Jeunes</span>
+                        <strong>@Model.TotalJeunes</strong>
+                    </div>
+                    <div class="dashboard-feature-breakdown__item">
+                        <span>Adultes</span>
+                        <strong>@Model.TotalAdultes</strong>
+                    </div>
+                    <div class="dashboard-feature-breakdown__item">
+                        <span>Filles</span>
+                        <strong>@Model.TotalFilles</strong>
+                    </div>
+                    <div class="dashboard-feature-breakdown__item">
+                        <span>Garcons</span>
+                        <strong>@Model.TotalGarcons</strong>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="col-md-3 col-6">
-            <div class="stat-card-3d bg-groupes">
-                <div class="stat-icon"><i class="bi bi-building"></i></div>
-                <h2>@Model.TotalGroupes</h2>
-                <p>Groupes actifs</p>
-            </div>
-        </div>
-        <div class="col-md-3 col-6">
-            <div class="stat-card-3d bg-activites">
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="stat-card-3d bg-activites h-100">
                 <div class="stat-icon"><i class="bi bi-calendar-event-fill"></i></div>
                 <h2>@Model.ActivitesEnCours</h2>
                 <p>Activites visibles</p>
             </div>
         </div>
-        <div class="col-md-3 col-6">
-            <div class="stat-card-3d bg-tickets">
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="stat-card-3d bg-tickets h-100">
                 <div class="stat-icon"><i class="bi bi-ticket-detailed-fill"></i></div>
                 <h2>@Model.TicketsOuverts</h2>
                 <p>Tickets support</p>
+            </div>
+        </div>
+        <div class="col-12 col-md-4 col-xl-2">
+            <div class="stat-card-3d bg-groupes h-100">
+                <div class="stat-icon"><i class="bi bi-building"></i></div>
+                <h2>@Model.TotalGroupes</h2>
+                <p>Groupes actifs</p>
             </div>
         </div>
     </div>
@@ -609,3 +655,101 @@ else if (isParent)
         }
     </div>
 </div>
+
+<style>
+    .dashboard-priority-row .stat-card-3d {
+        height: 100%;
+    }
+
+    .stat-card-3d--feature {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        min-height: 100%;
+        padding: 2rem;
+    }
+
+    .dashboard-feature-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .dashboard-feature-top h2 {
+        font-size: clamp(3rem, 5vw, 4.5rem);
+        margin: 0;
+        line-height: 0.92;
+        text-align: right;
+    }
+
+    .dashboard-feature-kicker {
+        display: inline-flex;
+        align-items: center;
+        margin-top: 0.35rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.16);
+        color: rgba(255,255,255,0.86);
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .dashboard-feature-title {
+        margin-top: 0.85rem !important;
+        font-size: 1.2rem !important;
+        font-weight: 800 !important;
+        color: #fff !important;
+    }
+
+    .dashboard-feature-breakdown {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.85rem;
+    }
+
+    .dashboard-feature-breakdown__item {
+        padding: 0.9rem 1rem;
+        border-radius: 14px;
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.12);
+        backdrop-filter: blur(2px);
+    }
+
+    .dashboard-feature-breakdown__item span {
+        display: block;
+        font-size: 0.82rem;
+        color: rgba(255,255,255,0.76);
+        margin-bottom: 0.25rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .dashboard-feature-breakdown__item strong {
+        font-size: 1.55rem;
+        line-height: 1;
+        color: #fff;
+        font-weight: 900;
+    }
+
+    @@media (max-width: 767.98px) {
+        .stat-card-3d--feature {
+            padding: 1.5rem;
+        }
+
+        .dashboard-feature-top {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .dashboard-feature-top h2 {
+            text-align: left;
+        }
+
+        .dashboard-feature-breakdown {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+</style>

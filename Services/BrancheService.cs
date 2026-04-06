@@ -187,7 +187,7 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
                 var branche = relatedBranchesById[s.BrancheId!.Value];
                 return new BrancheMembreDto
                 {
-                    Matricule = s.Matricule,
+                    Matricule = s.Matricule ?? string.Empty,
                     Nom = s.Nom,
                     Prenoms = s.Prenom,
                     Groupe = branche.Groupe?.Nom ?? "-",
