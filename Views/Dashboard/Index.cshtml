@@ -9,6 +9,7 @@
     var isParent = User.IsInRole("Parent");
     var solde = Model.TotalRecettes - Model.TotalDepenses;
     var anneeCourante = DateTime.UtcNow.Year;
+    const int groupesDashboardPageSize = 5;
 }
 
 <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
@@ -722,15 +723,18 @@ else if (isParent)
     <div class="col-md-6">
         @if (isAdminGest || isSupervision)
         {
-            <div class="card-3d p-4">
-                <h5 class="mb-3"><i class="bi bi-building text-or"></i> Derniers groupes</h5>
+            <div class="card-3d p-4" data-dashboard-group-list data-page-size="@groupesDashboardPageSize">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                    <h5 class="mb-0"><i class="bi bi-building text-or"></i> Groupes actifs</h5>
+                    <span class="dashboard-table-count">@Model.DerniersGroupes.Count groupe(s)</span>
+                </div>
                 <div class="table-responsive">
                     <table class="table-modern">
                         <thead><tr><th>Nom</th><th>Membres</th><th>Adresse</th></tr></thead>
                         <tbody>
                             @foreach (var g in Model.DerniersGroupes)
                             {
-                                <tr>
+                                <tr data-dashboard-group-row>
                                     <td>@g.Nom</td>
                                     <td><span class="badge-3d badge-soumise">@g.NombreMembres</span></td>
                                     <td>@(g.Adresse ?? "-")</td>
@@ -743,6 +747,18 @@ else if (isParent)
                         </tbody>
                     </table>
                 </div>
+                @if (Model.DerniersGroupes.Count > groupesDashboardPageSize)
+                {
+                    <div class="dashboard-table-pager" data-dashboard-group-pager>
+                        <button type="button" class="dashboard-table-pager__btn" data-dashboard-group-prev aria-label="Page precedente">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <span class="dashboard-table-pager__info" data-dashboard-group-info>Page 1</span>
+                        <button type="button" class="dashboard-table-pager__btn" data-dashboard-group-next aria-label="Page suivante">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                }
             </div>
         }
         else
@@ -995,6 +1011,57 @@ else if (isParent)
         color: #166534;
     }
 
+    .dashboard-table-count {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.35rem 0.65rem;
+        border-radius: 999px;
+        background: #f7faf4;
+        border: 1px solid rgba(95, 134, 44, 0.16);
+        color: var(--vert-logo);
+        font-size: 0.82rem;
+        font-weight: 700;
+    }
+
+    .dashboard-table-pager {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.65rem;
+        margin-top: 1rem;
+    }
+
+    .dashboard-table-pager__btn {
+        width: 36px;
+        height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        border: 1px solid rgba(95, 134, 44, 0.22);
+        background: #fff;
+        color: var(--vert-logo);
+        transition: all 0.2s ease;
+    }
+
+    .dashboard-table-pager__btn:hover:not(:disabled) {
+        background: var(--vert-logo);
+        color: #fff;
+    }
+
+    .dashboard-table-pager__btn:disabled {
+        opacity: 0.42;
+        cursor: not-allowed;
+    }
+
+    .dashboard-table-pager__info {
+        min-width: 110px;
+        text-align: center;
+        color: var(--bleu-gris);
+        font-size: 0.9rem;
+        font-weight: 700;
+    }
+
     @@media (max-width: 767.98px) {
         .stat-card-3d--feature {
             padding: 1.5rem;
@@ -1039,5 +1106,63 @@ else if (isParent)
             min-height: 38px;
             justify-content: center;
         }
+
+        .dashboard-table-pager {
+            justify-content: center;
+        }
     }
 </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('[data-dashboard-group-list]').forEach((container) => {
+            const rows = Array.from(container.querySelectorAll('[data-dashboard-group-row]'));
+            const pageSize = Number.parseInt(container.dataset.pageSize || '5', 10);
+            const pager = container.querySelector('[data-dashboard-group-pager]');
+            if (!pager || rows.length <= pageSize) {
+                return;
+            }
+
+            const previousButton = pager.querySelector('[data-dashboard-group-prev]');
+            const nextButton = pager.querySelector('[data-dashboard-group-next]');
+            const info = pager.querySelector('[data-dashboard-group-info]');
+            const totalPages = Math.ceil(rows.length / pageSize);
+            let currentPage = 0;
+
+            const render = () => {
+                rows.forEach((row, index) => {
+                    const isVisible = index >= currentPage * pageSize && index < (currentPage + 1) * pageSize;
+                    row.hidden = !isVisible;
+                });
+
+                if (info) {
+                    info.textContent = `Page ${currentPage + 1} / ${totalPages}`;
+                }
+
+                if (previousButton) {
+                    previousButton.disabled = currentPage === 0;
+                }
+
+                if (nextButton) {
+                    nextButton.disabled = currentPage >= totalPages - 1;
+                }
+            };
+
+            previousButton?.addEventListener('click', () => {
+                if (currentPage > 0) {
+                    currentPage -= 1;
+                    render();
+                }
+            });
+
+            nextButton?.addEventListener('click', () => {
+                if (currentPage < totalPages - 1) {
+                    currentPage += 1;
+                    render();
+                }
+            });
+
+            render();
+        });
+    });
+</script>

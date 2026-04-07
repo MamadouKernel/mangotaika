@@ -151,8 +151,7 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
 
         dto.DerniersGroupes = await db.Groupes
             .Where(g => g.IsActive)
-            .OrderByDescending(g => g.DateCreation)
-            .Take(5)
+            .OrderBy(g => g.Nom)
             .Select(g => new GroupeDto
             {
                 Id = g.Id,
