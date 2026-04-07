@@ -204,10 +204,10 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
                 : "Population majoritairement jeune";
 
         var densite = dto.TotalGroupes > 0
-            ? $"{dto.MoyenneScoutsParGroupe:N1} scouts par groupe en moyenne"
-            : "aucun groupe actif";
+            ? $"Moyenne par groupe : {dto.MoyenneScoutsParGroupe:N1} scouts actifs."
+            : "Aucun groupe actif.";
 
-        return $"{dominante} : {dto.PartJeunesPercent:N1}% de jeunes, {dto.PartAdultesPercent:N1}% d'adultes et {densite}.";
+        return $"{dominante} : {dto.PartJeunesPercent:N1}% de jeunes et {dto.PartAdultesPercent:N1}% d'adultes. {densite}";
     }
 
     private static string BuildAlertInsight(DashboardDto dto, int anneeCourante)
