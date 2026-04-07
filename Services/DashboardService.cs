@@ -98,12 +98,27 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
         dto.TotalAdultes = dto.TotalScouts - dto.TotalJeunes;
         dto.TotalFilles = activeScouts.Count(IsFemaleScout);
         dto.TotalGarcons = activeScouts.Count(IsMaleScout);
+        dto.PartJeunesPercent = ComputePercent(dto.TotalJeunes, dto.TotalScouts);
+        dto.PartAdultesPercent = ComputePercent(dto.TotalAdultes, dto.TotalScouts);
+        dto.PartFillesPercent = ComputePercent(dto.TotalFilles, dto.TotalScouts);
+        dto.PartGarconsPercent = ComputePercent(dto.TotalGarcons, dto.TotalScouts);
         dto.TotalGroupes = await db.Groupes.CountAsync(g => g.IsActive);
+        dto.MoyenneScoutsParGroupe = dto.TotalGroupes > 0
+            ? Math.Round((double)dto.TotalScouts / dto.TotalGroupes, 1)
+            : 0;
         dto.TotalBranches = await db.Branches.CountAsync(b => b.IsActive);
         dto.ActivitesEnCours = await db.Activites.CountAsync(a => !a.EstSupprime && (a.Statut == StatutActivite.Validee || a.Statut == StatutActivite.EnCours));
         dto.TicketsOuverts = await db.Tickets.CountAsync(t => !t.EstSupprime && (t.Statut == StatutTicket.Ouvert || t.Statut == StatutTicket.EnCours));
         dto.DemandesAutorisationEnAttente = await db.DemandesAutorisation.CountAsync(d => d.Statut == StatutDemande.Soumise || d.Statut == StatutDemande.EnRevision);
         dto.DemandesGroupeEnAttente = await db.DemandesGroupe.CountAsync(d => d.Statut == StatutDemandeGroupe.EnAttente);
+        var anneeCourante = DateTime.UtcNow.Year;
+        dto.InscriptionsParoissialesEnAttente = await db.InscriptionsAnnuellesScouts.CountAsync(i => i.AnneeReference == anneeCourante && !i.InscriptionParoissialeValidee);
+        dto.CotisationsNationalesNonAjour = await db.InscriptionsAnnuellesScouts.CountAsync(i => i.AnneeReference == anneeCourante && !i.CotisationNationaleAjour);
+        dto.InscriptionsAnnuellesARegulariser = await db.InscriptionsAnnuellesScouts.CountAsync(i =>
+            i.AnneeReference == anneeCourante &&
+            (i.Statut != StatutInscriptionAnnuelle.Validee || !i.InscriptionParoissialeValidee || !i.CotisationNationaleAjour));
+        dto.LecturePopulation = BuildPopulationInsight(dto);
+        dto.LectureAlertes = BuildAlertInsight(dto, anneeCourante);
         dto.TotalCompetences = await db.Competences.CountAsync();
         dto.TotalProjetsAGR = await db.ProjetsAGR.CountAsync(p => !p.EstSupprime);
         dto.TotalPartenaires = includePartenaires
@@ -157,6 +172,74 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
                 NomGroupe = a.Groupe != null ? a.Groupe.Nom : null
             })
             .ToListAsync();
+    }
+
+    private static double ComputePercent(int part, int total)
+    {
+        return total == 0 ? 0 : Math.Round(part * 100d / total, 1);
+    }
+
+    private static string BuildPopulationInsight(DashboardDto dto)
+    {
+        if (dto.TotalScouts == 0)
+        {
+            return "Aucun scout actif n'est encore enregistre dans le district.";
+        }
+
+        var dominante = dto.PartJeunesPercent >= 75
+            ? "District tres majoritairement jeune"
+            : dto.PartAdultesPercent >= 35
+                ? "Encadrement adulte significatif"
+                : "Population majoritairement jeune";
+
+        var densite = dto.TotalGroupes > 0
+            ? $"{dto.MoyenneScoutsParGroupe:N1} scouts par groupe en moyenne"
+            : "aucun groupe actif";
+
+        return $"{dominante} : {dto.PartJeunesPercent:N1}% de jeunes, {dto.PartAdultesPercent:N1}% d'adultes et {densite}.";
+    }
+
+    private static string BuildAlertInsight(DashboardDto dto, int anneeCourante)
+    {
+        var alertes = new List<string>();
+
+        if (dto.DemandesAutorisationEnAttente > 0)
+        {
+            alertes.Add($"{dto.DemandesAutorisationEnAttente} demande(s) d'autorisation a traiter");
+        }
+
+        if (dto.DemandesGroupeEnAttente > 0)
+        {
+            alertes.Add($"{dto.DemandesGroupeEnAttente} demande(s) de groupe en attente");
+        }
+
+        if (dto.InscriptionsAnnuellesARegulariser > 0)
+        {
+            alertes.Add($"{dto.InscriptionsAnnuellesARegulariser} inscription(s) {anneeCourante}-{anneeCourante + 1} a regulariser");
+        }
+
+        if (dto.CotisationsNationalesNonAjour > 0)
+        {
+            alertes.Add($"{dto.CotisationsNationalesNonAjour} cotisation(s) nationale(s) non a jour");
+        }
+
+        if (dto.TicketsOuverts > 0)
+        {
+            alertes.Add($"{dto.TicketsOuverts} ticket(s) support encore ouvert(s)");
+        }
+
+        if (alertes.Count == 0)
+        {
+            return "Aucune alerte prioritaire pour le moment.";
+        }
+
+        var message = string.Join(" | ", alertes.Take(3));
+        if (alertes.Count > 3)
+        {
+            message += $" | +{alertes.Count - 3} autre(s) point(s)";
+        }
+
+        return message;
     }
 
     private static bool IsFemaleScout(Scout scout)

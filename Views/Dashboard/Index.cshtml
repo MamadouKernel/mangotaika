@@ -8,6 +8,7 @@
     var isScout = User.IsInRole("Scout");
     var isParent = User.IsInRole("Parent");
     var solde = Model.TotalRecettes - Model.TotalDepenses;
+    var anneeCourante = DateTime.UtcNow.Year;
 }
 
 <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
@@ -43,18 +44,22 @@
                     <div class="dashboard-feature-breakdown__item">
                         <span>Jeunes</span>
                         <strong>@Model.TotalJeunes</strong>
+                        <small>@Model.PartJeunesPercent.ToString("N1")% du total</small>
                     </div>
                     <div class="dashboard-feature-breakdown__item">
                         <span>Adultes</span>
                         <strong>@Model.TotalAdultes</strong>
+                        <small>@Model.PartAdultesPercent.ToString("N1")% du total</small>
                     </div>
                     <div class="dashboard-feature-breakdown__item">
                         <span>Filles</span>
                         <strong>@Model.TotalFilles</strong>
+                        <small>@Model.PartFillesPercent.ToString("N1")% du total</small>
                     </div>
                     <div class="dashboard-feature-breakdown__item">
                         <span>Garcons</span>
                         <strong>@Model.TotalGarcons</strong>
+                        <small>@Model.PartGarconsPercent.ToString("N1")% du total</small>
                     </div>
                 </div>
             </div>
@@ -78,6 +83,47 @@
                 <div class="stat-icon"><i class="bi bi-building"></i></div>
                 <h2>@Model.TotalGroupes</h2>
                 <p>Groupes</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-7">
+            <div class="card-3d dashboard-story-card p-4 h-100">
+                <div class="dashboard-section-kicker">Lecture metier</div>
+                <h4 class="dashboard-story-card__title">Population du district</h4>
+                <p class="text-muted-custom mb-3">@Model.LecturePopulation</p>
+                <div class="dashboard-pill-list">
+                    <span class="dashboard-pill"><strong>@Model.TotalBranches</strong> branches actives</span>
+                    <span class="dashboard-pill"><strong>@Model.MoyenneScoutsParGroupe.ToString("N1")</strong> scouts par groupe</span>
+                    <span class="dashboard-pill"><strong>@Model.PartFillesPercent.ToString("N1")%</strong> filles</span>
+                    <span class="dashboard-pill"><strong>@Model.PartGarconsPercent.ToString("N1")%</strong> garcons</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card-3d dashboard-alert-card p-4 h-100">
+                <div class="dashboard-section-kicker">Alertes du moment</div>
+                <h4 class="dashboard-story-card__title">Priorites @anneeCourante</h4>
+                <p class="text-muted-custom mb-3">@Model.LectureAlertes</p>
+                <div class="dashboard-alert-grid">
+                    <div class="dashboard-alert-metric @(Model.DemandesAutorisationEnAttente > 0 ? "dashboard-alert-metric--warn" : "dashboard-alert-metric--ok")">
+                        <span>Demandes</span>
+                        <strong>@Model.DemandesAutorisationEnAttente</strong>
+                    </div>
+                    <div class="dashboard-alert-metric @(Model.DemandesGroupeEnAttente > 0 ? "dashboard-alert-metric--warn" : "dashboard-alert-metric--ok")">
+                        <span>Demandes groupe</span>
+                        <strong>@Model.DemandesGroupeEnAttente</strong>
+                    </div>
+                    <div class="dashboard-alert-metric @(Model.InscriptionsParoissialesEnAttente > 0 ? "dashboard-alert-metric--warn" : "dashboard-alert-metric--ok")">
+                        <span>Paroissiales en attente</span>
+                        <strong>@Model.InscriptionsParoissialesEnAttente</strong>
+                    </div>
+                    <div class="dashboard-alert-metric @(Model.CotisationsNationalesNonAjour > 0 ? "dashboard-alert-metric--warn" : "dashboard-alert-metric--ok")">
+                        <span>Cotisations non a jour</span>
+                        <strong>@Model.CotisationsNationalesNonAjour</strong>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -295,18 +341,22 @@ else if (isSupervision)
                     <div class="dashboard-feature-breakdown__item">
                         <span>Jeunes</span>
                         <strong>@Model.TotalJeunes</strong>
+                        <small>@Model.PartJeunesPercent.ToString("N1")% du total</small>
                     </div>
                     <div class="dashboard-feature-breakdown__item">
                         <span>Adultes</span>
                         <strong>@Model.TotalAdultes</strong>
+                        <small>@Model.PartAdultesPercent.ToString("N1")% du total</small>
                     </div>
                     <div class="dashboard-feature-breakdown__item">
                         <span>Filles</span>
                         <strong>@Model.TotalFilles</strong>
+                        <small>@Model.PartFillesPercent.ToString("N1")% du total</small>
                     </div>
                     <div class="dashboard-feature-breakdown__item">
                         <span>Garcons</span>
                         <strong>@Model.TotalGarcons</strong>
+                        <small>@Model.PartGarconsPercent.ToString("N1")% du total</small>
                     </div>
                 </div>
             </div>
@@ -330,6 +380,47 @@ else if (isSupervision)
                 <div class="stat-icon"><i class="bi bi-building"></i></div>
                 <h2>@Model.TotalGroupes</h2>
                 <p>Groupes actifs</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-7">
+            <div class="card-3d dashboard-story-card p-4 h-100">
+                <div class="dashboard-section-kicker">Lecture metier</div>
+                <h4 class="dashboard-story-card__title">Population suivie</h4>
+                <p class="text-muted-custom mb-3">@Model.LecturePopulation</p>
+                <div class="dashboard-pill-list">
+                    <span class="dashboard-pill"><strong>@Model.TotalBranches</strong> branches actives</span>
+                    <span class="dashboard-pill"><strong>@Model.MoyenneScoutsParGroupe.ToString("N1")</strong> scouts par groupe</span>
+                    <span class="dashboard-pill"><strong>@Model.PartFillesPercent.ToString("N1")%</strong> filles</span>
+                    <span class="dashboard-pill"><strong>@Model.PartGarconsPercent.ToString("N1")%</strong> garcons</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card-3d dashboard-alert-card p-4 h-100">
+                <div class="dashboard-section-kicker">Alertes du moment</div>
+                <h4 class="dashboard-story-card__title">Points a surveiller</h4>
+                <p class="text-muted-custom mb-3">@Model.LectureAlertes</p>
+                <div class="dashboard-alert-grid">
+                    <div class="dashboard-alert-metric @(Model.DemandesAutorisationEnAttente > 0 ? "dashboard-alert-metric--warn" : "dashboard-alert-metric--ok")">
+                        <span>Demandes</span>
+                        <strong>@Model.DemandesAutorisationEnAttente</strong>
+                    </div>
+                    <div class="dashboard-alert-metric @(Model.DemandesGroupeEnAttente > 0 ? "dashboard-alert-metric--warn" : "dashboard-alert-metric--ok")">
+                        <span>Demandes groupe</span>
+                        <strong>@Model.DemandesGroupeEnAttente</strong>
+                    </div>
+                    <div class="dashboard-alert-metric @(Model.InscriptionsParoissialesEnAttente > 0 ? "dashboard-alert-metric--warn" : "dashboard-alert-metric--ok")">
+                        <span>Paroissiales en attente</span>
+                        <strong>@Model.InscriptionsParoissialesEnAttente</strong>
+                    </div>
+                    <div class="dashboard-alert-metric @(Model.CotisationsNationalesNonAjour > 0 ? "dashboard-alert-metric--warn" : "dashboard-alert-metric--ok")">
+                        <span>Cotisations non a jour</span>
+                        <strong>@Model.CotisationsNationalesNonAjour</strong>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -734,6 +825,110 @@ else if (isParent)
         font-weight: 900;
     }
 
+    .dashboard-feature-breakdown__item small {
+        display: block;
+        margin-top: 0.35rem;
+        font-size: 0.74rem;
+        color: rgba(255,255,255,0.78);
+    }
+
+    .dashboard-story-card,
+    .dashboard-alert-card {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .dashboard-section-kicker {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        padding: 0.4rem 0.8rem;
+        border-radius: 999px;
+        background: rgba(95, 134, 44, 0.12);
+        color: var(--vert-logo);
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .dashboard-story-card__title {
+        margin-bottom: 0;
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: var(--bleu-gris);
+    }
+
+    .dashboard-pill-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .dashboard-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.65rem 0.85rem;
+        border-radius: 999px;
+        background: #f7faf4;
+        border: 1px solid rgba(95, 134, 44, 0.14);
+        color: var(--bleu-gris);
+        font-size: 0.92rem;
+        font-weight: 600;
+    }
+
+    .dashboard-pill strong {
+        color: var(--vert-logo);
+    }
+
+    .dashboard-alert-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem;
+    }
+
+    .dashboard-alert-metric {
+        padding: 0.9rem 1rem;
+        border-radius: 16px;
+        border: 1px solid rgba(84, 101, 118, 0.12);
+        background: #f8fafc;
+    }
+
+    .dashboard-alert-metric span {
+        display: block;
+        margin-bottom: 0.3rem;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #6b7280;
+    }
+
+    .dashboard-alert-metric strong {
+        font-size: 1.65rem;
+        line-height: 1;
+        color: var(--bleu-gris);
+    }
+
+    .dashboard-alert-metric--warn {
+        background: #fff7ed;
+        border-color: rgba(245, 158, 11, 0.26);
+    }
+
+    .dashboard-alert-metric--warn strong {
+        color: #c2410c;
+    }
+
+    .dashboard-alert-metric--ok {
+        background: #f0fdf4;
+        border-color: rgba(34, 197, 94, 0.18);
+    }
+
+    .dashboard-alert-metric--ok strong {
+        color: #166534;
+    }
+
     @@media (max-width: 767.98px) {
         .stat-card-3d--feature {
             padding: 1.5rem;
@@ -750,6 +945,19 @@ else if (isParent)
 
         .dashboard-feature-breakdown {
             grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .dashboard-alert-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .dashboard-pill-list {
+            flex-direction: column;
+        }
+
+        .dashboard-pill {
+            width: 100%;
+            justify-content: space-between;
         }
     }
 </style>

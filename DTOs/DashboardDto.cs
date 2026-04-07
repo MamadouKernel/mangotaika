@@ -13,6 +13,11 @@ public class DashboardDto
     public int TotalAdultes { get; set; }
     public int TotalFilles { get; set; }
     public int TotalGarcons { get; set; }
+    public double PartJeunesPercent { get; set; }
+    public double PartAdultesPercent { get; set; }
+    public double PartFillesPercent { get; set; }
+    public double PartGarconsPercent { get; set; }
+    public double MoyenneScoutsParGroupe { get; set; }
     public int TotalGroupes { get; set; }
     public int TotalBranches { get; set; }
     public int ActivitesEnCours { get; set; }
@@ -25,7 +30,12 @@ public class DashboardDto
     public int MessagesNonLus { get; set; }
     public int DemandesAutorisationEnAttente { get; set; }
     public int DemandesGroupeEnAttente { get; set; }
+    public int InscriptionsAnnuellesARegulariser { get; set; }
+    public int InscriptionsParoissialesEnAttente { get; set; }
+    public int CotisationsNationalesNonAjour { get; set; }
     public int AvisNonLus { get; set; }
+    public string LecturePopulation { get; set; } = string.Empty;
+    public string LectureAlertes { get; set; } = string.Empty;
     public int TotalCompetences { get; set; }
     public int TotalProjetsAGR { get; set; }
     public int TotalPartenaires { get; set; }
