@@ -99,6 +99,17 @@
                     <span class="dashboard-pill"><strong>@Model.PartFillesPercent.ToString("N1")%</strong> filles</span>
                     <span class="dashboard-pill"><strong>@Model.PartGarconsPercent.ToString("N1")%</strong> garcons</span>
                 </div>
+                <div class="dashboard-demography-matrix" aria-label="Repartition detaillee jeunes adultes par sexe">
+                    <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--header"></div>
+                    <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--header">Filles / Femmes</div>
+                    <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--header">Garcons / Hommes</div>
+                    <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--label">Jeunes</div>
+                    <div class="dashboard-demography-matrix__cell"><strong>@Model.JeunesFilles</strong></div>
+                    <div class="dashboard-demography-matrix__cell"><strong>@Model.JeunesGarcons</strong></div>
+                    <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--label">Adultes</div>
+                    <div class="dashboard-demography-matrix__cell"><strong>@Model.AdultesFemmes</strong></div>
+                    <div class="dashboard-demography-matrix__cell"><strong>@Model.AdultesHommes</strong></div>
+                </div>
             </div>
         </div>
         <div class="col-lg-5">
@@ -395,6 +406,17 @@ else if (isSupervision)
                     <span class="dashboard-pill"><strong>@Model.MoyenneScoutsParGroupe.ToString("N1")</strong> scouts par groupe</span>
                     <span class="dashboard-pill"><strong>@Model.PartFillesPercent.ToString("N1")%</strong> filles</span>
                     <span class="dashboard-pill"><strong>@Model.PartGarconsPercent.ToString("N1")%</strong> garcons</span>
+                </div>
+                <div class="dashboard-demography-matrix" aria-label="Repartition detaillee jeunes adultes par sexe">
+                    <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--header"></div>
+                    <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--header">Filles / Femmes</div>
+                    <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--header">Garcons / Hommes</div>
+                    <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--label">Jeunes</div>
+                    <div class="dashboard-demography-matrix__cell"><strong>@Model.JeunesFilles</strong></div>
+                    <div class="dashboard-demography-matrix__cell"><strong>@Model.JeunesGarcons</strong></div>
+                    <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--label">Adultes</div>
+                    <div class="dashboard-demography-matrix__cell"><strong>@Model.AdultesFemmes</strong></div>
+                    <div class="dashboard-demography-matrix__cell"><strong>@Model.AdultesHommes</strong></div>
                 </div>
             </div>
         </div>
@@ -883,6 +905,50 @@ else if (isParent)
         color: var(--vert-logo);
     }
 
+    .dashboard-demography-matrix {
+        display: grid;
+        grid-template-columns: minmax(90px, 0.8fr) repeat(2, minmax(110px, 1fr));
+        gap: 0.5rem;
+        margin-top: 0.3rem;
+    }
+
+    .dashboard-demography-matrix__cell {
+        min-height: 54px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.7rem 0.85rem;
+        border-radius: 14px;
+        background: #f8faf4;
+        border: 1px solid rgba(95, 134, 44, 0.14);
+        color: var(--bleu-gris);
+        font-size: 0.9rem;
+        font-weight: 650;
+        text-align: center;
+    }
+
+    .dashboard-demography-matrix__cell strong {
+        font-size: 1.35rem;
+        color: var(--vert-logo);
+        line-height: 1;
+    }
+
+    .dashboard-demography-matrix__cell--header {
+        min-height: 42px;
+        background: rgba(84, 101, 118, 0.07);
+        color: #667085;
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .dashboard-demography-matrix__cell--label {
+        justify-content: flex-start;
+        background: #fff;
+        color: var(--bleu-gris);
+        font-weight: 800;
+    }
+
     .dashboard-alert-grid {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -958,6 +1024,20 @@ else if (isParent)
         .dashboard-pill {
             width: 100%;
             justify-content: space-between;
+        }
+
+        .dashboard-demography-matrix {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .dashboard-demography-matrix__cell--header:first-child {
+            display: none;
+        }
+
+        .dashboard-demography-matrix__cell--label {
+            grid-column: 1 / -1;
+            min-height: 38px;
+            justify-content: center;
         }
     }
 </style>

@@ -13,6 +13,10 @@ public class DashboardDto
     public int TotalAdultes { get; set; }
     public int TotalFilles { get; set; }
     public int TotalGarcons { get; set; }
+    public int JeunesFilles { get; set; }
+    public int JeunesGarcons { get; set; }
+    public int AdultesFemmes { get; set; }
+    public int AdultesHommes { get; set; }
     public double PartJeunesPercent { get; set; }
     public double PartAdultesPercent { get; set; }
     public double PartFillesPercent { get; set; }

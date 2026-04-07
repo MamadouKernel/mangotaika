@@ -93,11 +93,22 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
             .Where(s => s.IsActive)
             .ToListAsync();
 
+        var jeunesScouts = activeScouts
+            .Where(s => ScoutTerritoryClassification.IsJeuneScout(s))
+            .ToList();
+        var adultesScouts = activeScouts
+            .Where(s => !ScoutTerritoryClassification.IsJeuneScout(s))
+            .ToList();
+
         dto.TotalScouts = activeScouts.Count;
-        dto.TotalJeunes = activeScouts.Count(s => ScoutTerritoryClassification.IsJeuneScout(s));
-        dto.TotalAdultes = dto.TotalScouts - dto.TotalJeunes;
+        dto.TotalJeunes = jeunesScouts.Count;
+        dto.TotalAdultes = adultesScouts.Count;
         dto.TotalFilles = activeScouts.Count(IsFemaleScout);
         dto.TotalGarcons = activeScouts.Count(IsMaleScout);
+        dto.JeunesFilles = jeunesScouts.Count(IsFemaleScout);
+        dto.JeunesGarcons = jeunesScouts.Count(IsMaleScout);
+        dto.AdultesFemmes = adultesScouts.Count(IsFemaleScout);
+        dto.AdultesHommes = adultesScouts.Count(IsMaleScout);
         dto.PartJeunesPercent = ComputePercent(dto.TotalJeunes, dto.TotalScouts);
         dto.PartAdultesPercent = ComputePercent(dto.TotalAdultes, dto.TotalScouts);
         dto.PartFillesPercent = ComputePercent(dto.TotalFilles, dto.TotalScouts);
