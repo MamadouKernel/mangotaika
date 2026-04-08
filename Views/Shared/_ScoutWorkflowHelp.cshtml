@@ -1,0 +1,513 @@
+﻿@model string
+@{
+    var context = string.IsNullOrWhiteSpace(Model) ? "general" : Model!;
+    var modalId = $"scoutWorkflowHelpModal-{context}";
+    var tooltip = context switch
+    {
+        "scout-create" => "Comprendre la creation d'un scout et le matricule",
+        "scout-import" => "Comprendre l'import scout et le matricule",
+        "annual-create" => "Comprendre l'inscription annuelle",
+        "annual-import" => "Comprendre l'import annuel",
+        "national-dues" => "Comprendre les cotisations nationales",
+        _ => "Comprendre la logique scout"
+    };
+
+    var title = "Creation, cotisation et inscription annuelle";
+    var intro = "Le parcours d'un scout est separe en etapes simples pour eviter les doublons et garder une information fiable.";
+    var focusLabel = "Logique metier";
+    var ruleTitle = "Regle centrale";
+    var ruleText = "Le matricule ne se saisit pas manuellement pour un nouveau scout. Il vient du fichier officiel des cotisations nationales.";
+    var footer = "Sequence conseillee : creer ou importer les scouts sans matricule, importer ensuite les cotisations nationales, puis creer ou importer les inscriptions annuelles.";
+    List<(string Number, string Title, string Body)> steps;
+    List<(string Title, string Body)> cards;
+
+    switch (context)
+    {
+        case "scout-create":
+            title = "Creer une fiche scout propre";
+            intro = "Cette page sert a enregistrer l'identite locale du scout. Elle ne sert pas a attribuer le matricule national.";
+            focusLabel = "Creation scout";
+            ruleText = "Un nouveau scout peut etre cree sans matricule. Le matricule sera renseigne plus tard par l'import des cotisations nationales.";
+            footer = "A faire ici : renseigner l'identite, le groupe, la branche, la fonction et le contact d'urgence. A ne pas faire ici : forcer un matricule national.";
+            steps = new()
+            {
+                ("1", "Identifier le scout", "Renseignez les donnees stables : nom, prenom, date et lieu de naissance, sexe et contacts."),
+                ("2", "Affecter localement", "Choisissez le groupe, la branche et la fonction actuelle du scout dans l'organisation."),
+                ("3", "Laisser le matricule vide", "Le matricule national sera attribue ou confirme uniquement lors du rapprochement avec le fichier national.")
+            };
+            cards = new()
+            {
+                ("Pourquoi sans matricule ?", "Le cahier de charges prevoit qu'un scout peut etre inscrit localement avant sa premiere cotisation nationale."),
+                ("Si le scout a deja un matricule", "Utilisez plutot l'import des cotisations nationales ou l'import scout pour rapprocher une fiche deja existante."),
+                ("Donnees importantes", "La date de naissance aide au rapprochement quand le matricule n'est pas encore connu."),
+                ("Risque evite", "On evite d'attribuer un matricule a la mauvaise personne ou de creer des doublons.")
+            };
+            break;
+
+        case "scout-import":
+            title = "Importer des fiches scouts";
+            intro = "Cet import cree ou met a jour les fiches scouts. Pour les nouveaux scouts, le matricule doit rester vide.";
+            focusLabel = "Import scouts";
+            ruleText = "Si une ligne contient un matricule inconnu, elle est rejetee. Le matricule ne peut pas etre attribue manuellement par ce fichier.";
+            footer = "Si votre fichier contient deja des matricules nationaux, importez d'abord ou ensuite le fichier dans Cotisations nationales pour faire le rapprochement officiel.";
+            steps = new()
+            {
+                ("1", "Preparer le fichier", "Renseignez au minimum nom, prenom et date de naissance. Le groupe, la branche et la fonction rendent la fiche plus complete."),
+                ("2", "Nouveaux scouts", "Laissez la colonne Matricule vide pour les scouts qui n'existent pas encore dans l'application."),
+                ("3", "Scouts existants", "Un matricule deja connu peut servir a retrouver et mettre a jour une fiche existante.")
+            };
+            cards = new()
+            {
+                ("Cree", "La ligne cree une nouvelle fiche si aucun scout existant ne correspond."),
+                ("Mis a jour", "La ligne met a jour une fiche si le scout est retrouve par matricule ou par identite fiable."),
+                ("Non enregistre", "La ligne est bloquee si elle essaie d'attribuer un matricule national manuellement."),
+                ("Bon reflexe", "Pour un import massif initial, laissez Matricule vide puis importez les cotisations nationales.")
+            };
+            break;
+
+        case "annual-create":
+            title = "Inscrire un scout pour l'annee";
+            intro = "Cette page cree le snapshot annuel d'un scout deja present dans l'application.";
+            focusLabel = "Inscription annuelle";
+            ruleText = "L'inscription annuelle ne cree pas le scout et n'attribue pas le matricule. Elle rattache un scout existant a une annee pastorale.";
+            footer = "Choisissez d'abord le scout : le groupe, la branche et la fonction se pre-remplissent a partir de sa fiche, puis vous pouvez ajuster le snapshot de l'annee.";
+            steps = new()
+            {
+                ("1", "Selectionner le scout", "Recherchez le scout dans la liste. Il doit deja exister dans la base."),
+                ("2", "Verifier l'annee", "Confirmez l'annee de reference et le libelle pastoral, par exemple 2026-2027."),
+                ("3", "Valider le snapshot", "Le groupe, la branche et la fonction de l'annee sont conserves comme historique annuel.")
+            };
+            cards = new()
+            {
+                ("Pourquoi un snapshot ?", "Le scout peut changer de branche, de groupe ou de fonction au fil des annees."),
+                ("Cotisation", "Le statut de cotisation nationale est affiche ici, mais il reste synchronise par l'import national."),
+                ("Historique", "Chaque annee cree une ligne distincte pour suivre le parcours administratif du scout."),
+                ("Ajustement", "Vous pouvez corriger le groupe ou la branche si la situation de l'annee differe de la fiche actuelle.")
+            };
+            break;
+
+        case "annual-import":
+            title = "Importer les inscriptions annuelles";
+            intro = "Cet import rattache des scouts existants a une annee pastorale. Il ne cree pas de nouvelles fiches scouts.";
+            focusLabel = "Import annuel";
+            ruleText = "Une ligne est importee seulement si le scout est retrouve. Sinon elle part en lignes non integrees pour correction.";
+            footer = "Si le scout n'existe pas encore, creez-le d'abord dans Scouts ou via l'import scouts, puis relancez l'import annuel.";
+            steps = new()
+            {
+                ("1", "Choisir l'annee", "Indiquez l'annee pastorale concernee par le fichier."),
+                ("2", "Rapprocher le scout", "Le systeme cherche le scout par matricule, ou par nom + prenom + date de naissance si le matricule est absent."),
+                ("3", "Creer le snapshot", "Si le scout est retrouve, l'inscription annuelle est creee ou mise a jour avec groupe, branche et fonction.")
+            };
+            cards = new()
+            {
+                ("Ne cree pas de scout", "C'est volontaire : l'inscription annuelle depend d'une fiche scout deja controlee."),
+                ("Matricule absent", "Le rapprochement par identite doit etre unique pour eviter les erreurs."),
+                ("Lignes ignorees", "Elles indiquent les scouts introuvables ou les donnees a corriger avant reimport."),
+                ("Lecture du rapport", "Le total visible sur la page est la liste filtree apres import, pas forcement le nombre cree par le fichier.")
+            };
+            break;
+
+        case "national-dues":
+            title = "Rapprocher les cotisations nationales";
+            intro = "Ce module traite le fichier officiel national. C'est ici que le matricule est attribue ou confirme.";
+            focusLabel = "Cotisations nationales";
+            ruleText = "Le matricule est l'identifiant officiel. S'il n'existe pas encore sur la fiche scout, il peut etre renseigne apres un rapprochement fiable.";
+            footer = "Les lignes non rapprochees doivent etre verifiees avant validation : creer la fiche scout manquante ou choisir manuellement le bon scout si l'identite est ambigue.";
+            steps = new()
+            {
+                ("1", "Importer le fichier national", "Le fichier apporte le matricule, le statut de cotisation, le montant et les informations d'identite disponibles."),
+                ("2", "Rapprocher", "Le systeme rapproche par matricule, puis par identite unique si le scout n'a pas encore de matricule."),
+                ("3", "Synchroniser", "Quand le rapprochement est fiable, le matricule et le statut de cotisation sont synchronises sur la fiche scout et l'inscription annuelle.")
+            };
+            cards = new()
+            {
+                ("A jour", "Le scout est reconnu comme cotisant national pour l'annee concernee."),
+                ("A verifier", "La ligne manque d'information fiable ou correspond a plusieurs scouts possibles."),
+                ("Non a jour", "La ligne indique que la cotisation nationale n'est pas encore validee."),
+                ("Pas de creation silencieuse", "On ne cree pas automatiquement une fiche incomplete depuis un fichier national ambigu.")
+            };
+            break;
+
+        default:
+            steps = new()
+            {
+                ("1", "Fiche scout", "On cree l'identite locale du scout, sans forcer le matricule."),
+                ("2", "Cotisation nationale", "Le fichier national attribue ou confirme le matricule."),
+                ("3", "Inscription annuelle", "Le scout est rattache a une annee pastorale avec son groupe, sa branche et sa fonction.")
+            };
+            cards = new()
+            {
+                ("Import scouts", "Creation ou mise a jour des fiches scouts."),
+                ("Import cotisations", "Rapprochement national et matricule officiel."),
+                ("Import annuel", "Historique annuel des scouts existants."),
+                ("Verification", "Les cas ambigus demandent une validation humaine.")
+            };
+            break;
+    }
+}
+
+<button type="button"
+        class="scout-workflow-help__trigger"
+        data-scout-workflow-help-open="@modalId"
+        data-help-tooltip="@tooltip"
+        aria-controls="@modalId"
+        aria-label="@tooltip">
+    <i class="bi bi-info-lg"></i>
+</button>
+
+<div class="scout-workflow-help" id="@modalId" aria-hidden="true">
+    <div class="scout-workflow-help__backdrop" data-scout-workflow-help-close></div>
+    <div class="scout-workflow-help__dialog" role="dialog" aria-modal="true" aria-labelledby="@($"{modalId}-title")">
+        <div class="scout-workflow-help__header">
+            <div>
+                <span class="scout-workflow-help__eyebrow"><i class="bi bi-compass"></i> @focusLabel</span>
+                <h3 id="@($"{modalId}-title")">@title</h3>
+                <p>@intro</p>
+            </div>
+            <button type="button" class="scout-workflow-help__close" data-scout-workflow-help-close aria-label="Fermer">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <div class="scout-workflow-help__rule">
+            <i class="bi bi-shield-check"></i>
+            <div>
+                <strong>@ruleTitle</strong>
+                <span>@ruleText</span>
+            </div>
+        </div>
+
+        <div class="scout-workflow-help__timeline">
+            @foreach (var step in steps)
+            {
+                <article>
+                    <span>@step.Number</span>
+                    <div>
+                        <strong>@step.Title</strong>
+                        <p>@step.Body</p>
+                    </div>
+                </article>
+            }
+        </div>
+
+        <div class="scout-workflow-help__grid">
+            @foreach (var card in cards)
+            {
+                <div>
+                    <strong>@card.Title</strong>
+                    <span>@card.Body</span>
+                </div>
+            }
+        </div>
+
+        <div class="scout-workflow-help__footer">
+            <i class="bi bi-lightbulb"></i>
+            <span>@footer</span>
+        </div>
+    </div>
+</div>
+
+<style>
+    .scout-workflow-help__trigger {
+        position: relative;
+        width: 38px;
+        height: 38px;
+        border-radius: 999px;
+        border: 1px solid rgba(95, 127, 67, 0.28);
+        background: linear-gradient(135deg, rgba(244, 248, 236, 0.98), rgba(255, 255, 255, 0.96));
+        color: var(--vert-logo);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 12px 24px rgba(47, 60, 68, 0.10);
+        transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        flex: 0 0 auto;
+    }
+
+    .scout-workflow-help__trigger:hover,
+    .scout-workflow-help__trigger:focus-visible {
+        transform: translateY(-1px);
+        box-shadow: 0 16px 28px rgba(47, 60, 68, 0.15);
+        background: linear-gradient(135deg, rgba(95, 127, 67, 0.16), rgba(255, 255, 255, 0.98));
+    }
+
+    .scout-workflow-help__trigger::after {
+        content: attr(data-help-tooltip);
+        position: absolute;
+        left: 50%;
+        bottom: calc(100% + 12px);
+        transform: translateX(-50%) translateY(6px);
+        min-width: 230px;
+        padding: 9px 12px;
+        border-radius: 14px;
+        background: #2f3c44;
+        color: #fff;
+        font-size: 0.78rem;
+        font-weight: 700;
+        line-height: 1.25;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.16s ease, transform 0.16s ease;
+        z-index: 1300;
+    }
+
+    .scout-workflow-help__trigger:hover::after,
+    .scout-workflow-help__trigger:focus-visible::after {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+
+    .scout-workflow-help {
+        position: fixed;
+        inset: 0;
+        display: none;
+        z-index: 1400;
+    }
+
+    .scout-workflow-help.is-open {
+        display: block;
+    }
+
+    .scout-workflow-help__backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(18, 28, 35, 0.55);
+        backdrop-filter: blur(8px);
+    }
+
+    .scout-workflow-help__dialog {
+        position: relative;
+        width: min(880px, calc(100vw - 32px));
+        max-height: 88vh;
+        overflow-y: auto;
+        margin: 5vh auto 0;
+        padding: 28px;
+        border-radius: 30px;
+        background:
+            radial-gradient(circle at top right, rgba(141, 181, 95, 0.18), transparent 34%),
+            linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 244, 0.98));
+        border: 1px solid rgba(95, 127, 67, 0.18);
+        box-shadow: 0 28px 70px rgba(18, 28, 35, 0.28);
+    }
+
+    .scout-workflow-help__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 18px;
+        margin-bottom: 20px;
+    }
+
+    .scout-workflow-help__eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 12px;
+        border-radius: 999px;
+        background: rgba(95, 127, 67, 0.12);
+        color: var(--vert-logo);
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+    }
+
+    .scout-workflow-help__header h3 {
+        margin: 0 0 8px;
+        color: #2f3c44;
+        font-weight: 800;
+        font-size: clamp(1.55rem, 3vw, 2.35rem);
+    }
+
+    .scout-workflow-help__header p {
+        margin: 0;
+        color: #66758a;
+        font-size: 1rem;
+        max-width: 650px;
+    }
+
+    .scout-workflow-help__close {
+        width: 42px;
+        height: 42px;
+        border-radius: 999px;
+        border: 1px solid rgba(47, 60, 68, 0.12);
+        background: rgba(255, 255, 255, 0.85);
+        color: #2f3c44;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .scout-workflow-help__rule {
+        display: flex;
+        gap: 14px;
+        padding: 18px;
+        border-radius: 22px;
+        background: rgba(255, 247, 214, 0.72);
+        border: 1px solid rgba(184, 152, 47, 0.26);
+        color: #5f4508;
+        margin-bottom: 20px;
+    }
+
+    .scout-workflow-help__rule i {
+        font-size: 1.55rem;
+        color: #7a5a11;
+    }
+
+    .scout-workflow-help__rule div {
+        display: grid;
+        gap: 4px;
+    }
+
+    .scout-workflow-help__timeline {
+        display: grid;
+        gap: 14px;
+        margin-bottom: 20px;
+    }
+
+    .scout-workflow-help__timeline article {
+        display: grid;
+        grid-template-columns: 42px 1fr;
+        gap: 14px;
+        padding: 16px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.78);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+
+    .scout-workflow-help__timeline article > span {
+        width: 42px;
+        height: 42px;
+        border-radius: 16px;
+        background: var(--vert-logo);
+        color: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        box-shadow: 0 12px 22px rgba(95, 127, 67, 0.22);
+    }
+
+    .scout-workflow-help__timeline strong,
+    .scout-workflow-help__grid strong {
+        display: block;
+        color: #2f3c44;
+        font-weight: 800;
+        margin-bottom: 4px;
+    }
+
+    .scout-workflow-help__timeline p,
+    .scout-workflow-help__grid span,
+    .scout-workflow-help__footer {
+        color: #66758a;
+        margin: 0;
+        line-height: 1.55;
+    }
+
+    .scout-workflow-help__grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .scout-workflow-help__grid > div {
+        padding: 16px;
+        border-radius: 20px;
+        background: rgba(95, 127, 67, 0.07);
+        border: 1px solid rgba(95, 127, 67, 0.12);
+    }
+
+    .scout-workflow-help__footer {
+        margin-top: 20px;
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        padding: 16px 18px;
+        border-radius: 22px;
+        background: rgba(47, 60, 68, 0.06);
+        font-weight: 700;
+    }
+
+    .scout-workflow-help__footer i {
+        color: var(--vert-logo);
+        font-size: 1.35rem;
+    }
+
+    body.scout-workflow-help-open {
+        overflow: hidden;
+    }
+
+    @@media (max-width: 768px) {
+        .scout-workflow-help__trigger::after {
+            display: none;
+        }
+
+        .scout-workflow-help__dialog {
+            width: calc(100vw - 20px);
+            margin-top: 2vh;
+            padding: 20px;
+            border-radius: 24px;
+        }
+
+        .scout-workflow-help__grid {
+            grid-template-columns: 1fr;
+        }
+
+        .scout-workflow-help__timeline article {
+            grid-template-columns: 36px 1fr;
+            padding: 14px;
+        }
+
+        .scout-workflow-help__timeline article > span {
+            width: 36px;
+            height: 36px;
+            border-radius: 14px;
+        }
+    }
+</style>
+
+<script>
+    (() => {
+        if (window.scoutWorkflowHelpInitialized) {
+            return;
+        }
+
+        window.scoutWorkflowHelpInitialized = true;
+        const body = document.body;
+
+        const setModalOpen = (modal, open) => {
+            if (!modal) {
+                return;
+            }
+
+            modal.classList.toggle('is-open', open);
+            modal.setAttribute('aria-hidden', open ? 'false' : 'true');
+            body.classList.toggle('scout-workflow-help-open', open);
+        };
+
+        document.addEventListener('click', (event) => {
+            const openButton = event.target.closest('[data-scout-workflow-help-open]');
+            if (openButton) {
+                const targetId = openButton.getAttribute('data-scout-workflow-help-open');
+                setModalOpen(document.getElementById(targetId), true);
+                return;
+            }
+
+            const closeButton = event.target.closest('[data-scout-workflow-help-close]');
+            if (closeButton) {
+                setModalOpen(closeButton.closest('.scout-workflow-help'), false);
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key !== 'Escape') {
+                return;
+            }
+
+            document.querySelectorAll('.scout-workflow-help.is-open').forEach((modal) => {
+                setModalOpen(modal, false);
+            });
+        });
+    })();
+</script>

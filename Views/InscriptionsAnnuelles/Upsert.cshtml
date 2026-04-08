@@ -1,4 +1,4 @@
-@using MangoTaika.Data.Entities
+﻿@using MangoTaika.Data.Entities
 @model InscriptionAnnuelleScout
 @{
     ViewData["Title"] = Model.Id == Guid.Empty ? "Nouvelle inscription annuelle" : "Modifier l'inscription annuelle";
@@ -11,7 +11,10 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h2 class="section-title mb-1"><i class="bi bi-journal-check text-or"></i> <span class="accent">@ViewData["Title"]</span></h2>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <h2 class="section-title mb-1"><i class="bi bi-journal-check text-or"></i> <span class="accent">@ViewData["Title"]</span></h2>
+            @await Html.PartialAsync("_ScoutWorkflowHelp", "annual-create")
+        </div>
         <p class="text-muted-custom mb-0">Renseignez l'annee pastorale et le snapshot annuel du groupe, de la branche et de la fonction.</p>
     </div>
     <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i></a>
@@ -237,3 +240,5 @@
         })();
     </script>
 }
+
+

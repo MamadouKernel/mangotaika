@@ -26,7 +26,10 @@
         .ToList();
 }
 
-<h2 class="section-title mb-1"><i class="bi bi-person-plus-fill text-or"></i> Nouveau <span class="accent">scout</span></h2>
+<div class="d-flex align-items-center gap-2 flex-wrap">
+    <h2 class="section-title mb-1"><i class="bi bi-person-plus-fill text-or"></i> Nouveau <span class="accent">scout</span></h2>
+    @await Html.PartialAsync("_ScoutWorkflowHelp", "scout-create")
+</div>
 <div class="section-divider"></div>
 
 <div class="card-3d p-4 mt-3 scout-form-shell">
@@ -398,4 +401,6 @@
     </script>
     <partial name="_ValidationScriptsPartial" />
 }
+
+
 
