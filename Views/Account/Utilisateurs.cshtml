@@ -2,7 +2,14 @@
 @{
     ViewData["Title"] = "Gestion des utilisateurs";
     Layout = "_LayoutAdmin";
-    var userRoles = ViewBag.UserRoles as Dictionary<Guid, string> ?? new();
+    var userRoles = ViewBag.UserRoles as Dictionary<Guid, List<string>> ?? new();
+    string RoleLabel(string r) => r switch {
+        "Parent"               => "Parent / Tuteur",
+        "AssistantCommissaire" => "Asst. Commissaire",
+        "ChefGroupe"           => "Chef de Groupe",
+        "ChefUnite"            => "Chef d'Unite",
+        _                      => r
+    };
 }
 
 <h2 class="section-title mb-1"><i class="bi bi-people-fill text-or"></i> Gestion des <span class="accent">utilisateurs</span></h2>
@@ -11,12 +18,23 @@
 <div class="row g-4 mt-2">
     @foreach (var user in Model)
     {
-        var roleDisplay = userRoles.GetValueOrDefault(user.Id, "—");
-        if (roleDisplay == "Parent") { roleDisplay = "Parent / Tuteur"; }
+        var userRoleList = userRoles.GetValueOrDefault(user.Id, []);
         <div class="col-lg-4 col-md-6">
             <div class="card-3d p-4 h-100 d-flex flex-column">
                 <h5 class="text-or mb-2">@user.Prenom @user.Nom</h5>
-                <p class="text-muted-custom small mb-2"><span class="badge-3d badge-soumise">@roleDisplay</span></p>
+                <p class="text-muted-custom small mb-2 d-flex flex-wrap gap-1">
+                    @if (userRoleList.Count == 0)
+                    {
+                        <span class="badge-3d badge-soumise">—</span>
+                    }
+                    else
+                    {
+                        foreach (var r in userRoleList)
+                        {
+                            <span class="badge-3d badge-soumise">@RoleLabel(r)</span>
+                        }
+                    }
+                </p>
                 <div class="d-flex flex-column gap-1 mb-3 flex-grow-1" style="font-size:0.85rem;">
                     <span><i class="bi bi-telephone text-bleu"></i> @user.PhoneNumber</span>
                     <span><i class="bi bi-envelope text-or"></i> @(user.Email ?? "—")</span>

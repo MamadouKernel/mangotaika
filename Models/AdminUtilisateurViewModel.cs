@@ -9,7 +9,7 @@ public class AdminUtilisateurDetailsViewModel
     public string Prenom { get; set; } = string.Empty;
     public string? Email { get; set; }
     public string? Telephone { get; set; }
-    public string Role { get; set; } = "—";
+    public List<string> Roles { get; set; } = [];
     public bool IsActive { get; set; }
     public DateTime DateCreation { get; set; }
     public string? NomGroupe { get; set; }
@@ -38,9 +38,8 @@ public class AdminUtilisateurEditViewModel
     [Display(Name = "Téléphone")]
     public string Telephone { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Le rôle est requis.")]
-    [Display(Name = "Rôle")]
-    public string Role { get; set; } = string.Empty;
+    [Display(Name = "Rôles")]
+    public List<string> Roles { get; set; } = [];
 
     [Display(Name = "Compte actif")]
     public bool IsActive { get; set; } = true;

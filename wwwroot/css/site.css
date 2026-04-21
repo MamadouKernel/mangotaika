@@ -537,6 +537,10 @@ body {
 .stat-card-3d .stat-icon { font-size: 2.5rem; color: rgba(255,255,255,0.9); }
 
 /* ===== SIDEBAR (liste menu : plat, sans relief « bouton ») ===== */
+/* Roles checkbox grid (edit user form) */
+.roles-checkbox-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem 1.5rem; background: var(--vert-pale); border-radius: 12px; padding: 0.75rem 1rem; }
+.roles-checkbox-grid .form-check-label { font-size: 0.88rem; font-weight: 500; }
+
 /* Role switcher */
 .role-switcher { background: var(--vert-pale); border-radius: 10px; padding: 0.6rem 0.75rem; }
 .role-switcher__label { display: block; font-size: 0.7rem; font-weight: 600; color: var(--vert-logo); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.35rem; }

@@ -345,11 +345,11 @@ public class AccountController(
         var (p, pageSize, skip, totalPages) = ListPagination.Normalize(page, ps, total);
         var users = await ordered.Skip(skip).Take(pageSize).ToListAsync();
 
-        var userRoles = new Dictionary<Guid, string>();
+        var userRoles = new Dictionary<Guid, List<string>>();
         foreach (var u in users)
         {
             var roles = await userManager.GetRolesAsync(u);
-            userRoles[u.Id] = roles.FirstOrDefault() ?? "—";
+            userRoles[u.Id] = roles.ToList();
         }
         ViewBag.UserRoles = userRoles;
         ListPagination.SetViewData(ViewData, HttpContext, p, pageSize, total, totalPages);
@@ -374,8 +374,6 @@ public class AccountController(
             return Forbid();
 
         var roles = await userManager.GetRolesAsync(user);
-        var role = roles.FirstOrDefault() ?? "—";
-        if (role == "Parent") role = "Parent / Tuteur";
 
         var model = new AdminUtilisateurDetailsViewModel
         {
@@ -384,7 +382,7 @@ public class AccountController(
             Prenom = user.Prenom,
             Email = user.Email,
             Telephone = user.PhoneNumber,
-            Role = role,
+            Roles = roles.ToList(),
             IsActive = user.IsActive,
             DateCreation = user.DateCreation,
             NomGroupe = user.Groupe?.Nom,
@@ -404,7 +402,6 @@ public class AccountController(
             return Forbid();
 
         var roles = await userManager.GetRolesAsync(user);
-        var role = roles.FirstOrDefault() ?? "Scout";
 
         var model = new AdminUtilisateurEditViewModel
         {
@@ -413,7 +410,7 @@ public class AccountController(
             Prenom = user.Prenom,
             Email = user.Email,
             Telephone = user.PhoneNumber ?? user.UserName ?? "",
-            Role = role,
+            Roles = roles.ToList(),
             IsActive = user.IsActive
         };
         ViewBag.RolesDisponibles = RolesPourEdition();
@@ -434,9 +431,9 @@ public class AccountController(
 
         ViewBag.RolesDisponibles = RolesPourEdition();
 
-        if (EstGestionnaireSansAdmin() && model.Role == "Administrateur")
+        if (EstGestionnaireSansAdmin() && model.Roles.Contains("Administrateur"))
         {
-            ModelState.AddModelError(nameof(model.Role), "Vous ne pouvez pas attribuer le rôle Administrateur.");
+            ModelState.AddModelError(nameof(model.Roles), "Vous ne pouvez pas attribuer le rôle Administrateur.");
         }
 
         var currentUserId = Guid.Parse(userManager.GetUserId(User)!);
@@ -476,16 +473,28 @@ public class AccountController(
             return View(model);
         }
 
-        var anciensRoles = await userManager.GetRolesAsync(user);
-        if (!anciensRoles.Contains(model.Role))
+        var nouveauxRoles = model.Roles.Where(r => !string.IsNullOrWhiteSpace(r)).Distinct().ToList();
+        if (nouveauxRoles.Count == 0)
         {
-            await userManager.RemoveFromRolesAsync(user, anciensRoles);
-            var addRole = await userManager.AddToRoleAsync(user, model.Role);
-            if (!addRole.Succeeded)
+            ModelState.AddModelError(nameof(model.Roles), "Veuillez selectionner au moins un role.");
+            return View(model);
+        }
+
+        var anciensRoles = await userManager.GetRolesAsync(user);
+        var aRetirer = anciensRoles.Except(nouveauxRoles).ToList();
+        var aAjouter = nouveauxRoles.Except(anciensRoles).ToList();
+
+        if (aRetirer.Count > 0)
+            await userManager.RemoveFromRolesAsync(user, aRetirer);
+
+        if (aAjouter.Count > 0)
+        {
+            var addResult = await userManager.AddToRolesAsync(user, aAjouter);
+            if (!addResult.Succeeded)
             {
-                foreach (var e in addRole.Errors)
-                    ModelState.AddModelError(nameof(model.Role), e.Description);
-                await userManager.AddToRolesAsync(user, anciensRoles);
+                foreach (var e in addResult.Errors)
+                    ModelState.AddModelError(nameof(model.Roles), e.Description);
+                await userManager.AddToRolesAsync(user, aRetirer);
                 return View(model);
             }
         }
@@ -512,8 +521,8 @@ public class AccountController(
     private IReadOnlyList<string> RolesPourEdition()
     {
         if (EstGestionnaireSansAdmin())
-            return ["Gestionnaire", "AgentSupport", "Superviseur", "Scout", "Parent", "Consultant"];
-        return ["Administrateur", "Gestionnaire", "AgentSupport", "Superviseur", "Scout", "Parent", "Consultant"];
+            return ["Gestionnaire", "AgentSupport", "Superviseur", "Consultant", "AssistantCommissaire", "ChefGroupe", "ChefUnite", "Scout", "Parent"];
+        return ["Administrateur", "Gestionnaire", "AgentSupport", "Superviseur", "Consultant", "AssistantCommissaire", "ChefGroupe", "ChefUnite", "Scout", "Parent"];
     }
 
     [HttpPost]
