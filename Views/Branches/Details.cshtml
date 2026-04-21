@@ -66,7 +66,6 @@
                 <td>Responsable</td>
                 <td>@(Model.NomChefUnite ?? "-")</td>
                 <td>@(Model.ContactChefUnite ?? "-")</td>
-                <td>@(Model.FoulardUrl ?? "-")</td>
                 <td>@(Model.NomGroupe ?? "-")</td>
             </tr>
             <tr>
@@ -215,21 +214,6 @@
         </div>
     </div>
 </div>
-
-@if (!string.IsNullOrWhiteSpace(Model.FoulardUrl))
-{
-    <div class="card-3d p-4 mb-4">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-            <div>
-                <h4 class="mb-1">Foulard de la branche</h4>
-                <p class="text-muted-custom mb-0">Cette photo est visible uniquement dans le detail de la branche.</p>
-            </div>
-        </div>
-        <div class="branche-foulard-frame">
-            <img src="@Model.FoulardUrl" alt="Foulard de la branche @Model.Nom" class="branche-foulard-frame__image" />
-        </div>
-    </div>
-}
 
 <div class="card-3d p-4 mb-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
@@ -468,7 +452,6 @@
         font-weight: 600;
     }
 
-    .branche-foulard-frame {
         border-radius: 26px;
         overflow: hidden;
         border: 1px solid rgba(234, 179, 8, 0.22);
@@ -476,7 +459,6 @@
         padding: 14px;
     }
 
-    .branche-foulard-frame__image {
         width: 100%;
         max-height: 320px;
         object-fit: cover;
