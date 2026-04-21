@@ -95,7 +95,7 @@
                 <h4 class="dashboard-story-card__title">Population du district</h4>
                 <p class="text-muted-custom mb-3">@Model.LecturePopulation</p>
                 <div class="dashboard-pill-list">
-                    <span class="dashboard-pill"><strong>@Model.TotalBranches</strong> branches actives</span>
+                    <span class="dashboard-pill"><strong>@Model.DemographieParBranche.Count(b => b.Total > 0)</strong> branches actives</span>
                     <span class="dashboard-pill"><strong>@Model.MoyenneScoutsParGroupe.ToString("N1")</strong> scouts par groupe</span>
                     <span class="dashboard-pill"><strong>@Model.PartFillesPercent.ToString("N1")%</strong> filles</span>
                     <span class="dashboard-pill"><strong>@Model.PartGarconsPercent.ToString("N1")%</strong> garcons</span>
@@ -403,7 +403,7 @@ else if (isSupervision)
                 <h4 class="dashboard-story-card__title">Population suivie</h4>
                 <p class="text-muted-custom mb-3">@Model.LecturePopulation</p>
                 <div class="dashboard-pill-list">
-                    <span class="dashboard-pill"><strong>@Model.TotalBranches</strong> branches actives</span>
+                    <span class="dashboard-pill"><strong>@Model.DemographieParBranche.Count(b => b.Total > 0)</strong> branches actives</span>
                     <span class="dashboard-pill"><strong>@Model.MoyenneScoutsParGroupe.ToString("N1")</strong> scouts par groupe</span>
                     <span class="dashboard-pill"><strong>@Model.PartFillesPercent.ToString("N1")%</strong> filles</span>
                     <span class="dashboard-pill"><strong>@Model.PartGarconsPercent.ToString("N1")%</strong> garcons</span>
