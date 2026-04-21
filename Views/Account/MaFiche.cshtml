@@ -11,7 +11,14 @@
 
 <h2 class="section-title mb-1">
     <i class="bi bi-person-badge text-or"></i>
-    @(isParentView ? $"Fiche de {Model.Prenom} {Model.Nom}" : "Ma fiche <span class=\"accent\">scout</span>")
+    @if (isParentView)
+    {
+        @($"Fiche de {Model.Prenom} {Model.Nom}")
+    }
+    else
+    {
+        @:Ma fiche <span class="accent">scout</span>
+    }
 </h2>
 <div class="section-divider"></div>
 
