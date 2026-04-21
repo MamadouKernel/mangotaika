@@ -138,6 +138,7 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
         dto.InscriptionsAnnuellesARegulariser = await db.InscriptionsAnnuellesScouts.CountAsync(i =>
             i.AnneeReference == anneeCourante &&
             (i.Statut != StatutInscriptionAnnuelle.Validee || !i.InscriptionParoissialeValidee || !i.CotisationNationaleAjour));
+        dto.DemographieParBranche = BuildDemographieParBranche(activeScouts);
         dto.LecturePopulation = BuildPopulationInsight(dto);
         dto.LectureAlertes = BuildAlertInsight(dto, anneeCourante);
         dto.TotalCompetences = await db.Competences.CountAsync();
@@ -528,6 +529,47 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
     {
         var value = user.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.TryParse(value, out var userId) ? userId : null;
+    }
+
+    private static List<DashboardBrancheDemoDto> BuildDemographieParBranche(List<Scout> scouts)
+    {
+        var ordre = new[]
+        {
+            ("OISILLON",    "Oisillons (4-7 ans)"),
+            ("LOUVETEAU",   "Louveteaux (8-11 ans)"),
+            ("ECLAIREUR",   "Eclaireurs (12-14 ans)"),
+            ("CHEMINOT",    "Cheminots (15-17 ans)"),
+            ("ROUTE",       "Route (18-21 ans)"),
+            ("ADS",         "Adultes (ADS)")
+        };
+
+        return ordre.Select(entry =>
+        {
+            var (key, label) = entry;
+            var groupe = scouts.Where(s => MatchBrancheKey(s.Branche?.Nom, key)).ToList();
+            return new DashboardBrancheDemoDto
+            {
+                Nom = label,
+                NomCourt = label,
+                Filles = groupe.Count(IsFemaleScout),
+                Garcons = groupe.Count(IsMaleScout)
+            };
+        }).ToList();
+    }
+
+    private static bool MatchBrancheKey(string? nom, string key)
+    {
+        var n = DatabaseText.NormalizeSearchKey(nom ?? string.Empty);
+        return key switch
+        {
+            "OISILLON"  => n.Contains("OISILLON") || n.Contains("COLONIE"),
+            "LOUVETEAU" => n.Contains("LOUVETEAU") || n.Contains("MEUTE"),
+            "ECLAIREUR" => n.Contains("ECLAIREUR") || n.Contains("TROUPE"),
+            "CHEMINOT"  => n.Contains("CHEMINOT") || n.Contains("GENERATION"),
+            "ROUTE"     => n.Contains("ROUTE") || n.Contains("ROUTIER") || n.Contains("COMMUNAUTE"),
+            "ADS"       => n.Contains("ADS") || n.Contains("ADULTE") || n.Contains("BENEVOLE"),
+            _           => false
+        };
     }
 
 }

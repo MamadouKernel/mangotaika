@@ -100,16 +100,16 @@
                     <span class="dashboard-pill"><strong>@Model.PartFillesPercent.ToString("N1")%</strong> filles</span>
                     <span class="dashboard-pill"><strong>@Model.PartGarconsPercent.ToString("N1")%</strong> garcons</span>
                 </div>
-                <div class="dashboard-demography-matrix" aria-label="Repartition detaillee jeunes adultes par sexe">
+                <div class="dashboard-demography-matrix dashboard-demography-matrix--branches" aria-label="Repartition par branche et par sexe">
                     <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--header"></div>
                     <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--header">Filles / Femmes</div>
                     <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--header">Garcons / Hommes</div>
-                    <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--label">Jeunes</div>
-                    <div class="dashboard-demography-matrix__cell"><strong>@Model.JeunesFilles</strong></div>
-                    <div class="dashboard-demography-matrix__cell"><strong>@Model.JeunesGarcons</strong></div>
-                    <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--label">Adultes</div>
-                    <div class="dashboard-demography-matrix__cell"><strong>@Model.AdultesFemmes</strong></div>
-                    <div class="dashboard-demography-matrix__cell"><strong>@Model.AdultesHommes</strong></div>
+                    @foreach (var b in Model.DemographieParBranche)
+                    {
+                        <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--label">@b.NomCourt</div>
+                        <div class="dashboard-demography-matrix__cell"><strong>@b.Filles</strong></div>
+                        <div class="dashboard-demography-matrix__cell"><strong>@b.Garcons</strong></div>
+                    }
                 </div>
             </div>
         </div>
@@ -408,16 +408,16 @@ else if (isSupervision)
                     <span class="dashboard-pill"><strong>@Model.PartFillesPercent.ToString("N1")%</strong> filles</span>
                     <span class="dashboard-pill"><strong>@Model.PartGarconsPercent.ToString("N1")%</strong> garcons</span>
                 </div>
-                <div class="dashboard-demography-matrix" aria-label="Repartition detaillee jeunes adultes par sexe">
+                <div class="dashboard-demography-matrix dashboard-demography-matrix--branches" aria-label="Repartition par branche et par sexe">
                     <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--header"></div>
                     <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--header">Filles / Femmes</div>
                     <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--header">Garcons / Hommes</div>
-                    <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--label">Jeunes</div>
-                    <div class="dashboard-demography-matrix__cell"><strong>@Model.JeunesFilles</strong></div>
-                    <div class="dashboard-demography-matrix__cell"><strong>@Model.JeunesGarcons</strong></div>
-                    <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--label">Adultes</div>
-                    <div class="dashboard-demography-matrix__cell"><strong>@Model.AdultesFemmes</strong></div>
-                    <div class="dashboard-demography-matrix__cell"><strong>@Model.AdultesHommes</strong></div>
+                    @foreach (var b in Model.DemographieParBranche)
+                    {
+                        <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--label">@b.NomCourt</div>
+                        <div class="dashboard-demography-matrix__cell"><strong>@b.Filles</strong></div>
+                        <div class="dashboard-demography-matrix__cell"><strong>@b.Garcons</strong></div>
+                    }
                 </div>
             </div>
         </div>

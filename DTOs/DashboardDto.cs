@@ -65,6 +65,16 @@ public class DashboardDto
     public List<DashboardFormationItemDto> DernieresFormations { get; set; } = [];
     public List<LmsParcoursItemDto> ParcoursLms { get; set; } = [];
     public List<AnnonceFormationDto> DernieresAnnoncesFormation { get; set; } = [];
+    public List<DashboardBrancheDemoDto> DemographieParBranche { get; set; } = [];
+}
+
+public class DashboardBrancheDemoDto
+{
+    public string Nom { get; set; } = string.Empty;
+    public string NomCourt { get; set; } = string.Empty;
+    public int Filles { get; set; }
+    public int Garcons { get; set; }
+    public int Total => Filles + Garcons;
 }
 
 public class DashboardFormationItemDto
