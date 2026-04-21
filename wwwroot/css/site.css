@@ -810,8 +810,8 @@ body {
     color: var(--texte-secondaire);
 }
 .commissaire-photo {
-    width: 220px; height: 220px;
-    border-radius: 50%; object-fit: cover;
+    width: 180px; height: 260px;
+    border-radius: 16px; object-fit: cover; object-position: top;
     border: 4px solid var(--vert-logo);
     box-shadow: 0 4px 24px rgba(0,0,0,0.12);
 }
@@ -1732,7 +1732,7 @@ main { animation: fadeInUp 0.35s ease-out; }
     .stat-card-3d { padding: 1.2rem; }
     .stat-card-3d .stat-icon { font-size: 1.8rem; }
     .commissaire-card { padding: 1.5rem; }
-    .commissaire-photo { width: 160px; height: 160px; }
+    .commissaire-photo { width: 130px; height: 190px; border-radius: 12px; }
     .commissaire-placeholder { width: 160px; height: 160px; }
     .hero-section { min-height: 70vh; padding: 2rem 1rem; }
     .hero-buttons { flex-direction: column; align-items: center; }
