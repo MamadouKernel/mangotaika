@@ -9,13 +9,37 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MangoTaika.Controllers;
 
-[Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant")]
-public class GroupesController(IGroupeService groupeService, IFileUploadService fileUploadService, AppDbContext db) : Controller
+[Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant,ChefGroupe,ChefUnite,AssistantCommissaire")]
+public class GroupesController(
+    IGroupeService groupeService,
+    IFileUploadService fileUploadService,
+    AppDbContext db,
+    OperationalAccessService operationalAccess,
+    ActiveRoleService activeRoleService) : Controller
 {
     public async Task<IActionResult> Index()
     {
         var (page, ps) = ListPagination.Read(Request);
         var all = await groupeService.GetAllAsync();
+
+        var activeRole = activeRoleService.GetActiveRole(User);
+        if (activeRole is "ChefGroupe" or "ChefUnite")
+        {
+            var (scopeGroupeId, _) = await operationalAccess.GetScopeAsync(User, activeRole);
+            if (scopeGroupeId.HasValue)
+                all = all.Where(g => g.Id == scopeGroupeId.Value).ToList();
+        }
+        else if (activeRole == "AssistantCommissaire")
+        {
+            var (_, scopeBrancheId) = await operationalAccess.GetScopeAsync(User, activeRole);
+            if (scopeBrancheId.HasValue)
+            {
+                var branche = await db.Branches.FindAsync(scopeBrancheId.Value);
+                if (branche?.GroupeId is not null)
+                    all = all.Where(g => g.Id == branche.GroupeId).ToList();
+            }
+        }
+
         var total = all.Count;
         var (p, pageSize, skip, totalPages) = ListPagination.Normalize(page, ps, total);
         var pageItems = all.Skip(skip).Take(pageSize).ToList();

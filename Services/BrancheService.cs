@@ -67,7 +67,6 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
             Nom = nom,
             Description = description,
             LogoUrl = NormalizeOptional(dto.LogoUrl),
-            FoulardUrl = NormalizeOptional(dto.FoulardUrl),
             AgeMin = dto.AgeMin,
             AgeMax = dto.AgeMax,
             ChefUniteId = chefUnite.Id,
@@ -95,7 +94,6 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
         branche.Nom = nom;
         branche.Description = description;
         branche.LogoUrl = NormalizeOptional(dto.LogoUrl);
-        branche.FoulardUrl = NormalizeOptional(dto.FoulardUrl);
         branche.AgeMin = dto.AgeMin;
         branche.AgeMax = dto.AgeMax;
         branche.ChefUniteId = chefUnite.Id;
@@ -120,7 +118,6 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
         Nom = b.Nom,
         Description = b.Description,
         LogoUrl = b.LogoUrl,
-        FoulardUrl = b.FoulardUrl,
         AgeMin = b.AgeMin,
         AgeMax = b.AgeMax,
         NomChefUnite = b.ChefUnite != null ? $"{b.ChefUnite.Prenom} {b.ChefUnite.Nom}" : b.NomChefUnite,

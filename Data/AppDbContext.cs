@@ -463,8 +463,11 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             ("AgentSupport",   "91b7eb6f-c8de-4dd3-9785-f0e6f7932301"),
             ("Scout",          "c3d4e5f6-a7b8-9012-cdef-123456789012"),
             ("Parent",         "d4e5f6a7-b8c9-0123-defa-234567890123"),
-            ("Superviseur",    "f6a7b8c9-d0e1-2345-fabc-456789012345"),
-            ("Consultant",     "e5f6a7b8-c9d0-1234-efab-345678901234")
+            ("Superviseur",            "f6a7b8c9-d0e1-2345-fabc-456789012345"),
+            ("Consultant",             "e5f6a7b8-c9d0-1234-efab-345678901234"),
+            ("AssistantCommissaire",   "aa000001-bbbb-cccc-dddd-000000000001"),
+            ("ChefGroupe",             "aa000002-bbbb-cccc-dddd-000000000002"),
+            ("ChefUnite",              "aa000003-bbbb-cccc-dddd-000000000003")
         };
         foreach (var (name, guid) in roleData)
         {

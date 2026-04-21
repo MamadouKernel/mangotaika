@@ -12,8 +12,6 @@
     <form asp-action="Create" method="post" enctype="multipart/form-data" class="form-modern">
         <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
         <input asp-for="LogoUrl" type="hidden" />
-        <input asp-for="FoulardUrl" type="hidden" />
-
         <div class="row g-4 align-items-start">
             <div class="col-lg-4">
                 <div class="branche-media-panel">
@@ -31,24 +29,7 @@
                         }
                         <input type="file" name="Logo" class="form-control" accept="image/*" />
                         <small class="text-muted-custom">JPG, PNG, GIF, WEBP. Taille maximale: 5 Mo.</small>
-                    </div>
-
-                    <div class="branche-media-panel__block branche-media-panel__block--soft">
-                        <span class="branche-media-panel__label">Photo du foulard</span>
-                        @if (!string.IsNullOrWhiteSpace(Model?.FoulardUrl))
-                        {
-                            <img src="@Model.FoulardUrl" alt="Apercu du foulard de la branche" class="branche-media-panel__image branche-media-panel__image--wide" />
-                        }
-                        else
-                        {
-                            <div class="branche-media-panel__image branche-media-panel__image--wide branche-media-panel__image--placeholder">
-                                <i class="bi bi-image"></i>
-                            </div>
-                        }
-                        <input type="file" name="Foulard" class="form-control" accept="image/*" />
-                        <small class="text-muted-custom">Visible uniquement dans la fiche detail de la branche.</small>
-                    </div>
-                </div>
+                    </div></div>
             </div>
 
             <div class="col-lg-8">
@@ -191,3 +172,6 @@
     if (initGroupe) loadScouts(initGroupe, initChef);
 </script>
 }
+
+
+

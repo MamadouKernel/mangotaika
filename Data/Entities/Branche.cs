@@ -1,4 +1,4 @@
-﻿namespace MangoTaika.Data.Entities;
+namespace MangoTaika.Data.Entities;
 
 public class Branche
 {
@@ -7,7 +7,6 @@ public class Branche
     public string NomNormalise { get; private set; } = string.Empty;
     public string? Description { get; set; }
     public string? LogoUrl { get; set; }
-    public string? FoulardUrl { get; set; }
     public int? AgeMin { get; set; }
     public int? AgeMax { get; set; }
     public string? NomChefUnite { get; set; }

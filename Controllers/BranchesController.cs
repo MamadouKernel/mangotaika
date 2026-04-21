@@ -9,14 +9,30 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MangoTaika.Controllers;
 
-[Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant")]
-public class BranchesController(IBrancheService brancheService, AppDbContext db, IFileUploadService fileUploadService) : Controller
+[Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant,AssistantCommissaire,ChefGroupe,ChefUnite")]
+public class BranchesController(
+    IBrancheService brancheService,
+    AppDbContext db,
+    IFileUploadService fileUploadService,
+    OperationalAccessService operationalAccess,
+    ActiveRoleService activeRoleService) : Controller
 {
     public async Task<IActionResult> Index(Guid? entiteId, Guid? groupeId, string? nomBranche)
     {
         var (page, ps) = ListPagination.Read(Request);
         var allBranches = await brancheService.GetAllAsync();
         var filteredBranches = allBranches.AsEnumerable();
+
+        var activeRole = activeRoleService.GetActiveRole(User);
+        if (activeRole is "AssistantCommissaire" or "ChefGroupe" or "ChefUnite")
+        {
+            var (scopeGroupeId, scopeBrancheId) = await operationalAccess.GetScopeAsync(User, activeRole);
+            if (scopeBrancheId.HasValue)
+                filteredBranches = filteredBranches.Where(b => b.Id == scopeBrancheId.Value);
+            else if (scopeGroupeId.HasValue)
+                filteredBranches = filteredBranches.Where(b => b.GroupeId == scopeGroupeId.Value);
+        }
+
         var selectedEntiteId = entiteId.HasValue && entiteId.Value != Guid.Empty
             ? entiteId
             : (groupeId.HasValue && groupeId.Value != Guid.Empty ? groupeId : null);
@@ -96,7 +112,7 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
     [HttpPost]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(BrancheCreateDto dto, IFormFile? Logo, IFormFile? Foulard)
+    public async Task<IActionResult> Create(BrancheCreateDto dto, IFormFile? Logo)
     {
         if (ModelState.IsValid)
         {
@@ -116,11 +132,6 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
                 dto.LogoUrl,
                 "branches",
                 "Le logo de la branche doit etre une image valide de 5 Mo maximum.");
-            dto.FoulardUrl = await fileUploadService.SaveImageAsync(
-                Foulard,
-                dto.FoulardUrl,
-                "branches",
-                "La photo du foulard doit etre une image valide de 5 Mo maximum.");
             await brancheService.CreateAsync(dto);
         }
         catch (InvalidOperationException ex)
@@ -153,7 +164,7 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
     [HttpPost]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(Guid id, BrancheCreateDto dto, IFormFile? Logo, IFormFile? Foulard)
+    public async Task<IActionResult> Edit(Guid id, BrancheCreateDto dto, IFormFile? Logo)
     {
         if (ModelState.IsValid)
         {
@@ -174,11 +185,6 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
                 dto.LogoUrl,
                 "branches",
                 "Le logo de la branche doit etre une image valide de 5 Mo maximum.");
-            dto.FoulardUrl = await fileUploadService.SaveImageAsync(
-                Foulard,
-                dto.FoulardUrl,
-                "branches",
-                "La photo du foulard doit etre une image valide de 5 Mo maximum.");
             result = await brancheService.UpdateAsync(id, dto);
         }
         catch (InvalidOperationException ex)
@@ -356,7 +362,6 @@ public class BranchesController(IBrancheService brancheService, AppDbContext db,
         Nom = dto.Nom,
         Description = dto.Description,
         LogoUrl = dto.LogoUrl,
-        FoulardUrl = dto.FoulardUrl,
         AgeMin = dto.AgeMin,
         AgeMax = dto.AgeMax,
         NomChefUnite = null,

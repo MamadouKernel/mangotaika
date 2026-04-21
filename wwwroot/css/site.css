@@ -537,6 +537,12 @@ body {
 .stat-card-3d .stat-icon { font-size: 2.5rem; color: rgba(255,255,255,0.9); }
 
 /* ===== SIDEBAR (liste menu : plat, sans relief « bouton ») ===== */
+/* Role switcher */
+.role-switcher { background: var(--vert-pale); border-radius: 10px; padding: 0.6rem 0.75rem; }
+.role-switcher__label { display: block; font-size: 0.7rem; font-weight: 600; color: var(--vert-logo); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.35rem; }
+.role-switcher__btn { background: var(--blanc); border: 1px solid var(--gris-border); color: var(--texte-principal); font-size: 0.82rem; font-weight: 600; border-radius: 8px; text-align: left; }
+.role-switcher__btn:hover { background: var(--vert-pale); color: var(--vert-logo); border-color: var(--vert-logo); }
+
 .sidebar {
     background: var(--blanc);
     border-right: 1px solid var(--gris-border);

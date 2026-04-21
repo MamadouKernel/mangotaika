@@ -7,12 +7,22 @@ using System.Security.Claims;
 
 namespace MangoTaika.Services;
 
-public class DashboardService(AppDbContext db, IFormationService formationService) : IDashboardService
+public class DashboardService(AppDbContext db, IFormationService formationService, ActiveRoleService activeRoleService) : IDashboardService
 {
     public async Task<DashboardDto> GetDashboardAsync(ClaimsPrincipal user)
     {
         var dto = new DashboardDto();
         var userId = TryGetUserId(user);
+        var activeRole = activeRoleService.GetActiveRole(user);
+
+        if (activeRole == "AssistantCommissaire" || activeRole == "ChefGroupe" || activeRole == "ChefUnite")
+        {
+            dto.RoleActif = ActiveRoleService.GetLabel(activeRole!);
+            dto.TitreBienvenue = "Mon espace scout";
+            dto.SousTitreBienvenue = "Vue personnelle de vos activites, demandes, formations et tickets.";
+            await FillScoutDashboardAsync(dto, userId);
+            return dto;
+        }
 
         if (user.IsInRole("Administrateur") || user.IsInRole("Gestionnaire"))
         {

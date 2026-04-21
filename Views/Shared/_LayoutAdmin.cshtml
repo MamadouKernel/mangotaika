@@ -1,3 +1,5 @@
+@using MangoTaika.Services
+@inject ActiveRoleService ActiveRoleService
 @{
     Layout = "_Layout";
     ViewData["IsAdminLayout"] = true;
@@ -9,13 +11,26 @@
     var isScout = User.IsInRole("Scout");
     var isParent = User.IsInRole("Parent");
     var isConsultant = User.IsInRole("Consultant");
+    var isAssistantCommissaire = User.IsInRole("AssistantCommissaire");
+    var isChefGroupe = User.IsInRole("ChefGroupe");
+    var isChefUnite = User.IsInRole("ChefUnite");
+    var isScopedLeader = isAssistantCommissaire || isChefGroupe || isChefUnite;
+
+    var activeRole = ActiveRoleService.GetActiveRole(User) ?? "";
+    var userRoles = ActiveRoleService.GetUserRoles(User);
+    var hasMultipleRoles = userRoles.Count > 1;
 
     var isAdminOrGest = isAdmin || isGestionnaire;
     var isSupportAgent = isAdminOrGest || isAgentSupport;
     var isEncadrement = isAdminOrGest || isSuperviseur || isConsultant;
 
-    var canViewTerritoire = isEncadrement;
-    var canViewActivites = isEncadrement;
+    var activeScopedLeader = isScopedLeader && !isAdminOrGest && !isEncadrement
+        ? activeRole
+        : (isScopedLeader ? activeRole : "");
+    var showScopedNav = activeScopedLeader is "AssistantCommissaire" or "ChefGroupe" or "ChefUnite";
+
+    var canViewTerritoire = isEncadrement || showScopedNav;
+    var canViewActivites = isEncadrement || showScopedNav;
     var canViewDemandes = isAdminOrGest || isSuperviseur || isConsultant;
     var canViewFinances = isEncadrement;
     var canManageCommunication = isAdminOrGest;
@@ -33,6 +48,34 @@
             <div class="sidebar-logo">
                 <img src="~/images/logo.png" alt="Logo MANGO TAIKA" />
             </div>
+
+            @if (hasMultipleRoles)
+            {
+                <div class="px-3 pb-3">
+                    <div class="role-switcher">
+                        <span class="role-switcher__label">Vue active</span>
+                        <div class="dropdown">
+                            <button class="btn btn-sm role-switcher__btn dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-person-badge"></i> @ActiveRoleService.GetLabel(activeRole)
+                            </button>
+                            <ul class="dropdown-menu w-100">
+                                @foreach (var r in userRoles)
+                                {
+                                    <li>
+                                        <form asp-controller="Account" asp-action="SwitchRole" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="role" value="@r" />
+                                            <button type="submit" class="dropdown-item @(r == activeRole ? "active" : "")">
+                                                @ActiveRoleService.GetLabel(r)
+                                            </button>
+                                        </form>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            }
 
             <ul class="nav flex-column">
                 <li class="nav-item">
@@ -54,6 +97,34 @@
                             <li><a class="nav-link" asp-controller="Formations" asp-action="MesFormations"><i class="bi bi-mortarboard"></i> Mes formations</a></li>
                             <li><a class="nav-link" asp-controller="Formations" asp-action="Catalogue"><i class="bi bi-book"></i> Catalogue formations</a></li>
                             <li><a class="nav-link" asp-controller="Certificats" asp-action="MesCertificats"><i class="bi bi-patch-check"></i> Mes certificats</a></li>
+                            <li><a class="nav-link" asp-controller="Tickets" asp-action="MesTickets"><i class="bi bi-headset"></i> Mes tickets</a></li>
+                        </ul>
+                    </li>
+                }
+
+                @if (showScopedNav)
+                {
+                    <li class="nav-item sidebar-group">
+                        <a class="nav-link sidebar-toggle" href="#" data-target="grp-mon-perimetre">
+                            <i class="bi bi-geo-fill"></i> Mon perimetre
+                            <i class="bi bi-chevron-down sidebar-chevron"></i>
+                        </a>
+                        <ul class="sidebar-submenu" id="grp-mon-perimetre">
+                            <li><a class="nav-link" asp-controller="Account" asp-action="MaFiche"><i class="bi bi-person-badge"></i> Ma fiche scout</a></li>
+                            @if (activeScopedLeader == "ChefGroupe")
+                            {
+                                <li><a class="nav-link" asp-controller="Groupes" asp-action="Index"><i class="bi bi-building"></i> Mon groupe</a></li>
+                                <li><a class="nav-link" asp-controller="Branches" asp-action="Index"><i class="bi bi-diagram-3-fill"></i> Branches de mon groupe</a></li>
+                                <li><a class="nav-link" asp-controller="Scouts" asp-action="Index"><i class="bi bi-people-fill"></i> Scouts de mon groupe</a></li>
+                            }
+                            else if (activeScopedLeader is "AssistantCommissaire" or "ChefUnite")
+                            {
+                                <li><a class="nav-link" asp-controller="Branches" asp-action="Index"><i class="bi bi-diagram-3-fill"></i> Ma branche</a></li>
+                                <li><a class="nav-link" asp-controller="Scouts" asp-action="Index"><i class="bi bi-people-fill"></i> Scouts de ma branche</a></li>
+                            }
+                            <li><a class="nav-link" asp-controller="Activites" asp-action="Index"><i class="bi bi-calendar-event-fill"></i> Activites</a></li>
+                            <li><a class="nav-link" asp-controller="Demandes" asp-action="Index"><i class="bi bi-file-earmark-check-fill"></i> Mes demandes</a></li>
+                            <li><a class="nav-link" asp-controller="Formations" asp-action="MesFormations"><i class="bi bi-mortarboard"></i> Mes formations</a></li>
                             <li><a class="nav-link" asp-controller="Tickets" asp-action="MesTickets"><i class="bi bi-headset"></i> Mes tickets</a></li>
                         </ul>
                     </li>

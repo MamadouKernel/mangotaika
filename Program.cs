@@ -87,6 +87,16 @@ builder.Services.AddScoped<IFormationService, FormationService>();
 builder.Services.AddScoped<IFileUploadService, FileUploadService>();
 builder.Services.AddScoped<INotificationDispatchService, NotificationDispatchService>();
 builder.Services.AddScoped<OperationalAccessService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ActiveRoleService>();
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.IdleTimeout = TimeSpan.FromHours(8);
+});
 
 builder.Services.AddAntiforgery(options =>
 {
@@ -140,6 +150,7 @@ app.Use(async (context, next) =>
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
+app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -176,7 +187,7 @@ using (var scope = app.Services.CreateScope())
         await db.SaveChangesAsync();
     }
 
-    foreach (var roleName in new[] { "Administrateur", "Gestionnaire", "AgentSupport", "Scout", "Parent", "Superviseur", "Consultant" })
+    foreach (var roleName in new[] { "Administrateur", "Gestionnaire", "AgentSupport", "Scout", "Parent", "Superviseur", "Consultant", "AssistantCommissaire", "ChefGroupe", "ChefUnite" })
     {
         if (!await roleManager.RoleExistsAsync(roleName))
         {

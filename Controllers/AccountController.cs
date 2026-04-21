@@ -17,7 +17,8 @@ public class AccountController(
     UserManager<ApplicationUser> userManager,
     SignInManager<ApplicationUser> signInManager,
     AppDbContext db,
-    ISmsService smsService) : Controller
+    ISmsService smsService,
+    ActiveRoleService activeRoleService) : Controller
 {
     [HttpGet]
     public IActionResult Login(string? returnUrl = null)
@@ -220,6 +221,19 @@ public class AccountController(
     {
         await signInManager.SignOutAsync();
         return RedirectToAction("Index", "Home");
+    }
+
+    // === BASCULEMENT DE ROLE ===
+
+    [HttpPost]
+    [Authorize]
+    [ValidateAntiForgeryToken]
+    public IActionResult SwitchRole(string role)
+    {
+        var userRoles = ActiveRoleService.GetUserRoles(User);
+        if (userRoles.Contains(role))
+            activeRoleService.SetActiveRole(role);
+        return RedirectToAction("Index", "Dashboard");
     }
 
     // === PROFIL UTILISATEUR ===

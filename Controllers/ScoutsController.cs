@@ -9,13 +9,15 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace MangoTaika.Controllers;
 
-[Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant")]
+[Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant,AssistantCommissaire,ChefGroupe,ChefUnite")]
 public class ScoutsController(
     IScoutService scoutService,
     IScoutQrService scoutQrService,
     AppDbContext db,
     IMemoryCache memoryCache,
-    IFileUploadService fileUploadService) : Controller
+    IFileUploadService fileUploadService,
+    OperationalAccessService operationalAccess,
+    ActiveRoleService activeRoleService) : Controller
 {
     private const string ImportReportCachePrefix = "scouts-import-report:";
     private static readonly TimeSpan ImportReportLifetime = TimeSpan.FromMinutes(15);
@@ -40,6 +42,16 @@ public class ScoutsController(
             : await scoutService.SearchAsync(recherche);
 
         var filtered = scouts.AsEnumerable();
+
+        var activeRole = activeRoleService.GetActiveRole(User);
+        if (activeRole is "AssistantCommissaire" or "ChefGroupe" or "ChefUnite")
+        {
+            var (scopeGroupeId, scopeBrancheId) = await operationalAccess.GetScopeAsync(User, activeRole);
+            if (scopeBrancheId.HasValue)
+                filtered = filtered.Where(s => s.BrancheId == scopeBrancheId.Value);
+            else if (scopeGroupeId.HasValue)
+                filtered = filtered.Where(s => s.GroupeId == scopeGroupeId.Value);
+        }
 
         if (groupeId.HasValue && groupeId.Value != Guid.Empty)
         {

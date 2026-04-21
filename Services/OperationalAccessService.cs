@@ -15,6 +15,32 @@ public sealed class OperationalAccessService(AppDbContext db, UserManager<Applic
     public bool IsSupervision(ClaimsPrincipal user)
         => user.IsInRole("Superviseur") || user.IsInRole("Consultant");
 
+    public bool IsAssistantCommissaire(ClaimsPrincipal user) => user.IsInRole("AssistantCommissaire");
+    public bool IsChefGroupe(ClaimsPrincipal user) => user.IsInRole("ChefGroupe");
+    public bool IsChefUnite(ClaimsPrincipal user) => user.IsInRole("ChefUnite");
+    public bool IsScopedLeader(ClaimsPrincipal user)
+        => IsAssistantCommissaire(user) || IsChefGroupe(user) || IsChefUnite(user);
+
+    public async Task<ApplicationUser?> GetCurrentUserAsync(ClaimsPrincipal user)
+    {
+        var userId = userManager.GetUserId(user);
+        if (!Guid.TryParse(userId, out var parsed)) return null;
+        return await db.Users.FindAsync(parsed);
+    }
+
+    public async Task<(Guid? GroupeId, Guid? BrancheId)> GetScopeAsync(ClaimsPrincipal user, string activeRole)
+    {
+        var appUser = await GetCurrentUserAsync(user);
+        if (appUser is null) return (null, null);
+        return activeRole switch
+        {
+            "ChefGroupe"            => (appUser.GroupeId, null),
+            "AssistantCommissaire"  => (null, appUser.BrancheId),
+            "ChefUnite"             => (appUser.GroupeId, appUser.BrancheId),
+            _                       => (null, null)
+        };
+    }
+
     public async Task<Scout?> GetCurrentScoutAsync(ClaimsPrincipal user)
     {
         var userId = userManager.GetUserId(user);
