@@ -806,13 +806,13 @@ body {
     color: var(--texte-secondaire);
 }
 .commissaire-photo {
-    width: 150px; height: 150px;
+    width: 220px; height: 220px;
     border-radius: 50%; object-fit: cover;
-    border: 3px solid var(--vert-logo);
-    box-shadow: none;
+    border: 4px solid var(--vert-logo);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
 }
 .commissaire-placeholder {
-    width: 150px; height: 150px;
+    width: 220px; height: 220px;
     border-radius: 50%;
     background: var(--vert-logo);
     display: flex; align-items: center; justify-content: center;
@@ -1728,8 +1728,8 @@ main { animation: fadeInUp 0.35s ease-out; }
     .stat-card-3d { padding: 1.2rem; }
     .stat-card-3d .stat-icon { font-size: 1.8rem; }
     .commissaire-card { padding: 1.5rem; }
-    .commissaire-photo { width: 100px; height: 100px; }
-    .commissaire-placeholder { width: 100px; height: 100px; }
+    .commissaire-photo { width: 160px; height: 160px; }
+    .commissaire-placeholder { width: 160px; height: 160px; }
     .hero-section { min-height: 70vh; padding: 2rem 1rem; }
     .hero-buttons { flex-direction: column; align-items: center; }
     .hero-buttons .btn { width: 100%; max-width: 280px; }
