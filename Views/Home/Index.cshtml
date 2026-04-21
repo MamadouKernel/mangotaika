@@ -69,8 +69,8 @@
             <h3 class="section-title">Mot du <span class="accent">Commissaire</span></h3>
             <div class="section-divider"></div>
             <div class="commissaire-card">
-                <div class="row align-items-center">
-                    <div class="col-md-3 text-center mb-3 mb-md-0">
+                <div class="row align-items-center g-4">
+                    <div class="col-md-4 text-center mb-3 mb-md-0">
                         @if (!string.IsNullOrEmpty(mot.PhotoUrl))
                         {
                             <img src="@mot.PhotoUrl" alt="Commissaire de District" class="commissaire-photo" />
@@ -82,7 +82,7 @@
                             </div>
                         }
                     </div>
-                    <div class="col-md-9">
+                    <div class="col-md-8">
                         <p style="font-size:1.1rem;line-height:1.8;color:var(--texte-secondaire);position:relative;z-index:1;white-space:pre-wrap;">
                             @mot.Contenu
                         </p>
