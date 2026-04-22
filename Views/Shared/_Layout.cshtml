@@ -14,7 +14,22 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/activity-suite.css" asp-append-version="true" />
-    <link rel="icon" type="image/png" href="~/images/logo.png" />
+    @* Logo et Favicon - Multi-device support *@
+    <link rel="manifest" href="~/manifest.json" />
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
+    <link rel="shortcut icon" type="image/x-icon" href="~/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="192x192" href="~/images/logo.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="~/images/logo.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="~/images/logo.png" />
+    <link rel="apple-touch-icon" sizes="144x144" href="~/images/logo.png" />
+    <meta name="theme-color" content="#1a5f4a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MANGO TAÏKA" />
+    <meta name="application-name" content="MANGO TAÏKA" />
+    <meta name="msapplication-TileColor" content="#1a5f4a" />
+    <meta name="msapplication-TileImage" content="~/images/logo.png" />
     <meta name="request-verification-token" content="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
 </head>
 <body>
