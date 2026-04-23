@@ -1,4 +1,4 @@
-﻿namespace MangoTaika.DTOs;
+namespace MangoTaika.DTOs;
 
 using System.ComponentModel.DataAnnotations;
 using MangoTaika.Helpers;

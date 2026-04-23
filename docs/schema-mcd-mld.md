@@ -1,4 +1,4 @@
-﻿# Schema MCD et MLD complet - MangoTaika
+# Schema MCD et MLD complet - MangoTaika
 
 Source: reconstruction a partir de [AppDbContext](../Data/AppDbContext.cs), des entites `Data/Entities/*.cs`, du snapshot EF Core et des migrations recentes.
 

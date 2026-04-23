@@ -1,4 +1,4 @@
-﻿@model string
+@model string
 @{
     var context = string.IsNullOrWhiteSpace(Model) ? "general" : Model!;
     var modalId = $"scoutWorkflowHelpModal-{context}";

@@ -1,4 +1,4 @@
-﻿using ClosedXML.Excel;
+using ClosedXML.Excel;
 using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.Helpers;

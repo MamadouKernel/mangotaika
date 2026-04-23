@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.Helpers;

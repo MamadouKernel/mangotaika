@@ -1,4 +1,4 @@
-﻿using MangoTaika.Data.Entities;
+using MangoTaika.Data.Entities;
 using MangoTaika.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;

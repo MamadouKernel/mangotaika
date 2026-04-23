@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using MangoTaika.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Xunit;

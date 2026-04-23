@@ -1,4 +1,4 @@
-﻿namespace MangoTaika.Data.Entities;
+namespace MangoTaika.Data.Entities;
 
 public class DemandeAutorisation
 {

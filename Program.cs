@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.Hubs;

@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
     function normalizeText(value) {
         return (value || '').replace(/\s+/g, ' ').trim();
     }

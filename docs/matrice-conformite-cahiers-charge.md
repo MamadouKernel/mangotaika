@@ -1,4 +1,4 @@
-﻿# Matrice de conformite aux cahiers de charge - MangoTaika
+# Matrice de conformite aux cahiers de charge - MangoTaika
 
 Date de mise a jour: 2026-04-01
 

@@ -1,4 +1,4 @@
-﻿using MangoTaika.Data;
+using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
 using Microsoft.EntityFrameworkCore;

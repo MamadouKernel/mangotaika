@@ -1,4 +1,4 @@
-﻿using MangoTaika.Data.Entities;
+using MangoTaika.Data.Entities;
 
 namespace MangoTaika.DTOs;
 

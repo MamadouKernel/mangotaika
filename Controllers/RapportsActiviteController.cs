@@ -1,4 +1,4 @@
-﻿using MangoTaika.Data;
+using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.Helpers;
 using MangoTaika.Services;
