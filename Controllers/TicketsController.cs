@@ -528,8 +528,9 @@ public class TicketsController(
     private async Task<List<ApplicationUser>> GetSupportAgentsAsync()
     {
         var admins = await userManager.GetUsersInRoleAsync("Administrateur");
+        var commissairesDistrict = await userManager.GetUsersInRoleAsync("CommissaireDistrict");
         var gestionnaires = await userManager.GetUsersInRoleAsync("Gestionnaire");
         var agents = await userManager.GetUsersInRoleAsync("AgentSupport");
-        return admins.Concat(gestionnaires).Concat(agents).Distinct().OrderBy(u => u.Prenom).ThenBy(u => u.Nom).ToList();
+        return admins.Concat(commissairesDistrict).Concat(gestionnaires).Concat(agents).Distinct().OrderBy(u => u.Prenom).ThenBy(u => u.Nom).ToList();
     }
 }

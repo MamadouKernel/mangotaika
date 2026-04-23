@@ -15,7 +15,7 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
         var userId = TryGetUserId(user);
         var activeRole = activeRoleService.GetActiveRole(user);
 
-        if (activeRole == "AssistantCommissaire" || activeRole == "ChefGroupe" || activeRole == "ChefUnite")
+        if (activeRole == "EquipeDistrict" || activeRole == "ChefGroupe" || activeRole == "ChefUnite")
         {
             dto.RoleActif = ActiveRoleService.GetLabel(activeRole!);
             dto.TitreBienvenue = "Mon espace scout";
@@ -24,9 +24,11 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
             return dto;
         }
 
-        if (user.IsInRole("Administrateur") || user.IsInRole("Gestionnaire"))
+        if (RoleNames.IsAdminLike(user) || user.IsInRole("Gestionnaire"))
         {
-            dto.RoleActif = user.IsInRole("Administrateur") ? "Administrateur" : "Gestionnaire";
+            dto.RoleActif = CommissaireDistrictClaimsTransformation.HasAdministrateurAlias(user)
+                ? ActiveRoleService.GetLabel(RoleNames.CommissaireDistrict)
+                : "Administrateur";
             dto.TitreBienvenue = "Pilotage global";
             dto.SousTitreBienvenue = "Vue complete des operations du district et des demandes en attente.";
             await FillEncadrementDashboardAsync(dto, includeMessages: true, includePartenaires: true);

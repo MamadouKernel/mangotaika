@@ -3,6 +3,7 @@ using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.Hubs;
 using MangoTaika.Services;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
@@ -87,6 +88,7 @@ builder.Services.AddScoped<IFormationService, FormationService>();
 builder.Services.AddScoped<IFileUploadService, FileUploadService>();
 builder.Services.AddScoped<INotificationDispatchService, NotificationDispatchService>();
 builder.Services.AddScoped<OperationalAccessService>();
+builder.Services.AddScoped<IClaimsTransformation, CommissaireDistrictClaimsTransformation>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ActiveRoleService>();
 builder.Services.AddDistributedMemoryCache();
@@ -187,7 +189,7 @@ using (var scope = app.Services.CreateScope())
         await db.SaveChangesAsync();
     }
 
-    foreach (var roleName in new[] { "Administrateur", "Gestionnaire", "AgentSupport", "Scout", "Parent", "Superviseur", "Consultant", "AssistantCommissaire", "ChefGroupe", "ChefUnite" })
+    foreach (var roleName in RoleNames.All)
     {
         if (!await roleManager.RoleExistsAsync(roleName))
         {
@@ -203,7 +205,7 @@ using (var scope = app.Services.CreateScope())
     var adminEmail = builder.Configuration["AdminSeed:Email"] ?? "admin@mangotaika.com";
     var adminPhone = builder.Configuration["AdminSeed:Phone"] ?? "0000000000";
     var adminPassword = builder.Configuration["AdminSeed:Password"];
-    const string adminRole = "Administrateur";
+    const string adminRole = RoleNames.Administrateur;
 
     if (!string.IsNullOrWhiteSpace(adminPassword) && !await db.Users.AnyAsync(u => u.PhoneNumber == adminPhone))
     {

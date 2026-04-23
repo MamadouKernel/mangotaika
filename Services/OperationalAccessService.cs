@@ -10,16 +10,16 @@ namespace MangoTaika.Services;
 public sealed class OperationalAccessService(AppDbContext db, UserManager<ApplicationUser> userManager)
 {
     public bool IsAdminLike(ClaimsPrincipal user)
-        => user.IsInRole("Administrateur") || user.IsInRole("Gestionnaire");
+        => RoleNames.IsAdminLike(user) || user.IsInRole(RoleNames.Gestionnaire);
 
     public bool IsSupervision(ClaimsPrincipal user)
         => user.IsInRole("Superviseur") || user.IsInRole("Consultant");
 
-    public bool IsAssistantCommissaire(ClaimsPrincipal user) => user.IsInRole("AssistantCommissaire");
+    public bool IsEquipeDistrict(ClaimsPrincipal user) => user.IsInRole(RoleNames.EquipeDistrict);
     public bool IsChefGroupe(ClaimsPrincipal user) => user.IsInRole("ChefGroupe");
     public bool IsChefUnite(ClaimsPrincipal user) => user.IsInRole("ChefUnite");
     public bool IsScopedLeader(ClaimsPrincipal user)
-        => IsAssistantCommissaire(user) || IsChefGroupe(user) || IsChefUnite(user);
+        => IsEquipeDistrict(user) || IsChefGroupe(user) || IsChefUnite(user);
 
     public async Task<ApplicationUser?> GetCurrentUserAsync(ClaimsPrincipal user)
     {
@@ -35,7 +35,7 @@ public sealed class OperationalAccessService(AppDbContext db, UserManager<Applic
         return activeRole switch
         {
             "ChefGroupe"            => (appUser.GroupeId, null),
-            "AssistantCommissaire"  => (null, appUser.BrancheId),
+            "EquipeDistrict"        => (null, appUser.BrancheId),
             "ChefUnite"             => (appUser.GroupeId, appUser.BrancheId),
             _                       => (null, null)
         };

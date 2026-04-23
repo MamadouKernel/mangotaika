@@ -6,22 +6,17 @@ public class ActiveRoleService(IHttpContextAccessor httpContextAccessor)
 {
     private const string SessionKey = "ActiveRole";
 
-    public static readonly string[] AllRoles =
-    [
-        "Administrateur", "Gestionnaire", "AgentSupport",
-        "Superviseur", "Consultant",
-        "AssistantCommissaire", "ChefGroupe", "ChefUnite",
-        "Scout", "Parent"
-    ];
+    public static readonly string[] AllRoles = RoleNames.All;
 
     private static readonly Dictionary<string, string> RoleLabels = new()
     {
         ["Administrateur"]      = "Administrateur",
+        ["CommissaireDistrict"] = "Commissaire de District",
         ["Gestionnaire"]        = "Gestionnaire",
         ["AgentSupport"]        = "Agent de support",
         ["Superviseur"]         = "Superviseur",
         ["Consultant"]          = "Consultant",
-        ["AssistantCommissaire"] = "Assistant Commissaire",
+        ["EquipeDistrict"]      = "Equipe de District",
         ["ChefGroupe"]          = "Chef de Groupe",
         ["ChefUnite"]           = "Chef d'Unite",
         ["Scout"]               = "Scout",
@@ -31,13 +26,14 @@ public class ActiveRoleService(IHttpContextAccessor httpContextAccessor)
     public string? GetActiveRole(ClaimsPrincipal user)
     {
         var session = httpContextAccessor.HttpContext?.Session;
+        var roles = GetUserRoles(user);
         if (session is not null)
         {
             var stored = session.GetString(SessionKey);
-            if (!string.IsNullOrEmpty(stored) && user.IsInRole(stored))
+            if (!string.IsNullOrEmpty(stored) && roles.Contains(stored))
                 return stored;
         }
-        return AllRoles.FirstOrDefault(user.IsInRole);
+        return roles.FirstOrDefault();
     }
 
     public void SetActiveRole(string role)
@@ -46,7 +42,15 @@ public class ActiveRoleService(IHttpContextAccessor httpContextAccessor)
     }
 
     public static List<string> GetUserRoles(ClaimsPrincipal user)
-        => AllRoles.Where(user.IsInRole).ToList();
+    {
+        var roles = AllRoles.Where(user.IsInRole).ToList();
+        if (CommissaireDistrictClaimsTransformation.HasAdministrateurAlias(user))
+        {
+            roles.Remove(RoleNames.Administrateur);
+        }
+
+        return roles;
+    }
 
     public static string GetLabel(string role)
         => RoleLabels.TryGetValue(role, out var label) ? label : role;

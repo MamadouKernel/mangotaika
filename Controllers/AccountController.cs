@@ -357,10 +357,10 @@ public class AccountController(
     }
 
     private bool EstGestionnaireSansAdmin() =>
-        User.IsInRole("Gestionnaire") && !User.IsInRole("Administrateur");
+        User.IsInRole(RoleNames.Gestionnaire) && !RoleNames.IsAdminLike(User);
 
     private async Task<bool> EstUtilisateurAdminAsync(ApplicationUser u) =>
-        (await userManager.GetRolesAsync(u)).Contains("Administrateur");
+        (await userManager.GetRolesAsync(u)).Any(RoleNames.IsAdminRole);
 
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> UtilisateurDetails(Guid id)
@@ -431,9 +431,9 @@ public class AccountController(
 
         ViewBag.RolesDisponibles = RolesPourEdition();
 
-        if (EstGestionnaireSansAdmin() && model.Roles.Contains("Administrateur"))
+        if (EstGestionnaireSansAdmin() && model.Roles.Any(RoleNames.IsAdminRole))
         {
-            ModelState.AddModelError(nameof(model.Roles), "Vous ne pouvez pas attribuer le rôle Administrateur.");
+            ModelState.AddModelError(nameof(model.Roles), "Vous ne pouvez pas attribuer un rôle administrateur.");
         }
 
         var currentUserId = Guid.Parse(userManager.GetUserId(User)!);
@@ -521,8 +521,8 @@ public class AccountController(
     private IReadOnlyList<string> RolesPourEdition()
     {
         if (EstGestionnaireSansAdmin())
-            return ["Gestionnaire", "AgentSupport", "Superviseur", "Consultant", "AssistantCommissaire", "ChefGroupe", "ChefUnite", "Scout", "Parent"];
-        return ["Administrateur", "Gestionnaire", "AgentSupport", "Superviseur", "Consultant", "AssistantCommissaire", "ChefGroupe", "ChefUnite", "Scout", "Parent"];
+            return ["Gestionnaire", "AgentSupport", "Superviseur", "Consultant", "EquipeDistrict", "ChefGroupe", "ChefUnite", "Scout", "Parent"];
+        return ["Administrateur", "CommissaireDistrict", "Gestionnaire", "AgentSupport", "Superviseur", "Consultant", "EquipeDistrict", "ChefGroupe", "ChefUnite", "Scout", "Parent"];
     }
 
     [HttpPost]

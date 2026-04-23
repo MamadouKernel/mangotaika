@@ -344,7 +344,7 @@ public class TicketService(AppDbContext db, IHubContext<NotificationHub> hubCont
             .Select(t => t.NoteSatisfaction!.Value)
             .ToList();
 
-        var supportRoleNames = new[] { "Administrateur", "Gestionnaire", "AgentSupport" };
+        var supportRoleNames = new[] { RoleNames.Administrateur, RoleNames.CommissaireDistrict, RoleNames.Gestionnaire, RoleNames.AgentSupport };
         var roleAgentIds = await db.UserRoles
             .Join(db.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
             .Where(x => supportRoleNames.Contains(x.Name!))
@@ -699,7 +699,7 @@ public class TicketService(AppDbContext db, IHubContext<NotificationHub> hubCont
 
     private async Task<Guid?> GetLeastLoadedSupportAgentAsync(Guid? groupeId = null)
     {
-        var supportRoleNames = new[] { "Administrateur", "Gestionnaire", "AgentSupport" };
+        var supportRoleNames = new[] { RoleNames.Administrateur, RoleNames.CommissaireDistrict, RoleNames.Gestionnaire, RoleNames.AgentSupport };
         var candidateIds = await db.UserRoles
             .Join(db.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
             .Where(x => supportRoleNames.Contains(x.Name!))
@@ -820,7 +820,7 @@ public class TicketService(AppDbContext db, IHubContext<NotificationHub> hubCont
 
     private async Task<List<Guid>> GetSupervisionRecipientIdsAsync()
     {
-        var supportRoleNames = new[] { "Administrateur", "Gestionnaire", "Superviseur" };
+        var supportRoleNames = new[] { RoleNames.Administrateur, RoleNames.CommissaireDistrict, RoleNames.Gestionnaire, RoleNames.Superviseur };
         return await db.UserRoles
             .Join(db.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
             .Where(x => supportRoleNames.Contains(x.Name!))

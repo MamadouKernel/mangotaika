@@ -5,7 +5,8 @@
     var userRoles = ViewBag.UserRoles as Dictionary<Guid, List<string>> ?? new();
     string RoleLabel(string r) => r switch {
         "Parent"               => "Parent / Tuteur",
-        "AssistantCommissaire" => "Asst. Commissaire",
+        "CommissaireDistrict"  => "Commissaire de District",
+        "EquipeDistrict"       => "Equipe de District",
         "ChefGroupe"           => "Chef de Groupe",
         "ChefUnite"            => "Chef d'Unite",
         _                      => r

@@ -33,7 +33,7 @@
             <h4 class="text-or mb-1">@Model.Prenom @Model.Nom</h4>
             @foreach (var r in Model.Roles)
             {
-                <span class="badge-3d badge-soumise me-1">@(r == "Parent" ? "Parent / Tuteur" : r == "AssistantCommissaire" ? "Assistant Commissaire" : r == "ChefGroupe" ? "Chef de Groupe" : r == "ChefUnite" ? "Chef d'Unite" : r)</span>
+                <span class="badge-3d badge-soumise me-1">@(r == "Parent" ? "Parent / Tuteur" : r == "CommissaireDistrict" ? "Commissaire de District" : r == "EquipeDistrict" ? "Equipe de District" : r == "ChefGroupe" ? "Chef de Groupe" : r == "ChefUnite" ? "Chef d'Unite" : r)</span>
             }
             @if (Model.IsActive)
             {

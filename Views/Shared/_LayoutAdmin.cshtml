@@ -11,10 +11,10 @@
     var isScout = User.IsInRole("Scout");
     var isParent = User.IsInRole("Parent");
     var isConsultant = User.IsInRole("Consultant");
-    var isAssistantCommissaire = User.IsInRole("AssistantCommissaire");
+    var isEquipeDistrict = User.IsInRole("EquipeDistrict");
     var isChefGroupe = User.IsInRole("ChefGroupe");
     var isChefUnite = User.IsInRole("ChefUnite");
-    var isScopedLeader = isAssistantCommissaire || isChefGroupe || isChefUnite;
+    var isScopedLeader = isEquipeDistrict || isChefGroupe || isChefUnite;
 
     var activeRole = ActiveRoleService.GetActiveRole(User) ?? "";
     var userRoles = ActiveRoleService.GetUserRoles(User);
@@ -27,7 +27,7 @@
     var activeScopedLeader = isScopedLeader && !isAdminOrGest && !isEncadrement
         ? activeRole
         : (isScopedLeader ? activeRole : "");
-    var showScopedNav = activeScopedLeader is "AssistantCommissaire" or "ChefGroupe" or "ChefUnite";
+    var showScopedNav = activeScopedLeader is "EquipeDistrict" or "ChefGroupe" or "ChefUnite";
 
     var canViewTerritoire = isEncadrement || showScopedNav;
     var canViewActivites = isEncadrement || showScopedNav;
@@ -117,7 +117,7 @@
                                 <li><a class="nav-link" asp-controller="Branches" asp-action="Index"><i class="bi bi-diagram-3-fill"></i> Branches de mon groupe</a></li>
                                 <li><a class="nav-link" asp-controller="Scouts" asp-action="Index"><i class="bi bi-people-fill"></i> Scouts de mon groupe</a></li>
                             }
-                            else if (activeScopedLeader is "AssistantCommissaire" or "ChefUnite")
+                            else if (activeScopedLeader is "EquipeDistrict" or "ChefUnite")
                             {
                                 <li><a class="nav-link" asp-controller="Branches" asp-action="Index"><i class="bi bi-diagram-3-fill"></i> Ma branche</a></li>
                                 <li><a class="nav-link" asp-controller="Scouts" asp-action="Index"><i class="bi bi-people-fill"></i> Scouts de ma branche</a></li>
@@ -326,6 +326,5 @@
         if (overlay) overlay.classList.remove('open');
     }
 </script>
-
 
 

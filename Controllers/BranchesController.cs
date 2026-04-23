@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MangoTaika.Controllers;
 
-[Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant,AssistantCommissaire,ChefGroupe,ChefUnite")]
+[Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant,EquipeDistrict,ChefGroupe,ChefUnite")]
 public class BranchesController(
     IBrancheService brancheService,
     AppDbContext db,
@@ -24,7 +24,7 @@ public class BranchesController(
         var filteredBranches = allBranches.AsEnumerable();
 
         var activeRole = activeRoleService.GetActiveRole(User);
-        if (activeRole is "AssistantCommissaire" or "ChefGroupe" or "ChefUnite")
+        if (activeRole is "EquipeDistrict" or "ChefGroupe" or "ChefUnite")
         {
             var (scopeGroupeId, scopeBrancheId) = await operationalAccess.GetScopeAsync(User, activeRole);
             if (scopeBrancheId.HasValue)

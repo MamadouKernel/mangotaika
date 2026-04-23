@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MangoTaika.Controllers;
 
-[Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant,ChefGroupe,ChefUnite,AssistantCommissaire")]
+[Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant,ChefGroupe,ChefUnite,EquipeDistrict")]
 public class GroupesController(
     IGroupeService groupeService,
     IFileUploadService fileUploadService,
@@ -29,7 +29,7 @@ public class GroupesController(
             if (scopeGroupeId.HasValue)
                 all = all.Where(g => g.Id == scopeGroupeId.Value).ToList();
         }
-        else if (activeRole == "AssistantCommissaire")
+        else if (activeRole == "EquipeDistrict")
         {
             var (_, scopeBrancheId) = await operationalAccess.GetScopeAsync(User, activeRole);
             if (scopeBrancheId.HasValue)
@@ -267,6 +267,5 @@ public class GroupesController(
         ViewBag.ChefsGroupe = items;
     }
 }
-
 
 

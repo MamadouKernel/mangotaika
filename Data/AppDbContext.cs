@@ -465,7 +465,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             ("Parent",         "d4e5f6a7-b8c9-0123-defa-234567890123"),
             ("Superviseur",            "f6a7b8c9-d0e1-2345-fabc-456789012345"),
             ("Consultant",             "e5f6a7b8-c9d0-1234-efab-345678901234"),
-            ("AssistantCommissaire",   "aa000001-bbbb-cccc-dddd-000000000001"),
+            ("CommissaireDistrict",    "aa000004-bbbb-cccc-dddd-000000000004"),
+            ("EquipeDistrict",         "aa000001-bbbb-cccc-dddd-000000000001"),
             ("ChefGroupe",             "aa000002-bbbb-cccc-dddd-000000000002"),
             ("ChefUnite",              "aa000003-bbbb-cccc-dddd-000000000003")
         };

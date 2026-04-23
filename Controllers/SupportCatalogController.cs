@@ -1,5 +1,6 @@
 using MangoTaika.Data;
 using MangoTaika.Data.Entities;
+using MangoTaika.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -136,7 +137,7 @@ public class SupportCatalogController(
 
     private async Task PopulateSupportTargetsAsync()
     {
-        var supportRoleNames = new[] { "Administrateur", "Gestionnaire", "AgentSupport" };
+        var supportRoleNames = new[] { RoleNames.Administrateur, RoleNames.CommissaireDistrict, RoleNames.Gestionnaire, RoleNames.AgentSupport };
         var roleAgentIds = await db.UserRoles
             .Join(db.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
             .Where(x => supportRoleNames.Contains(x.Name!))
