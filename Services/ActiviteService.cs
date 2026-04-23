@@ -122,8 +122,8 @@ public class ActiviteService(AppDbContext db) : IActiviteService
             Id = Guid.NewGuid(),
             ActiviteId = activite.Id,
             AuteurId = createurId,
-            Contenu = "ActivitÃ© crÃ©Ã©e.",
-            TypeAction = "CrÃ©ation"
+            Contenu = "Activité créée.",
+            TypeAction = "Création"
         });
 
         await db.SaveChangesAsync();

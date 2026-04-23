@@ -412,7 +412,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasMany(q => q.Reponses).WithOne(r => r.Question).HasForeignKey(r => r.QuestionId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        // InscriptionFormation â€” unique par scout/formation
+        // InscriptionFormation : unique par scout/formation
         builder.Entity<InscriptionFormation>(e =>
         {
             e.HasOne(i => i.Scout).WithMany().HasForeignKey(i => i.ScoutId).OnDelete(DeleteBehavior.Cascade);
@@ -442,7 +442,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasOne(m => m.Auteur).WithMany().HasForeignKey(m => m.AuteurId).OnDelete(DeleteBehavior.Restrict);
         });
 
-        // ProgressionLecon â€” unique par scout/leÃ§on
+        // ProgressionLecon : unique par scout/leçon
         builder.Entity<ProgressionLecon>(e =>
         {
             e.HasOne(p => p.Scout).WithMany().HasForeignKey(p => p.ScoutId).OnDelete(DeleteBehavior.Cascade);
@@ -455,7 +455,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasOne(t => t.Scout).WithMany().HasForeignKey(t => t.ScoutId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        // Seed des rÃ´les
+        // Seed des rôles
         var roleData = new (string Name, string Guid)[]
         {
             ("Administrateur", "a1b2c3d4-e5f6-7890-abcd-ef1234567890"),
