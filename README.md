@@ -207,6 +207,7 @@ Vous pouvez utiliser:
 
 Variables importantes:
 - `ConnectionStrings__DefaultConnection`
+- `ReverseProxy__TrustAllForwardedHeaders`
 - `AdminSeed__Email`
 - `AdminSeed__Phone`
 - `AdminSeed__Password`
@@ -407,6 +408,7 @@ Prerequis cote serveur:
 Exemples disponibles dans [.env.example](./.env.example):
 
 - `APP_PORT`
+- `REVERSE_PROXY_TRUST_ALL_FORWARDED_HEADERS`
 - `POSTGRES_DB`
 - `POSTGRES_USER`
 - `POSTGRES_PASSWORD`

@@ -34,6 +34,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
+      ReverseProxy__TrustAllForwardedHeaders: ${REVERSE_PROXY_TRUST_ALL_FORWARDED_HEADERS:-true}
       ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=${POSTGRES_DB:-MangoTaikaDb};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-change-me};Client Encoding=UTF8
       AdminSeed__Email: ${ADMIN_SEED_EMAIL:-admin@mangotaika.com}
       AdminSeed__Phone: ${ADMIN_SEED_PHONE:-0000000000}

@@ -51,13 +51,23 @@ if (!string.IsNullOrWhiteSpace(dataProtectionKeysPath))
         .SetApplicationName("MangoTaika");
 }
 
+var trustAllForwardedHeaders = builder.Configuration.GetValue("ReverseProxy:TrustAllForwardedHeaders", false);
 var secureCookiePolicy = builder.Environment.IsEnvironment("Testing")
     ? CookieSecurePolicy.SameAsRequest
     : CookieSecurePolicy.Always;
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto |
+        ForwardedHeaders.XForwardedHost;
+
+    if (trustAllForwardedHeaders)
+    {
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+    }
 });
 
 builder.Services.ConfigureApplicationCookie(options =>
