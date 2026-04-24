@@ -83,7 +83,7 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(HistoriqueFormViewModel model, IFormFile? Photo)
+    public async Task<IActionResult> Create(HistoriqueFormViewModel model)
     {
         var entries = model.GetNormalizedEntries();
         if (entries.Count == 0)
@@ -104,26 +104,19 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
             {
                 Id = Guid.NewGuid(),
                 Categorie = entry.Categorie,
+                PhotoUrl = NormalizeValue(entry.PhotoUrl),
                 Description = entry.Description,
                 Periode = entry.Periode,
                 Ordre = entry.Ordre
             }).ToList()
         };
-        SyncLegacyFields(membre);
 
-        if (Photo is not null && Photo.Length > 0)
+        if (!await TryApplyEntryPhotosAsync(entries, membre.CategorieDetails.ToList()))
         {
-            try
-            {
-                membre.PhotoUrl = await fileUploadService.SaveImageAsync(Photo, "historique");
-            }
-            catch (InvalidOperationException ex)
-            {
-                this.AddDomainError(ex);
-                return View(model);
-            }
+            return View(model);
         }
 
+        SyncLegacyFields(membre);
         db.MembresHistoriques.Add(membre);
         await db.SaveChangesAsync();
 
@@ -143,7 +136,7 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(Guid id, HistoriqueFormViewModel model, IFormFile? Photo)
+    public async Task<IActionResult> Edit(Guid id, HistoriqueFormViewModel model)
     {
         if (id != model.Id)
         {
@@ -172,6 +165,7 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
         membre.Nom = model.Nom.Trim();
         db.MembresHistoriquesCategories.RemoveRange(membre.CategorieDetails.ToList());
         membre.CategorieDetails = [];
+
         foreach (var entry in entries)
         {
             membre.CategorieDetails.Add(new MembreHistoriqueCategorie
@@ -179,26 +173,19 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
                 Id = Guid.NewGuid(),
                 MembreHistoriqueId = membre.Id,
                 Categorie = entry.Categorie,
+                PhotoUrl = NormalizeValue(entry.PhotoUrl),
                 Description = entry.Description,
                 Periode = entry.Periode,
                 Ordre = entry.Ordre
             });
         }
-        SyncLegacyFields(membre);
 
-        if (Photo is not null && Photo.Length > 0)
+        if (!await TryApplyEntryPhotosAsync(entries, membre.CategorieDetails.ToList()))
         {
-            try
-            {
-                membre.PhotoUrl = await fileUploadService.SaveImageAsync(Photo, "historique");
-            }
-            catch (InvalidOperationException ex)
-            {
-                this.AddDomainError(ex);
-                return View(model);
-            }
+            return View(model);
         }
 
+        SyncLegacyFields(membre);
         await db.SaveChangesAsync();
 
         TempData["Success"] = "Membre mis à jour.";
@@ -285,8 +272,38 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
         membre.Ordre = details.FirstOrDefault()?.Ordre ?? 0;
         membre.Periode = details.Count == 1 ? NormalizeValue(details[0].Periode) : null;
         membre.Description = details.Count == 1 ? NormalizeValue(details[0].Description) : null;
+        membre.PhotoUrl = details
+            .Select(detail => NormalizeValue(detail.PhotoUrl))
+            .FirstOrDefault(photoUrl => !string.IsNullOrWhiteSpace(photoUrl));
     }
 
     private static string? NormalizeValue(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private async Task<bool> TryApplyEntryPhotosAsync(
+        IReadOnlyList<HistoriqueCategorieFormViewModel> entries,
+        IReadOnlyList<MembreHistoriqueCategorie> details)
+    {
+        for (var index = 0; index < entries.Count; index++)
+        {
+            var uploadedPhoto = Request.Form.Files.GetFile($"EntryPhotos[{index}]");
+            if (uploadedPhoto is null || uploadedPhoto.Length == 0)
+            {
+                details[index].PhotoUrl = NormalizeValue(entries[index].PhotoUrl);
+                continue;
+            }
+
+            try
+            {
+                details[index].PhotoUrl = await fileUploadService.SaveImageAsync(uploadedPhoto, "historique");
+            }
+            catch (InvalidOperationException ex)
+            {
+                this.AddDomainError(ex);
+                return false;
+            }
+        }
+
+        return true;
+    }
 }

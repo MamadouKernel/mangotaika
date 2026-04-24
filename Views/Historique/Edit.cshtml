@@ -10,7 +10,6 @@
 <div class="card-3d p-4 mt-3" style="max-width:840px;">
     <form asp-action="Edit" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data" class="form-modern">
         <input type="hidden" asp-for="Id" />
-        <input type="hidden" asp-for="PhotoUrl" />
         <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
 
         <partial name="_HistoriqueFormFields" model="Model" />

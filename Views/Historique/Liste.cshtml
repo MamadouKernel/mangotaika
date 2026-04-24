@@ -45,17 +45,19 @@
                         .Select(category => new MembreHistoriqueCategorie
                         {
                             Categorie = category,
+                            PhotoUrl = membre.PhotoUrl,
                             Description = membre.Description,
                             Periode = membre.Periode,
                             Ordre = membre.Ordre
                         })
                         .ToList();
                 var detail = details.FirstOrDefault(entry => categorie == CategorieHistorique.Aucune || entry.Categorie == categorie);
+                var photoUrl = detail?.PhotoUrl ?? membre.PhotoUrl;
                 <div class="col-md-4 col-sm-6">
                     <div class="card-3d p-4 text-center h-100">
-                        @if (!string.IsNullOrEmpty(membre.PhotoUrl))
+                        @if (!string.IsNullOrEmpty(photoUrl))
                         {
-                            <img src="@membre.PhotoUrl" alt="@membre.Nom" style="width:120px;height:120px;object-fit:cover;border-radius:50%;border:3px solid var(--vert-pastel);margin-bottom:1rem;" />
+                            <img src="@photoUrl" alt="@membre.Nom" style="width:120px;height:120px;object-fit:cover;border-radius:50%;border:3px solid var(--vert-pastel);margin-bottom:1rem;" />
                         }
                         else
                         {

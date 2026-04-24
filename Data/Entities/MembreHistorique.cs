@@ -20,6 +20,7 @@ public class MembreHistoriqueCategorie
     public Guid MembreHistoriqueId { get; set; }
     public MembreHistorique MembreHistorique { get; set; } = null!;
     public CategorieHistorique Categorie { get; set; }
+    public string? PhotoUrl { get; set; }
     public string? Description { get; set; }
     public string? Periode { get; set; }
     public int Ordre { get; set; }

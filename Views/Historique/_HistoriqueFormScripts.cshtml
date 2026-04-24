@@ -2,12 +2,64 @@
     (function () {
         const container = document.getElementById('historiqueCategoryBlocks');
         const toggles = Array.from(document.querySelectorAll('.historique-category-toggle'));
-        const photoInput = document.getElementById('photoInput');
-        const photoPreview = document.getElementById('photoPreview');
-        const photoPreviewImg = document.getElementById('photoPreviewImg');
+
+        const maxPhotoBytes = 280 * 1024;
+        const maxDimension = 1200;
+        const minDimension = 480;
+        const initialQuality = 0.82;
+        const minQuality = 0.45;
 
         if (!container || toggles.length === 0) {
             return;
+        }
+
+        function getPhotoElements(block) {
+            return {
+                hiddenInput: block.querySelector('.historique-photo-url'),
+                fileInput: block.querySelector('.historique-photo-input'),
+                previewWrapper: block.querySelector('.historique-photo-preview-wrapper'),
+                previewImage: block.querySelector('.historique-photo-preview-img'),
+                status: block.querySelector('.historique-photo-status')
+            };
+        }
+
+        function setPhotoStatus(block, message, tone) {
+            const { status } = getPhotoElements(block);
+            if (!status) {
+                return;
+            }
+
+            if (!message) {
+                status.classList.add('d-none');
+                status.textContent = '';
+                status.style.color = '';
+                return;
+            }
+
+            status.classList.remove('d-none');
+            status.textContent = message;
+            status.style.color = tone === 'error' ? '#f87171' : '';
+        }
+
+        function setPreview(block, src) {
+            const { previewWrapper, previewImage } = getPhotoElements(block);
+            if (!previewWrapper || !previewImage) {
+                return;
+            }
+
+            if (!src) {
+                previewImage.removeAttribute('src');
+                previewWrapper.classList.add('d-none');
+                return;
+            }
+
+            previewImage.src = src;
+            previewWrapper.classList.remove('d-none');
+        }
+
+        function restoreExistingPreview(block) {
+            const { hiddenInput } = getPhotoElements(block);
+            setPreview(block, hiddenInput ? hiddenInput.value : '');
         }
 
         function createBlock(categoryValue, label) {
@@ -17,9 +69,10 @@
             block.innerHTML = `
                 <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
                     <h6 class="mb-0 text-or">${label}</h6>
-                    <span class="badge-3d badge-soumise">Categorie</span>
+                    <span class="badge-3d badge-soumise">Catégorie</span>
                 </div>
                 <input type="hidden" data-field="Categorie" value="${categoryValue}" />
+                <input type="hidden" data-field="PhotoUrl" class="historique-photo-url" value="" />
                 <div class="row">
                     <div class="col-md-8 mb-3">
                         <label class="form-label">Période</label>
@@ -30,11 +83,29 @@
                         <input class="form-control" data-field="Ordre" type="number" value="0" />
                     </div>
                 </div>
-                <div>
+                <div class="mb-3">
                     <label class="form-label">Description</label>
                     <textarea class="form-control" data-field="Description" rows="3"></textarea>
                 </div>
+                <div>
+                    <label class="form-label">Photo <span class="text-muted-custom small">(optionnelle)</span></label>
+                    <div class="historique-photo-preview-wrapper mb-2 d-none">
+                        <img alt="Photo"
+                             class="historique-photo-preview-img"
+                             style="width:96px;height:96px;object-fit:cover;border-radius:18px;border:2px solid var(--vert-pastel);" />
+                    </div>
+                    <input type="file"
+                           class="form-control historique-photo-input"
+                           data-file-field="Photo"
+                           accept="image/*" />
+                    <small class="text-muted-custom d-block mt-2">
+                        La photo est compressée avant envoi pour rester sous la limite serveur.
+                    </small>
+                    <small class="historique-photo-status text-muted-custom d-block mt-1 d-none"></small>
+                </div>
             `;
+
+            wirePhotoInput(block);
             return block;
         }
 
@@ -51,6 +122,12 @@
                     field.name = `Entries[${index}].${field.dataset.field}`;
                     field.id = `Entries_${index}__${field.dataset.field}`;
                 });
+
+                const fileInput = block.querySelector('[data-file-field="Photo"]');
+                if (fileInput) {
+                    fileInput.name = `EntryPhotos[${index}]`;
+                    fileInput.id = `EntryPhotos_${index}`;
+                }
             });
         }
 
@@ -71,24 +148,135 @@
             reindexBlocks();
         }
 
-        toggles.forEach(toggle => toggle.addEventListener('change', syncBlocks));
-        syncBlocks();
+        function loadImage(file) {
+            return new Promise((resolve, reject) => {
+                const url = URL.createObjectURL(file);
+                const image = new Image();
+                image.onload = function () {
+                    URL.revokeObjectURL(url);
+                    resolve(image);
+                };
+                image.onerror = function () {
+                    URL.revokeObjectURL(url);
+                    reject(new Error("Impossible de charger cette image."));
+                };
+                image.src = url;
+            });
+        }
 
-        if (photoInput && photoPreview && photoPreviewImg) {
-            photoInput.addEventListener('change', function (e) {
-                const file = e.target.files[0];
-                if (!file) {
-                    photoPreview.style.display = 'none';
+        function renderBlob(image, width, height, quality) {
+            return new Promise((resolve, reject) => {
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+
+                const context = canvas.getContext('2d');
+                if (!context) {
+                    reject(new Error("Canvas indisponible."));
                     return;
                 }
 
-                const reader = new FileReader();
-                reader.onload = function (event) {
-                    photoPreviewImg.src = event.target.result;
-                    photoPreview.style.display = 'block';
-                };
-                reader.readAsDataURL(file);
+                context.drawImage(image, 0, 0, width, height);
+                canvas.toBlob(blob => {
+                    if (!blob) {
+                        reject(new Error("Compression impossible."));
+                        return;
+                    }
+
+                    resolve(blob);
+                }, 'image/jpeg', quality);
             });
         }
+
+        function updatePreviewFromFile(block, file) {
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                setPreview(block, event.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function optimizePhoto(file) {
+            if (!file.type.startsWith('image/')) {
+                return file;
+            }
+
+            const image = await loadImage(file);
+            const longestSide = Math.max(image.width, image.height);
+            if (file.size <= maxPhotoBytes && longestSide <= maxDimension) {
+                return file;
+            }
+
+            let scale = Math.min(1, maxDimension / longestSide);
+            let width = Math.max(1, Math.round(image.width * scale));
+            let height = Math.max(1, Math.round(image.height * scale));
+            let quality = initialQuality;
+            let blob = await renderBlob(image, width, height, quality);
+
+            while (blob.size > maxPhotoBytes && quality > minQuality) {
+                quality = Math.max(minQuality, quality - 0.08);
+                blob = await renderBlob(image, width, height, quality);
+            }
+
+            while (blob.size > maxPhotoBytes && Math.max(width, height) > minDimension) {
+                width = Math.max(1, Math.round(width * 0.85));
+                height = Math.max(1, Math.round(height * 0.85));
+                blob = await renderBlob(image, width, height, quality);
+            }
+
+            if (blob.size > maxPhotoBytes) {
+                throw new Error("Image encore trop volumineuse après optimisation. Réduisez-la avant envoi.");
+            }
+
+            const normalizedName = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+            return new File([blob], normalizedName, {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+            });
+        }
+
+        function wirePhotoInput(block) {
+            const { fileInput } = getPhotoElements(block);
+            if (!fileInput || fileInput.dataset.bound === 'true') {
+                return;
+            }
+
+            fileInput.dataset.bound = 'true';
+            fileInput.addEventListener('change', async function (event) {
+                const currentFile = event.target.files && event.target.files[0];
+                if (!currentFile) {
+                    restoreExistingPreview(block);
+                    setPhotoStatus(block, '');
+                    return;
+                }
+
+                try {
+                    setPhotoStatus(block, "Optimisation de la photo en cours...");
+                    const optimizedFile = await optimizePhoto(currentFile);
+
+                    if (optimizedFile !== currentFile) {
+                        const transfer = new DataTransfer();
+                        transfer.items.add(optimizedFile);
+                        fileInput.files = transfer.files;
+                        setPhotoStatus(block, `Photo optimisée avant envoi (${Math.round(optimizedFile.size / 1024)} Ko).`);
+                    } else {
+                        setPhotoStatus(block, `Photo prête pour l'envoi (${Math.round(currentFile.size / 1024)} Ko).`);
+                    }
+
+                    updatePreviewFromFile(block, fileInput.files[0]);
+                } catch (error) {
+                    fileInput.value = '';
+                    restoreExistingPreview(block);
+                    setPhotoStatus(
+                        block,
+                        error instanceof Error ? error.message : "Optimisation impossible.",
+                        'error');
+                }
+            });
+        }
+
+        container.querySelectorAll('.historique-category-block').forEach(wirePhotoInput);
+        toggles.forEach(toggle => toggle.addEventListener('change', syncBlocks));
+        syncBlocks();
     })();
 </script>

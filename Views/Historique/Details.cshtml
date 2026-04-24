@@ -23,10 +23,20 @@
         <div class="d-flex flex-column gap-3">
             @foreach (var detail in Model.CategorieDetails.OrderBy(entry => entry.Ordre).ThenBy(entry => entry.Categorie))
             {
+                var photoUrl = detail.PhotoUrl ?? Model.PhotoUrl;
                 <div class="border rounded-3 p-3" style="border-color:rgba(255,255,255,0.08)!important;">
                     <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
                         <span class="badge-3d badge-soumise">@detail.Categorie.GetLabel()</span>
                     </div>
+
+                    @if (!string.IsNullOrWhiteSpace(photoUrl))
+                    {
+                        <div class="mb-3">
+                            <img src="@photoUrl"
+                                 alt="@Model.Nom"
+                                 style="width:110px;height:110px;object-fit:cover;border-radius:18px;border:2px solid var(--vert-pastel);" />
+                        </div>
+                    }
 
                     <dl class="row mb-0 small">
                         <dt class="col-sm-3 text-muted-custom">Période</dt>
@@ -53,6 +63,15 @@
                 <span class="badge-3d badge-soumise">@category.GetLabel()</span>
             }
         </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.PhotoUrl))
+        {
+            <div class="mt-4">
+                <img src="@Model.PhotoUrl"
+                     alt="@Model.Nom"
+                     style="width:110px;height:110px;object-fit:cover;border-radius:18px;border:2px solid var(--vert-pastel);" />
+            </div>
+        }
 
         <dl class="row mt-4 mb-0 small">
             <dt class="col-sm-3 text-muted-custom">Période</dt>
