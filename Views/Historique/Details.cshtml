@@ -4,87 +4,423 @@
     ViewData["Title"] = Model.Nom;
     Layout = "_LayoutAdmin";
     var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+
+    var categoryDetails = Model.CategorieDetails.Any()
+        ? Model.CategorieDetails
+            .OrderBy(entry => entry.Ordre)
+            .ThenBy(entry => entry.Categorie)
+            .ToList()
+        : Model.Categories
+            .GetSelectedCategories()
+            .Select(category => new MembreHistoriqueCategorie
+            {
+                Categorie = category,
+                PhotoUrl = Model.PhotoUrl,
+                Description = Model.Description,
+                Periode = Model.Periode,
+                Ordre = Model.Ordre
+            })
+            .ToList();
+
+    var primaryDetail = categoryDetails.FirstOrDefault();
+    var heroPhotoUrl = primaryDetail?.PhotoUrl ?? Model.PhotoUrl;
+    var summaryText = categoryDetails.Count == 1
+        ? "Une categorie historique rattachee a cette fiche."
+        : $"{categoryDetails.Count} categories historiques rattachees a cette fiche.";
+    var periodHighlight = categoryDetails.Count == 1
+        ? (string.IsNullOrWhiteSpace(primaryDetail?.Periode) ? "Non renseignee" : primaryDetail!.Periode)
+        : "Multiple";
+    var periodHint = categoryDetails.Count == 1
+        ? (primaryDetail?.Categorie.GetLabel() ?? "Periode principale")
+        : "Chaque categorie peut avoir sa propre periode.";
+    var firstDefinedOrder = categoryDetails
+        .Where(detail => detail.Ordre > 0)
+        .OrderBy(detail => detail.Ordre)
+        .FirstOrDefault();
+    var orderHighlight = firstDefinedOrder?.Ordre.ToString() ?? "Non defini";
+    var orderHint = firstDefinedOrder?.Categorie.GetLabel() ?? "Aucun ordre prioritaire renseigne.";
+    var biographyCount = categoryDetails.Count(detail => !string.IsNullOrWhiteSpace(detail.Description));
 }
 
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
-    <h2 class="section-title mb-0"><i class="bi bi-clock-history text-or"></i> @Model.Nom</h2>
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div class="historique-page-intro">
+        <span class="historique-page-intro__eyebrow">Memoire du district</span>
+        <h2 class="section-title mb-1"><i class="bi bi-clock-history text-or"></i> @Model.Nom</h2>
+        <p class="text-muted-custom mb-0">Fiche detaillee du patrimoine humain et institutionnel du district.</p>
+    </div>
     <div class="d-flex flex-wrap gap-2">
         @if (canManage)
         {
-            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-bleu btn-sm" title="Modifier"><i class="bi bi-pencil"></i></a>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-bleu btn-sm" title="Modifier">
+                <i class="bi bi-pencil"></i>
+            </a>
         }
-        <a asp-action="Index" class="btn btn-outline-or btn-sm" title="Liste"><i class="bi bi-arrow-left"></i></a>
+        <a asp-action="Index" class="btn btn-outline-or btn-sm" title="Liste">
+            <i class="bi bi-arrow-left"></i>
+        </a>
     </div>
 </div>
 
-<div class="card-3d p-4">
-    @if (Model.CategorieDetails.Any())
-    {
-        <div class="d-flex flex-column gap-3">
-            @foreach (var detail in Model.CategorieDetails.OrderBy(entry => entry.Ordre).ThenBy(entry => entry.Categorie))
-            {
-                var photoUrl = detail.PhotoUrl ?? Model.PhotoUrl;
-                <div class="border rounded-3 p-3" style="border-color:rgba(255,255,255,0.08)!important;">
-                    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-                        <span class="badge-3d badge-soumise">@detail.Categorie.GetLabel()</span>
+<div class="card-3d p-4 mb-4 historique-details-shell">
+    <div class="row g-4 align-items-start">
+        <div class="col-xl-3 col-lg-4">
+            <div class="historique-profile-card">
+                @if (!string.IsNullOrWhiteSpace(heroPhotoUrl))
+                {
+                    <img src="@heroPhotoUrl" alt="@Model.Nom" class="historique-profile-card__photo" />
+                }
+                else
+                {
+                    <div class="historique-profile-card__photo historique-profile-card__photo--placeholder">
+                        <i class="bi bi-person-circle"></i>
                     </div>
+                }
 
-                    @if (!string.IsNullOrWhiteSpace(photoUrl))
+                <span class="badge-3d badge-soumise">Archive institutionnelle</span>
+                <strong class="historique-profile-card__name">@Model.Nom</strong>
+                <span class="historique-profile-card__subtitle">@summaryText</span>
+
+                <div class="historique-profile-card__meta">
+                    <span>Fiche creee</span>
+                    <strong>@Model.DateCreation.ToString("dd/MM/yyyy")</strong>
+                </div>
+
+                <div class="historique-profile-card__tags">
+                    @if (categoryDetails.Any())
                     {
-                        <div class="mb-3">
-                            <img src="@photoUrl"
-                                 alt="@Model.Nom"
-                                 style="width:110px;height:110px;object-fit:cover;border-radius:18px;border:2px solid var(--vert-pastel);" />
-                        </div>
+                        @foreach (var detail in categoryDetails)
+                        {
+                            <span class="badge-3d badge-soumise">@detail.Categorie.GetLabel()</span>
+                        }
                     }
-
-                    <dl class="row mb-0 small">
-                        <dt class="col-sm-3 text-muted-custom">Période</dt>
-                        <dd class="col-sm-9">@(detail.Periode ?? "-")</dd>
-
-                        <dt class="col-sm-3 text-muted-custom">Ordre</dt>
-                        <dd class="col-sm-9">@detail.Ordre</dd>
-                    </dl>
-
-                    @if (!string.IsNullOrWhiteSpace(detail.Description))
+                    else
                     {
-                        <h6 class="text-or mt-4 mb-2">Biographie / texte</h6>
-                        <div class="text-muted-custom small" style="white-space:pre-wrap;line-height:1.7;">@detail.Description</div>
+                        <span class="badge-3d badge-soumise">Sans categorie</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-9 col-lg-8">
+            <div class="historique-summary mb-4">
+                <div>
+                    <span class="historique-summary__eyebrow">Fiche historique</span>
+                    <h3 class="mb-1">@Model.Nom</h3>
+                    <p class="text-muted-custom mb-0">@summaryText</p>
+                </div>
+            </div>
+
+            <div class="historique-kpi-grid mb-4">
+                <div class="historique-kpi-card">
+                    <span class="historique-kpi-card__label">Categories</span>
+                    <strong>@categoryDetails.Count</strong>
+                    <small>@(categoryDetails.Count > 1 ? "axes historiques rattaches" : "axe historique rattache")</small>
+                </div>
+                <div class="historique-kpi-card">
+                    <span class="historique-kpi-card__label">Periode phare</span>
+                    <strong>@periodHighlight</strong>
+                    <small>@periodHint</small>
+                </div>
+                <div class="historique-kpi-card">
+                    <span class="historique-kpi-card__label">Ordre prioritaire</span>
+                    <strong>@orderHighlight</strong>
+                    <small>@orderHint</small>
+                </div>
+                <div class="historique-kpi-card">
+                    <span class="historique-kpi-card__label">Biographies</span>
+                    <strong>@biographyCount</strong>
+                    <small>@(biographyCount > 0 ? "section(s) renseignee(s)" : "Aucune biographie disponible")</small>
+                </div>
+            </div>
+
+            @if (categoryDetails.Any())
+            {
+                <div class="historique-sections">
+                    @foreach (var detail in categoryDetails)
+                    {
+                        var photoUrl = detail.PhotoUrl ?? Model.PhotoUrl;
+                        var hasPhoto = !string.IsNullOrWhiteSpace(photoUrl);
+                        var hasDescription = !string.IsNullOrWhiteSpace(detail.Description);
+                        var periodLabel = string.IsNullOrWhiteSpace(detail.Periode) ? "Non renseignee" : detail.Periode;
+                        var orderLabel = detail.Ordre > 0 ? detail.Ordre.ToString() : "Non defini";
+
+                        <section class="historique-section">
+                            <div class="historique-section__head">
+                                <div class="d-flex flex-column gap-2">
+                                    <span class="badge-3d badge-soumise">@detail.Categorie.GetLabel()</span>
+                                    <div class="historique-section__meta">
+                                        <span><i class="bi bi-calendar-range"></i> @periodLabel</span>
+                                        <span><i class="bi bi-sort-numeric-down"></i> Ordre @orderLabel</span>
+                                    </div>
+                                </div>
+
+                                @if (hasPhoto)
+                                {
+                                    <img src="@photoUrl" alt="@Model.Nom" class="historique-section__thumb" />
+                                }
+                            </div>
+
+                            <div class="historique-biography">
+                                <h6>Biographie / texte</h6>
+                                @if (hasDescription)
+                                {
+                                    <div class="historique-biography__text">@detail.Description</div>
+                                }
+                                else
+                                {
+                                    <div class="historique-biography__empty">
+                                        <i class="bi bi-journal-text"></i>
+                                        <span>Aucune biographie renseignee pour cette categorie.</span>
+                                    </div>
+                                }
+                            </div>
+                        </section>
                     }
                 </div>
             }
-        </div>
-    }
-    else
-    {
-        <div class="d-flex flex-wrap gap-2">
-            @foreach (var category in Model.Categories.GetSelectedCategories())
+            else
             {
-                <span class="badge-3d badge-soumise">@category.GetLabel()</span>
+                <div class="historique-empty-state">
+                    <i class="bi bi-hourglass-split"></i>
+                    <div>
+                        <strong>Aucune donnee detaillee disponible.</strong>
+                        <p class="mb-0">Cette fiche n'a pas encore de categorie ou de biographie structuree.</p>
+                    </div>
+                </div>
             }
         </div>
+    </div>
+</div>
 
-        @if (!string.IsNullOrWhiteSpace(Model.PhotoUrl))
-        {
-            <div class="mt-4">
-                <img src="@Model.PhotoUrl"
-                     alt="@Model.Nom"
-                     style="width:110px;height:110px;object-fit:cover;border-radius:18px;border:2px solid var(--vert-pastel);" />
-            </div>
-        }
+<style>
+    .historique-page-intro {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
 
-        <dl class="row mt-4 mb-0 small">
-            <dt class="col-sm-3 text-muted-custom">Période</dt>
-            <dd class="col-sm-9">@(Model.Periode ?? "-")</dd>
+    .historique-page-intro__eyebrow,
+    .historique-summary__eyebrow,
+    .historique-kpi-card__label {
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.74rem;
+        font-weight: 700;
+    }
 
-            <dt class="col-sm-3 text-muted-custom">Ordre</dt>
-            <dd class="col-sm-9">@Model.Ordre</dd>
-        </dl>
+    .historique-page-intro__eyebrow,
+    .historique-summary__eyebrow {
+        color: var(--vert-logo);
+    }
 
-        @if (!string.IsNullOrWhiteSpace(Model.Description))
-        {
-            <h6 class="text-or mt-4 mb-2">Biographie / texte</h6>
-            <div class="text-muted-custom small" style="white-space:pre-wrap;line-height:1.7;">@Model.Description</div>
+    .historique-details-shell {
+        overflow: hidden;
+    }
+
+    .historique-profile-card {
+        height: 100%;
+        padding: 20px;
+        border-radius: 24px;
+        border: 1px solid rgba(95, 127, 67, 0.18);
+        background: linear-gradient(180deg, rgba(95, 127, 67, 0.12), rgba(255, 255, 255, 0.96));
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 12px;
+    }
+
+    .historique-profile-card__photo {
+        width: 100%;
+        max-width: 220px;
+        aspect-ratio: 1;
+        object-fit: cover;
+        border-radius: 28px;
+        border: 1px solid rgba(95, 127, 67, 0.18);
+        background: rgba(255, 255, 255, 0.9);
+    }
+
+    .historique-profile-card__photo--placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--vert-logo);
+        font-size: 3.2rem;
+    }
+
+    .historique-profile-card__name {
+        color: #223547;
+        font-size: 1.15rem;
+    }
+
+    .historique-profile-card__subtitle {
+        color: #6a7a8c;
+        font-weight: 600;
+    }
+
+    .historique-profile-card__meta {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.85);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        color: #6a7a8c;
+        font-size: 0.9rem;
+    }
+
+    .historique-profile-card__meta strong {
+        color: #223547;
+        font-size: 1rem;
+    }
+
+    .historique-profile-card__tags {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .historique-summary h3 {
+        color: #223547;
+        font-size: 1.4rem;
+    }
+
+    .historique-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .historique-kpi-card {
+        padding: 16px 18px;
+        border-radius: 18px;
+        border: 1px solid var(--gris-border);
+        background: rgba(255, 255, 255, 0.88);
+        min-height: 108px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .historique-kpi-card__label {
+        color: var(--texte-secondaire);
+    }
+
+    .historique-kpi-card strong {
+        margin-top: 8px;
+        color: #223547;
+        font-size: 1.35rem;
+    }
+
+    .historique-kpi-card small {
+        margin-top: 6px;
+        color: #6a7a8c;
+        line-height: 1.5;
+    }
+
+    .historique-sections {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .historique-section {
+        padding: 20px;
+        border-radius: 20px;
+        border: 1px solid var(--gris-border);
+        background: rgba(247, 248, 250, 0.84);
+    }
+
+    .historique-section__head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 14px;
+    }
+
+    .historique-section__meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 16px;
+        color: #5a7080;
+        font-size: 0.92rem;
+        font-weight: 600;
+    }
+
+    .historique-section__meta span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .historique-section__thumb {
+        width: 84px;
+        height: 84px;
+        object-fit: cover;
+        border-radius: 20px;
+        border: 1px solid rgba(95, 127, 67, 0.18);
+        background: rgba(255, 255, 255, 0.9);
+        flex-shrink: 0;
+    }
+
+    .historique-biography h6 {
+        color: var(--bleu-logo);
+        margin-bottom: 10px;
+        font-size: 0.95rem;
+    }
+
+    .historique-biography__text {
+        color: var(--texte);
+        white-space: pre-wrap;
+        line-height: 1.75;
+        font-size: 0.95rem;
+    }
+
+    .historique-biography__empty,
+    .historique-empty-state {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        border: 1px dashed var(--gris-border);
+        background: rgba(255, 255, 255, 0.92);
+        color: var(--texte-secondaire);
+    }
+
+    .historique-biography__empty i,
+    .historique-empty-state i {
+        color: var(--vert-logo);
+        font-size: 1.2rem;
+    }
+
+    .historique-empty-state strong {
+        display: block;
+        margin-bottom: 4px;
+        color: #223547;
+    }
+
+    @@media (max-width: 991.98px) {
+        .historique-kpi-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
     }
-</div>
+
+    @@media (max-width: 767.98px) {
+        .historique-kpi-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .historique-section__head {
+            flex-direction: column;
+        }
+
+        .historique-section__thumb {
+            width: 72px;
+            height: 72px;
+        }
+    }
+</style>
