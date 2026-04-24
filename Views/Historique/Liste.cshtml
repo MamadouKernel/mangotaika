@@ -1,7 +1,10 @@
 @model List<MangoTaika.Data.Entities.MembreHistorique>
+@using MangoTaika.Data.Entities
 @{
     ViewData["Title"] = ViewBag.Titre;
     var icone = ViewBag.Icone as string;
+    var recherche = ViewBag.Recherche as string;
+    var categorie = ViewBag.Categorie is CategorieHistorique current ? current : CategorieHistorique.Aucune;
 }
 
 <div class="container my-5">
@@ -11,16 +14,32 @@
         <div class="section-divider mx-auto"></div>
     </div>
 
+    <form method="get" class="card-3d p-4 mb-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-9">
+                <label for="recherche" class="form-label">Recherche</label>
+                <input id="recherche" name="recherche" value="@recherche" class="form-control" placeholder="Nom, période ou description" />
+            </div>
+            <div class="col-md-3 d-flex flex-wrap gap-2">
+                <button type="submit" class="btn btn-mango"><i class="bi bi-search"></i> Rechercher</button>
+                @if (!string.IsNullOrWhiteSpace(recherche))
+                {
+                    <a asp-action="@(ViewContext.RouteData.Values["action"]?.ToString())" class="btn btn-outline-or">Réinitialiser</a>
+                }
+            </div>
+        </div>
+    </form>
+
     @if (Model.Any())
     {
         <div class="row g-4 justify-content-center">
-            @foreach (var m in Model)
+            @foreach (var membre in Model)
             {
                 <div class="col-md-4 col-sm-6">
                     <div class="card-3d p-4 text-center h-100">
-                        @if (!string.IsNullOrEmpty(m.PhotoUrl))
+                        @if (!string.IsNullOrEmpty(membre.PhotoUrl))
                         {
-                            <img src="@m.PhotoUrl" alt="@m.Nom" style="width:120px;height:120px;object-fit:cover;border-radius:50%;border:3px solid var(--vert-pastel);margin-bottom:1rem;" />
+                            <img src="@membre.PhotoUrl" alt="@membre.Nom" style="width:120px;height:120px;object-fit:cover;border-radius:50%;border:3px solid var(--vert-pastel);margin-bottom:1rem;" />
                         }
                         else
                         {
@@ -28,14 +47,23 @@
                                 <i class="bi bi-person-fill" style="font-size:3rem;color:#fff;"></i>
                             </div>
                         }
-                        <h5 style="color:var(--bleu-logo);">@m.Nom</h5>
-                        @if (!string.IsNullOrEmpty(m.Periode))
+                        <h5 style="color:var(--bleu-logo);">@membre.Nom</h5>
+                        @if (!string.IsNullOrEmpty(membre.Periode))
                         {
-                            <span class="badge-3d badge-soumise mb-2">@m.Periode</span>
+                            <span class="badge-3d badge-soumise mb-2">@membre.Periode</span>
                         }
-                        @if (!string.IsNullOrEmpty(m.Description))
+                        @if (categorie == CategorieHistorique.Aucune)
                         {
-                            <p class="text-muted-custom small mt-2">@m.Description</p>
+                            <div class="d-flex flex-wrap justify-content-center gap-1 mt-2">
+                                @foreach (var category in membre.Categories.GetSelectedCategories())
+                                {
+                                    <span class="badge-3d badge-soumise">@category.GetLabel()</span>
+                                }
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(membre.Description))
+                        {
+                            <p class="text-muted-custom small mt-2">@membre.Description</p>
                         }
                     </div>
                 </div>

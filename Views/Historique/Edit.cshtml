@@ -1,4 +1,5 @@
-@model MangoTaika.Data.Entities.MembreHistorique
+@model MangoTaika.Models.HistoriqueFormViewModel
+@using MangoTaika.Data.Entities
 @{
     ViewData["Title"] = "Modifier " + Model.Nom;
     Layout = "_LayoutAdmin";
@@ -7,30 +8,52 @@
 <h2 class="section-title mb-1"><i class="bi bi-pencil text-or"></i> Modifier <span class="accent">@Model.Nom</span></h2>
 <div class="section-divider"></div>
 
-<div class="card-3d p-4 mt-3" style="max-width:600px;">
+<div class="card-3d p-4 mt-3" style="max-width:720px;">
     <form asp-action="Edit" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data" class="form-modern">
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="PhotoUrl" />
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
         <div class="mb-3">
-            <label asp-for="Nom" class="form-label">Nom complet</label>
+            <label asp-for="Nom" class="form-label"></label>
             <input asp-for="Nom" class="form-control" />
+            <span asp-validation-for="Nom" class="text-danger small"></span>
         </div>
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label asp-for="Categorie" class="form-label">Catégorie</label>
-                <select asp-for="Categorie" asp-items="Html.GetEnumSelectList<CategorieHistorique>()" class="form-select"></select>
-            </div>
-            <div class="col-md-3 mb-3">
-                <label asp-for="Periode" class="form-label">Période</label>
-                <input asp-for="Periode" class="form-control" />
-            </div>
-            <div class="col-md-3 mb-3">
-                <label asp-for="Ordre" class="form-label">Ordre</label>
-                <input asp-for="Ordre" class="form-control" type="number" />
-            </div>
-        </div>
+
         <div class="mb-3">
-            <label asp-for="Description" class="form-label">Description</label>
-            <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+            <label class="form-label">Catégories</label>
+            <div class="d-flex flex-wrap gap-3">
+                @foreach (var category in CategorieHistoriqueExtensions.All)
+                {
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="Categories" value="@((int)category)"
+                               id="cat_@category" @(Model.Categories.Contains(category) ? "checked" : "") />
+                        <label class="form-check-label" for="cat_@category">@category.GetLabel()</label>
+                    </div>
+                }
+            </div>
+            <span asp-validation-for="Categories" class="text-danger small"></span>
         </div>
+
+        <div class="row">
+            <div class="col-md-8 mb-3">
+                <label asp-for="Periode" class="form-label"></label>
+                <input asp-for="Periode" class="form-control" />
+                <span asp-validation-for="Periode" class="text-danger small"></span>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label asp-for="Ordre" class="form-label"></label>
+                <input asp-for="Ordre" class="form-control" type="number" />
+                <span asp-validation-for="Ordre" class="text-danger small"></span>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Description" class="form-label"></label>
+            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+            <span asp-validation-for="Description" class="text-danger small"></span>
+        </div>
+
         <div class="mb-4">
             <label class="form-label">Photo</label>
             <div id="photoPreview" class="mb-2" style="@(string.IsNullOrEmpty(Model.PhotoUrl) ? "display:none;" : "")">
@@ -38,20 +61,27 @@
             </div>
             <input type="file" name="Photo" id="photoInput" class="form-control" accept="image/*" />
         </div>
-        <button type="submit" class="btn btn-mango" title="Enregistrer"><i class="bi bi-check-lg"></i></button>
-        <a asp-action="Index" class="btn btn-outline-or ms-2" title="Annuler"><i class="bi bi-x-lg"></i></a>
+
+        <div class="d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-mango" title="Enregistrer"><i class="bi bi-check-lg"></i> Enregistrer</button>
+            <a asp-action="Index" class="btn btn-outline-or" title="Annuler">Annuler</a>
+        </div>
     </form>
 </div>
 
 @section Scripts {
+    <partial name="_ValidationScriptsPartial" />
     <script>
-        document.getElementById('photoInput').addEventListener('change', function(e) {
+        document.getElementById('photoInput').addEventListener('change', function (e) {
             var file = e.target.files[0];
             var preview = document.getElementById('photoPreview');
             var img = document.getElementById('photoPreviewImg');
             if (file) {
                 var reader = new FileReader();
-                reader.onload = function(ev) { img.src = ev.target.result; preview.style.display = 'block'; };
+                reader.onload = function (ev) {
+                    img.src = ev.target.result;
+                    preview.style.display = 'block';
+                };
                 reader.readAsDataURL(file);
             }
         });

@@ -4,12 +4,6 @@
     ViewData["Title"] = Model.Nom;
     Layout = "_LayoutAdmin";
     var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
-    var catLabel = Model.Categorie switch {
-        CategorieHistorique.AncienCommissaire => "Ancien Commissaire",
-        CategorieHistorique.AncienChefGroupe => "Ancien Chef de Groupe",
-        CategorieHistorique.MembreCAD => "Membre CAD",
-        _ => ""
-    };
 }
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
@@ -24,11 +18,21 @@
 </div>
 
 <div class="card-3d p-4">
-    <span class="badge-3d badge-soumise">@catLabel</span>
+    <div class="d-flex flex-wrap gap-2">
+        @foreach (var category in Model.Categories.GetSelectedCategories())
+        {
+            <span class="badge-3d badge-soumise">@category.GetLabel()</span>
+        }
+    </div>
+
     <dl class="row mt-4 mb-0 small">
-        <dt class="col-sm-3 text-muted-custom">Periode</dt>
+        <dt class="col-sm-3 text-muted-custom">Période</dt>
         <dd class="col-sm-9">@(Model.Periode ?? "-")</dd>
+
+        <dt class="col-sm-3 text-muted-custom">Ordre</dt>
+        <dd class="col-sm-9">@Model.Ordre</dd>
     </dl>
+
     @if (!string.IsNullOrWhiteSpace(Model.Description))
     {
         <h6 class="text-or mt-4 mb-2">Biographie / texte</h6>

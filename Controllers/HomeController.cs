@@ -193,8 +193,8 @@ public class HomeController(AppDbContext db, IConfiguration configuration) : Con
     {
         ViewBag.Historique = await db.MembresHistoriques
             .Where(m => !m.EstSupprime)
-            .OrderBy(m => m.Categorie)
-            .ThenBy(m => m.Ordre)
+            .OrderBy(m => m.Ordre)
+            .ThenBy(m => m.Nom)
             .ToListAsync();
     }
 

@@ -218,6 +218,12 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasOne(h => h.Auteur).WithMany().HasForeignKey(h => h.AuteurId).OnDelete(DeleteBehavior.Restrict);
         });
 
+        // MembreHistorique
+        builder.Entity<MembreHistorique>(e =>
+        {
+            e.Property(m => m.Categories).HasColumnName("Categorie");
+        });
+
         // Actualite
         builder.Entity<Actualite>(e =>
         {

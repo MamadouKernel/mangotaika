@@ -482,13 +482,13 @@ public static class SeedData
         // ============================================================
         var membresHist = new[]
         {
-            new MembreHistorique { Id = Guid.NewGuid(), Nom = "Konan Kouadio Jean", Description = "Premier Commissaire de District, fondateur du mouvement scout dans la région.", Periode = "1985-1995", Categorie = CategorieHistorique.AncienCommissaire, Ordre = 1 },
-            new MembreHistorique { Id = Guid.NewGuid(), Nom = "Traoré Mamadou", Description = "A développé le scoutisme dans les zones rurales du district.", Periode = "1995-2005", Categorie = CategorieHistorique.AncienCommissaire, Ordre = 2 },
-            new MembreHistorique { Id = Guid.NewGuid(), Nom = "Yao Kouassi Pierre", Description = "A modernisé les méthodes de formation et créé le premier camp permanent.", Periode = "2005-2015", Categorie = CategorieHistorique.AncienCommissaire, Ordre = 3 },
-            new MembreHistorique { Id = Guid.NewGuid(), Nom = "Diallo Ibrahima", Description = "Chef du groupe 1er Abidjan pendant 10 ans.", Periode = "2000-2010", Categorie = CategorieHistorique.AncienChefGroupe, Ordre = 1 },
-            new MembreHistorique { Id = Guid.NewGuid(), Nom = "Bamba Aïcha", Description = "Première femme chef de groupe du district.", Periode = "2010-2018", Categorie = CategorieHistorique.AncienChefGroupe, Ordre = 2 },
-            new MembreHistorique { Id = Guid.NewGuid(), Nom = "Dr. Koné Seydou", Description = "Médecin et membre fondateur du Conseil d'Administration du District.", Periode = "1990-2010", Categorie = CategorieHistorique.MembreCAD, Ordre = 1 },
-            new MembreHistorique { Id = Guid.NewGuid(), Nom = "Mme Ouattara Fanta", Description = "Trésorière du CAD, a structuré la gestion financière du district.", Periode = "2005-2020", Categorie = CategorieHistorique.MembreCAD, Ordre = 2 }
+            new MembreHistorique { Id = Guid.NewGuid(), Nom = "Konan Kouadio Jean", Description = "Premier Commissaire de District, fondateur du mouvement scout dans la région.", Periode = "1985-1995", Categories = CategorieHistorique.AncienCommissaire, Ordre = 1 },
+            new MembreHistorique { Id = Guid.NewGuid(), Nom = "Traoré Mamadou", Description = "A développé le scoutisme dans les zones rurales du district.", Periode = "1995-2005", Categories = CategorieHistorique.AncienCommissaire, Ordre = 2 },
+            new MembreHistorique { Id = Guid.NewGuid(), Nom = "Yao Kouassi Pierre", Description = "A modernisé les méthodes de formation et créé le premier camp permanent.", Periode = "2005-2015", Categories = CategorieHistorique.AncienCommissaire, Ordre = 3 },
+            new MembreHistorique { Id = Guid.NewGuid(), Nom = "Diallo Ibrahima", Description = "Chef du groupe 1er Abidjan pendant 10 ans.", Periode = "2000-2010", Categories = CategorieHistorique.AncienChefGroupe, Ordre = 1 },
+            new MembreHistorique { Id = Guid.NewGuid(), Nom = "Bamba Aïcha", Description = "Première femme chef de groupe du district.", Periode = "2010-2018", Categories = CategorieHistorique.AncienChefGroupe, Ordre = 2 },
+            new MembreHistorique { Id = Guid.NewGuid(), Nom = "Dr. Koné Seydou", Description = "Médecin et membre fondateur du Conseil d'Administration du District.", Periode = "1990-2010", Categories = CategorieHistorique.MembreCAD, Ordre = 1 },
+            new MembreHistorique { Id = Guid.NewGuid(), Nom = "Mme Ouattara Fanta", Description = "Trésorière du CAD, a structuré la gestion financière du district.", Periode = "2005-2020", Categories = CategorieHistorique.MembreCAD, Ordre = 2 }
         };
         db.MembresHistoriques.AddRange(membresHist);
 
