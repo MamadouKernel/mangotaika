@@ -19,6 +19,7 @@
                 fileInput: block.querySelector('.historique-photo-input'),
                 previewWrapper: block.querySelector('.historique-photo-preview-wrapper'),
                 previewImage: block.querySelector('.historique-photo-preview-img'),
+                removeButton: block.querySelector('.historique-photo-remove-btn'),
                 status: block.querySelector('.historique-photo-status')
             };
         }
@@ -42,7 +43,7 @@
         }
 
         function setPreview(block, src) {
-            const { previewWrapper, previewImage } = getPhotoElements(block);
+            const { previewWrapper, previewImage, removeButton } = getPhotoElements(block);
             if (!previewWrapper || !previewImage) {
                 return;
             }
@@ -50,11 +51,17 @@
             if (!src) {
                 previewImage.removeAttribute('src');
                 previewWrapper.classList.add('d-none');
+                if (removeButton) {
+                    removeButton.classList.add('d-none');
+                }
                 return;
             }
 
             previewImage.src = src;
             previewWrapper.classList.remove('d-none');
+            if (removeButton) {
+                removeButton.classList.remove('d-none');
+            }
         }
 
         function restoreExistingPreview(block) {
@@ -87,17 +94,21 @@
                     <label class="form-label">Description</label>
                     <textarea class="form-control" data-field="Description" rows="3"></textarea>
                 </div>
-                <div>
-                    <label class="form-label">Photo <span class="text-muted-custom small">(optionnelle)</span></label>
-                    <div class="historique-photo-preview-wrapper mb-2 d-none">
-                        <img alt="Photo"
-                             class="historique-photo-preview-img"
-                             style="width:96px;height:96px;object-fit:cover;border-radius:18px;border:2px solid var(--vert-pastel);" />
-                    </div>
-                    <input type="file"
-                           class="form-control historique-photo-input"
-                           data-file-field="Photo"
-                           accept="@FileInputAccept.Image" />
+                 <div>
+                     <label class="form-label">Photo <span class="text-muted-custom small">(optionnelle)</span></label>
+                     <div class="historique-photo-preview-wrapper mb-2 d-none">
+                         <img alt="Photo"
+                              class="historique-photo-preview-img"
+                              style="width:96px;height:96px;object-fit:cover;border-radius:18px;border:2px solid var(--vert-pastel);" />
+                     </div>
+                     <button type="button"
+                             class="btn btn-sm btn-outline-or historique-photo-remove-btn mb-2 d-none">
+                         <i class="bi bi-trash3"></i> Retirer l'image
+                     </button>
+                     <input type="file"
+                            class="form-control historique-photo-input"
+                            data-file-field="Photo"
+                            accept="@FileInputAccept.Image" />
                     <small class="text-muted-custom d-block mt-2">
                         La photo est compressée avant envoi pour rester sous la limite serveur.
                     </small>
@@ -236,7 +247,7 @@
         }
 
         function wirePhotoInput(block) {
-            const { fileInput } = getPhotoElements(block);
+            const { fileInput, hiddenInput, removeButton } = getPhotoElements(block);
             if (!fileInput || fileInput.dataset.bound === 'true') {
                 return;
             }
@@ -273,6 +284,19 @@
                         'error');
                 }
             });
+
+            if (removeButton && removeButton.dataset.bound !== 'true') {
+                removeButton.dataset.bound = 'true';
+                removeButton.addEventListener('click', function () {
+                    if (hiddenInput) {
+                        hiddenInput.value = '';
+                    }
+
+                    fileInput.value = '';
+                    setPreview(block, '');
+                    setPhotoStatus(block, "Photo retirée. Enregistrez pour confirmer.");
+                });
+            }
         }
 
         container.querySelectorAll('.historique-category-block').forEach(wirePhotoInput);

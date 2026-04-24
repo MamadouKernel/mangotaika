@@ -62,18 +62,22 @@
                 <span asp-validation-for="Entries[i].Description" class="text-danger small"></span>
             </div>
 
-            <div>
-                <label class="form-label">Photo <span class="text-muted-custom small">(optionnelle)</span></label>
-                <div class="historique-photo-preview-wrapper mb-2 @(string.IsNullOrWhiteSpace(entry.PhotoUrl) ? "d-none" : string.Empty)">
-                    <img src="@(entry.PhotoUrl ?? string.Empty)"
-                         alt="Photo"
-                         class="historique-photo-preview-img"
-                         style="width:96px;height:96px;object-fit:cover;border-radius:18px;border:2px solid var(--vert-pastel);" />
-                </div>
-                <input type="file"
-                       name="EntryPhotos[@i]"
-                       id="EntryPhotos_@i"
-                       class="form-control historique-photo-input"
+             <div>
+                 <label class="form-label">Photo <span class="text-muted-custom small">(optionnelle)</span></label>
+                 <div class="historique-photo-preview-wrapper mb-2 @(string.IsNullOrWhiteSpace(entry.PhotoUrl) ? "d-none" : string.Empty)">
+                     <img src="@(entry.PhotoUrl ?? string.Empty)"
+                          alt="Photo"
+                          class="historique-photo-preview-img"
+                          style="width:96px;height:96px;object-fit:cover;border-radius:18px;border:2px solid var(--vert-pastel);" />
+                 </div>
+                 <button type="button"
+                         class="btn btn-sm btn-outline-or historique-photo-remove-btn mb-2 @(string.IsNullOrWhiteSpace(entry.PhotoUrl) ? "d-none" : string.Empty)">
+                     <i class="bi bi-trash3"></i> Retirer l'image
+                 </button>
+                 <input type="file"
+                        name="EntryPhotos[@i]"
+                        id="EntryPhotos_@i"
+                        class="form-control historique-photo-input"
                        data-file-field="Photo"
                        accept="@FileInputAccept.Image" />
                 <small class="text-muted-custom d-block mt-2">
