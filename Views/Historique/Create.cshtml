@@ -1,5 +1,4 @@
 @model MangoTaika.Models.HistoriqueFormViewModel
-@using MangoTaika.Data.Entities
 @{
     ViewData["Title"] = "Ajouter un membre historique";
     Layout = "_LayoutAdmin";
@@ -8,57 +7,11 @@
 <h2 class="section-title mb-1"><i class="bi bi-plus-lg text-or"></i> Ajouter un <span class="accent">membre historique</span></h2>
 <div class="section-divider"></div>
 
-<div class="card-3d p-4 mt-3" style="max-width:720px;">
+<div class="card-3d p-4 mt-3" style="max-width:840px;">
     <form asp-action="Create" method="post" enctype="multipart/form-data" class="form-modern">
         <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
 
-        <div class="mb-3">
-            <label asp-for="Nom" class="form-label"></label>
-            <input asp-for="Nom" class="form-control" />
-            <span asp-validation-for="Nom" class="text-danger small"></span>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Catégories</label>
-            <div class="d-flex flex-wrap gap-3">
-                @foreach (var category in CategorieHistoriqueExtensions.All)
-                {
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="Categories" value="@((int)category)"
-                               id="cat_@category" @(Model.Categories.Contains(category) ? "checked" : "") />
-                        <label class="form-check-label" for="cat_@category">@category.GetLabel()</label>
-                    </div>
-                }
-            </div>
-            <span asp-validation-for="Categories" class="text-danger small"></span>
-        </div>
-
-        <div class="row">
-            <div class="col-md-8 mb-3">
-                <label asp-for="Periode" class="form-label"></label>
-                <input asp-for="Periode" class="form-control" placeholder="2015-2020" />
-                <span asp-validation-for="Periode" class="text-danger small"></span>
-            </div>
-            <div class="col-md-4 mb-3">
-                <label asp-for="Ordre" class="form-label"></label>
-                <input asp-for="Ordre" class="form-control" type="number" />
-                <span asp-validation-for="Ordre" class="text-danger small"></span>
-            </div>
-        </div>
-
-        <div class="mb-3">
-            <label asp-for="Description" class="form-label"></label>
-            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
-            <span asp-validation-for="Description" class="text-danger small"></span>
-        </div>
-
-        <div class="mb-4">
-            <label class="form-label">Photo <span class="text-muted-custom small">(optionnel)</span></label>
-            <input type="file" name="Photo" id="photoInput" class="form-control" accept="image/*" />
-            <div id="photoPreview" class="mt-2" style="display:none;">
-                <img id="photoPreviewImg" alt="Aperçu" style="width:100px;height:100px;object-fit:cover;border-radius:50%;border:2px solid var(--vert-pastel);" />
-            </div>
-        </div>
+        <partial name="_HistoriqueFormFields" model="Model" />
 
         <div class="d-flex flex-wrap gap-2">
             <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Enregistrer</button>
@@ -69,21 +22,5 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script>
-        document.getElementById('photoInput').addEventListener('change', function (e) {
-            var file = e.target.files[0];
-            var preview = document.getElementById('photoPreview');
-            var img = document.getElementById('photoPreviewImg');
-            if (file) {
-                var reader = new FileReader();
-                reader.onload = function (ev) {
-                    img.src = ev.target.result;
-                    preview.style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            } else {
-                preview.style.display = 'none';
-            }
-        });
-    </script>
+    <partial name="_HistoriqueFormScripts" />
 }

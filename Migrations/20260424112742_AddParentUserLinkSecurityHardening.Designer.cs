@@ -3,6 +3,7 @@ using System;
 using MangoTaika.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MangoTaika.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260424112742_AddParentUserLinkSecurityHardening")]
+    partial class AddParentUserLinkSecurityHardening
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1331,35 +1334,6 @@ namespace MangoTaika.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("MembresHistoriques");
-                });
-
-            modelBuilder.Entity("MangoTaika.Data.Entities.MembreHistoriqueCategorie", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Categorie")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("MembreHistoriqueId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Ordre")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Periode")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MembreHistoriqueId", "Categorie")
-                        .IsUnique();
-
-                    b.ToTable("MembresHistoriquesCategories");
                 });
 
             modelBuilder.Entity("MangoTaika.Data.Entities.MessageDiscussionFormation", b =>
@@ -3361,17 +3335,6 @@ namespace MangoTaika.Migrations
                     b.Navigation("Module");
                 });
 
-            modelBuilder.Entity("MangoTaika.Data.Entities.MembreHistoriqueCategorie", b =>
-                {
-                    b.HasOne("MangoTaika.Data.Entities.MembreHistorique", "MembreHistorique")
-                        .WithMany("CategorieDetails")
-                        .HasForeignKey("MembreHistoriqueId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("MembreHistorique");
-                });
-
             modelBuilder.Entity("MangoTaika.Data.Entities.MessageDiscussionFormation", b =>
                 {
                     b.HasOne("MangoTaika.Data.Entities.ApplicationUser", "Auteur")
@@ -4005,11 +3968,6 @@ namespace MangoTaika.Migrations
             modelBuilder.Entity("MangoTaika.Data.Entities.Lecon", b =>
                 {
                     b.Navigation("Progressions");
-                });
-
-            modelBuilder.Entity("MangoTaika.Data.Entities.MembreHistorique", b =>
-                {
-                    b.Navigation("CategorieDetails");
                 });
 
             modelBuilder.Entity("MangoTaika.Data.Entities.ModuleFormation", b =>

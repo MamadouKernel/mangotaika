@@ -274,6 +274,7 @@
                 <div class="footer-rs-links">
                     @foreach (var lien in footerLiensRS)
                     {
+                        var safeUrl = SafeLinkHelper.NormalizeAllowedLink(lien.Url, allowLocal: true);
                         var iconClass = lien.Plateforme?.ToLower() switch
                         {
                             "facebook" => "bi-facebook",
@@ -286,9 +287,12 @@
                             "telegram" => "bi-telegram",
                             _ => lien.Icone ?? "bi-link-45deg"
                         };
-                        <a href="@lien.Url" target="_blank" rel="noopener" title="@lien.Plateforme">
-                            <i class="bi @iconClass"></i>
-                        </a>
+                        if (!string.IsNullOrEmpty(safeUrl))
+                        {
+                            <a href="@safeUrl" target="_blank" rel="noopener noreferrer" title="@lien.Plateforme">
+                                <i class="bi @iconClass"></i>
+                            </a>
+                        }
                     }
                 </div>
             }
@@ -318,3 +322,4 @@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+@using MangoTaika.Helpers

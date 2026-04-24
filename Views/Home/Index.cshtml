@@ -151,8 +151,9 @@
             <div class="row g-3 justify-content-center">
                 @foreach (var p in partenaires)
                 {
+                    var siteWeb = SafeLinkHelper.NormalizeAllowedLink(p.SiteWeb);
                     <div class="col-6 col-md-3 col-lg-2">
-                        <a href="@(p.SiteWeb ?? "#")" target="_blank" rel="noopener" class="text-decoration-none">
+                        <a href="@(siteWeb ?? "#")" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
                             <div class="partenaire-logo-card">
                                 @if (!string.IsNullOrEmpty(p.LogoUrl))
                                 {
@@ -234,3 +235,4 @@
         });
     </script>
 }
+@using MangoTaika.Helpers

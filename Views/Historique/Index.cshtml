@@ -45,19 +45,39 @@
     <div class="row g-4">
         @foreach (var membre in Model.Membres)
         {
-            var labels = membre.Categories.GetSelectedCategories().ToList();
+            var details = membre.CategorieDetails.Any()
+                ? membre.CategorieDetails
+                    .OrderBy(detail => detail.Ordre)
+                    .ThenBy(detail => detail.Categorie)
+                    .ToList()
+                : membre.Categories
+                    .GetSelectedCategories()
+                    .Select(category => new MembreHistoriqueCategorie
+                    {
+                        Categorie = category,
+                        Description = membre.Description,
+                        Periode = membre.Periode,
+                        Ordre = membre.Ordre
+                    })
+                    .ToList();
             <div class="col-lg-4 col-md-6">
                 <div class="card-3d p-4 h-100 d-flex flex-column">
                     <h5 class="text-or mb-2">@membre.Nom</h5>
                     <div class="d-flex flex-wrap gap-1 mb-3">
-                        @foreach (var category in labels)
+                        @foreach (var detail in details)
                         {
-                            <span class="badge-3d badge-soumise">@category.GetLabel()</span>
+                            <span class="badge-3d badge-soumise">@detail.Categorie.GetLabel()</span>
                         }
                     </div>
-                    <div class="d-flex flex-column gap-1 mb-3 flex-grow-1" style="font-size:0.85rem;">
-                        <span><i class="bi bi-calendar-range text-bleu"></i> @(membre.Periode ?? "-")</span>
-                        <span><i class="bi bi-sort-numeric-down text-or"></i> Ordre d'affichage : @membre.Ordre</span>
+                    <div class="d-flex flex-column gap-2 mb-3 flex-grow-1" style="font-size:0.85rem;">
+                        @foreach (var detail in details)
+                        {
+                            <div class="border rounded-3 p-2" style="border-color:rgba(255,255,255,0.08)!important;">
+                                <div class="fw-semibold text-bleu">@detail.Categorie.GetLabel()</div>
+                                <div><i class="bi bi-calendar-range text-bleu"></i> @(detail.Periode ?? "-")</div>
+                                <div><i class="bi bi-sort-numeric-down text-or"></i> Ordre : @detail.Ordre</div>
+                            </div>
+                        }
                     </div>
                     <div class="d-flex flex-wrap gap-2 mt-auto">
                         <a asp-action="Details" asp-route-id="@membre.Id" class="btn btn-sm btn-outline-or" title="Détails"><i class="bi bi-eye"></i></a>

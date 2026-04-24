@@ -1,0 +1,73 @@
+@model MangoTaika.Models.HistoriqueFormViewModel
+@using MangoTaika.Data.Entities
+@{
+    var selectedCategories = Model.GetSelectedCategories().ToHashSet();
+    var entries = Model.GetNormalizedEntries();
+}
+
+<div class="mb-3">
+    <label asp-for="Nom" class="form-label"></label>
+    <input asp-for="Nom" class="form-control" />
+    <span asp-validation-for="Nom" class="text-danger small"></span>
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Catégories</label>
+    <div class="d-flex flex-wrap gap-3">
+        @foreach (var category in CategorieHistoriqueExtensions.All)
+        {
+            <div class="form-check">
+                <input class="form-check-input historique-category-toggle"
+                       type="checkbox"
+                       value="@((int)category)"
+                       data-label="@category.GetLabel()"
+                       id="cat_@category"
+                       @(selectedCategories.Contains(category) ? "checked" : "") />
+                <label class="form-check-label" for="cat_@category">@category.GetLabel()</label>
+            </div>
+        }
+    </div>
+    <span asp-validation-for="Entries" class="text-danger small"></span>
+</div>
+
+<div id="historiqueCategoryBlocks" class="d-flex flex-column gap-3 mb-4">
+    @for (var i = 0; i < entries.Count; i++)
+    {
+        var entry = entries[i];
+        <div class="card-3d p-3 historique-category-block" data-category="@((int)entry.Categorie)">
+            <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+                <h6 class="mb-0 text-or">@entry.Categorie.GetLabel()</h6>
+                <span class="badge-3d badge-soumise">Categorie</span>
+            </div>
+
+            <input type="hidden" asp-for="Entries[i].Categorie" data-field="Categorie" />
+
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <label asp-for="Entries[i].Periode" class="form-label"></label>
+                    <input asp-for="Entries[i].Periode" class="form-control" data-field="Periode" placeholder="2015-2020" />
+                    <span asp-validation-for="Entries[i].Periode" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Entries[i].Ordre" class="form-label"></label>
+                    <input asp-for="Entries[i].Ordre" class="form-control" data-field="Ordre" type="number" />
+                    <span asp-validation-for="Entries[i].Ordre" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <div>
+                <label asp-for="Entries[i].Description" class="form-label"></label>
+                <textarea asp-for="Entries[i].Description" class="form-control" data-field="Description" rows="3"></textarea>
+                <span asp-validation-for="Entries[i].Description" class="text-danger small"></span>
+            </div>
+        </div>
+    }
+</div>
+
+<div class="mb-4">
+    <label class="form-label">Photo <span class="text-muted-custom small">(optionnel)</span></label>
+    <div id="photoPreview" class="mb-2" style="@(string.IsNullOrEmpty(Model.PhotoUrl) ? "display:none;" : "")">
+        <img id="photoPreviewImg" src="@Model.PhotoUrl" alt="Aperçu" style="width:100px;height:100px;object-fit:cover;border-radius:50%;border:2px solid var(--vert-pastel);" />
+    </div>
+    <input type="file" name="Photo" id="photoInput" class="form-control" accept="image/*" />
+</div>

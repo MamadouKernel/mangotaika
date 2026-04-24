@@ -21,6 +21,6 @@ public static class ImageUploadExtensions
             throw new InvalidOperationException(invalidImageMessage);
         }
 
-        return await fileUploadService.SaveFileAsync(file, subfolder);
+        return await fileUploadService.SaveImageAsync(file, subfolder);
     }
 }

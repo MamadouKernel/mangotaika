@@ -1,5 +1,7 @@
-using MangoTaika.Data;
+﻿using MangoTaika.Data;
 using MangoTaika.Data.Entities;
+using MangoTaika.Helpers;
+using MangoTaika.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -7,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace MangoTaika.Controllers;
 
 [Authorize(Roles = "Administrateur,Gestionnaire")]
-public class MotCommissaireController(AppDbContext db) : Controller
+public class MotCommissaireController(AppDbContext db, IFileUploadService fileUploadService) : Controller
 {
     public async Task<IActionResult> Index()
     {
@@ -33,7 +35,18 @@ public class MotCommissaireController(AppDbContext db) : Controller
         ModelState.Remove("PhotoUrl");
         if (!ModelState.IsValid) return View(model);
         model.Id = Guid.NewGuid();
-        model.PhotoUrl = await SavePhotoAsync(Photo);
+        if (Photo is not null)
+        {
+            try
+            {
+                model.PhotoUrl = await fileUploadService.SaveImageAsync(Photo, "commissaire");
+            }
+            catch (InvalidOperationException ex)
+            {
+                this.AddDomainError(ex);
+                return View(model);
+            }
+        }
         db.MotsCommissaire.Add(model);
         await db.SaveChangesAsync();
         TempData["Success"] = "Mot du commissaire ajouté.";
@@ -61,7 +74,17 @@ public class MotCommissaireController(AppDbContext db) : Controller
         mot.Annee = model.Annee;
         mot.EstActif = model.EstActif;
         if (Photo is not null)
-            mot.PhotoUrl = await SavePhotoAsync(Photo);
+        {
+            try
+            {
+                mot.PhotoUrl = await fileUploadService.SaveImageAsync(Photo, "commissaire");
+            }
+            catch (InvalidOperationException ex)
+            {
+                this.AddDomainError(ex);
+                return View(model);
+            }
+        }
         await db.SaveChangesAsync();
         TempData["Success"] = "Mot du commissaire mis à jour.";
         return RedirectToAction(nameof(Index));
@@ -82,15 +105,5 @@ public class MotCommissaireController(AppDbContext db) : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private static async Task<string?> SavePhotoAsync(IFormFile? file)
-    {
-        if (file is null || file.Length == 0) return null;
-        var uploads = Path.Combine("wwwroot", "uploads", "commissaire");
-        Directory.CreateDirectory(uploads);
-        var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
-        var filePath = Path.Combine(uploads, fileName);
-        using var stream = new FileStream(filePath, FileMode.Create);
-        await file.CopyToAsync(stream);
-        return $"/uploads/commissaire/{fileName}";
-    }
 }
+

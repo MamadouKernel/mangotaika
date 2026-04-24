@@ -1,5 +1,6 @@
 @model List<MangoTaika.Data.Entities.Partenaire>
 @using MangoTaika.Data.Entities
+@using MangoTaika.Helpers
 @{
     ViewData["Title"] = "Partenaires & Reseaux sociaux";
     Layout = "_LayoutAdmin";
@@ -37,6 +38,7 @@
 <div class="row g-3">
     @foreach (var p in Model)
     {
+        var siteWeb = SafeLinkHelper.NormalizeAllowedLink(p.SiteWeb);
         <div class="col-md-3 col-6">
             <div class="card-3d p-3 text-center h-100">
                 <h6 style="color:var(--bleu-logo);font-size:0.85rem;">@p.Nom</h6>
@@ -48,9 +50,9 @@
                         <a asp-action="EditPartenaire" asp-route-id="@p.Id" class="btn btn-sm btn-bleu" style="font-size:0.7rem;" title="Modifier"><i class="bi bi-pencil"></i></a>
                         <form asp-action="DeletePartenaire" asp-route-id="@p.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer ?')"><button type="submit" class="btn btn-sm p-0 px-1" style="color:#f87171;font-size:0.7rem;" title="Supprimer"><i class="bi bi-trash"></i></button></form>
                     }
-                    @if (!string.IsNullOrEmpty(p.SiteWeb))
+                    @if (!string.IsNullOrEmpty(siteWeb))
                     {
-                        <a href="@p.SiteWeb" target="_blank" class="btn btn-sm btn-outline-or" style="font-size:0.7rem;"><i class="bi bi-globe"></i></a>
+                        <a href="@siteWeb" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-or" style="font-size:0.7rem;"><i class="bi bi-globe"></i></a>
                     }
                 </div>
             </div>

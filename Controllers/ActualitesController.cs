@@ -1,4 +1,4 @@
-using MangoTaika.Data.Entities;
+﻿using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
 using MangoTaika.Helpers;
 using MangoTaika.Services;
@@ -8,9 +8,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MangoTaika.Controllers;
 
-public class ActualitesController(IActualiteService actualiteService, UserManager<ApplicationUser> userManager, IWebHostEnvironment env) : Controller
+public class ActualitesController(IActualiteService actualiteService, UserManager<ApplicationUser> userManager, IFileUploadService fileUploadService) : Controller
 {
-    // ─── Public (sans login) ───
+    // â”€â”€â”€ Public (sans login) â”€â”€â”€
     [AllowAnonymous]
     public async Task<IActionResult> Index()
     {
@@ -26,7 +26,7 @@ public class ActualitesController(IActualiteService actualiteService, UserManage
         return View(a);
     }
 
-    // ─── Admin CRUD ───
+    // â”€â”€â”€ Admin CRUD â”€â”€â”€
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> Admin()
     {
@@ -48,7 +48,19 @@ public class ActualitesController(IActualiteService actualiteService, UserManage
     public async Task<IActionResult> Create(ActualiteCreateDto dto)
     {
         if (!ModelState.IsValid) return View(dto);
-        string? imagePath = await SaveImageAsync(dto.Image);
+        string? imagePath = null;
+        if (dto.Image is not null)
+        {
+            try
+            {
+                imagePath = await fileUploadService.SaveImageAsync(dto.Image, "actualites");
+            }
+            catch (InvalidOperationException ex)
+            {
+                this.AddDomainError(ex);
+                return View(dto);
+            }
+        }
         var userId = Guid.Parse(userManager.GetUserId(User)!);
         await actualiteService.CreateAsync(dto, userId, imagePath);
         TempData["Success"] = "Actualité créée avec succès.";
@@ -69,7 +81,19 @@ public class ActualitesController(IActualiteService actualiteService, UserManage
     public async Task<IActionResult> Edit(Guid id, ActualiteCreateDto dto)
     {
         if (!ModelState.IsValid) return View(dto);
-        string? imagePath = await SaveImageAsync(dto.Image);
+        string? imagePath = null;
+        if (dto.Image is not null)
+        {
+            try
+            {
+                imagePath = await fileUploadService.SaveImageAsync(dto.Image, "actualites");
+            }
+            catch (InvalidOperationException ex)
+            {
+                this.AddDomainError(ex);
+                return View(dto);
+            }
+        }
         var result = await actualiteService.UpdateAsync(id, dto, imagePath);
         if (!result) return NotFound();
         TempData["Success"] = "Actualité mise à jour.";
@@ -106,15 +130,5 @@ public class ActualitesController(IActualiteService actualiteService, UserManage
         return RedirectToAction(nameof(Admin));
     }
 
-    private async Task<string?> SaveImageAsync(Microsoft.AspNetCore.Http.IFormFile? file)
-    {
-        if (file is null || file.Length == 0) return null;
-        var uploads = Path.Combine(env.WebRootPath, "uploads", "actualites");
-        Directory.CreateDirectory(uploads);
-        var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
-        var filePath = Path.Combine(uploads, fileName);
-        using var stream = new FileStream(filePath, FileMode.Create);
-        await file.CopyToAsync(stream);
-        return $"/uploads/actualites/{fileName}";
-    }
 }
+

@@ -2,13 +2,14 @@ using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.Helpers;
 using MangoTaika.Models;
+using MangoTaika.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace MangoTaika.Controllers;
 
-public class HistoriqueController(AppDbContext db) : Controller
+public class HistoriqueController(AppDbContext db, IFileUploadService fileUploadService) : Controller
 {
     [AllowAnonymous]
     public Task<IActionResult> Commissaires(string? recherche)
@@ -38,12 +39,12 @@ public class HistoriqueController(AppDbContext db) : Controller
     public async Task<IActionResult> Index(string? recherche, List<CategorieHistorique>? categories)
     {
         var selectedCategories = NormalizeCategories(categories);
-        var query = BuildHistoriqueQuery(recherche);
+        IQueryable<MembreHistorique> query = BuildHistoriqueQuery(recherche)
+            .Include(m => m.CategorieDetails);
 
         if (selectedCategories.Count > 0)
         {
-            var selectedFlags = CombineCategories(selectedCategories);
-            query = query.Where(m => (m.Categories & selectedFlags) != CategorieHistorique.Aucune);
+            query = query.Where(m => m.CategorieDetails.Any(detail => selectedCategories.Contains(detail.Categorie)));
         }
 
         var ordered = query
@@ -68,6 +69,7 @@ public class HistoriqueController(AppDbContext db) : Controller
     public async Task<IActionResult> Details(Guid id)
     {
         var membre = await db.MembresHistoriques
+            .Include(m => m.CategorieDetails.OrderBy(detail => detail.Ordre).ThenBy(detail => detail.Categorie))
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == id && !x.EstSupprime);
 
@@ -76,17 +78,17 @@ public class HistoriqueController(AppDbContext db) : Controller
 
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public IActionResult Create()
-        => View(new HistoriqueFormViewModel { Ordre = 0 });
+        => View(new HistoriqueFormViewModel());
 
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(HistoriqueFormViewModel model, IFormFile? Photo)
     {
-        var categories = model.ToFlags();
-        if (categories == CategorieHistorique.Aucune)
+        var entries = model.GetNormalizedEntries();
+        if (entries.Count == 0)
         {
-            ModelState.AddModelError(nameof(model.Categories), "Sélectionnez au moins une catégorie.");
+            ModelState.AddModelError(nameof(model.Entries), "Sélectionnez au moins une catégorie.");
         }
 
         if (!ModelState.IsValid)
@@ -98,15 +100,28 @@ public class HistoriqueController(AppDbContext db) : Controller
         {
             Id = Guid.NewGuid(),
             Nom = model.Nom.Trim(),
-            Description = NormalizeValue(model.Description),
-            Periode = NormalizeValue(model.Periode),
-            Categories = categories,
-            Ordre = model.Ordre
+            CategorieDetails = entries.Select(entry => new MembreHistoriqueCategorie
+            {
+                Id = Guid.NewGuid(),
+                Categorie = entry.Categorie,
+                Description = entry.Description,
+                Periode = entry.Periode,
+                Ordre = entry.Ordre
+            }).ToList()
         };
+        SyncLegacyFields(membre);
 
         if (Photo is not null && Photo.Length > 0)
         {
-            membre.PhotoUrl = await SavePhotoAsync(Photo);
+            try
+            {
+                membre.PhotoUrl = await fileUploadService.SaveImageAsync(Photo, "historique");
+            }
+            catch (InvalidOperationException ex)
+            {
+                this.AddDomainError(ex);
+                return View(model);
+            }
         }
 
         db.MembresHistoriques.Add(membre);
@@ -119,7 +134,9 @@ public class HistoriqueController(AppDbContext db) : Controller
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> Edit(Guid id)
     {
-        var membre = await db.MembresHistoriques.FirstOrDefaultAsync(m => m.Id == id && !m.EstSupprime);
+        var membre = await db.MembresHistoriques
+            .Include(m => m.CategorieDetails.OrderBy(detail => detail.Ordre).ThenBy(detail => detail.Categorie))
+            .FirstOrDefaultAsync(m => m.Id == id && !m.EstSupprime);
         return membre is null ? NotFound() : View(HistoriqueFormViewModel.FromEntity(membre));
     }
 
@@ -133,10 +150,10 @@ public class HistoriqueController(AppDbContext db) : Controller
             return BadRequest();
         }
 
-        var categories = model.ToFlags();
-        if (categories == CategorieHistorique.Aucune)
+        var entries = model.GetNormalizedEntries();
+        if (entries.Count == 0)
         {
-            ModelState.AddModelError(nameof(model.Categories), "Sélectionnez au moins une catégorie.");
+            ModelState.AddModelError(nameof(model.Entries), "Sélectionnez au moins une catégorie.");
         }
 
         if (!ModelState.IsValid)
@@ -144,21 +161,42 @@ public class HistoriqueController(AppDbContext db) : Controller
             return View(model);
         }
 
-        var membre = await db.MembresHistoriques.FirstOrDefaultAsync(m => m.Id == id && !m.EstSupprime);
+        var membre = await db.MembresHistoriques
+            .Include(m => m.CategorieDetails)
+            .FirstOrDefaultAsync(m => m.Id == id && !m.EstSupprime);
         if (membre is null)
         {
             return NotFound();
         }
 
         membre.Nom = model.Nom.Trim();
-        membre.Description = NormalizeValue(model.Description);
-        membre.Periode = NormalizeValue(model.Periode);
-        membre.Categories = categories;
-        membre.Ordre = model.Ordre;
+        db.MembresHistoriquesCategories.RemoveRange(membre.CategorieDetails.ToList());
+        membre.CategorieDetails = [];
+        foreach (var entry in entries)
+        {
+            membre.CategorieDetails.Add(new MembreHistoriqueCategorie
+            {
+                Id = Guid.NewGuid(),
+                MembreHistoriqueId = membre.Id,
+                Categorie = entry.Categorie,
+                Description = entry.Description,
+                Periode = entry.Periode,
+                Ordre = entry.Ordre
+            });
+        }
+        SyncLegacyFields(membre);
 
         if (Photo is not null && Photo.Length > 0)
         {
-            membre.PhotoUrl = await SavePhotoAsync(Photo);
+            try
+            {
+                membre.PhotoUrl = await fileUploadService.SaveImageAsync(Photo, "historique");
+            }
+            catch (InvalidOperationException ex)
+            {
+                this.AddDomainError(ex);
+                return View(model);
+            }
         }
 
         await db.SaveChangesAsync();
@@ -190,7 +228,8 @@ public class HistoriqueController(AppDbContext db) : Controller
         string? recherche)
     {
         var membres = await BuildHistoriqueQuery(recherche)
-            .Where(m => (m.Categories & category) == category)
+            .Include(m => m.CategorieDetails)
+            .Where(m => m.CategorieDetails.Any(detail => detail.Categorie == category))
             .OrderBy(m => m.Ordre)
             .ThenBy(m => m.Nom)
             .ToListAsync();
@@ -215,7 +254,10 @@ public class HistoriqueController(AppDbContext db) : Controller
             query = query.Where(m =>
                 EF.Functions.ILike(m.Nom, pattern) ||
                 (m.Description != null && EF.Functions.ILike(m.Description, pattern)) ||
-                (m.Periode != null && EF.Functions.ILike(m.Periode, pattern)));
+                (m.Periode != null && EF.Functions.ILike(m.Periode, pattern)) ||
+                m.CategorieDetails.Any(detail =>
+                    (detail.Description != null && EF.Functions.ILike(detail.Description, pattern)) ||
+                    (detail.Periode != null && EF.Functions.ILike(detail.Periode, pattern))));
         }
 
         return query;
@@ -229,23 +271,22 @@ public class HistoriqueController(AppDbContext db) : Controller
             .ToList()
            ?? [];
 
-    private static CategorieHistorique CombineCategories(IEnumerable<CategorieHistorique> categories)
-        => categories.Aggregate(CategorieHistorique.Aucune, static (current, category) => current | category);
+    private static void SyncLegacyFields(MembreHistorique membre)
+    {
+        var details = membre.CategorieDetails
+            .Where(detail => CategorieHistoriqueExtensions.All.Contains(detail.Categorie))
+            .OrderBy(detail => detail.Ordre)
+            .ThenBy(detail => detail.Categorie)
+            .ToList();
+
+        membre.Categories = details
+            .Select(detail => detail.Categorie)
+            .Aggregate(CategorieHistorique.Aucune, static (current, category) => current | category);
+        membre.Ordre = details.FirstOrDefault()?.Ordre ?? 0;
+        membre.Periode = details.Count == 1 ? NormalizeValue(details[0].Periode) : null;
+        membre.Description = details.Count == 1 ? NormalizeValue(details[0].Description) : null;
+    }
 
     private static string? NormalizeValue(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    private static async Task<string> SavePhotoAsync(IFormFile photo)
-    {
-        var directory = Path.Combine("wwwroot", "uploads", "historique");
-        Directory.CreateDirectory(directory);
-
-        var fileName = $"{Guid.NewGuid()}{Path.GetExtension(photo.FileName)}";
-        var filePath = Path.Combine(directory, fileName);
-
-        await using var stream = new FileStream(filePath, FileMode.Create);
-        await photo.CopyToAsync(stream);
-
-        return $"/uploads/historique/{fileName}";
-    }
 }

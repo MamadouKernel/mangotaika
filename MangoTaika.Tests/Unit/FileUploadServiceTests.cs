@@ -10,7 +10,7 @@ namespace MangoTaika.Tests.Unit;
 public sealed class FileUploadServiceTests
 {
     [Fact]
-    public async Task SaveFileAsync_Saves_Valid_Png_Image()
+    public async Task SaveImageAsync_Saves_Valid_Png_Image()
     {
         var root = CreateTempDirectory();
         try
@@ -19,7 +19,7 @@ public sealed class FileUploadServiceTests
             await using var stream = new MemoryStream(CreatePngBytes());
             IFormFile file = new FormFile(stream, 0, stream.Length, "Logo", "logo.png");
 
-            var url = await service.SaveFileAsync(file, "groupes");
+            var url = await service.SaveImageAsync(file, "groupes");
 
             url.Should().StartWith("/uploads/groupes/");
             var relativePath = url.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
@@ -32,7 +32,7 @@ public sealed class FileUploadServiceTests
     }
 
     [Fact]
-    public async Task SaveFileAsync_Rejects_Image_With_Invalid_Magic_Bytes()
+    public async Task SaveImageAsync_Rejects_Image_With_Invalid_Magic_Bytes()
     {
         var root = CreateTempDirectory();
         try
@@ -41,10 +41,31 @@ public sealed class FileUploadServiceTests
             await using var stream = new MemoryStream([0x00, 0x11, 0x22, 0x33, 0x44]);
             IFormFile file = new FormFile(stream, 0, stream.Length, "Logo", "logo.png");
 
-            Func<Task> act = () => service.SaveFileAsync(file, "branches");
+            Func<Task> act = () => service.SaveImageAsync(file, "branches");
 
             await act.Should().ThrowAsync<InvalidOperationException>()
                 .WithMessage("*ne correspond pas*");
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task SaveDocumentAsync_Rejects_Html_File()
+    {
+        var root = CreateTempDirectory();
+        try
+        {
+            var service = new FileUploadService(new TestWebHostEnvironment(root));
+            await using var stream = new MemoryStream("<script>alert(1)</script>"u8.ToArray());
+            IFormFile file = new FormFile(stream, 0, stream.Length, "Document", "payload.html");
+
+            Func<Task> act = () => service.SaveDocumentAsync(file, "activites");
+
+            await act.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage("*Type de fichier non autorise*");
         }
         finally
         {

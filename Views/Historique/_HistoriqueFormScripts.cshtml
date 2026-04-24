@@ -1,0 +1,94 @@
+<script>
+    (function () {
+        const container = document.getElementById('historiqueCategoryBlocks');
+        const toggles = Array.from(document.querySelectorAll('.historique-category-toggle'));
+        const photoInput = document.getElementById('photoInput');
+        const photoPreview = document.getElementById('photoPreview');
+        const photoPreviewImg = document.getElementById('photoPreviewImg');
+
+        if (!container || toggles.length === 0) {
+            return;
+        }
+
+        function createBlock(categoryValue, label) {
+            const block = document.createElement('div');
+            block.className = 'card-3d p-3 historique-category-block';
+            block.dataset.category = categoryValue;
+            block.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+                    <h6 class="mb-0 text-or">${label}</h6>
+                    <span class="badge-3d badge-soumise">Categorie</span>
+                </div>
+                <input type="hidden" data-field="Categorie" value="${categoryValue}" />
+                <div class="row">
+                    <div class="col-md-8 mb-3">
+                        <label class="form-label">Période</label>
+                        <input class="form-control" data-field="Periode" placeholder="2015-2020" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Ordre</label>
+                        <input class="form-control" data-field="Ordre" type="number" value="0" />
+                    </div>
+                </div>
+                <div>
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control" data-field="Description" rows="3"></textarea>
+                </div>
+            `;
+            return block;
+        }
+
+        function reindexBlocks() {
+            const orderedBlocks = toggles
+                .filter(toggle => toggle.checked)
+                .map(toggle => container.querySelector(`.historique-category-block[data-category="${toggle.value}"]`))
+                .filter(Boolean);
+
+            orderedBlocks.forEach(block => container.appendChild(block));
+
+            orderedBlocks.forEach((block, index) => {
+                block.querySelectorAll('[data-field]').forEach(field => {
+                    field.name = `Entries[${index}].${field.dataset.field}`;
+                    field.id = `Entries_${index}__${field.dataset.field}`;
+                });
+            });
+        }
+
+        function syncBlocks() {
+            toggles.forEach(toggle => {
+                const selector = `.historique-category-block[data-category="${toggle.value}"]`;
+                const existingBlock = container.querySelector(selector);
+
+                if (toggle.checked && !existingBlock) {
+                    container.appendChild(createBlock(toggle.value, toggle.dataset.label));
+                }
+
+                if (!toggle.checked && existingBlock) {
+                    existingBlock.remove();
+                }
+            });
+
+            reindexBlocks();
+        }
+
+        toggles.forEach(toggle => toggle.addEventListener('change', syncBlocks));
+        syncBlocks();
+
+        if (photoInput && photoPreview && photoPreviewImg) {
+            photoInput.addEventListener('change', function (e) {
+                const file = e.target.files[0];
+                if (!file) {
+                    photoPreview.style.display = 'none';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    photoPreviewImg.src = event.target.result;
+                    photoPreview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+    })();
+</script>

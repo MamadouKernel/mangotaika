@@ -61,13 +61,13 @@
                         <small class="text-muted-custom">Saisissez le(s) matricule(s) separes par des virgules. Format attendu : 0583753X.</small>
                     </div>
 
-                    <div class="mb-3" id="codeSection" style="display:none;">
+                    <div class="mb-3" id="codeSection">
                         <label asp-for="CodeInvitation" class="form-label">
                             Code d'invitation <span class="text-danger">*</span>
                         </label>
                         <input asp-for="CodeInvitation" class="form-control" placeholder="Ex: MT-20260321-A1B2C3" />
                         <span asp-validation-for="CodeInvitation" class="text-danger small"></span>
-                        <small class="text-muted-custom">Ce code vous a ete transmis par un administrateur du district.</small>
+                        <small class="text-muted-custom">Ce code vous a ete transmis par le district pour valider votre inscription.</small>
                     </div>
 
                     <div class="mb-3" id="scoutSection" style="display:none;">
@@ -117,7 +117,6 @@
             function toggleSections() {
                 const role = roleSelect.value;
                 matriculesSection.style.display = role === 'Parent' ? 'block' : 'none';
-                codeSection.style.display = role === 'Gestionnaire' ? 'block' : 'none';
                 scoutSection.style.display = role === 'Scout' ? 'block' : 'none';
             }
 

@@ -1,5 +1,6 @@
-using MangoTaika.Data;
+﻿using MangoTaika.Data;
 using MangoTaika.Data.Entities;
+using MangoTaika.Helpers;
 using MangoTaika.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -47,7 +48,15 @@ public class PartenairesController(AppDbContext db, IFileUploadService fileUploa
         }
         p.Nom = model.Nom.Trim();
         p.Description = model.Description;
-        p.SiteWeb = model.SiteWeb;
+        var siteWeb = SafeLinkHelper.NormalizeAllowedLink(model.SiteWeb);
+        if (!string.IsNullOrWhiteSpace(model.SiteWeb) && siteWeb is null)
+        {
+            ModelState.AddModelError(nameof(model.SiteWeb), "Le site web doit utiliser http ou https.");
+            model.Id = id;
+            model.LogoUrl = p.LogoUrl;
+            return View(model);
+        }
+        p.SiteWeb = siteWeb;
         p.TypePartenariat = model.TypePartenariat;
         p.Ordre = model.Ordre;
         p.EstActif = model.EstActif;
@@ -59,7 +68,7 @@ public class PartenairesController(AppDbContext db, IFileUploadService fileUploa
                 model.LogoUrl = p.LogoUrl;
                 return View(model);
             }
-            p.LogoUrl = await fileUpload.SaveFileAsync(Logo, "partenaires");
+            p.LogoUrl = await fileUpload.SaveImageAsync(Logo, "partenaires");
         }
         await db.SaveChangesAsync();
         TempData["Success"] = "Partenaire mis à jour.";
@@ -69,7 +78,15 @@ public class PartenairesController(AppDbContext db, IFileUploadService fileUploa
     [HttpPost, Authorize(Roles = "Administrateur,Gestionnaire"), ValidateAntiForgeryToken]
     public async Task<IActionResult> CreatePartenaire(Partenaire model, IFormFile? Logo)
     {
+        var siteWeb = SafeLinkHelper.NormalizeAllowedLink(model.SiteWeb);
+        if (!string.IsNullOrWhiteSpace(model.SiteWeb) && siteWeb is null)
+        {
+            TempData["Error"] = "Le site web doit utiliser http ou https.";
+            return RedirectToAction(nameof(Index));
+        }
+
         model.Id = Guid.NewGuid();
+        model.SiteWeb = siteWeb;
         if (Logo is not null && Logo.Length > 0)
         {
             if (!fileUpload.IsValidImage(Logo))
@@ -77,8 +94,10 @@ public class PartenairesController(AppDbContext db, IFileUploadService fileUploa
                 TempData["Error"] = "Type de fichier non autorisé pour le logo.";
                 return RedirectToAction(nameof(Index));
             }
-            model.LogoUrl = await fileUpload.SaveFileAsync(Logo, "partenaires");
+
+            model.LogoUrl = await fileUpload.SaveImageAsync(Logo, "partenaires");
         }
+
         db.Partenaires.Add(model);
         await db.SaveChangesAsync();
         TempData["Success"] = "Partenaire ajouté.";
@@ -97,13 +116,20 @@ public class PartenairesController(AppDbContext db, IFileUploadService fileUploa
     [HttpPost, Authorize(Roles = "Administrateur,Gestionnaire"), ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateLien(LienReseauSocial model)
     {
+        var normalizedUrl = SafeLinkHelper.NormalizeAllowedLink(model.Url, allowLocal: true);
+        if (normalizedUrl is null)
+        {
+            TempData["Error"] = "L'URL du reseau social doit utiliser http, https ou un chemin local valide.";
+            return RedirectToAction(nameof(Index));
+        }
+
         model.Id = Guid.NewGuid();
+        model.Url = normalizedUrl;
         db.LiensReseauxSociaux.Add(model);
         await db.SaveChangesAsync();
         TempData["Success"] = "Lien ajouté.";
         return RedirectToAction(nameof(Index));
     }
-
     [HttpPost, Authorize(Roles = "Administrateur,Gestionnaire"), ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteLien(Guid id)
     {
@@ -113,3 +139,4 @@ public class PartenairesController(AppDbContext db, IFileUploadService fileUploa
         return RedirectToAction(nameof(Index));
     }
 }
+

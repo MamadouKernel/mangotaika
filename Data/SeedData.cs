@@ -131,7 +131,7 @@ public static class SeedData
         // ============================================================
         var parents = new[]
         {
-            new Parent { Id = Guid.NewGuid(), Nom = "Ouattara", Prenom = "Mariam", Telephone = "0707070705", Email = "mariam.ouattara@email.ci", Relation = "Mère", Scouts = { scouts[2], scouts[3] } },
+            new Parent { Id = Guid.NewGuid(), Nom = "Ouattara", Prenom = "Mariam", Telephone = "0707070705", Email = "mariam.ouattara@email.ci", Relation = "Mère", UserId = parentUser.Id, Scouts = { scouts[2], scouts[3] } },
             new Parent { Id = Guid.NewGuid(), Nom = "Diabaté", Prenom = "Seydou", Telephone = "0505050501", Email = "seydou.diabate@email.ci", Relation = "Père", Scouts = { scouts[0] } },
             new Parent { Id = Guid.NewGuid(), Nom = "Coulibaly", Prenom = "Aminata", Telephone = "0505050502", Relation = "Mère", Scouts = { scouts[1], scouts[6] } }
         };

@@ -91,7 +91,7 @@ public class GalerieController(AppDbContext db, IFileUploadService fileUpload) :
 
             var ext = Path.GetExtension(media.FileName).ToLowerInvariant();
             var typeMedia = ExtensionsVideo.Contains(ext) ? "video" : "image";
-            var path = await fileUpload.SaveFileAsync(media, "galerie");
+            var path = await fileUpload.SaveMediaAsync(media, "galerie");
 
             var titreGalerie = fichiers.Count > 1 ? $"{titreBase} ({i + 1})" : titreBase;
             db.Galeries.Add(new Galerie

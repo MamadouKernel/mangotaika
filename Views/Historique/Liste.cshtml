@@ -35,6 +35,22 @@
         <div class="row g-4 justify-content-center">
             @foreach (var membre in Model)
             {
+                var details = membre.CategorieDetails.Any()
+                    ? membre.CategorieDetails
+                        .OrderBy(entry => entry.Ordre)
+                        .ThenBy(entry => entry.Categorie)
+                        .ToList()
+                    : membre.Categories
+                        .GetSelectedCategories()
+                        .Select(category => new MembreHistoriqueCategorie
+                        {
+                            Categorie = category,
+                            Description = membre.Description,
+                            Periode = membre.Periode,
+                            Ordre = membre.Ordre
+                        })
+                        .ToList();
+                var detail = details.FirstOrDefault(entry => categorie == CategorieHistorique.Aucune || entry.Categorie == categorie);
                 <div class="col-md-4 col-sm-6">
                     <div class="card-3d p-4 text-center h-100">
                         @if (!string.IsNullOrEmpty(membre.PhotoUrl))
@@ -48,22 +64,22 @@
                             </div>
                         }
                         <h5 style="color:var(--bleu-logo);">@membre.Nom</h5>
-                        @if (!string.IsNullOrEmpty(membre.Periode))
+                        @if (!string.IsNullOrEmpty(detail?.Periode))
                         {
-                            <span class="badge-3d badge-soumise mb-2">@membre.Periode</span>
+                            <span class="badge-3d badge-soumise mb-2">@detail.Periode</span>
                         }
                         @if (categorie == CategorieHistorique.Aucune)
                         {
                             <div class="d-flex flex-wrap justify-content-center gap-1 mt-2">
-                                @foreach (var category in membre.Categories.GetSelectedCategories())
+                                @foreach (var category in details.Select(entry => entry.Categorie))
                                 {
                                     <span class="badge-3d badge-soumise">@category.GetLabel()</span>
                                 }
                             </div>
                         }
-                        @if (!string.IsNullOrEmpty(membre.Description))
+                        @if (!string.IsNullOrEmpty(detail?.Description))
                         {
-                            <p class="text-muted-custom small mt-2">@membre.Description</p>
+                            <p class="text-muted-custom small mt-2">@detail.Description</p>
                         }
                     </div>
                 </div>

@@ -405,27 +405,13 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
             return;
         }
 
-        var userEntity = await db.Users.FirstOrDefaultAsync(u => u.Id == userId);
-        if (userEntity is null)
-        {
-            dto.MessageInfo = "Compte parent introuvable.";
-            return;
-        }
-
-        var parent = await db.Parents
-            .Include(p => p.Scouts)
-            .FirstOrDefaultAsync(p => p.Telephone == userEntity.PhoneNumber);
-
-        if (parent is null)
-        {
-            dto.MessageInfo = "Aucun enfant n'est lie a votre compte.";
-            return;
-        }
-
-        var scoutIds = parent.Scouts
-            .Where(s => s.IsActive)
+        var scoutIds = await db.Parents
+            .AsNoTracking()
+            .Where(p => p.UserId == userId)
+            .SelectMany(p => p.Scouts.Where(s => s.IsActive))
             .Select(s => s.Id)
-            .ToList();
+            .Distinct()
+            .ToListAsync();
 
         dto.MesEnfants = scoutIds.Count;
         dto.TicketsOuverts = await db.Tickets

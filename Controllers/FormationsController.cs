@@ -15,7 +15,8 @@ public class FormationsController(
     IFormationService formationService,
     AppDbContext db,
     UserManager<ApplicationUser> userManager,
-    INotificationDispatchService notificationDispatchService) : Controller
+    INotificationDispatchService notificationDispatchService,
+    IFileUploadService fileUploadService) : Controller
 {
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> Index()
@@ -44,14 +45,16 @@ public class FormationsController(
 
         if (image != null)
         {
-            var uploadsDir = Path.Combine("wwwroot", "uploads", "formations");
-            Directory.CreateDirectory(uploadsDir);
-            var fileName = $"cover-{formation.Id}{Path.GetExtension(image.FileName)}";
-            var filePath = Path.Combine(uploadsDir, fileName);
-            await using var stream = new FileStream(filePath, FileMode.Create);
-            await image.CopyToAsync(stream);
-            formation.ImageUrl = $"/uploads/formations/{fileName}";
-            await db.SaveChangesAsync();
+            try
+            {
+                formation.ImageUrl = await fileUploadService.SaveImageAsync(image, "formations");
+                await db.SaveChangesAsync();
+            }
+            catch (InvalidOperationException ex)
+            {
+                this.SetDomainError(ex);
+                return RedirectToAction(nameof(Edit), new { id = formation.Id });
+            }
         }
 
         TempData["Success"] = "Formation creee avec succes.";
@@ -77,18 +80,19 @@ public class FormationsController(
 
         if (image != null)
         {
-            var uploadsDir = Path.Combine("wwwroot", "uploads", "formations");
-            Directory.CreateDirectory(uploadsDir);
-            var fileName = $"cover-{id}{Path.GetExtension(image.FileName)}";
-            var filePath = Path.Combine(uploadsDir, fileName);
-            await using var stream = new FileStream(filePath, FileMode.Create);
-            await image.CopyToAsync(stream);
-
-            var formation = await db.Formations.FindAsync(id);
-            if (formation != null)
+            try
             {
-                formation.ImageUrl = $"/uploads/formations/{fileName}";
-                await db.SaveChangesAsync();
+                var formation = await db.Formations.FindAsync(id);
+                if (formation != null)
+                {
+                    formation.ImageUrl = await fileUploadService.SaveImageAsync(image, "formations");
+                    await db.SaveChangesAsync();
+                }
+            }
+            catch (InvalidOperationException ex)
+            {
+                this.SetDomainError(ex);
+                return RedirectToAction(nameof(Edit), new { id });
             }
         }
 
@@ -169,14 +173,16 @@ public class FormationsController(
 
         if (document != null && dto.Type == TypeLecon.Document)
         {
-            var uploadsDir = Path.Combine("wwwroot", "uploads", "formations");
-            Directory.CreateDirectory(uploadsDir);
-            var fileName = $"{lecon.Id}{Path.GetExtension(document.FileName)}";
-            var filePath = Path.Combine(uploadsDir, fileName);
-            await using var stream = new FileStream(filePath, FileMode.Create);
-            await document.CopyToAsync(stream);
-            lecon.DocumentUrl = $"/uploads/formations/{fileName}";
-            await db.SaveChangesAsync();
+            try
+            {
+                lecon.DocumentUrl = await fileUploadService.SaveDocumentAsync(document, "formations", [".pdf", ".doc", ".docx"]);
+                await db.SaveChangesAsync();
+            }
+            catch (InvalidOperationException ex)
+            {
+                this.SetDomainError(ex);
+                return RedirectToAction(nameof(Edit), new { id = formationId });
+            }
         }
 
         TempData["Success"] = "Lecon ajoutee.";
@@ -515,13 +521,17 @@ public class FormationsController(
     [Authorize(Roles = "Parent")]
     public async Task<IActionResult> FormationsEnfant(Guid scoutId, string? q = null, string? statut = null, bool? certifiant = null, string? tri = null)
     {
-        var parent = await GetCurrentParentAsync();
-        if (parent is null || !parent.Scouts.Any(s => s.Id == scoutId))
+        var user = await userManager.GetUserAsync(User);
+        if (user is null)
+            return RedirectToAction("Login", "Account");
+
+        var scoutIds = await GetCurrentParentScoutIdsAsync(user.Id);
+        if (!scoutIds.Contains(scoutId))
             return Forbid();
 
         var inscriptions = await formationService.GetParcoursScoutsAsync([scoutId]);
         inscriptions = ApplyParcoursFilters(inscriptions, q, statut, certifiant, tri);
-        ViewBag.Scout = parent.Scouts.First(s => s.Id == scoutId);
+        ViewBag.Scout = await db.Scouts.AsNoTracking().FirstOrDefaultAsync(s => s.Id == scoutId);
         ViewBag.Recherche = q;
         ViewBag.Statut = statut;
         ViewBag.Certifiant = certifiant;
@@ -594,15 +604,15 @@ public class FormationsController(
         return await db.Scouts.FirstOrDefaultAsync(s => s.UserId == user.Id && s.IsActive);
     }
 
-    private async Task<Parent?> GetCurrentParentAsync()
+    private async Task<List<Guid>> GetCurrentParentScoutIdsAsync(Guid userId)
     {
-        var user = await userManager.GetUserAsync(User);
-        if (user is null)
-            return null;
-
         return await db.Parents
-            .Include(p => p.Scouts)
-            .FirstOrDefaultAsync(p => p.Telephone == user.PhoneNumber);
+            .AsNoTracking()
+            .Where(p => p.UserId == userId)
+            .SelectMany(p => p.Scouts.Where(s => s.IsActive))
+            .Select(s => s.Id)
+            .Distinct()
+            .ToListAsync();
     }
 
     private List<FormationDto> ApplyCatalogueFilters(

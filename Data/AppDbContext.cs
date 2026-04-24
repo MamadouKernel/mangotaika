@@ -32,6 +32,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<SuiviDemande> SuivisDemande => Set<SuiviDemande>();
     public DbSet<DemandeGroupe> DemandesGroupe => Set<DemandeGroupe>();
     public DbSet<MembreHistorique> MembresHistoriques => Set<MembreHistorique>();
+    public DbSet<MembreHistoriqueCategorie> MembresHistoriquesCategories => Set<MembreHistoriqueCategorie>();
     public DbSet<HistoriqueTicket> HistoriquesTicket => Set<HistoriqueTicket>();
     public DbSet<Actualite> Actualites => Set<Actualite>();
     public DbSet<CodeInvitation> CodesInvitation => Set<CodeInvitation>();
@@ -97,6 +98,13 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasOne(s => s.Branche).WithMany(b => b.Scouts).HasForeignKey(s => s.BrancheId);
             e.HasMany(s => s.Parents).WithMany(p => p.Scouts);
             e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        builder.Entity<Parent>(e =>
+        {
+            e.HasIndex(p => p.UserId)
+                .HasDatabaseName("IX_Parents_UserId");
+            e.HasOne(p => p.User).WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.SetNull);
         });
 
         // Groupe
@@ -222,6 +230,16 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         builder.Entity<MembreHistorique>(e =>
         {
             e.Property(m => m.Categories).HasColumnName("Categorie");
+            e.HasMany(m => m.CategorieDetails)
+                .WithOne(d => d.MembreHistorique)
+                .HasForeignKey(d => d.MembreHistoriqueId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<MembreHistoriqueCategorie>(e =>
+        {
+            e.HasIndex(d => new { d.MembreHistoriqueId, d.Categorie })
+                .IsUnique();
         });
 
         // Actualite

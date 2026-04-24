@@ -51,11 +51,13 @@ if (!string.IsNullOrWhiteSpace(dataProtectionKeysPath))
         .SetApplicationName("MangoTaika");
 }
 
+var secureCookiePolicy = builder.Environment.IsEnvironment("Testing")
+    ? CookieSecurePolicy.SameAsRequest
+    : CookieSecurePolicy.Always;
+
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    options.KnownNetworks.Clear();
-    options.KnownProxies.Clear();
 });
 
 builder.Services.ConfigureApplicationCookie(options =>
@@ -63,7 +65,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LoginPath = "/Account/Login";
     options.AccessDeniedPath = "/Account/AccessDenied";
     options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.Cookie.SecurePolicy = secureCookiePolicy;
     options.Cookie.SameSite = SameSiteMode.Strict;
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
     options.SlidingExpiration = true;
@@ -96,14 +98,14 @@ builder.Services.AddSession(options =>
 {
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.Cookie.SecurePolicy = secureCookiePolicy;
     options.IdleTimeout = TimeSpan.FromHours(8);
 });
 
 builder.Services.AddAntiforgery(options =>
 {
     options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.Cookie.SecurePolicy = secureCookiePolicy;
     options.Cookie.SameSite = SameSiteMode.Strict;
     options.HeaderName = "RequestVerificationToken";
 });
@@ -157,7 +159,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
-app.MapHub<NotificationHub>("/hubs/notifications");
+app.MapHub<NotificationHub>("/hubs/notifications").RequireAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 using (var scope = app.Services.CreateScope())

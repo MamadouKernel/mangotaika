@@ -23,7 +23,7 @@ public sealed class FormationsAccessTests
 
             var author = await TestDataSeeder.AddUserAsync(db, "Coach", "Lms", []);
             childScout = CreateScout("7000401D", "Nadia", "Yao");
-            var parent = CreateParent(parentUser.PhoneNumber!, childScout);
+            var parent = CreateParent(parentUser.Id, childScout);
             var formation = CreateFormation(author.Id, "Formation Premiers Pas");
 
             db.Parents.Add(parent);
@@ -63,7 +63,7 @@ public sealed class FormationsAccessTests
             var author = await TestDataSeeder.AddUserAsync(db, "Coach", "Lms", []);
             var linkedScout = CreateScout("7000402D", "Enfant", "Lie");
             otherScout = CreateScout("7000403D", "Autre", "Scout");
-            var parent = CreateParent(parentUser.PhoneNumber!, linkedScout);
+            var parent = CreateParent(parentUser.Id, linkedScout);
             var formation = CreateFormation(author.Id, "Formation Reservee");
 
             db.Parents.Add(parent);
@@ -151,14 +151,14 @@ public sealed class FormationsAccessTests
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
-    private static Parent CreateParent(string phoneNumber, params Scout[] scouts)
+    private static Parent CreateParent(Guid userId, params Scout[] scouts)
     {
         return new Parent
         {
             Id = Guid.NewGuid(),
             Nom = "Parent",
             Prenom = "Test",
-            Telephone = phoneNumber,
+            UserId = userId,
             Scouts = scouts.ToList()
         };
     }

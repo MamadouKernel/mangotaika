@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using ClosedXML.Excel;
 using MangoTaika.Data;
@@ -18,6 +18,7 @@ public class AccountController(
     SignInManager<ApplicationUser> signInManager,
     AppDbContext db,
     ISmsService smsService,
+    IFileUploadService fileUploadService,
     ActiveRoleService activeRoleService) : Controller
 {
     [HttpGet]
@@ -37,7 +38,7 @@ public class AccountController(
         ViewData["ReturnUrl"] = returnUrl;
         if (!ModelState.IsValid) return View(model);
 
-        // Trouver l'utilisateur par téléphone
+        // Trouver l'utilisateur par tÃ©lÃ©phone
         var user = await db.Users.FirstOrDefaultAsync(u => u.PhoneNumber == model.Telephone);
         if (user == null)
         {
@@ -57,7 +58,7 @@ public class AccountController(
         if (result.RequiresTwoFactor)
             return RedirectToAction(nameof(VerifierMfa), new { rememberMe = model.RememberMe });
         if (result.IsLockedOut)
-            ModelState.AddModelError(string.Empty, "Compte verrouillé. Réessayez plus tard.");
+            ModelState.AddModelError(string.Empty, "Compte verrouillÃ©. RÃ©essayez plus tard.");
         else
             ModelState.AddModelError(string.Empty, "Identifiants invalides.");
         return View(model);
@@ -71,24 +72,23 @@ public class AccountController(
     public async Task<IActionResult> Register(RegisterViewModel model)
     {
         if (!ModelState.IsValid) return View(model);
-
-        // Seuls Parent, Gestionnaire et Scout peuvent s'inscrire
         if (model.Role != "Parent" && model.Role != "Gestionnaire" && model.Role != "Scout")
         {
             ModelState.AddModelError("Role", "Rôle invalide.");
             return View(model);
         }
-
-        // Vérifier unicité du téléphone
         if (await db.Users.AnyAsync(u => u.PhoneNumber == model.Telephone))
         {
             ModelState.AddModelError("Telephone", "Ce numéro de téléphone est déjà utilisé.");
             return View(model);
         }
-
-        // === Validation selon le rôle ===
-
-        // Parent / Tuteur : matricule(s) obligatoire(s)
+        var codeInvitation = await ResolveInvitationAsync(model.CodeInvitation);
+        if (codeInvitation is null)
+        {
+            ModelState.AddModelError("CodeInvitation", "Un code d'invitation valide est requis.");
+            return View(model);
+        }
+        var scouts = new List<Scout>();
         if (model.Role == "Parent")
         {
             if (string.IsNullOrWhiteSpace(model.Matricules))
@@ -96,33 +96,51 @@ public class AccountController(
                 ModelState.AddModelError("Matricules", "En tant que parent / tuteur, vous devez fournir le(s) matricule(s) de vos enfants.");
                 return View(model);
             }
+            var matricules = model.Matricules
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(ScoutMatriculeFormat.Normalize)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            foreach (var matricule in matricules)
+            {
+                var scout = await db.Scouts.FirstOrDefaultAsync(s => s.Matricule == matricule && s.IsActive);
+                if (scout is null)
+                {
+                    ModelState.AddModelError("Matricules", $"Matricule introuvable : {matricule}");
+                    return View(model);
+                }
+                scouts.Add(scout);
+            }
         }
-
-        // Gestionnaire : code d'invitation obligatoire
-        Data.Entities.CodeInvitation? codeInvitation = null;
-        if (model.Role == "Gestionnaire")
+        List<Parent> parentsLies = [];
+        if (model.Role == "Parent")
         {
-            if (string.IsNullOrWhiteSpace(model.CodeInvitation))
+            parentsLies = await ResolveParentLinksForRegistrationAsync(model, scouts);
+            if (parentsLies.Count == 0)
             {
-                ModelState.AddModelError("CodeInvitation", "Un code d'invitation est requis pour s'inscrire en tant que gestionnaire.");
+                ModelState.AddModelError("Matricules", "Aucune fiche parent correspondante n'a été trouvée pour ces scouts avec vos coordonnées.");
                 return View(model);
             }
-            var invitationCode = model.CodeInvitation.Trim();
-            codeInvitation = db.Database.IsNpgsql()
-                ? await db.CodesInvitation
-                    .FirstOrDefaultAsync(c => c.Code == invitationCode && !c.EstUtilise)
-                : await db.CodesInvitation
-                    .FirstOrDefaultAsync(c =>
-                        c.Code.ToUpper() == DatabaseText.NormalizeCaseInsensitiveKey(invitationCode) &&
-                        !c.EstUtilise);
-            if (codeInvitation is null)
+            if (parentsLies.Any(p => p.UserId.HasValue))
             {
-                ModelState.AddModelError("CodeInvitation", "Code d'invitation invalide ou déjà utilisé.");
+                ModelState.AddModelError("Matricules", "Une fiche parent correspondant à ces scouts est déjà liée à un compte.");
+                return View(model);
+            }
+            var scoutIdsLies = parentsLies
+                .SelectMany(p => p.Scouts)
+                .Select(s => s.Id)
+                .Distinct()
+                .ToHashSet();
+            var matriculesManquants = scouts
+                .Where(s => !scoutIdsLies.Contains(s.Id))
+                .Select(s => s.Matricule ?? s.Id.ToString())
+                .ToList();
+            if (matriculesManquants.Count > 0)
+            {
+                ModelState.AddModelError("Matricules", $"Fiches parent manquantes pour : {string.Join(", ", matriculesManquants)}");
                 return View(model);
             }
         }
-
-        // Scout : matricule obligatoire et doit exister en base
         Scout? scoutLie = null;
         if (model.Role == "Scout")
         {
@@ -138,28 +156,17 @@ public class AccountController(
                 ModelState.AddModelError("MatriculeScout", "Matricule introuvable. Vérifiez auprès de votre chef de groupe.");
                 return View(model);
             }
-        }
-
-        // Valider les matricules si fournis
-        var scouts = new List<Scout>();
-        if (!string.IsNullOrWhiteSpace(model.Matricules))
-        {
-            var matricules = model.Matricules
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-            foreach (var mat in matricules)
+            if (scoutLie.UserId.HasValue)
             {
-                var matricule = ScoutMatriculeFormat.Normalize(mat);
-                var scout = await db.Scouts.FirstOrDefaultAsync(s => s.Matricule == matricule && s.IsActive);
-                if (scout == null)
-                {
-                    ModelState.AddModelError("Matricules", $"Matricule introuvable : {matricule}");
-                    return View(model);
-                }
-                scouts.Add(scout);
+                ModelState.AddModelError("MatriculeScout", "Ce matricule est déjà lié à un compte.");
+                return View(model);
+            }
+            if (!ScoutMatchesRegistration(scoutLie, model))
+            {
+                ModelState.AddModelError("MatriculeScout", "Les coordonnées saisies ne correspondent pas à la fiche scout existante.");
+                return View(model);
             }
         }
-
         var user = new ApplicationUser
         {
             UserName = model.Telephone,
@@ -167,53 +174,114 @@ public class AccountController(
             Email = model.Email,
             Nom = model.Nom,
             Prenom = model.Prenom,
-            IsActive = false
+            Matricule = scoutLie?.Matricule,
+            IsActive = true
         };
+        await using var transaction = await db.Database.BeginTransactionAsync();
         var result = await userManager.CreateAsync(user, model.Password);
-        if (result.Succeeded)
+        if (!result.Succeeded)
         {
-            await userManager.AddToRoleAsync(user, model.Role);
-
-            // Lier les scouts au parent
-            if (scouts.Count > 0)
-            {
-                var parent = new Parent
-                {
-                    Id = Guid.NewGuid(),
-                    Nom = model.Nom,
-                    Prenom = model.Prenom,
-                    Telephone = model.Telephone,
-                    Email = model.Email
-                };
-                parent.Scouts = scouts;
-                db.Parents.Add(parent);
-                await db.SaveChangesAsync();
-            }
-
-            // Lier le scout à son compte utilisateur
-            if (scoutLie is not null)
-            {
-                scoutLie.UserId = user.Id;
-                await db.SaveChangesAsync();
-            }
-
-            // Marquer le code d'invitation comme utilisé
-            if (codeInvitation is not null)
-            {
-                codeInvitation.EstUtilise = true;
-                codeInvitation.DateUtilisation = DateTime.UtcNow;
-                codeInvitation.UtilisePaId = user.Id;
-                await db.SaveChangesAsync();
-            }
-
-            TempData["Success"] = "Inscription réussie. Votre compte sera activé par un administrateur.";
-            return RedirectToAction(nameof(Login));
+            foreach (var error in result.Errors)
+                ModelState.AddModelError(string.Empty, error.Description);
+            return View(model);
         }
-        foreach (var error in result.Errors)
-            ModelState.AddModelError(string.Empty, error.Description);
-        return View(model);
+        var roleResult = await userManager.AddToRoleAsync(user, model.Role);
+        if (!roleResult.Succeeded)
+        {
+            foreach (var error in roleResult.Errors)
+                ModelState.AddModelError(nameof(model.Role), error.Description);
+            return View(model);
+        }
+        if (parentsLies.Count > 0)
+        {
+            foreach (var parent in parentsLies)
+            {
+                parent.UserId = user.Id;
+                parent.Nom = user.Nom;
+                parent.Prenom = user.Prenom;
+                parent.Telephone = user.PhoneNumber;
+                parent.Email = user.Email;
+            }
+        }
+        if (scoutLie is not null)
+        {
+            scoutLie.UserId = user.Id;
+        }
+        codeInvitation.EstUtilise = true;
+        codeInvitation.DateUtilisation = DateTime.UtcNow;
+        codeInvitation.UtilisePaId = user.Id;
+        await db.SaveChangesAsync();
+        await transaction.CommitAsync();
+        TempData["Success"] = "Inscription réussie. Votre compte est maintenant activé.";
+        return RedirectToAction(nameof(Login));
     }
-
+    private async Task<CodeInvitation?> ResolveInvitationAsync(string? rawCode)
+    {
+        if (string.IsNullOrWhiteSpace(rawCode))
+            return null;
+        var invitationCode = rawCode.Trim();
+        return db.Database.IsNpgsql()
+            ? await db.CodesInvitation.FirstOrDefaultAsync(c => c.Code == invitationCode && !c.EstUtilise)
+            : await db.CodesInvitation.FirstOrDefaultAsync(c =>
+                c.Code.ToUpper() == DatabaseText.NormalizeCaseInsensitiveKey(invitationCode) &&
+                !c.EstUtilise);
+    }
+    private static string NormalizePhoneKey(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return string.Empty;
+        var digits = new string(value.Where(char.IsDigit).ToArray());
+        return digits.Length > 10 ? digits[^10..] : digits;
+    }
+    private static string? NormalizeEmailKey(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim().ToUpperInvariant();
+    private static bool ContactMatches(string? recordPhone, string? recordEmail, RegisterViewModel model)
+    {
+        var phoneMatches = NormalizePhoneKey(recordPhone) == NormalizePhoneKey(model.Telephone)
+            && !string.IsNullOrWhiteSpace(model.Telephone);
+        var emailKey = NormalizeEmailKey(model.Email);
+        var emailMatches = emailKey is not null && NormalizeEmailKey(recordEmail) == emailKey;
+        return phoneMatches || emailMatches;
+    }
+    private static bool ScoutMatchesRegistration(Scout scout, RegisterViewModel model)
+        => ContactMatches(scout.Telephone, scout.Email, model);
+    private async Task<List<Parent>> ResolveParentLinksForRegistrationAsync(RegisterViewModel model, IReadOnlyCollection<Scout> scouts)
+    {
+        if (scouts.Count == 0)
+            return [];
+        var scoutIds = scouts.Select(s => s.Id).ToList();
+        var parents = await db.Parents
+            .Include(p => p.Scouts)
+            .Where(p => p.Scouts.Any(s => scoutIds.Contains(s.Id)))
+            .ToListAsync();
+        return parents
+            .Where(p => ContactMatches(p.Telephone, p.Email, model))
+            .ToList();
+    }
+    private async Task<List<Guid>> GetLinkedParentScoutIdsAsync(Guid userId)
+    {
+        return await db.Parents
+            .AsNoTracking()
+            .Where(p => p.UserId == userId)
+            .SelectMany(p => p.Scouts.Where(s => s.IsActive))
+            .Select(s => s.Id)
+            .Distinct()
+            .ToListAsync();
+    }
+    private async Task SyncLinkedParentRecordsAsync(ApplicationUser user)
+    {
+        var parents = await db.Parents.Where(p => p.UserId == user.Id).ToListAsync();
+        if (parents.Count == 0)
+            return;
+        foreach (var parent in parents)
+        {
+            parent.Nom = user.Nom;
+            parent.Prenom = user.Prenom;
+            parent.Telephone = user.PhoneNumber;
+            parent.Email = user.Email;
+        }
+        await db.SaveChangesAsync();
+    }
     [HttpPost]
     [Authorize]
     [ValidateAntiForgeryToken]
@@ -278,13 +346,13 @@ public class AccountController(
         user.Prenom = model.Prenom;
         user.Email = model.Email;
 
-        // Droit de rectification : permettre le changement de téléphone
+        // Droit de rectification : permettre le changement de tÃ©lÃ©phone
         if (!string.IsNullOrWhiteSpace(model.Telephone) && model.Telephone != user.PhoneNumber)
         {
-            // Vérifier unicité
+            // VÃ©rifier unicitÃ©
             if (await db.Users.AnyAsync(u => u.PhoneNumber == model.Telephone && u.Id != user.Id))
             {
-                ModelState.AddModelError("Telephone", "Ce numéro de téléphone est déjà utilisé.");
+                ModelState.AddModelError("Telephone", "Ce numÃ©ro de tÃ©lÃ©phone est dÃ©jÃ  utilisÃ©.");
                 return View(model);
             }
             user.PhoneNumber = model.Telephone;
@@ -294,16 +362,21 @@ public class AccountController(
 
         if (Photo is not null && Photo.Length > 0)
         {
-            var dir = Path.Combine("wwwroot", "uploads", "profils");
-            Directory.CreateDirectory(dir);
-            var fileName = $"{Guid.NewGuid()}{Path.GetExtension(Photo.FileName)}";
-            using var stream = new FileStream(Path.Combine(dir, fileName), FileMode.Create);
-            await Photo.CopyToAsync(stream);
-            user.PhotoUrl = $"/uploads/profils/{fileName}";
+            try
+            {
+                user.PhotoUrl = await fileUploadService.SaveImageAsync(Photo, "profils");
+            }
+            catch (InvalidOperationException ex)
+            {
+                this.AddDomainError(ex);
+                model.PhotoUrl = user.PhotoUrl;
+                return View(model);
+            }
         }
 
         await userManager.UpdateAsync(user);
-        TempData["Success"] = "Profil mis à jour.";
+        await SyncLinkedParentRecordsAsync(user);
+        TempData["Success"] = "Profil mis Ã  jour.";
         return RedirectToAction(nameof(Profil));
     }
 
@@ -325,7 +398,7 @@ public class AccountController(
         if (result.Succeeded)
         {
             await signInManager.RefreshSignInAsync(user);
-            TempData["Success"] = "Mot de passe modifié avec succès.";
+            TempData["Success"] = "Mot de passe modifiÃ© avec succÃ¨s.";
         }
         else
         {
@@ -433,12 +506,12 @@ public class AccountController(
 
         if (EstGestionnaireSansAdmin() && model.Roles.Any(RoleNames.IsAdminRole))
         {
-            ModelState.AddModelError(nameof(model.Roles), "Vous ne pouvez pas attribuer un rôle administrateur.");
+            ModelState.AddModelError(nameof(model.Roles), "Vous ne pouvez pas attribuer un rÃ´le administrateur.");
         }
 
         var currentUserId = Guid.Parse(userManager.GetUserId(User)!);
         if (id == currentUserId && !model.IsActive)
-            ModelState.AddModelError(nameof(model.IsActive), "Vous ne pouvez pas désactiver votre propre compte.");
+            ModelState.AddModelError(nameof(model.IsActive), "Vous ne pouvez pas dÃ©sactiver votre propre compte.");
 
         if (!string.IsNullOrWhiteSpace(model.NouveauMotDePasse))
         {
@@ -452,7 +525,7 @@ public class AccountController(
         {
             if (await db.Users.AnyAsync(u => u.PhoneNumber == model.Telephone && u.Id != user.Id))
             {
-                ModelState.AddModelError(nameof(model.Telephone), "Ce numéro est déjà utilisé.");
+                ModelState.AddModelError(nameof(model.Telephone), "Ce numÃ©ro est dÃ©jÃ  utilisÃ©.");
                 return View(model);
             }
             user.PhoneNumber = model.Telephone;
@@ -472,6 +545,8 @@ public class AccountController(
                 ModelState.AddModelError(string.Empty, e.Description);
             return View(model);
         }
+
+        await SyncLinkedParentRecordsAsync(user);
 
         var nouveauxRoles = model.Roles.Where(r => !string.IsNullOrWhiteSpace(r)).Distinct().ToList();
         if (nouveauxRoles.Count == 0)
@@ -514,7 +589,7 @@ public class AccountController(
         if (!model.IsActive)
             await userManager.UpdateSecurityStampAsync(user);
 
-        TempData["Success"] = "Utilisateur mis à jour.";
+        TempData["Success"] = "Utilisateur mis Ã  jour.";
         return RedirectToAction(nameof(UtilisateurDetails), new { id });
     }
 
@@ -535,7 +610,7 @@ public class AccountController(
         {
             user.IsActive = true;
             await db.SaveChangesAsync();
-            TempData["Success"] = $"Compte de {user.Prenom} {user.Nom} activé.";
+            TempData["Success"] = $"Compte de {user.Prenom} {user.Nom} activÃ©.";
         }
         return RedirectToAction(nameof(Utilisateurs));
     }
@@ -552,7 +627,7 @@ public class AccountController(
             // Invalider toutes les sessions actives de cet utilisateur
             await userManager.UpdateSecurityStampAsync(user);
             await db.SaveChangesAsync();
-            TempData["Success"] = $"Compte de {user.Prenom} {user.Nom} désactivé.";
+            TempData["Success"] = $"Compte de {user.Prenom} {user.Nom} dÃ©sactivÃ©.";
         }
         return RedirectToAction(nameof(Utilisateurs));
     }
@@ -599,11 +674,11 @@ public class AccountController(
         };
         db.CodesInvitation.Add(code);
         await db.SaveChangesAsync();
-        TempData["Success"] = $"Code généré : {code.Code}";
+        TempData["Success"] = $"Code gÃ©nÃ©rÃ© : {code.Code}";
         return RedirectToAction(nameof(CodesInvitation));
     }
 
-    // === MFA SMS (Authentification à deux facteurs par SMS) ===
+    // === MFA SMS (Authentification Ã  deux facteurs par SMS) ===
 
     [Authorize]
     public async Task<IActionResult> ActiverMfa()
@@ -628,7 +703,7 @@ public class AccountController(
         if (user is null) return RedirectToAction(nameof(Login));
 
         var code = await userManager.GenerateChangePhoneNumberTokenAsync(user, user.PhoneNumber!);
-        await smsService.SendSmsAsync(user.PhoneNumber!, $"MANGO TAÏKA - Votre code de vérification : {code}");
+        await smsService.SendSmsAsync(user.PhoneNumber!, $"MANGO TAÃKA - Votre code de vÃ©rification : {code}");
 
         TempData["MfaCodeEnvoye"] = true;
         return RedirectToAction(nameof(ActiverMfa));
@@ -654,7 +729,7 @@ public class AccountController(
         var isValid = await userManager.VerifyChangePhoneNumberTokenAsync(user, model.Code.Trim(), user.PhoneNumber!);
         if (!isValid)
         {
-            ModelState.AddModelError("Code", "Code de vérification invalide ou expiré.");
+            ModelState.AddModelError("Code", "Code de vÃ©rification invalide ou expirÃ©.");
             model.CodeEnvoye = true;
             return View(model);
         }
@@ -662,7 +737,7 @@ public class AccountController(
         await userManager.SetTwoFactorEnabledAsync(user, true);
         user.PhoneNumberConfirmed = true;
         await userManager.UpdateAsync(user);
-        TempData["Success"] = "Authentification à deux facteurs par SMS activée.";
+        TempData["Success"] = "Authentification Ã  deux facteurs par SMS activÃ©e.";
         return RedirectToAction(nameof(Profil));
     }
 
@@ -674,7 +749,7 @@ public class AccountController(
         var user = await userManager.GetUserAsync(User);
         if (user is null) return RedirectToAction(nameof(Login));
         await userManager.SetTwoFactorEnabledAsync(user, false);
-        TempData["Success"] = "Authentification à deux facteurs désactivée.";
+        TempData["Success"] = "Authentification Ã  deux facteurs dÃ©sactivÃ©e.";
         return RedirectToAction(nameof(Profil));
     }
 
@@ -692,7 +767,7 @@ public class AccountController(
         if (user is null) return RedirectToAction(nameof(Login));
 
         var code = await userManager.GenerateTwoFactorTokenAsync(user, "Phone");
-        await smsService.SendSmsAsync(user.PhoneNumber!, $"MANGO TAÏKA - Votre code de connexion : {code}");
+        await smsService.SendSmsAsync(user.PhoneNumber!, $"MANGO TAÃKA - Votre code de connexion : {code}");
 
         TempData["SmsEnvoye"] = true;
         return RedirectToAction(nameof(VerifierMfa));
@@ -710,11 +785,11 @@ public class AccountController(
             return RedirectToAction("Index", "Dashboard");
         if (result.IsLockedOut)
         {
-            ModelState.AddModelError(string.Empty, "Compte verrouillé. Réessayez plus tard.");
+            ModelState.AddModelError(string.Empty, "Compte verrouillÃ©. RÃ©essayez plus tard.");
             return View(model);
         }
 
-        ModelState.AddModelError("Code", "Code invalide ou expiré.");
+        ModelState.AddModelError("Code", "Code invalide ou expirÃ©.");
         return View(model);
     }
 
@@ -732,7 +807,7 @@ public class AccountController(
 
         if (scout is null)
         {
-            TempData["Error"] = "Aucune fiche scout n'est liée à votre compte.";
+            TempData["Error"] = "Aucune fiche scout n'est liÃ©e Ã  votre compte.";
             return RedirectToAction(nameof(Profil));
         }
 
@@ -771,7 +846,7 @@ public class AccountController(
         scout.Email = Email;
         await db.SaveChangesAsync();
 
-        TempData["Success"] = "Fiche mise à jour.";
+        TempData["Success"] = "Fiche mise Ã  jour.";
         return RedirectToAction(nameof(MaFiche));
     }
 
@@ -781,37 +856,36 @@ public class AccountController(
     public async Task<IActionResult> MesEnfants()
     {
         var userId = Guid.Parse(userManager.GetUserId(User)!);
-        var user = await userManager.FindByIdAsync(userId.ToString());
-        if (user is null) return RedirectToAction(nameof(Login));
-
-        // Trouver le parent lié
-        var parent = await db.Parents
-            .Include(p => p.Scouts).ThenInclude(s => s.Groupe)
-            .Include(p => p.Scouts).ThenInclude(s => s.Branche)
-            .FirstOrDefaultAsync(p => p.Telephone == user.PhoneNumber);
-
-        if (parent is null || !parent.Scouts.Any())
+        var scoutIds = await GetLinkedParentScoutIdsAsync(userId);
+        if (scoutIds.Count == 0)
         {
-            TempData["Error"] = "Aucun enfant n'est lié à votre compte.";
+            TempData["Error"] = "Aucun enfant n'est liÃ© Ã  votre compte.";
             return RedirectToAction(nameof(Profil));
         }
 
-        return View(parent.Scouts.Where(s => s.IsActive).ToList());
+        var scouts = await db.Scouts
+            .Include(s => s.Groupe)
+            .Include(s => s.Branche)
+            .Where(s => scoutIds.Contains(s.Id) && s.IsActive)
+            .OrderBy(s => s.Nom)
+            .ThenBy(s => s.Prenom)
+            .ToListAsync();
+
+        if (scouts.Count == 0)
+        {
+            TempData["Error"] = "Aucun enfant n'est liÃ© Ã  votre compte.";
+            return RedirectToAction(nameof(Profil));
+        }
+
+        return View(scouts);
     }
 
     [Authorize(Roles = "Parent")]
     public async Task<IActionResult> FicheEnfant(Guid id)
     {
         var userId = Guid.Parse(userManager.GetUserId(User)!);
-        var user = await userManager.FindByIdAsync(userId.ToString());
-        if (user is null) return RedirectToAction(nameof(Login));
-
-        // Vérifier que le scout est bien l'enfant du parent
-        var parent = await db.Parents
-            .Include(p => p.Scouts)
-            .FirstOrDefaultAsync(p => p.Telephone == user.PhoneNumber);
-
-        if (parent is null || !parent.Scouts.Any(s => s.Id == id))
+        var scoutIds = await GetLinkedParentScoutIdsAsync(userId);
+        if (!scoutIds.Contains(id))
             return Forbid();
 
         var scout = await db.Scouts
@@ -835,7 +909,7 @@ public class AccountController(
         ViewBag.Competences = competences;
         ViewBag.Participations = participations;
         ViewBag.Cotisations = cotisations;
-        return View("MaFiche", scout); // Réutilise la même vue que MaFiche
+        return View("MaFiche", scout); // RÃ©utilise la mÃªme vue que MaFiche
     }
 
     // === DROITS RGPD / ARTCI ===
@@ -1283,13 +1357,13 @@ public class AccountController(
     private static string NormaliserPdfTexte(string contenu)
     {
         var texte = contenu
-            .Replace("’", "'")
-            .Replace("‘", "'")
-            .Replace("“", "\"")
-            .Replace("”", "\"")
-            .Replace("–", "-")
-            .Replace("—", "-")
-            .Replace("•", "-");
+            .Replace("â€™", "'")
+            .Replace("â€˜", "'")
+            .Replace("â€œ", "\"")
+            .Replace("â€", "\"")
+            .Replace("â€“", "-")
+            .Replace("â€”", "-")
+            .Replace("â€¢", "-");
 
         var decomposed = texte.Normalize(NormalizationForm.FormD);
         var sb = new StringBuilder(decomposed.Length);
@@ -1371,7 +1445,7 @@ public class AccountController(
     }
 
     /// <summary>
-    /// Droit d'accès : Télécharger toutes les données personnelles de l'utilisateur (JSON)
+    /// Droit d'accÃ¨s : TÃ©lÃ©charger toutes les donnÃ©es personnelles de l'utilisateur (JSON)
     /// </summary>
     [Authorize]
     [HttpPost]
@@ -1384,7 +1458,7 @@ public class AccountController(
         var userId = user.Id;
         var roles = await userManager.GetRolesAsync(user);
 
-        // Collecter toutes les données liées à l'utilisateur
+        // Collecter toutes les donnÃ©es liÃ©es Ã  l'utilisateur
         var donnees = new Dictionary<string, object?>
         {
             ["InformationsPersonnelles"] = new
@@ -1408,7 +1482,7 @@ public class AccountController(
         donnees["Groupe"] = user.Groupe != null ? new { user.Groupe.Nom, user.Groupe.Adresse } : null;
         donnees["Branche"] = user.Branche != null ? new { user.Branche.Nom } : null;
 
-        // Scout lié (si le user est un scout)
+        // Scout liÃ© (si le user est un scout)
         var scoutLie = await db.Scouts.Include(s => s.Groupe).Include(s => s.Branche)
             .FirstOrDefaultAsync(s => s.UserId == userId);
         if (scoutLie != null)
@@ -1429,21 +1503,21 @@ public class AccountController(
                 Branche = scoutLie.Branche?.Nom
             };
 
-            // Compétences du scout
+            // CompÃ©tences du scout
             var competences = await db.Competences
                 .Where(c => c.ScoutId == scoutLie.Id)
                 .Select(c => new { c.Nom, c.Niveau, c.DateObtention })
                 .ToListAsync();
             donnees["Competences"] = competences;
 
-            // Suivi académique
+            // Suivi acadÃ©mique
             var suivis = await db.SuivisAcademiques
                 .Where(s => s.ScoutId == scoutLie.Id)
                 .Select(s => new { s.AnneeScolaire, s.Etablissement, s.NiveauScolaire, s.Classe, s.MoyenneGenerale, s.Mention })
                 .ToListAsync();
             donnees["SuiviAcademique"] = suivis;
 
-            // Participations aux activités
+            // Participations aux activitÃ©s
             var participations = await db.ParticipantsActivite
                 .Include(p => p.Activite)
                 .Where(p => p.ScoutId == scoutLie.Id)
@@ -1459,7 +1533,7 @@ public class AccountController(
             donnees["Cotisations"] = cotisations;
         }
 
-        // Tickets créés
+        // Tickets crÃ©Ã©s
         var tickets = await db.Tickets
             .Where(t => t.CreateurId == userId && !t.EstSupprime)
             .Select(t => new { t.Sujet, t.Description, t.Statut, t.Priorite, t.DateCreation })
@@ -1473,7 +1547,7 @@ public class AccountController(
             .ToListAsync();
         donnees["HistoriqueFonctions"] = historique;
 
-        // Demandes d'autorisation créées
+        // Demandes d'autorisation crÃ©Ã©es
         var demandes = await db.DemandesAutorisation
             .Where(d => d.DemandeurId == userId)
             .Select(d => new { d.Titre, d.TypeActivite, d.Statut, d.DateCreation, d.DateActivite })
@@ -1491,7 +1565,7 @@ public class AccountController(
     }
 
     /// <summary>
-    /// Droit à l'oubli : Demander la suppression de son compte et l'anonymisation des données
+    /// Droit Ã  l'oubli : Demander la suppression de son compte et l'anonymisation des donnÃ©es
     /// </summary>
     [Authorize]
     [HttpPost]
@@ -1501,23 +1575,33 @@ public class AccountController(
         var user = await userManager.GetUserAsync(User);
         if (user is null) return RedirectToAction(nameof(Login));
 
-        // Vérifier le mot de passe pour confirmer l'identité
+        // VÃ©rifier le mot de passe pour confirmer l'identitÃ©
         if (string.IsNullOrWhiteSpace(MotDePasseConfirmation) ||
             !await userManager.CheckPasswordAsync(user, MotDePasseConfirmation))
         {
-            TempData["ErrorSuppression"] = "Mot de passe incorrect. La suppression a été annulée.";
+            TempData["ErrorSuppression"] = "Mot de passe incorrect. La suppression a Ã©tÃ© annulÃ©e.";
             return RedirectToAction(nameof(Profil));
         }
 
         var userId = user.Id;
         var anonyme = $"SUPPRIME-{Guid.NewGuid().ToString("N")[..8]}";
 
-        // 1. Anonymiser le scout lié
+        // 1. Anonymiser le scout liÃ©
         var scoutLie = await db.Scouts.FirstOrDefaultAsync(s => s.UserId == userId);
         if (scoutLie != null)
         {
             scoutLie.UserId = null;
-            // On ne supprime pas le scout (données associatives), mais on coupe le lien
+            // On ne supprime pas le scout (donnÃ©es associatives), mais on coupe le lien
+        }
+
+        var parentsLies = await db.Parents.Where(p => p.UserId == userId).ToListAsync();
+        foreach (var parent in parentsLies)
+        {
+            parent.UserId = null;
+            parent.Telephone = null;
+            parent.Email = null;
+            parent.Nom = "Parent";
+            parent.Prenom = anonyme;
         }
 
         // 2. Anonymiser les tickets (garder pour historique mais anonymiser)
@@ -1531,26 +1615,26 @@ public class AccountController(
         var messages = await db.MessagesTicket.Where(m => m.AuteurId == userId).ToListAsync();
         foreach (var m in messages)
         {
-            m.Contenu = "[Message supprimé - Droit à l'oubli]";
+            m.Contenu = "[Message supprimÃ© - Droit Ã  l'oubli]";
         }
 
-        // 4. Anonymiser les commentaires d'activités
+        // 4. Anonymiser les commentaires d'activitÃ©s
         var commentaires = await db.CommentairesActivite.Where(c => c.AuteurId == userId).ToListAsync();
         foreach (var c in commentaires)
         {
-            c.Contenu = "[Commentaire supprimé - Droit à l'oubli]";
+            c.Contenu = "[Commentaire supprimÃ© - Droit Ã  l'oubli]";
         }
 
         // 5. Marquer les demandes d'autorisation
         var demandes = await db.DemandesAutorisation.Where(d => d.DemandeurId == userId).ToListAsync();
         foreach (var d in demandes)
         {
-            d.Observations = "[Demandeur supprimé - Droit à l'oubli]";
+            d.Observations = "[Demandeur supprimÃ© - Droit Ã  l'oubli]";
         }
 
-        // 6. Anonymiser les données du compte utilisateur
+        // 6. Anonymiser les donnÃ©es du compte utilisateur
         user.Nom = "Utilisateur";
-        user.Prenom = "Supprimé";
+        user.Prenom = "SupprimÃ©";
         user.Email = $"{anonyme}@supprime.local";
         user.NormalizedEmail = user.Email.ToUpperInvariant();
         user.PhoneNumber = null;
@@ -1559,20 +1643,21 @@ public class AccountController(
         user.PhotoUrl = null;
         user.Matricule = null;
         user.IsActive = false;
-        user.PasswordHash = null; // Empêcher toute connexion
+        user.PasswordHash = null; // EmpÃªcher toute connexion
         user.SecurityStamp = Guid.NewGuid().ToString(); // Invalider toutes les sessions
         user.TwoFactorEnabled = false;
         user.PhoneNumberConfirmed = false;
         user.EmailConfirmed = false;
         user.LockoutEnabled = true;
-        user.LockoutEnd = DateTimeOffset.MaxValue; // Verrouiller définitivement
+        user.LockoutEnd = DateTimeOffset.MaxValue; // Verrouiller dÃ©finitivement
 
         await db.SaveChangesAsync();
 
-        // Déconnecter l'utilisateur
+        // DÃ©connecter l'utilisateur
         await signInManager.SignOutAsync();
 
-        TempData["Success"] = "Votre compte a été supprimé et vos données personnelles ont été anonymisées conformément à la loi n°2013-450.";
+        TempData["Success"] = "Votre compte a Ã©tÃ© supprimÃ© et vos donnÃ©es personnelles ont Ã©tÃ© anonymisÃ©es conformÃ©ment Ã  la loi nÂ°2013-450.";
         return RedirectToAction("Index", "Home");
     }
 }
+

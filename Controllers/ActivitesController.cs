@@ -16,7 +16,7 @@ public class ActivitesController(
     IScoutQrService scoutQrService,
     UserManager<ApplicationUser> userManager,
     AppDbContext db,
-    IWebHostEnvironment env) : Controller
+    IFileUploadService fileUploadService) : Controller
 {
     private Guid UserId => Guid.Parse(userManager.GetUserId(User)!);
 
@@ -295,13 +295,18 @@ public class ActivitesController(
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        var dir = Path.Combine(env.WebRootPath, "uploads", "activites", id.ToString());
-        Directory.CreateDirectory(dir);
-        var fileName = $"{Guid.NewGuid()}{Path.GetExtension(fichier.FileName)}";
-        var filePath = Path.Combine(dir, fileName);
-        using (var stream = new FileStream(filePath, FileMode.Create))
+        string cheminFichier;
+        try
         {
-            await fichier.CopyToAsync(stream);
+            cheminFichier = await fileUploadService.SaveDocumentAsync(
+                fichier,
+                Path.Combine("activites", id.ToString()),
+                [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".csv", ".txt", ".jpg", ".jpeg", ".png", ".webp", ".gif"]);
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+            return RedirectToAction(nameof(Details), new { id });
         }
 
         db.DocumentsActivite.Add(new DocumentActivite
@@ -309,7 +314,7 @@ public class ActivitesController(
             Id = Guid.NewGuid(),
             ActiviteId = id,
             NomFichier = fichier.FileName,
-            CheminFichier = $"/uploads/activites/{id}/{fileName}",
+            CheminFichier = cheminFichier,
             TypeDocument = typeDocument
         });
 
