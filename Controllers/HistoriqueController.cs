@@ -162,31 +162,58 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
             return NotFound();
         }
 
-        membre.Nom = model.Nom.Trim();
-        db.MembresHistoriquesCategories.RemoveRange(membre.CategorieDetails.ToList());
-        membre.CategorieDetails = [];
-
-        foreach (var entry in entries)
+        var existingDetails = membre.CategorieDetails.ToList();
+        var updatedDetails = entries.Select(entry => new MembreHistoriqueCategorie
         {
-            membre.CategorieDetails.Add(new MembreHistoriqueCategorie
-            {
-                Id = Guid.NewGuid(),
-                MembreHistoriqueId = membre.Id,
-                Categorie = entry.Categorie,
-                PhotoUrl = NormalizeValue(entry.PhotoUrl),
-                Description = entry.Description,
-                Periode = entry.Periode,
-                Ordre = entry.Ordre
-            });
-        }
+            Id = Guid.NewGuid(),
+            MembreHistoriqueId = membre.Id,
+            Categorie = entry.Categorie,
+            PhotoUrl = NormalizeValue(entry.PhotoUrl),
+            Description = entry.Description,
+            Periode = entry.Periode,
+            Ordre = entry.Ordre
+        }).ToList();
 
-        if (!await TryApplyEntryPhotosAsync(entries, membre.CategorieDetails.ToList()))
+        if (!await TryApplyEntryPhotosAsync(entries, updatedDetails))
         {
             return View(model);
         }
 
-        SyncLegacyFields(membre);
-        await db.SaveChangesAsync();
+        membre.Nom = model.Nom.Trim();
+
+        await using var transaction = await db.Database.BeginTransactionAsync();
+
+        try
+        {
+            if (existingDetails.Count > 0)
+            {
+                db.MembresHistoriquesCategories.RemoveRange(existingDetails);
+                await db.SaveChangesAsync();
+            }
+
+            membre.CategorieDetails = updatedDetails;
+            db.MembresHistoriquesCategories.AddRange(updatedDetails);
+
+            SyncLegacyFields(membre);
+            await db.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            await transaction.RollbackAsync();
+            db.ChangeTracker.Clear();
+
+            var exists = await db.MembresHistoriques
+                .AsNoTracking()
+                .AnyAsync(m => m.Id == id && !m.EstSupprime);
+
+            if (!exists)
+            {
+                return NotFound();
+            }
+
+            throw;
+        }
 
         TempData["Success"] = "Membre mis à jour.";
         return RedirectToAction(nameof(Index));
