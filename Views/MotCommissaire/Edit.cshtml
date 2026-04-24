@@ -33,7 +33,7 @@
                 <img id="photoPreviewImg" src="@Model.PhotoUrl" alt="Aperçu" style="width:150px;height:150px;object-fit:cover;border-radius:12px;border:2px solid var(--vert-pastel);box-shadow:var(--shadow-md);" />
                 <small class="d-block text-muted-custom mt-1">Choisir un fichier pour remplacer.</small>
             </div>
-            <input type="file" name="Photo" id="photoInput" class="form-control" accept="image/*" />
+            <input type="file" name="Photo" id="photoInput" class="form-control" accept="@FileInputAccept.Image" />
         </div>
         <button type="submit" class="btn btn-mango" title="Enregistrer"><i class="bi bi-check-lg"></i></button>
         <a asp-action="Index" class="btn btn-outline-or ms-2" title="Annuler"><i class="bi bi-x-lg"></i></a>

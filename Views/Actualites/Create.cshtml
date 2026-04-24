@@ -23,7 +23,7 @@
         </div>
         <div class="mb-3">
             <label asp-for="Image" class="form-label">Image (optionnel)</label>
-            <input asp-for="Image" class="form-control" type="file" accept="image/*" onchange="previewImg(this)" />
+            <input asp-for="Image" class="form-control" type="file" accept="@FileInputAccept.Image" onchange="previewImg(this)" />
             <img id="imgPreview" class="mt-2" style="max-height:200px;border-radius:14px;display:none;" alt="Aperçu" />
         </div>
         <div class="d-flex gap-2 mt-2">

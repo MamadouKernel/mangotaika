@@ -24,7 +24,7 @@
         </div>
         <div class="mb-3">
             <label class="form-label">Logo de l'entite</label>
-            <input type="file" name="Logo" class="form-control" accept="image/*" />
+            <input type="file" name="Logo" class="form-control" accept="@FileInputAccept.Image" />
             <small class="text-muted-custom">Formats acceptes: JPG, PNG, GIF, WEBP. Taille maximale: 5 Mo.</small>
             <span asp-validation-for="LogoUrl" class="text-danger small d-block"></span>
             @if (!string.IsNullOrWhiteSpace(Model?.LogoUrl))

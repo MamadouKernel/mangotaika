@@ -155,7 +155,8 @@ app.Use(async (context, next) =>
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; " +
         "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; " +
         "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; " +
-        "img-src 'self' data: https://*.tile.openstreetmap.org; " +
+        "img-src 'self' data: blob: https://*.tile.openstreetmap.org; " +
+        "media-src 'self' data: blob:; " +
         "connect-src 'self' wss: ws: https://nominatim.openstreetmap.org; " +
         "frame-src 'self' https://www.youtube.com https://player.vimeo.com;";
     await next();

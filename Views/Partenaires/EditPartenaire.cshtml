@@ -51,7 +51,7 @@
         </div>
         <div class="mb-4">
             <label class="form-label small">Nouveau logo (optionnel)</label>
-            <input type="file" name="Logo" class="form-control" accept="image/*" />
+            <input type="file" name="Logo" class="form-control" accept="@FileInputAccept.Image" />
             @if (!string.IsNullOrEmpty(Model.LogoUrl))
             {
                 <p class="small text-muted-custom mt-2 mb-0">Logo actuel : <img src="@Model.LogoUrl" alt="" style="height:40px;vertical-align:middle;border-radius:6px;" /></p>

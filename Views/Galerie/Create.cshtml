@@ -18,7 +18,7 @@
         </div>
         <div class="mb-3">
             <label class="form-label">Fichiers (images ou vidéos — plusieurs fichiers possibles)</label>
-            <input name="medias" class="form-control" type="file" accept="image/*,video/*" required multiple onchange="previewMedias(this)" />
+            <input name="medias" class="form-control" type="file" accept="@FileInputAccept.Media" required multiple onchange="previewMedias(this)" />
             <small class="text-muted-custom">Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs fichiers.</small>
             <div id="previewContainer" class="d-flex flex-wrap gap-2 mt-2"></div>
         </div>

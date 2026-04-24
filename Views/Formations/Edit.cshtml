@@ -38,7 +38,7 @@
                     {
                         <div class="mb-1"><img src="@Model.ImageUrl" alt="Couverture" style="max-height:60px;" class="rounded" /></div>
                     }
-                    <input type="file" name="image" class="form-control" accept="image/*" />
+                    <input type="file" name="image" class="form-control" accept="@FileInputAccept.Image" />
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Durée estimée (h)</label>
