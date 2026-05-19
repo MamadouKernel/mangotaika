@@ -85,7 +85,7 @@ public class AccountController(
             return View(model);
         }
         CodeInvitation? codeInvitation = null;
-        if (model.Role != "Parent")
+        if (model.Role == "Gestionnaire")
         {
             codeInvitation = await ResolveInvitationAsync(model.CodeInvitation);
             if (codeInvitation is null)
