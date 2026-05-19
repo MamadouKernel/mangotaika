@@ -58,10 +58,10 @@
                         </label>
                         <input asp-for="Matricules" class="form-control" placeholder="Ex: 0583753X, 0583754X" />
                         <span asp-validation-for="Matricules" class="text-danger small"></span>
-                        <small class="text-muted-custom">Saisissez le(s) matricule(s) separes par des virgules. Format attendu : 0583753X.</small>
+                        <small class="text-muted-custom">Saisissez le(s) matricule(s) separes par des virgules. Aucun code d'invitation n'est demande aux parents/tuteurs. Un enfant peut etre lie a trois parents/tuteurs maximum.</small>
                     </div>
 
-                    <div class="mb-3" id="codeSection">
+                    <div class="mb-3" id="codeSection" style="@(Model.Role == "Parent" ? "display:none;" : string.Empty)">
                         <label asp-for="CodeInvitation" class="form-label">
                             Code d'invitation <span class="text-danger">*</span>
                         </label>
@@ -117,6 +117,7 @@
             function toggleSections() {
                 const role = roleSelect.value;
                 matriculesSection.style.display = role === 'Parent' ? 'block' : 'none';
+                codeSection.style.display = role === 'Parent' ? 'none' : 'block';
                 scoutSection.style.display = role === 'Scout' ? 'block' : 'none';
             }
 

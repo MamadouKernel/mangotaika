@@ -21,6 +21,8 @@ public class AccountController(
     IFileUploadService fileUploadService,
     ActiveRoleService activeRoleService) : Controller
 {
+    private const int MaxParentsPerScout = 3;
+
     [HttpGet]
     public IActionResult Login(string? returnUrl = null)
     {
@@ -82,12 +84,17 @@ public class AccountController(
             ModelState.AddModelError("Telephone", "Ce numéro de téléphone est déjà utilisé.");
             return View(model);
         }
-        var codeInvitation = await ResolveInvitationAsync(model.CodeInvitation);
-        if (codeInvitation is null)
+        CodeInvitation? codeInvitation = null;
+        if (model.Role != "Parent")
         {
-            ModelState.AddModelError("CodeInvitation", "Un code d'invitation valide est requis.");
-            return View(model);
+            codeInvitation = await ResolveInvitationAsync(model.CodeInvitation);
+            if (codeInvitation is null)
+            {
+                ModelState.AddModelError("CodeInvitation", "Un code d'invitation valide est requis.");
+                return View(model);
+            }
         }
+
         var scouts = new List<Scout>();
         if (model.Role == "Parent")
         {
@@ -110,6 +117,15 @@ public class AccountController(
                     return View(model);
                 }
                 scouts.Add(scout);
+            }
+
+            var enfantsAvecTropDeTuteurs = await GetScoutsAboveParentLimitAsync(scouts);
+            if (enfantsAvecTropDeTuteurs.Count > 0)
+            {
+                ModelState.AddModelError(
+                    "Matricules",
+                    $"Un enfant ne peut pas etre lie a plus de {MaxParentsPerScout} parents/tuteurs. Limite depassee pour : {string.Join(", ", enfantsAvecTropDeTuteurs)}.");
+                return View(model);
             }
         }
         List<Parent> parentsLies = [];
@@ -207,9 +223,13 @@ public class AccountController(
         {
             scoutLie.UserId = user.Id;
         }
-        codeInvitation.EstUtilise = true;
-        codeInvitation.DateUtilisation = DateTime.UtcNow;
-        codeInvitation.UtilisePaId = user.Id;
+        if (codeInvitation is not null)
+        {
+            codeInvitation.EstUtilise = true;
+            codeInvitation.DateUtilisation = DateTime.UtcNow;
+            codeInvitation.UtilisePaId = user.Id;
+        }
+
         await db.SaveChangesAsync();
         await transaction.CommitAsync();
         TempData["Success"] = "Inscription réussie. Votre compte est maintenant activé.";
@@ -226,6 +246,25 @@ public class AccountController(
                 c.Code.ToUpper() == DatabaseText.NormalizeCaseInsensitiveKey(invitationCode) &&
                 !c.EstUtilise);
     }
+
+    private async Task<List<string>> GetScoutsAboveParentLimitAsync(IReadOnlyCollection<Scout> scouts)
+    {
+        if (scouts.Count == 0)
+            return [];
+
+        var scoutIds = scouts.Select(s => s.Id).ToList();
+        return await db.Scouts
+            .Where(s => scoutIds.Contains(s.Id))
+            .Select(s => new
+            {
+                Label = s.Matricule ?? $"{s.Prenom} {s.Nom}",
+                ParentCount = s.Parents.Count
+            })
+            .Where(s => s.ParentCount > MaxParentsPerScout)
+            .Select(s => s.Label)
+            .ToListAsync();
+    }
+
     private static string NormalizePhoneKey(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
