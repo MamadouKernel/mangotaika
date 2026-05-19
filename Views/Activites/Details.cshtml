@@ -227,22 +227,45 @@
     </div>
 
     <div class="tab-pane fade" id="participants">
-        @if (canManage && Model.Statut != StatutActivite.Archivee && !pointageCloture && scoutsDisponibles.Any())
+        @if (canManage && Model.Statut != StatutActivite.Archivee && !pointageCloture)
         {
             <div class="card-3d p-3 mb-3">
-                <form asp-action="AjouterParticipant" asp-route-id="@Model.Id" method="post" class="d-flex gap-2 align-items-end">
+                <form asp-action="AjouterParticipants" asp-route-id="@Model.Id" method="post" class="participant-add-form">
                     @Html.AntiForgeryToken()
-                    <div class="flex-grow-1">
-                        <label class="form-label small">Ajouter un scout</label>
-                        <select name="scoutId" class="form-select" required>
-                            <option value="">-- Selectionner --</option>
-                            @foreach (var s in scoutsDisponibles)
+                    <div class="participant-add-form__grid">
+                        <div data-searchable-select-wrapper>
+                            <label class="form-label small">Rechercher et selectionner des scouts</label>
+                            <input type="search" class="form-control form-control-sm mb-2" placeholder="Nom, prenom, matricule, branche..." data-select-search-input />
+                            <select name="scoutIds" class="form-select" data-searchable-select multiple size="8" aria-label="Scouts disponibles">
+                                @foreach (var s in scoutsDisponibles)
+                                {
+                                    var searchLabel = $"{s.Matricule} {s.Prenom} {s.Nom} {s.Branche?.Nom}";
+                                    <option value="@s.Id" data-search-label="@searchLabel">
+                                        @s.Matricule - @s.Prenom @s.Nom @(s.Branche != null ? $"({s.Branche.Nom})" : string.Empty)
+                                    </option>
+                                }
+                            </select>
+                            <small class="text-muted-custom" data-select-search-empty hidden>Aucun scout correspondant.</small>
+                            @if (!scoutsDisponibles.Any())
                             {
-                                <option value="@s.Id">@s.Matricule - @s.Prenom @s.Nom @(s.Branche != null ? $"({s.Branche.Nom})" : string.Empty)</option>
+                                <small class="text-muted-custom d-block mt-2">Tous les scouts disponibles sont deja inscrits.</small>
                             }
-                        </select>
+                        </div>
+                        <div>
+                            <label for="matriculesParticipants" class="form-label small">Importer par matricules</label>
+                            <textarea id="matriculesParticipants"
+                                      name="matricules"
+                                      class="form-control"
+                                      rows="8"
+                                      placeholder="Ex:&#10;0583753X&#10;0583754X&#10;0583755X"></textarea>
+                            <small class="text-muted-custom d-block mt-2">Un matricule par ligne, ou separes par virgule, point-virgule ou espace.</small>
+                        </div>
                     </div>
-                    <button type="submit" class="btn btn-mango" title="Ajouter un participant"><i class="bi bi-person-plus"></i></button>
+                    <div class="d-flex justify-content-end mt-3">
+                        <button type="submit" class="btn btn-mango">
+                            <i class="bi bi-person-plus"></i> Ajouter les participants
+                        </button>
+                    </div>
                 </form>
             </div>
         }
@@ -519,6 +542,28 @@
 
     .activite-kpi-card--qr {
         background: linear-gradient(180deg, rgba(95, 127, 67, 0.14), rgba(255, 255, 255, 0.88));
+    }
+
+    .participant-add-form__grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+        gap: 1rem;
+        align-items: start;
+    }
+
+    .participant-add-form select[multiple] {
+        min-height: 180px;
+    }
+
+    .participant-add-form textarea {
+        min-height: 180px;
+        resize: vertical;
+    }
+
+    @@media (max-width: 768px) {
+        .participant-add-form__grid {
+            grid-template-columns: 1fr;
+        }
     }
 
     .presence-qr-modal {

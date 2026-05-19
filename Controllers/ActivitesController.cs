@@ -347,6 +347,11 @@ public class ActivitesController(
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> AjouterParticipant(Guid id, Guid scoutId)
+        => await AjouterParticipants(id, scoutId == Guid.Empty ? [] : [scoutId], null);
+
+    [HttpPost, ValidateAntiForgeryToken]
+    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    public async Task<IActionResult> AjouterParticipants(Guid id, List<Guid>? scoutIds, string? matricules)
     {
         var activite = await db.Activites.FirstOrDefaultAsync(a => a.Id == id && !a.EstSupprime);
         if (activite is null) return NotFound();
@@ -357,24 +362,95 @@ public class ActivitesController(
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        var exists = await db.ParticipantsActivite.AnyAsync(p => p.ActiviteId == id && p.ScoutId == scoutId);
-        if (exists)
+        var selectedScoutIds = scoutIds?
+            .Where(scoutId => scoutId != Guid.Empty)
+            .Distinct()
+            .ToList()
+            ?? [];
+        var importedMatricules = ParseMatricules(matricules);
+
+        var importedScouts = importedMatricules.Count == 0
+            ? []
+            : await db.Scouts
+                .Where(s => s.IsActive && s.Matricule != null && importedMatricules.Contains(s.Matricule.ToUpper()))
+                .Select(s => new { s.Id, s.Matricule })
+                .ToListAsync();
+
+        var allScoutIds = selectedScoutIds
+            .Concat(importedScouts.Select(s => s.Id))
+            .Distinct()
+            .ToList();
+
+        if (allScoutIds.Count == 0)
         {
-            TempData["Error"] = "Ce scout est deja inscrit.";
+            TempData["Error"] = "Selectionnez au moins un scout ou renseignez une liste de matricules.";
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        var scout = await db.Scouts.FindAsync(scoutId);
-        if (scout is null) return NotFound();
+        var existingScoutIds = await db.ParticipantsActivite
+            .Where(p => p.ActiviteId == id && allScoutIds.Contains(p.ScoutId))
+            .Select(p => p.ScoutId)
+            .ToListAsync();
+        var existingScoutSet = existingScoutIds.ToHashSet();
 
-        db.ParticipantsActivite.Add(new ParticipantActivite
+        var scoutsToAdd = await db.Scouts
+            .Where(s => s.IsActive && allScoutIds.Contains(s.Id) && !existingScoutSet.Contains(s.Id))
+            .OrderBy(s => s.Nom)
+            .ThenBy(s => s.Prenom)
+            .ToListAsync();
+
+        if (scoutsToAdd.Count > 0)
         {
-            Id = Guid.NewGuid(),
-            ActiviteId = id,
-            ScoutId = scoutId
-        });
-        await db.SaveChangesAsync();
-        TempData["Success"] = $"{scout.Prenom} {scout.Nom} inscrit.";
+            db.ParticipantsActivite.AddRange(scoutsToAdd.Select(scout => new ParticipantActivite
+            {
+                Id = Guid.NewGuid(),
+                ActiviteId = id,
+                ScoutId = scout.Id
+            }));
+
+            db.CommentairesActivite.Add(new CommentaireActivite
+            {
+                Id = Guid.NewGuid(),
+                ActiviteId = id,
+                AuteurId = UserId,
+                Contenu = $"{scoutsToAdd.Count} participant(s) ajoute(s) a la liste.",
+                TypeAction = "Participants"
+            });
+
+            await db.SaveChangesAsync();
+        }
+
+        var foundImportedMatricules = importedScouts
+            .Select(s => NormalizeMatricule(s.Matricule))
+            .Where(matricule => !string.IsNullOrWhiteSpace(matricule))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var notFoundCount = importedMatricules.Count(matricule => !foundImportedMatricules.Contains(matricule));
+        var duplicateCount = existingScoutIds.Count;
+
+        var importSummary = new List<string>();
+        if (duplicateCount > 0)
+        {
+            importSummary.Add($"{duplicateCount} deja inscrit(s)");
+        }
+
+        if (notFoundCount > 0)
+        {
+            importSummary.Add($"{notFoundCount} matricule(s) introuvable(s)");
+        }
+
+        var summarySuffix = importSummary.Count > 0
+            ? $" ({string.Join(", ", importSummary)})."
+            : ".";
+
+        if (scoutsToAdd.Count > 0)
+        {
+            TempData["Success"] = $"{scoutsToAdd.Count} participant(s) ajoute(s){summarySuffix}";
+        }
+        else
+        {
+            TempData["Error"] = $"Aucun nouveau participant ajoute{summarySuffix}";
+        }
+
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -774,6 +850,24 @@ public class ActivitesController(
     {
         return activite.Statut == StatutActivite.EnCours || activite.Statut == StatutActivite.Terminee;
     }
+
+    private static List<string> ParseMatricules(string? rawValue)
+    {
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return [];
+        }
+
+        return rawValue
+            .Split(['\r', '\n', ',', ';', '\t', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(NormalizeMatricule)
+            .Where(matricule => !string.IsNullOrWhiteSpace(matricule))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static string NormalizeMatricule(string? matricule)
+        => string.IsNullOrWhiteSpace(matricule) ? string.Empty : matricule.Trim().ToUpperInvariant();
 
     private IActionResult RedirectToActivityPage(Guid id, string? returnAction)
     {
