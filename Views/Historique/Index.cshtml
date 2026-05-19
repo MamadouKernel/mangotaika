@@ -55,6 +55,7 @@
                     .Select(category => new MembreHistoriqueCategorie
                     {
                         Categorie = category,
+                        Groupe = null,
                         PhotoUrl = membre.PhotoUrl,
                         Description = membre.Description,
                         Periode = membre.Periode,
@@ -75,6 +76,10 @@
                         {
                             <div class="border rounded-3 p-2" style="border-color:rgba(255,255,255,0.08)!important;">
                                 <div class="fw-semibold text-bleu">@detail.Categorie.GetLabel()</div>
+                                @if (!string.IsNullOrWhiteSpace(detail.Groupe))
+                                {
+                                    <div><i class="bi bi-house-flag text-or"></i> @detail.Groupe</div>
+                                }
                                 <div><i class="bi bi-calendar-range text-bleu"></i> @(detail.Periode ?? "-")</div>
                                 <div><i class="bi bi-sort-numeric-down text-or"></i> Ordre : @detail.Ordre</div>
                             </div>

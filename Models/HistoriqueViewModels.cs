@@ -29,6 +29,7 @@ public sealed class HistoriqueFormViewModel
             .Select(entry => new HistoriqueCategorieFormViewModel
             {
                 Categorie = entry.Categorie,
+                Groupe = NormalizeValue(entry.Groupe),
                 PhotoUrl = entry.PhotoUrl,
                 Description = NormalizeValue(entry.Description),
                 Periode = NormalizeValue(entry.Periode),
@@ -54,6 +55,7 @@ public sealed class HistoriqueFormViewModel
                     .Select(detail => new HistoriqueCategorieFormViewModel
                     {
                         Categorie = detail.Categorie,
+                        Groupe = detail.Groupe,
                         PhotoUrl = detail.PhotoUrl,
                         Description = detail.Description,
                         Periode = detail.Periode,
@@ -65,6 +67,7 @@ public sealed class HistoriqueFormViewModel
                     .Select(category => new HistoriqueCategorieFormViewModel
                     {
                         Categorie = category,
+                        Groupe = null,
                         PhotoUrl = entity.PhotoUrl,
                         Description = entity.Description,
                         Periode = entity.Periode,
@@ -80,6 +83,9 @@ public sealed class HistoriqueFormViewModel
 public sealed class HistoriqueCategorieFormViewModel
 {
     public CategorieHistorique Categorie { get; set; }
+
+    [Display(Name = "Groupe")]
+    public string? Groupe { get; set; }
 
     public string? PhotoUrl { get; set; }
 

@@ -32,8 +32,8 @@
 
     @if (Model.Any())
     {
-        <div class="row g-4 justify-content-center">
-            @foreach (var membre in Model)
+        var displayItems = Model
+            .Select(membre =>
             {
                 var details = membre.CategorieDetails.Any()
                     ? membre.CategorieDetails
@@ -45,6 +45,7 @@
                         .Select(category => new MembreHistoriqueCategorie
                         {
                             Categorie = category,
+                            Groupe = null,
                             PhotoUrl = membre.PhotoUrl,
                             Description = membre.Description,
                             Periode = membre.Periode,
@@ -52,7 +53,49 @@
                         })
                         .ToList();
                 var detail = details.FirstOrDefault(entry => categorie == CategorieHistorique.Aucune || entry.Categorie == categorie);
-                var photoUrl = detail?.PhotoUrl ?? membre.PhotoUrl;
+                return new
+                {
+                    Membre = membre,
+                    Details = details,
+                    Detail = detail,
+                    PhotoUrl = detail?.PhotoUrl ?? membre.PhotoUrl,
+                    Groupe = string.IsNullOrWhiteSpace(detail?.Groupe) ? "Groupe non renseigne" : detail!.Groupe!.Trim()
+                };
+            })
+            .Where(item => item.Detail is not null)
+            .ToList();
+
+        var groupByGroupe = categorie == CategorieHistorique.AncienChefGroupe;
+        var groupedItems = groupByGroupe
+            ? displayItems
+                .GroupBy(item => item.Groupe)
+                .OrderBy(group => group.Key == "Groupe non renseigne" ? 1 : 0)
+                .ThenBy(group => group.Key)
+                .ToList()
+            : displayItems
+                .GroupBy(_ => string.Empty)
+                .ToList();
+
+        @foreach (var group in groupedItems)
+        {
+            if (groupByGroupe)
+            {
+                <div class="historique-group-heading">
+                    <div>
+                        <span>Groupe</span>
+                        <h3>@group.Key</h3>
+                    </div>
+                    <strong>@group.Count()</strong>
+                </div>
+            }
+
+            <div class="row g-4 justify-content-center mb-4">
+            @foreach (var item in group)
+            {
+                var membre = item.Membre;
+                var details = item.Details;
+                var detail = item.Detail;
+                var photoUrl = item.PhotoUrl;
                 <div class="col-md-4 col-sm-6">
                     <div class="card-3d p-4 text-center h-100">
                         @if (!string.IsNullOrEmpty(photoUrl))
@@ -70,6 +113,12 @@
                         {
                             <span class="badge-3d badge-soumise mb-2">@detail.Periode</span>
                         }
+                        @if (!string.IsNullOrWhiteSpace(detail?.Groupe))
+                        {
+                            <div class="text-muted-custom small mb-2">
+                                <i class="bi bi-house-flag text-or"></i> @detail.Groupe
+                            </div>
+                        }
                         @if (categorie == CategorieHistorique.Aucune)
                         {
                             <div class="d-flex flex-wrap justify-content-center gap-1 mt-2">
@@ -86,7 +135,8 @@
                     </div>
                 </div>
             }
-        </div>
+            </div>
+        }
     }
     else
     {
@@ -100,3 +150,46 @@
         <a asp-controller="Home" asp-action="LivreDor" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i> Retour au Livre d'or</a>
     </div>
 </div>
+
+<style>
+    .historique-group-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin: 2rem 0 1rem;
+        padding: 1rem 1.25rem;
+        border: 1px solid rgba(90, 125, 59, 0.18);
+        border-radius: 18px;
+        background: rgba(90, 125, 59, 0.08);
+    }
+
+    .historique-group-heading span {
+        display: block;
+        margin-bottom: 0.15rem;
+        color: var(--text-muted);
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .historique-group-heading h3 {
+        margin: 0;
+        color: var(--vert-logo);
+        font-size: 1.25rem;
+        font-weight: 800;
+    }
+
+    .historique-group-heading strong {
+        display: inline-flex;
+        width: 42px;
+        height: 42px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: var(--vert-logo);
+        color: #fff;
+        font-weight: 800;
+    }
+</style>

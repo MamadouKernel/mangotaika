@@ -15,6 +15,7 @@
             .Select(category => new MembreHistoriqueCategorie
             {
                 Categorie = category,
+                Groupe = null,
                 PhotoUrl = Model.PhotoUrl,
                 Description = Model.Description,
                 Periode = Model.Periode,
@@ -142,6 +143,7 @@
                         var hasPhoto = !string.IsNullOrWhiteSpace(photoUrl);
                         var hasDescription = !string.IsNullOrWhiteSpace(detail.Description);
                         var periodLabel = string.IsNullOrWhiteSpace(detail.Periode) ? "Non renseignee" : detail.Periode;
+                        var groupLabel = string.IsNullOrWhiteSpace(detail.Groupe) ? null : detail.Groupe;
                         var orderLabel = detail.Ordre > 0 ? detail.Ordre.ToString() : "Non defini";
 
                         <section class="historique-section">
@@ -149,6 +151,10 @@
                                 <div class="d-flex flex-column gap-2">
                                     <span class="badge-3d badge-soumise">@detail.Categorie.GetLabel()</span>
                                     <div class="historique-section__meta">
+                                        @if (!string.IsNullOrWhiteSpace(groupLabel))
+                                        {
+                                            <span><i class="bi bi-house-flag"></i> @groupLabel</span>
+                                        }
                                         <span><i class="bi bi-calendar-range"></i> @periodLabel</span>
                                         <span><i class="bi bi-sort-numeric-down"></i> Ordre @orderLabel</span>
                                     </div>

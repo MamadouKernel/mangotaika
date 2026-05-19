@@ -44,12 +44,17 @@
             <input type="hidden" asp-for="Entries[i].PhotoUrl" data-field="PhotoUrl" class="historique-photo-url" />
 
             <div class="row">
-                <div class="col-md-8 mb-3">
+                <div class="col-md-5 mb-3">
                     <label asp-for="Entries[i].Periode" class="form-label"></label>
                     <input asp-for="Entries[i].Periode" class="form-control" data-field="Periode" placeholder="2015-2020" />
                     <span asp-validation-for="Entries[i].Periode" class="text-danger small"></span>
                 </div>
                 <div class="col-md-4 mb-3">
+                    <label asp-for="Entries[i].Groupe" class="form-label"></label>
+                    <input asp-for="Entries[i].Groupe" class="form-control" data-field="Groupe" placeholder="Ex: 1er Abidjan" />
+                    <span asp-validation-for="Entries[i].Groupe" class="text-danger small"></span>
+                </div>
+                <div class="col-md-3 mb-3">
                     <label asp-for="Entries[i].Ordre" class="form-label"></label>
                     <input asp-for="Entries[i].Ordre" class="form-control" data-field="Ordre" type="number" />
                     <span asp-validation-for="Entries[i].Ordre" class="text-danger small"></span>

@@ -104,6 +104,7 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
             {
                 Id = Guid.NewGuid(),
                 Categorie = entry.Categorie,
+                Groupe = entry.Groupe,
                 PhotoUrl = NormalizeValue(entry.PhotoUrl),
                 Description = entry.Description,
                 Periode = entry.Periode,
@@ -168,6 +169,7 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
             Id = Guid.NewGuid(),
             MembreHistoriqueId = membre.Id,
             Categorie = entry.Categorie,
+            Groupe = entry.Groupe,
             PhotoUrl = NormalizeValue(entry.PhotoUrl),
             Description = entry.Description,
             Periode = entry.Periode,
@@ -271,7 +273,8 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
                 (m.Periode != null && EF.Functions.ILike(m.Periode, pattern)) ||
                 m.CategorieDetails.Any(detail =>
                     (detail.Description != null && EF.Functions.ILike(detail.Description, pattern)) ||
-                    (detail.Periode != null && EF.Functions.ILike(detail.Periode, pattern))));
+                    (detail.Periode != null && EF.Functions.ILike(detail.Periode, pattern)) ||
+                    (detail.Groupe != null && EF.Functions.ILike(detail.Groupe, pattern))));
         }
 
         return query;
