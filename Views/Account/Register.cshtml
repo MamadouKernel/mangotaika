@@ -1,6 +1,7 @@
 @model RegisterViewModel
 @{
     ViewData["Title"] = "Inscription";
+    var selectedRole = Model?.Role ?? "Parent";
 }
 
 <div class="container my-5">
@@ -61,7 +62,7 @@
                         <small class="text-muted-custom">Saisissez le(s) matricule(s) separes par des virgules. Aucun code d'invitation n'est demande aux parents/tuteurs. Un enfant peut etre lie a trois parents/tuteurs maximum.</small>
                     </div>
 
-                    <div class="mb-3" id="codeSection" style="@(Model.Role == "Gestionnaire" ? string.Empty : "display:none;")">
+                    <div class="mb-3" id="codeSection" style="@(selectedRole == "Gestionnaire" ? string.Empty : "display:none;")">
                         <label asp-for="CodeInvitation" class="form-label">
                             Code d'invitation <span class="text-danger">*</span>
                         </label>

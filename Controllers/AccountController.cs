@@ -67,7 +67,7 @@ public class AccountController(
     }
 
     [HttpGet]
-    public IActionResult Register() => View();
+    public IActionResult Register() => View(new RegisterViewModel());
 
     [HttpPost]
     [ValidateAntiForgeryToken]
