@@ -449,10 +449,25 @@ public class AccountController(
     // === GESTION DES COMPTES (Admin/Gestionnaire) ===
 
     [Authorize(Roles = "Administrateur,Gestionnaire")]
-    public async Task<IActionResult> Utilisateurs()
+    public async Task<IActionResult> Utilisateurs(string? recherche)
     {
         var (page, ps) = ListPagination.Read(Request);
-        var ordered = db.Users.OrderByDescending(u => u.DateCreation);
+        var query = db.Users.AsQueryable();
+        if (!string.IsNullOrWhiteSpace(recherche))
+        {
+            var search = recherche.Trim().ToUpperInvariant();
+            query = query.Where(u =>
+                (u.Nom != null && u.Nom.ToUpper().Contains(search)) ||
+                (u.Prenom != null && u.Prenom.ToUpper().Contains(search)) ||
+                ((u.Prenom + " " + u.Nom).ToUpper().Contains(search)) ||
+                ((u.Nom + " " + u.Prenom).ToUpper().Contains(search)) ||
+                (u.Matricule != null && u.Matricule.ToUpper().Contains(search)) ||
+                (u.PhoneNumber != null && u.PhoneNumber.Contains(search)) ||
+                (u.Email != null && u.Email.ToUpper().Contains(search)) ||
+                (u.UserName != null && u.UserName.Contains(search)));
+        }
+
+        var ordered = query.OrderByDescending(u => u.DateCreation);
         var total = await ordered.CountAsync();
         var (p, pageSize, skip, totalPages) = ListPagination.Normalize(page, ps, total);
         var users = await ordered.Skip(skip).Take(pageSize).ToListAsync();
@@ -464,6 +479,7 @@ public class AccountController(
             userRoles[u.Id] = roles.ToList();
         }
         ViewBag.UserRoles = userRoles;
+        ViewBag.Recherche = recherche;
         ListPagination.SetViewData(ViewData, HttpContext, p, pageSize, total, totalPages);
         return View(users);
     }

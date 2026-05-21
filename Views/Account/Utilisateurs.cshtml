@@ -3,6 +3,7 @@
     ViewData["Title"] = "Gestion des utilisateurs";
     Layout = "_LayoutAdmin";
     var userRoles = ViewBag.UserRoles as Dictionary<Guid, List<string>> ?? new();
+    var recherche = ViewBag.Recherche as string ?? string.Empty;
     string RoleLabel(string r) => r switch {
         "Parent"               => "Parent / Tuteur",
         "CommissaireDistrict"  => "Commissaire de District",
@@ -15,6 +16,30 @@
 
 <h2 class="section-title mb-1"><i class="bi bi-people-fill text-or"></i> Gestion des <span class="accent">utilisateurs</span></h2>
 <div class="section-divider"></div>
+
+<form asp-action="Utilisateurs" method="get" class="card-3d p-3 mb-4">
+    <div class="row g-2 align-items-end">
+        <div class="col-lg-9">
+            <label for="recherche" class="form-label small">Recherche</label>
+            <input id="recherche"
+                   name="recherche"
+                   value="@recherche"
+                   class="form-control"
+                   placeholder="Matricule, nom, prenom, telephone ou email" />
+        </div>
+        <div class="col-lg-3 d-flex gap-2">
+            <button type="submit" class="btn btn-mango flex-fill">
+                <i class="bi bi-search"></i> Rechercher
+            </button>
+            @if (!string.IsNullOrWhiteSpace(recherche))
+            {
+                <a asp-action="Utilisateurs" class="btn btn-outline-or" title="Reinitialiser">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+            }
+        </div>
+    </div>
+</form>
 
 <div class="row g-4 mt-2">
     @foreach (var user in Model)
@@ -37,6 +62,10 @@
                     }
                 </p>
                 <div class="d-flex flex-column gap-1 mb-3 flex-grow-1" style="font-size:0.85rem;">
+                    @if (!string.IsNullOrWhiteSpace(user.Matricule))
+                    {
+                        <span><i class="bi bi-hash text-or"></i> @user.Matricule</span>
+                    }
                     <span><i class="bi bi-telephone text-bleu"></i> @user.PhoneNumber</span>
                     <span><i class="bi bi-envelope text-or"></i> @(user.Email ?? "—")</span>
                     <span><i class="bi bi-calendar3 text-bleu"></i> Inscrit le @user.DateCreation.ToString("dd/MM/yyyy")</span>
