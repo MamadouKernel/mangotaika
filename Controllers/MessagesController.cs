@@ -1,4 +1,5 @@
 using MangoTaika.Data;
+using MangoTaika.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -14,9 +15,18 @@ public class MessagesController(AppDbContext db) : Controller
         if (!string.IsNullOrEmpty(type))
             query = query.Where(m => m.Type == type);
 
-        var messages = await query.OrderByDescending(m => m.DateEnvoi).ToListAsync();
-        ViewBag.TypeFiltre = type;
-        return View(messages);
+        var model = new MessagesAdminViewModel
+        {
+            Messages = await query.OrderByDescending(m => m.DateEnvoi).ToListAsync(),
+            LivreDorMessages = await db.LivreDor
+                .Where(m => !m.EstSupprime)
+                .OrderBy(m => m.EstValide)
+                .ThenByDescending(m => m.DateCreation)
+                .ToListAsync(),
+            TypeFiltre = type
+        };
+
+        return View(model);
     }
 
     public async Task<IActionResult> Details(Guid id)
@@ -54,5 +64,38 @@ public class MessagesController(AppDbContext db) : Controller
             TempData["Success"] = "Message supprimé.";
         }
         return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ValiderLivreDor(Guid id)
+    {
+        var message = await db.LivreDor.FindAsync(id);
+        if (message is not null && !message.EstSupprime)
+        {
+            message.EstValide = true;
+            message.DateValidation = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+            TempData["Success"] = "Message du livre d'or valide.";
+        }
+
+        return RedirectToAction(nameof(Index), new { type = "LivreDor" });
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SupprimerLivreDor(Guid id)
+    {
+        var message = await db.LivreDor.FindAsync(id);
+        if (message is not null)
+        {
+            message.EstSupprime = true;
+            await db.SaveChangesAsync();
+            TempData["Success"] = "Message du livre d'or supprime.";
+        }
+
+        return RedirectToAction(nameof(Index), new { type = "LivreDor" });
     }
 }
