@@ -68,7 +68,17 @@ public class PartenairesController(AppDbContext db, IFileUploadService fileUploa
                 model.LogoUrl = p.LogoUrl;
                 return View(model);
             }
-            p.LogoUrl = await fileUpload.SaveImageAsync(Logo, "partenaires");
+
+            try
+            {
+                p.LogoUrl = await fileUpload.SaveImageAsync(Logo, "partenaires");
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["Error"] = ex.Message;
+                model.LogoUrl = p.LogoUrl;
+                return View(model);
+            }
         }
         await db.SaveChangesAsync();
         TempData["Success"] = "Partenaire mis à jour.";
@@ -95,7 +105,15 @@ public class PartenairesController(AppDbContext db, IFileUploadService fileUploa
                 return RedirectToAction(nameof(Index));
             }
 
-            model.LogoUrl = await fileUpload.SaveImageAsync(Logo, "partenaires");
+            try
+            {
+                model.LogoUrl = await fileUpload.SaveImageAsync(Logo, "partenaires");
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["Error"] = ex.Message;
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         db.Partenaires.Add(model);

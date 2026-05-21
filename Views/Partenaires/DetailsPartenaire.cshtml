@@ -17,6 +17,12 @@
 </div>
 
 <div class="card-3d p-4">
+    @if (!string.IsNullOrWhiteSpace(Model.LogoUrl))
+    {
+        <div class="mb-4">
+            <img src="@Model.LogoUrl" alt="Logo @Model.Nom" style="height:80px;max-width:220px;object-fit:contain;border-radius:10px;" />
+        </div>
+    }
     <dl class="row mb-0 small">
         <dt class="col-sm-4 text-muted-custom">Type</dt>
         <dd class="col-sm-8">@(Model.TypePartenariat ?? "-")</dd>

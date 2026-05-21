@@ -28,9 +28,12 @@
             <div class="col-md-3"><label class="form-label small">Nom</label><input name="Nom" class="form-control" required /></div>
             <div class="col-md-2"><label class="form-label small">Type</label><select name="TypePartenariat" class="form-select"><option>Sponsor</option><option>Institutionnel</option><option>Technique</option><option>Media</option></select></div>
             <div class="col-md-2"><label class="form-label small">Site web</label><input name="SiteWeb" class="form-control" placeholder="https://..." /></div>
-                    <div class="col-md-2"><label class="form-label small">Logo</label><input type="file" name="Logo" class="form-control" accept="@FileInputAccept.Image" /></div>
+            <div class="col-md-2"><label class="form-label small">Logo</label><input type="file" name="Logo" class="form-control" accept="@FileInputAccept.Image" /></div>
             <div class="col-md-1"><label class="form-label small">Ordre</label><input name="Ordre" class="form-control" type="number" value="0" /></div>
             <div class="col-auto"><button type="submit" class="btn btn-mango"><i class="bi bi-plus-lg"></i></button></div>
+            <div class="col-12">
+                <small class="text-muted-custom">Le logo apparait sur cette page et sur l'accueil public dans la section Nos Partenaires si le partenaire est actif.</small>
+            </div>
         </form>
     </div>
 }
@@ -41,6 +44,16 @@
         var siteWeb = SafeLinkHelper.NormalizeAllowedLink(p.SiteWeb);
         <div class="col-md-3 col-6">
             <div class="card-3d p-3 text-center h-100">
+                <div class="mb-2">
+                    @if (!string.IsNullOrWhiteSpace(p.LogoUrl))
+                    {
+                        <img src="@p.LogoUrl" alt="Logo @p.Nom" style="height:56px;max-width:100%;object-fit:contain;border-radius:8px;" />
+                    }
+                    else
+                    {
+                        <i class="bi bi-building" style="font-size:2rem;color:var(--bleu-gris-pale);"></i>
+                    }
+                </div>
                 <h6 style="color:var(--bleu-logo);font-size:0.85rem;">@p.Nom</h6>
                 <small class="text-muted-custom">@(p.TypePartenariat ?? "-")</small>
                 <div class="mt-2 d-flex flex-wrap gap-1 justify-content-center">
