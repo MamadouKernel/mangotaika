@@ -45,7 +45,8 @@ public class ActiviteService(AppDbContext db) : IActiviteService
             .Include(x => x.Groupe)
             .Include(x => x.Createur)
             .Include(x => x.Documents)
-            .Include(x => x.Participants).ThenInclude(p => p.Scout).ThenInclude(s => s.Branche)
+            .Include(x => x.Participants).ThenInclude(p => p.Scout)
+            .Include(x => x.Participants).ThenInclude(p => p.Scout!.Branche)
             .Include(x => x.Participants).ThenInclude(p => p.Ressource)
             .Include(x => x.Commentaires).ThenInclude(c => c.Auteur)
             .FirstOrDefaultAsync(x => x.Id == id && !x.EstSupprime);
