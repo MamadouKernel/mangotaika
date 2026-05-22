@@ -1,7 +1,7 @@
 @model MangoTaika.Models.VerificationScoutViewModel
 @{
     ViewData["Title"] = "Verification";
-    var statusClass = Model.Statut == "A jour" ? "verification-result--ok" : Model.Statut == "Non a jour" ? "verification-result--warning" : "verification-result--missing";
+    var statusClass = Model.Statut == "A jour" ? "verification-result--ok" : Model.Statut == "Non à jour" ? "verification-result--warning" : "verification-result--missing";
 }
 
 <section class="verification-page">

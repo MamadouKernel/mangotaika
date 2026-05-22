@@ -1,4 +1,5 @@
 @using MangoTaika.Helpers
+@using MangoTaika.Data.Entities
 @model MangoTaika.DTOs.FormationDetailDto
 @{
     ViewData["Title"] = Model.Titre;
@@ -7,6 +8,10 @@
     var stats = (MangoTaika.DTOs.FormationStatsDto)ViewBag.Stats;
     var lectureSeule = ViewBag.LectureSeule as bool? ?? false;
     var canManage = !lectureSeule && (User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire"));
+    var ressources = ViewBag.Ressources as List<Ressource> ?? new();
+    var ressourcesFormation = ViewBag.RessourcesFormation as List<ParticipationFormationRessource> ?? new();
+    var ressourcesFormationIds = ressourcesFormation.Select(r => r.RessourceId).ToHashSet();
+    var ressourcesDisponibles = ressources.Where(r => !ressourcesFormationIds.Contains(r.Id)).ToList();
     var totalElementsCertifiants = (Model.DelivreBadge ? 1 : 0) + (Model.DelivreAttestation ? 1 : 0) + (Model.DelivreCertificat ? 1 : 0);
 }
 
@@ -148,6 +153,70 @@
                         </small>
                     </div>
                 </div>
+            </section>
+
+            <section class="classroom-panel">
+                <div class="classroom-panel__head">
+                    <div>
+                        <span class="classroom-panel__eyebrow">Ressources externes</span>
+                        <h2 class="classroom-panel__title">Invites, formateurs et parrains</h2>
+                    </div>
+                </div>
+
+                @if (canManage)
+                {
+                    <form asp-action="AjouterRessources" asp-route-id="@Model.Id" method="post" class="mb-3">
+                        @Html.AntiForgeryToken()
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-9">
+                                <label class="form-label">Ajouter des ressources</label>
+                                <select name="ressourceIds" class="form-select" multiple size="5">
+                                    @foreach (var ressource in ressourcesDisponibles)
+                                    {
+                                        <option value="@ressource.Id">@($"{ressource.Prenom} {ressource.Nom}".Trim()) - @ressource.Type - @(ressource.Groupe?.Nom ?? "District")</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-mango w-100" type="submit"><i class="bi bi-person-plus"></i> Ajouter</button>
+                            </div>
+                        </div>
+                    </form>
+                }
+
+                @if (ressourcesFormation.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table-modern">
+                            <thead><tr><th>Nom</th><th>Type</th><th>Groupe</th><th>Contact</th><th></th></tr></thead>
+                            <tbody>
+                                @foreach (var participation in ressourcesFormation)
+                                {
+                                    <tr>
+                                        <td>@($"{participation.Ressource.Prenom} {participation.Ressource.Nom}".Trim())</td>
+                                        <td>@participation.Ressource.Type</td>
+                                        <td>@(participation.Ressource.Groupe?.Nom ?? "District")</td>
+                                        <td>@(participation.Ressource.Telephone ?? participation.Ressource.Email ?? "-")</td>
+                                        <td class="text-end">
+                                            @if (canManage)
+                                            {
+                                                <form asp-action="RetirerRessource" asp-route-id="@Model.Id" method="post" onsubmit="return confirm('Retirer cette ressource de la formation ?')">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="participationId" value="@participation.Id" />
+                                                    <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-x-circle"></i></button>
+                                                </form>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted mb-0">Aucune ressource rattachee a cette formation.</p>
+                }
             </section>
 
             <section class="classroom-panel">

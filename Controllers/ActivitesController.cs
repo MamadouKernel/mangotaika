@@ -16,7 +16,8 @@ public class ActivitesController(
     IScoutQrService scoutQrService,
     UserManager<ApplicationUser> userManager,
     AppDbContext db,
-    IFileUploadService fileUploadService) : Controller
+    IFileUploadService fileUploadService,
+    INotificationDispatchService notificationDispatchService) : Controller
 {
     private Guid UserId => Guid.Parse(userManager.GetUserId(User)!);
 
@@ -115,6 +116,12 @@ public class ActivitesController(
                 .ToListAsync();
         }
 
+        ViewBag.Ressources = await db.Ressources
+            .Where(r => r.IsActive && (!activite.GroupeId.HasValue || r.GroupeId == activite.GroupeId))
+            .OrderBy(r => r.Nom)
+            .ThenBy(r => r.Prenom)
+            .ToListAsync();
+
         return View(activite);
     }
 
@@ -143,6 +150,7 @@ public class ActivitesController(
             TypeAction = "Soumission"
         });
         await db.SaveChangesAsync();
+        await NotifyActivityStakeholdersAsync(a, "Activite soumise", $"L'activite \"{a.Titre}\" a ete soumise pour validation.");
         TempData["Success"] = "Activite soumise pour validation.";
         return RedirectToAction(nameof(Details), new { id });
     }
@@ -164,6 +172,7 @@ public class ActivitesController(
             TypeAction = "Validation"
         });
         await db.SaveChangesAsync();
+        await NotifyActivityStakeholdersAsync(a, "Activite validee", $"L'activite \"{a.Titre}\" a ete validee.");
         TempData["Success"] = "Activite validee.";
         return RedirectToAction(nameof(Details), new { id });
     }
@@ -185,6 +194,7 @@ public class ActivitesController(
             TypeAction = "Rejet"
         });
         await db.SaveChangesAsync();
+        await NotifyActivityStakeholdersAsync(a, "Activite rejetee", $"L'activite \"{a.Titre}\" a ete rejetee. Motif : {motif ?? "Non precise"}");
         TempData["Success"] = "Activite rejetee.";
         return RedirectToAction(nameof(Details), new { id });
     }
@@ -205,6 +215,7 @@ public class ActivitesController(
             TypeAction = "Demarrage"
         });
         await db.SaveChangesAsync();
+        await NotifyActivityStakeholdersAsync(a, "Activite demarree", $"L'activite \"{a.Titre}\" a demarre.");
         TempData["Success"] = "Activite en cours.";
         return RedirectToAction(nameof(Details), new { id });
     }
@@ -225,6 +236,7 @@ public class ActivitesController(
             TypeAction = "Cloture"
         });
         await db.SaveChangesAsync();
+        await NotifyActivityStakeholdersAsync(a, "Activite terminee", $"L'activite \"{a.Titre}\" est terminee.");
         TempData["Success"] = "Activite terminee.";
         return RedirectToAction(nameof(Details), new { id });
     }
@@ -258,6 +270,7 @@ public class ActivitesController(
             TypeAction = "Archivage"
         });
         await db.SaveChangesAsync();
+        await NotifyActivityStakeholdersAsync(a, "Activite archivee", $"L'activite \"{a.Titre}\" a ete archivee.");
         TempData["Success"] = "Activite archivee.";
         return RedirectToAction(nameof(Details), new { id });
     }
@@ -347,11 +360,11 @@ public class ActivitesController(
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> AjouterParticipant(Guid id, Guid scoutId)
-        => await AjouterParticipants(id, scoutId == Guid.Empty ? [] : [scoutId], null);
+        => await AjouterParticipants(id, scoutId == Guid.Empty ? [] : [scoutId], null, null);
 
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize(Roles = "Administrateur,Gestionnaire")]
-    public async Task<IActionResult> AjouterParticipants(Guid id, List<Guid>? scoutIds, string? matricules)
+    public async Task<IActionResult> AjouterParticipants(Guid id, List<Guid>? scoutIds, List<Guid>? ressourceIds, string? matricules)
     {
         var activite = await db.Activites.FirstOrDefaultAsync(a => a.Id == id && !a.EstSupprime);
         if (activite is null) return NotFound();
@@ -388,8 +401,8 @@ public class ActivitesController(
         }
 
         var existingScoutIds = await db.ParticipantsActivite
-            .Where(p => p.ActiviteId == id && allScoutIds.Contains(p.ScoutId))
-            .Select(p => p.ScoutId)
+            .Where(p => p.ActiviteId == id && p.ScoutId.HasValue && allScoutIds.Contains(p.ScoutId.Value))
+            .Select(p => p.ScoutId!.Value)
             .ToListAsync();
         var existingScoutSet = existingScoutIds.ToHashSet();
 
@@ -420,6 +433,49 @@ public class ActivitesController(
             await db.SaveChangesAsync();
         }
 
+        var selectedRessourceIds = ressourceIds?
+            .Where(ressourceId => ressourceId != Guid.Empty)
+            .Distinct()
+            .ToList()
+            ?? [];
+
+        var existingRessourceIds = selectedRessourceIds.Count == 0
+            ? []
+            : await db.ParticipantsActivite
+                .Where(p => p.ActiviteId == id && p.RessourceId.HasValue && selectedRessourceIds.Contains(p.RessourceId.Value))
+                .Select(p => p.RessourceId!.Value)
+                .ToListAsync();
+
+        var ressourcesToAdd = selectedRessourceIds.Count == 0
+            ? []
+            : await db.Ressources
+                .Where(r => r.IsActive
+                    && selectedRessourceIds.Contains(r.Id)
+                    && !existingRessourceIds.Contains(r.Id)
+                    && (!activite.GroupeId.HasValue || r.GroupeId == activite.GroupeId))
+                .ToListAsync();
+
+        if (ressourcesToAdd.Count > 0)
+        {
+            db.ParticipantsActivite.AddRange(ressourcesToAdd.Select(ressource => new ParticipantActivite
+            {
+                Id = Guid.NewGuid(),
+                ActiviteId = id,
+                RessourceId = ressource.Id
+            }));
+
+            db.CommentairesActivite.Add(new CommentaireActivite
+            {
+                Id = Guid.NewGuid(),
+                ActiviteId = id,
+                AuteurId = UserId,
+                Contenu = $"{ressourcesToAdd.Count} ressource(s) ajoutee(s) a la liste.",
+                TypeAction = "Participants"
+            });
+
+            await db.SaveChangesAsync();
+        }
+
         var foundImportedMatricules = importedScouts
             .Select(s => NormalizeMatricule(s.Matricule))
             .Where(matricule => !string.IsNullOrWhiteSpace(matricule))
@@ -442,9 +498,10 @@ public class ActivitesController(
             ? $" ({string.Join(", ", importSummary)})."
             : ".";
 
-        if (scoutsToAdd.Count > 0)
+        var totalAdded = scoutsToAdd.Count + ressourcesToAdd.Count;
+        if (totalAdded > 0)
         {
-            TempData["Success"] = $"{scoutsToAdd.Count} participant(s) ajoute(s){summarySuffix}";
+            TempData["Success"] = $"{totalAdded} participant(s) ajoute(s){summarySuffix}";
         }
         else
         {
@@ -849,6 +906,31 @@ public class ActivitesController(
     private static bool PointageEstAccessible(Activite activite)
     {
         return activite.Statut == StatutActivite.EnCours || activite.Statut == StatutActivite.Terminee;
+    }
+
+    private async Task NotifyActivityStakeholdersAsync(Activite activite, string title, string message)
+    {
+        var recipients = await db.Users
+            .Where(u => u.Id == activite.CreateurId || (activite.GroupeId.HasValue && u.GroupeId == activite.GroupeId))
+            .Select(u => u.Id)
+            .ToListAsync();
+
+        var adminRoleIds = await db.Roles
+            .Where(r => r.Name == "Administrateur" || r.Name == "Gestionnaire")
+            .Select(r => r.Id)
+            .ToListAsync();
+
+        var adminIds = await db.UserRoles
+            .Where(ur => adminRoleIds.Contains(ur.RoleId))
+            .Select(ur => ur.UserId)
+            .ToListAsync();
+
+        await notificationDispatchService.SendAsync(
+            recipients.Concat(adminIds),
+            title,
+            message,
+            "Activites",
+            $"/Activites/Details/{activite.Id}");
     }
 
     private static List<string> ParseMatricules(string? rawValue)

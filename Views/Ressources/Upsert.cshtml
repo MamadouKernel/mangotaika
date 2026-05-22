@@ -1,0 +1,68 @@
+@model MangoTaika.Data.Entities.Ressource
+@using MangoTaika.Data.Entities
+@{
+    ViewData["Title"] = Model.Id == Guid.Empty ? "Nouvelle ressource" : "Modifier ressource";
+    Layout = "_LayoutAdmin";
+    var groupes = ViewBag.Groupes as List<Groupe> ?? new();
+    var managedGroupId = ViewBag.ManagedGroupId as Guid?;
+}
+
+<h2 class="section-title mb-4"><i class="bi bi-person-workspace text-or"></i> @ViewData["Title"]</h2>
+
+<div class="card-3d p-4">
+    <form method="post" class="form-modern">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        <div asp-validation-summary="ModelOnly" class="text-danger small"></div>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="Nom" class="form-label">Nom *</label>
+                <input asp-for="Nom" class="form-control" required />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Prenom" class="form-label">Prenom</label>
+                <input asp-for="Prenom" class="form-control" />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Type" class="form-label">Type</label>
+                <select asp-for="Type" class="form-select" asp-items="Html.GetEnumSelectList<TypeRessource>()"></select>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Telephone" class="form-label">Telephone</label>
+                <input asp-for="Telephone" class="form-control" />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Email" class="form-label">Email</label>
+                <input asp-for="Email" class="form-control" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="GroupeId" class="form-label">Groupe</label>
+                <select asp-for="GroupeId" class="form-select" disabled="@(managedGroupId.HasValue)">
+                    <option value="">District</option>
+                    @foreach (var groupe in groupes)
+                    {
+                        <option value="@groupe.Id" selected="@(Model.GroupeId == groupe.Id)">@groupe.Nom</option>
+                    }
+                </select>
+                @if (managedGroupId.HasValue)
+                {
+                    <input type="hidden" asp-for="GroupeId" value="@managedGroupId" />
+                }
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+                <div class="form-check">
+                    <input asp-for="IsActive" class="form-check-input" />
+                    <label asp-for="IsActive" class="form-check-label">Actif</label>
+                </div>
+            </div>
+            <div class="col-12">
+                <label asp-for="Notes" class="form-label">Notes</label>
+                <textarea asp-for="Notes" class="form-control" rows="4"></textarea>
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-4">
+            <button class="btn btn-mango" type="submit"><i class="bi bi-check-lg"></i> Enregistrer</button>
+            <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
+        </div>
+    </form>
+</div>

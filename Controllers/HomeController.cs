@@ -2,6 +2,8 @@ using MangoTaika.Data;
 using MangoTaika.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
+using System.Text;
 using System.Diagnostics;
 
 namespace MangoTaika.Controllers;
@@ -92,14 +94,15 @@ public class HomeController(AppDbContext db, IConfiguration configuration) : Con
         var nom = NormalizeSearchValue(model.Nom);
         var prenom = NormalizeSearchValue(model.Prenom);
 
-        var scout = await db.Scouts
+        var candidates = await db.Scouts
             .AsNoTracking()
             .Include(s => s.Groupe)
             .Include(s => s.Branche)
             .Where(s => s.IsActive
                 && s.Matricule != null
                 && s.Matricule.ToLower() == matricule.ToLower())
-            .FirstOrDefaultAsync(s => s.Nom.ToLower() == nom && s.Prenom.ToLower() == prenom);
+            .ToListAsync();
+        var scout = candidates.FirstOrDefault(s => NormalizeSearchValue(s.Nom) == nom && NormalizeSearchValue(s.Prenom) == prenom);
 
         if (scout == null)
         {
@@ -118,7 +121,7 @@ public class HomeController(AppDbContext db, IConfiguration configuration) : Con
         model.MatriculeTrouve = scout.Matricule;
         model.Groupe = scout.Groupe?.Nom;
         model.Branche = scout.Branche?.Nom;
-        model.Statut = inscription?.CotisationNationaleAjour == true ? "A jour" : "Non a jour";
+        model.Statut = inscription?.CotisationNationaleAjour == true ? "A jour" : "Non à jour";
 
         return View(model);
     }
@@ -271,6 +274,10 @@ public class HomeController(AppDbContext db, IConfiguration configuration) : Con
 
     private static string NormalizeSearchValue(string value)
     {
-        return value.Trim().ToLower();
+        var normalized = value.Trim().Normalize(NormalizationForm.FormD);
+        var chars = normalized
+            .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+            .ToArray();
+        return new string(chars).Normalize(NormalizationForm.FormC).ToLowerInvariant();
     }
 }

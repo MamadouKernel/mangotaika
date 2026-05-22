@@ -46,6 +46,7 @@ public class ActiviteService(AppDbContext db) : IActiviteService
             .Include(x => x.Createur)
             .Include(x => x.Documents)
             .Include(x => x.Participants).ThenInclude(p => p.Scout).ThenInclude(s => s.Branche)
+            .Include(x => x.Participants).ThenInclude(p => p.Ressource)
             .Include(x => x.Commentaires).ThenInclude(c => c.Auteur)
             .FirstOrDefaultAsync(x => x.Id == id && !x.EstSupprime);
         if (a is null) return null;
@@ -82,9 +83,13 @@ public class ActiviteService(AppDbContext db) : IActiviteService
             {
                 Id = p.Id,
                 ScoutId = p.ScoutId,
-                NomComplet = $"{p.Scout.Prenom} {p.Scout.Nom}",
-                Matricule = p.Scout.Matricule ?? string.Empty,
-                NomBranche = p.Scout.Branche?.Nom,
+                RessourceId = p.RessourceId,
+                TypeParticipant = p.Ressource != null ? p.Ressource.Type.ToString() : "Scout",
+                NomComplet = p.Scout != null ? $"{p.Scout.Prenom} {p.Scout.Nom}" : $"{p.Ressource!.Prenom} {p.Ressource.Nom}".Trim(),
+                Matricule = p.Scout?.Matricule ?? string.Empty,
+                NomBranche = p.Scout?.Branche?.Nom,
+                Telephone = p.Scout?.Telephone ?? p.Ressource?.Telephone,
+                Email = p.Scout?.Email ?? p.Ressource?.Email,
                 Presence = p.Presence
             }).OrderBy(p => p.NomComplet).ToList(),
             Commentaires = a.Commentaires.Select(c => new CommentaireActiviteDto

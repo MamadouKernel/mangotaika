@@ -37,6 +37,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<Actualite> Actualites => Set<Actualite>();
     public DbSet<CodeInvitation> CodesInvitation => Set<CodeInvitation>();
     public DbSet<ParticipantActivite> ParticipantsActivite => Set<ParticipantActivite>();
+    public DbSet<Ressource> Ressources => Set<Ressource>();
+    public DbSet<ParticipationFormationRessource> ParticipationsFormationRessources => Set<ParticipationFormationRessource>();
     public DbSet<CommentaireActivite> CommentairesActivite => Set<CommentaireActivite>();
     public DbSet<TransactionFinanciere> TransactionsFinancieres => Set<TransactionFinanciere>();
     public DbSet<ProjetAGR> ProjetsAGR => Set<ProjetAGR>();
@@ -149,7 +151,16 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         builder.Entity<ParticipantActivite>(e =>
         {
             e.HasOne(p => p.Scout).WithMany().HasForeignKey(p => p.ScoutId).OnDelete(DeleteBehavior.Cascade);
-            e.HasIndex(p => new { p.ActiviteId, p.ScoutId }).IsUnique();
+            e.HasOne(p => p.Ressource).WithMany(r => r.ParticipationsActivites).HasForeignKey(p => p.RessourceId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(p => new { p.ActiviteId, p.ScoutId }).IsUnique().HasFilter("\"ScoutId\" IS NOT NULL");
+            e.HasIndex(p => new { p.ActiviteId, p.RessourceId }).IsUnique().HasFilter("\"RessourceId\" IS NOT NULL");
+            e.ToTable(t => t.HasCheckConstraint("CK_ParticipantsActivite_ParticipantType", "(\"ScoutId\" IS NOT NULL AND \"RessourceId\" IS NULL) OR (\"ScoutId\" IS NULL AND \"RessourceId\" IS NOT NULL)"));
+        });
+
+        builder.Entity<Ressource>(e =>
+        {
+            e.HasOne(r => r.Groupe).WithMany().HasForeignKey(r => r.GroupeId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(r => new { r.GroupeId, r.Type, r.Nom, r.Prenom });
         });
 
         // CommentaireActivite
@@ -442,6 +453,13 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasOne(i => i.Scout).WithMany().HasForeignKey(i => i.ScoutId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(i => i.SessionFormation).WithMany(s => s.Inscriptions).HasForeignKey(i => i.SessionFormationId).OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(i => new { i.ScoutId, i.FormationId }).IsUnique();
+        });
+
+        builder.Entity<ParticipationFormationRessource>(e =>
+        {
+            e.HasOne(p => p.Ressource).WithMany(r => r.ParticipationsFormation).HasForeignKey(p => p.RessourceId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(p => p.Formation).WithMany().HasForeignKey(p => p.FormationId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(p => new { p.RessourceId, p.FormationId }).IsUnique();
         });
 
         builder.Entity<CertificationFormation>(e =>

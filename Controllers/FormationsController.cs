@@ -108,7 +108,65 @@ public class FormationsController(
             return NotFound();
 
         ViewBag.Stats = await formationService.GetStatsAsync(id);
+        ViewBag.Ressources = await db.Ressources
+            .Include(r => r.Groupe)
+            .Where(r => r.IsActive)
+            .OrderBy(r => r.Groupe!.Nom)
+            .ThenBy(r => r.Nom)
+            .ToListAsync();
+        ViewBag.RessourcesFormation = await db.ParticipationsFormationRessources
+            .Include(p => p.Ressource).ThenInclude(r => r.Groupe)
+            .Where(p => p.FormationId == id)
+            .OrderBy(p => p.Ressource.Nom)
+            .ToListAsync();
         return View(formation);
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    public async Task<IActionResult> AjouterRessources(Guid id, List<Guid>? ressourceIds)
+    {
+        var formationExists = await db.Formations.AnyAsync(f => f.Id == id);
+        if (!formationExists) return NotFound();
+
+        var ids = ressourceIds?.Where(x => x != Guid.Empty).Distinct().ToList() ?? [];
+        if (ids.Count == 0)
+        {
+            TempData["Error"] = "Selectionnez au moins une ressource.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        var existingIds = await db.ParticipationsFormationRessources
+            .Where(p => p.FormationId == id && ids.Contains(p.RessourceId))
+            .Select(p => p.RessourceId)
+            .ToListAsync();
+
+        var toAdd = await db.Ressources
+            .Where(r => r.IsActive && ids.Contains(r.Id) && !existingIds.Contains(r.Id))
+            .ToListAsync();
+
+        db.ParticipationsFormationRessources.AddRange(toAdd.Select(r => new ParticipationFormationRessource
+        {
+            Id = Guid.NewGuid(),
+            FormationId = id,
+            RessourceId = r.Id
+        }));
+
+        await db.SaveChangesAsync();
+        TempData["Success"] = $"{toAdd.Count} ressource(s) ajoutee(s) a la formation.";
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    public async Task<IActionResult> RetirerRessource(Guid id, Guid participationId)
+    {
+        var participation = await db.ParticipationsFormationRessources.FirstOrDefaultAsync(p => p.Id == participationId && p.FormationId == id);
+        if (participation is null) return NotFound();
+        db.ParticipationsFormationRessources.Remove(participation);
+        await db.SaveChangesAsync();
+        TempData["Success"] = "Ressource retiree de la formation.";
+        return RedirectToAction(nameof(Details), new { id });
     }
 
     [HttpPost, ValidateAntiForgeryToken]

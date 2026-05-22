@@ -1,0 +1,89 @@
+@model List<MangoTaika.Data.Entities.Ressource>
+@using MangoTaika.Data.Entities
+@{
+    ViewData["Title"] = "Ressources";
+    Layout = "_LayoutAdmin";
+    var groupes = ViewBag.Groupes as List<Groupe> ?? new();
+    var selectedGroupId = ViewBag.SelectedGroupId as Guid?;
+    var selectedType = ViewBag.Type as TypeRessource?;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h2 class="section-title mb-0"><i class="bi bi-person-workspace text-or"></i> Ressources</h2>
+    <a asp-action="Create" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Ajouter</a>
+</div>
+
+<form method="get" class="card-3d p-3 mb-4">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label">Recherche</label>
+            <input type="text" name="q" value="@ViewBag.Search" class="form-control" placeholder="Nom, telephone, email..." />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Groupe</label>
+            <select name="groupeId" class="form-select">
+                <option value="">Tous</option>
+                @foreach (var groupe in groupes)
+                {
+                    <option value="@groupe.Id" selected="@(selectedGroupId == groupe.Id)">@groupe.Nom</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Type</label>
+            <select name="type" class="form-select">
+                <option value="">Tous</option>
+                @foreach (var type in Enum.GetValues<TypeRessource>())
+                {
+                    <option value="@type" selected="@(selectedType == type)">@type</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-outline-or w-100" type="submit"><i class="bi bi-search"></i> Filtrer</button>
+        </div>
+    </div>
+</form>
+
+<div class="row g-3">
+@foreach (var ressource in Model)
+{
+    <div class="col-md-4">
+        <div class="card-3d p-3 h-100">
+            <div class="d-flex justify-content-between gap-2">
+                <div>
+                    <span class="badge-3d badge-soumise">@ressource.Type</span>
+                    <h5 class="mt-2 mb-1">@($"{ressource.Prenom} {ressource.Nom}".Trim())</h5>
+                    <p class="text-muted-custom mb-1">@((ressource.Groupe?.Nom) ?? "District")</p>
+                </div>
+                <span class="badge-3d @(ressource.IsActive ? "badge-validee" : "badge-rejetee")">@(ressource.IsActive ? "Actif" : "Inactif")</span>
+            </div>
+            <div class="small text-muted-custom mt-2">
+                @if (!string.IsNullOrWhiteSpace(ressource.Telephone))
+                {
+                    <div><i class="bi bi-telephone"></i> @ressource.Telephone</div>
+                }
+                @if (!string.IsNullOrWhiteSpace(ressource.Email))
+                {
+                    <div><i class="bi bi-envelope"></i> @ressource.Email</div>
+                }
+            </div>
+            <div class="d-flex gap-2 mt-3">
+                <a asp-action="Edit" asp-route-id="@ressource.Id" class="btn btn-sm btn-outline-or"><i class="bi bi-pencil"></i></a>
+                @if (ressource.IsActive)
+                {
+                    <form asp-action="Delete" asp-route-id="@ressource.Id" method="post" onsubmit="return confirm('Desactiver cette ressource ?')">
+                        @Html.AntiForgeryToken()
+                        <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-x-circle"></i></button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+}
+</div>
+
+@if (!Model.Any())
+{
+    <div class="text-center text-muted-custom py-5">Aucune ressource trouvee.</div>
+}

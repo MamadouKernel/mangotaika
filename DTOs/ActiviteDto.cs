@@ -53,10 +53,15 @@ public class DocumentActiviteDto
 public class ParticipantActiviteDto
 {
     public Guid Id { get; set; }
-    public Guid ScoutId { get; set; }
+    public Guid? ScoutId { get; set; }
+    public Guid? RessourceId { get; set; }
+    public bool EstRessource => RessourceId.HasValue;
+    public string TypeParticipant { get; set; } = "Scout";
     public string NomComplet { get; set; } = string.Empty;
     public string Matricule { get; set; } = string.Empty;
     public string? NomBranche { get; set; }
+    public string? Telephone { get; set; }
+    public string? Email { get; set; }
     public StatutPresence Presence { get; set; }
 }
 

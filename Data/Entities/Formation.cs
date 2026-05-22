@@ -45,7 +45,7 @@ public enum NiveauFormation
 {
     [Display(Name = "SAPF")]
     Sapf,
-    [Display(Name = "AITCHWE")]
+    [Display(Name = "AÎTCHWE")]
     Aitchwe,
     [Display(Name = "KLADIGNON")]
     Kladignon,
@@ -55,11 +55,11 @@ public enum NiveauFormation
     Nandjelet,
     [Display(Name = "STATPRO")]
     Statpro,
-    [Display(Name = "NANDJELET (2 Buchettes)")]
+    [Display(Name = "NANDJELET (2 Bûchettes)")]
     NandjeletDeuxBuchettes,
-    [Display(Name = "3 BUCHETTES")]
+    [Display(Name = "3 BÛCHETTES")]
     TroisBuchettes,
-    [Display(Name = "4 BUCHETTES")]
+    [Display(Name = "4 BÛCHETTES")]
     QuatreBuchettes,
     [Display(Name = "AUTRES")]
     Autres

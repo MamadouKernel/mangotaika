@@ -5,10 +5,13 @@
     Layout = "_LayoutAdmin";
     var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
     var scouts = ViewBag.ScoutsGroupe as List<Scout> ?? new();
+    var ressources = ViewBag.Ressources as List<Ressource> ?? new();
     var rapportActivite = ViewBag.RapportActivite as RapportActivite;
     var presenceUrl = ViewBag.PresenceUrl as string ?? string.Empty;
-    var participantIds = Model.Participants.Select(p => p.ScoutId).ToHashSet();
+    var participantIds = Model.Participants.Where(p => p.ScoutId.HasValue).Select(p => p.ScoutId!.Value).ToHashSet();
+    var participantRessourceIds = Model.Participants.Where(p => p.RessourceId.HasValue).Select(p => p.RessourceId!.Value).ToHashSet();
     var scoutsDisponibles = scouts.Where(s => !participantIds.Contains(s.Id)).ToList();
+    var ressourcesDisponibles = ressources.Where(r => !participantRessourceIds.Contains(r.Id)).ToList();
     var pointageDisponible = Model.Statut == StatutActivite.EnCours || Model.Statut == StatutActivite.Terminee;
     var pointageCloture = Model.PointageCloture;
     var pointageBadgeClass = pointageCloture ? "badge-rejetee" : pointageDisponible ? "badge-approuvee" : "badge-soumise";
@@ -252,6 +255,19 @@
                             }
                         </div>
                         <div>
+                            <label class="form-label small">Ajouter des ressources</label>
+                            <select name="ressourceIds" class="form-select" multiple size="8" aria-label="Ressources disponibles">
+                                @foreach (var r in ressourcesDisponibles)
+                                {
+                                    <option value="@r.Id">@($"{r.Prenom} {r.Nom}".Trim()) - @r.Type</option>
+                                }
+                            </select>
+                            @if (!ressourcesDisponibles.Any())
+                            {
+                                <small class="text-muted-custom d-block mt-2">Aucune ressource disponible pour ce groupe.</small>
+                            }
+                        </div>
+                        <div>
                             <label for="matriculesParticipants" class="form-label small">Importer par matricules</label>
                             <textarea id="matriculesParticipants"
                                       name="matricules"
@@ -283,7 +299,7 @@
                             <tr>
                                 <th>Matricule</th>
                                 <th>Nom</th>
-                                <th>Branche</th>
+                                <th>Profil</th>
                                 <th>Presence</th>
                                 <th></th>
                             </tr>
@@ -292,9 +308,9 @@
                             @foreach (var p in Model.Participants)
                             {
                                 <tr>
-                                    <td><code>@p.Matricule</code></td>
+                                    <td><code>@(string.IsNullOrWhiteSpace(p.Matricule) ? "-" : p.Matricule)</code></td>
                                     <td>@p.NomComplet</td>
-                                    <td>@(p.NomBranche ?? "-")</td>
+                                    <td>@(p.EstRessource ? p.TypeParticipant : (p.NomBranche ?? "Scout"))</td>
                                     <td>
                                         @if (canManage && pointageDisponible && !pointageCloture)
                                         {

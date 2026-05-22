@@ -425,7 +425,7 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
         }
 
         dto.ActivitesFamille = await db.ParticipantsActivite
-            .Where(p => scoutIds.Contains(p.ScoutId) && !p.Activite.EstSupprime)
+            .Where(p => p.ScoutId.HasValue && scoutIds.Contains(p.ScoutId.Value) && !p.Activite.EstSupprime)
             .Select(p => p.ActiviteId)
             .Distinct()
             .CountAsync();
@@ -484,7 +484,7 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
             .ToListAsync();
 
         dto.DernieresActivites = await db.ParticipantsActivite
-            .Where(p => scoutIds.Contains(p.ScoutId) && !p.Activite.EstSupprime)
+            .Where(p => p.ScoutId.HasValue && scoutIds.Contains(p.ScoutId.Value) && !p.Activite.EstSupprime)
             .OrderByDescending(p => p.Activite.DateDebut)
             .GroupBy(p => new
             {

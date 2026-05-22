@@ -98,6 +98,7 @@ builder.Services.AddScoped<IActualiteService, ActualiteService>();
 builder.Services.AddScoped<ISmsService, SmsService>();
 builder.Services.AddScoped<IFormationService, FormationService>();
 builder.Services.AddScoped<IFileUploadService, FileUploadService>();
+builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>();
 builder.Services.AddScoped<INotificationDispatchService, NotificationDispatchService>();
 builder.Services.AddScoped<OperationalAccessService>();
 builder.Services.AddScoped<IClaimsTransformation, CommissaireDistrictClaimsTransformation>();
