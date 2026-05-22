@@ -4,10 +4,21 @@
     ViewData["Title"] = $"{Model.Prenom} {Model.Nom}";
     Layout = "_LayoutAdmin";
     var inscriptions = ViewBag.InscriptionsAnnuelles as List<InscriptionAnnuelleScout> ?? new();
+    var participations = ViewBag.Participations as List<ParticipantActivite> ?? new();
     var scoutQrValue = ViewBag.ScoutQrValue as string ?? string.Empty;
     var contactUrgence = string.IsNullOrWhiteSpace(Model.ContactUrgenceNom)
         ? "Aucun contact d'urgence renseigne"
         : $"{Model.ContactUrgenceNom} {(string.IsNullOrWhiteSpace(Model.ContactUrgenceRelation) ? string.Empty : $"({Model.ContactUrgenceRelation})")}".Trim();
+    string FormatDate(DateTime? value) => value?.ToString("dd/MM/yyyy HH:mm") ?? "-";
+    string FormatDuree(Activite? activite)
+    {
+        if (activite == null || !activite.DateFin.HasValue) return "-";
+        var duree = activite.DateFin.Value - activite.DateDebut;
+        if (duree.TotalMinutes <= 0) return "-";
+        if (duree.TotalDays >= 1) return $"{Math.Ceiling(duree.TotalDays):0} j";
+        if (duree.TotalHours >= 1) return $"{duree.TotalHours:0.#} h";
+        return $"{duree.TotalMinutes:0} min";
+    }
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
@@ -131,6 +142,50 @@
             </div>
         </div>
     </div>
+</div>
+
+<div class="card-3d p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h5 class="mb-0 text-or">Participations aux activites</h5>
+        <span class="badge-3d badge-soumise">@participations.Count</span>
+    </div>
+    @if (participations.Any())
+    {
+        <div class="table-responsive">
+            <table class="table-modern">
+                <thead>
+                    <tr>
+                        <th>Activite</th>
+                        <th>Date debut / fin</th>
+                        <th>Inscription</th>
+                        <th>Duree</th>
+                        <th>Statut activite</th>
+                        <th>Participation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var participation in participations)
+                {
+                    <tr>
+                        <td>@(participation.Activite?.Titre ?? "-")</td>
+                        <td>
+                            <div>@FormatDate(participation.Activite?.DateDebut)</div>
+                            <small class="text-muted-custom">@FormatDate(participation.Activite?.DateFin)</small>
+                        </td>
+                        <td>@participation.DateInscription.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>@FormatDuree(participation.Activite)</td>
+                        <td><span class="badge-3d badge-soumise">@(participation.Activite?.Statut.ToString() ?? "-")</span></td>
+                        <td><span class="badge-3d @(participation.Presence == StatutPresence.Present ? "badge-validee" : participation.Presence == StatutPresence.Absent ? "badge-rejetee" : "badge-soumise")">@participation.Presence</span></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="text-muted-custom">Aucune participation enregistree pour ce scout.</div>
+    }
 </div>
 
 <div class="card-3d p-4">

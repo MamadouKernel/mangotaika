@@ -70,6 +70,59 @@ public class HomeController(AppDbContext db, IConfiguration configuration) : Con
 
     public IActionResult Contact() => View(new Data.Entities.ContactMessage());
 
+    [HttpGet]
+    public IActionResult Verification() => View(new VerificationScoutViewModel());
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Verification(VerificationScoutViewModel model)
+    {
+        model.RechercheEffectuee = true;
+
+        if (string.IsNullOrWhiteSpace(model.Matricule)
+            || string.IsNullOrWhiteSpace(model.Nom)
+            || string.IsNullOrWhiteSpace(model.Prenom))
+        {
+            model.Statut = "Inexistant";
+            ModelState.AddModelError(string.Empty, "Renseignez le matricule, le nom et le prenom pour lancer la verification.");
+            return View(model);
+        }
+
+        var matricule = model.Matricule.Trim();
+        var nom = NormalizeSearchValue(model.Nom);
+        var prenom = NormalizeSearchValue(model.Prenom);
+
+        var scout = await db.Scouts
+            .AsNoTracking()
+            .Include(s => s.Groupe)
+            .Include(s => s.Branche)
+            .Where(s => s.IsActive
+                && s.Matricule != null
+                && s.Matricule.ToLower() == matricule.ToLower())
+            .FirstOrDefaultAsync(s => s.Nom.ToLower() == nom && s.Prenom.ToLower() == prenom);
+
+        if (scout == null)
+        {
+            model.Statut = "Inexistant";
+            return View(model);
+        }
+
+        var currentYear = DateTime.UtcNow.Year;
+        var inscription = await db.InscriptionsAnnuellesScouts
+            .AsNoTracking()
+            .Where(i => i.ScoutId == scout.Id && i.AnneeReference == currentYear)
+            .OrderByDescending(i => i.DateInscription)
+            .FirstOrDefaultAsync();
+
+        model.NomComplet = $"{scout.Prenom} {scout.Nom}";
+        model.MatriculeTrouve = scout.Matricule;
+        model.Groupe = scout.Groupe?.Nom;
+        model.Branche = scout.Branche?.Nom;
+        model.Statut = inscription?.CotisationNationaleAjour == true ? "A jour" : "Non a jour";
+
+        return View(model);
+    }
+
     public IActionResult WhatsApp()
     {
         var normalizedPhone = (configuration["Contact:WhatsAppNumber"] ?? "2250759013291")
@@ -214,5 +267,10 @@ public class HomeController(AppDbContext db, IConfiguration configuration) : Con
             IconClass = iconClass,
             Url = $"https://wa.me/{phoneNumber}?text={Uri.EscapeDataString(message)}"
         };
+    }
+
+    private static string NormalizeSearchValue(string value)
+    {
+        return value.Trim().ToLower();
     }
 }

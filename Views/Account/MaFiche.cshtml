@@ -1,4 +1,4 @@
-@model MangoTaika.Data.Entities.Scout
+﻿@model MangoTaika.Data.Entities.Scout
 @{
     ViewData["Title"] = "Ma fiche scout";
     var isParentView = User.IsInRole("Parent");
@@ -7,6 +7,16 @@
     var participations = ViewBag.Participations as List<MangoTaika.Data.Entities.ParticipantActivite> ?? new();
     var cotisations = ViewBag.Cotisations as List<MangoTaika.Data.Entities.TransactionFinanciere> ?? new();
     var historique = ViewBag.Historique as List<MangoTaika.Data.Entities.HistoriqueFonction> ?? new();
+    string FormatDate(DateTime? value) => value?.ToString("dd/MM/yyyy HH:mm") ?? "-";
+    string FormatDuree(MangoTaika.Data.Entities.Activite? activite)
+    {
+        if (activite == null || !activite.DateFin.HasValue) return "-";
+        var duree = activite.DateFin.Value - activite.DateDebut;
+        if (duree.TotalMinutes <= 0) return "-";
+        if (duree.TotalDays >= 1) return $"{Math.Ceiling(duree.TotalDays):0} j";
+        if (duree.TotalHours >= 1) return $"{duree.TotalHours:0.#} h";
+        return $"{duree.TotalMinutes:0} min";
+    }
 }
 
 <h2 class="section-title mb-1">
@@ -132,21 +142,26 @@
         </div>
         }
 
-        <!-- Participations aux activités -->
+        <!-- Participations aux activites -->
         @if (participations.Any())
         {
         <div class="card-3d p-4 mb-4">
-            <h6 style="color:var(--bleu-logo);font-weight:700;"><i class="bi bi-calendar-event"></i> Activités (@participations.Count)</h6>
+            <h6 style="color:var(--bleu-logo);font-weight:700;"><i class="bi bi-calendar-event"></i> Activites (@participations.Count)</h6>
             <div class="table-responsive mt-2">
                 <table class="table-modern">
-                    <thead><tr><th>Activité</th><th>Date</th><th>Lieu</th><th>Présence</th></tr></thead>
+                    <thead><tr><th>Activite</th><th>Date debut / fin</th><th>Inscription</th><th>Duree</th><th>Statut activite</th><th>Participation</th></tr></thead>
                     <tbody>
                         @foreach (var p in participations.OrderByDescending(x => x.Activite?.DateDebut))
                         {
                             <tr>
-                                <td>@(p.Activite?.Titre ?? "—")</td>
-                                <td>@(p.Activite?.DateDebut.ToString("dd/MM/yyyy") ?? "—")</td>
-                                <td>@(p.Activite?.Lieu ?? "—")</td>
+                                <td>@(p.Activite?.Titre ?? "-")</td>
+                                <td>
+                                    <div>@FormatDate(p.Activite?.DateDebut)</div>
+                                    <small class="text-muted-custom">@FormatDate(p.Activite?.DateFin)</small>
+                                </td>
+                                <td>@p.DateInscription.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@FormatDuree(p.Activite)</td>
+                                <td><span class="badge-3d badge-soumise">@(p.Activite?.Statut.ToString() ?? "-")</span></td>
                                 <td><span class="badge-3d @(p.Presence == MangoTaika.Data.Entities.StatutPresence.Present ? "badge-validee" : p.Presence == MangoTaika.Data.Entities.StatutPresence.Absent ? "badge-rejetee" : "badge-soumise")">@p.Presence</span></td>
                             </tr>
                         }
@@ -155,7 +170,6 @@
             </div>
         </div>
         }
-
         <!-- Cotisations -->
         @if (cotisations.Any())
         {
@@ -203,3 +217,4 @@
         }
     </div>
 </div>
+

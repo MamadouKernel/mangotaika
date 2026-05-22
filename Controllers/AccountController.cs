@@ -869,7 +869,8 @@ public class AccountController(
         var competences = await db.Competences.Where(c => c.ScoutId == scout.Id).ToListAsync();
         var participations = await db.ParticipantsActivite
             .Include(p => p.Activite)
-            .Where(p => p.ScoutId == scout.Id)
+            .Where(p => p.ScoutId == scout.Id && !p.Activite.EstSupprime)
+            .OrderByDescending(p => p.Activite.DateDebut)
             .ToListAsync();
         var cotisations = await db.TransactionsFinancieres
             .Where(t => t.ScoutId == scout.Id && !t.EstSupprime)
@@ -954,7 +955,8 @@ public class AccountController(
         var competences = await db.Competences.Where(c => c.ScoutId == scout.Id).ToListAsync();
         var participations = await db.ParticipantsActivite
             .Include(p => p.Activite)
-            .Where(p => p.ScoutId == scout.Id)
+            .Where(p => p.ScoutId == scout.Id && !p.Activite.EstSupprime)
+            .OrderByDescending(p => p.Activite.DateDebut)
             .ToListAsync();
         var cotisations = await db.TransactionsFinancieres
             .Where(t => t.ScoutId == scout.Id && !t.EstSupprime)

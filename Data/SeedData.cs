@@ -363,15 +363,15 @@ public static class SeedData
         // ============================================================
         var formation1 = new Formation
         {
-            Id = Guid.NewGuid(), Titre = "Les fondamentaux du scoutisme", Description = "Formation d'introduction aux principes, valeurs et techniques de base du scoutisme.", Niveau = NiveauFormation.Debutant, Statut = StatutFormation.Publiee, DureeEstimeeHeures = 6, AuteurId = admin.Id, DatePublication = now.AddDays(-15)
+            Id = Guid.NewGuid(), Titre = "Les fondamentaux du scoutisme", Description = "Formation d'introduction aux principes, valeurs et techniques de base du scoutisme.", Niveau = NiveauFormation.Sapf, Statut = StatutFormation.Publiee, DureeEstimeeHeures = 6, AuteurId = admin.Id, DatePublication = now.AddDays(-15)
         };
         var formation2 = new Formation
         {
-            Id = Guid.NewGuid(), Titre = "Leadership et gestion d'équipe", Description = "Formation avancée pour les chefs de patrouille et responsables d'unité.", Niveau = NiveauFormation.Avance, Statut = StatutFormation.Publiee, DureeEstimeeHeures = 10, AuteurId = admin.Id, BrancheCibleId = branches[1].Id, DatePublication = now.AddDays(-5)
+            Id = Guid.NewGuid(), Titre = "Leadership et gestion d'équipe", Description = "Formation avancée pour les chefs de patrouille et responsables d'unité.", Niveau = NiveauFormation.Kladignon, Statut = StatutFormation.Publiee, DureeEstimeeHeures = 10, AuteurId = admin.Id, BrancheCibleId = branches[1].Id, DatePublication = now.AddDays(-5)
         };
         var formation3 = new Formation
         {
-            Id = Guid.NewGuid(), Titre = "Techniques de camp", Description = "Tout savoir pour organiser et vivre un camp scout réussi.", Niveau = NiveauFormation.Intermediaire, Statut = StatutFormation.Brouillon, DureeEstimeeHeures = 8, AuteurId = gestionnaire.Id
+            Id = Guid.NewGuid(), Titre = "Techniques de camp", Description = "Tout savoir pour organiser et vivre un camp scout réussi.", Niveau = NiveauFormation.Aitchwe, Statut = StatutFormation.Brouillon, DureeEstimeeHeures = 8, AuteurId = gestionnaire.Id
         };
         db.Formations.AddRange(formation1, formation2, formation3);
         await db.SaveChangesAsync();

@@ -110,7 +110,6 @@
                             <i class="bi bi-chevron-down sidebar-chevron"></i>
                         </a>
                         <ul class="sidebar-submenu" id="grp-mon-perimetre">
-                            <li><a class="nav-link" asp-controller="Account" asp-action="MaFiche"><i class="bi bi-person-badge"></i> Ma fiche scout</a></li>
                             @if (activeScopedLeader == "ChefGroupe")
                             {
                                 <li><a class="nav-link" asp-controller="Groupes" asp-action="Index"><i class="bi bi-building"></i> Mon groupe</a></li>
@@ -326,5 +325,4 @@
         if (overlay) overlay.classList.remove('open');
     }
 </script>
-
 

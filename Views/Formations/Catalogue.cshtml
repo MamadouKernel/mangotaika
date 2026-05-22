@@ -1,3 +1,5 @@
+@using MangoTaika.Data.Entities
+@using MangoTaika.Helpers
 @model List<MangoTaika.DTOs.FormationDto>
 @{
     ViewData["Title"] = "Catalogue des formations";
@@ -80,29 +82,9 @@
                 <label class="form-label">Niveau</label>
                 <select name="niveau" class="form-select">
                     <option value="">Tous</option>
-                    @if (string.Equals((string?)ViewBag.Niveau, "Debutant", StringComparison.OrdinalIgnoreCase))
+                    @foreach (var niveauFormation in Enum.GetValues<NiveauFormation>())
                     {
-                        <option value="Debutant" selected="selected">Debutant</option>
-                    }
-                    else
-                    {
-                        <option value="Debutant">Debutant</option>
-                    }
-                    @if (string.Equals((string?)ViewBag.Niveau, "Intermediaire", StringComparison.OrdinalIgnoreCase))
-                    {
-                        <option value="Intermediaire" selected="selected">Intermediaire</option>
-                    }
-                    else
-                    {
-                        <option value="Intermediaire">Intermediaire</option>
-                    }
-                    @if (string.Equals((string?)ViewBag.Niveau, "Avance", StringComparison.OrdinalIgnoreCase))
-                    {
-                        <option value="Avance" selected="selected">Avance</option>
-                    }
-                    else
-                    {
-                        <option value="Avance">Avance</option>
+                        <option value="@niveauFormation" selected="@(string.Equals((string?)ViewBag.Niveau, niveauFormation.ToString(), StringComparison.OrdinalIgnoreCase) ? "selected" : null)">@niveauFormation.GetDisplayName()</option>
                     }
                 </select>
             </div>
@@ -179,7 +161,7 @@
 
                     <div class="campus-course-card__body">
                         <div class="campus-course-card__badges">
-                            <span class="badge bg-info">@f.Niveau</span>
+                            <span class="badge bg-info">@f.Niveau.GetDisplayName()</span>
                             <span class="badge bg-secondary">@f.DureeEstimeeHeures h</span>
                             <span class="badge bg-primary">@f.NombreModules modules</span>
                             @if (!string.IsNullOrWhiteSpace(f.SessionStatut))

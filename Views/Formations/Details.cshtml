@@ -1,3 +1,4 @@
+@using MangoTaika.Helpers
 @model MangoTaika.DTOs.FormationDetailDto
 @{
     ViewData["Title"] = Model.Titre;
@@ -45,7 +46,7 @@
         <aside class="campus-hero__side">
             <div class="campus-hero-card">
                 <div class="campus-hero-card__label">Vue d'ensemble</div>
-                <strong>@Model.Niveau · @Model.DureeEstimeeHeures h · @Model.NombreModules modules</strong>
+                <strong>@Model.Niveau.GetDisplayName() · @Model.DureeEstimeeHeures h · @Model.NombreModules modules</strong>
                 <small>
                     Auteur : @Model.NomAuteur
                     @if (!string.IsNullOrWhiteSpace(Model.NomBrancheCible))

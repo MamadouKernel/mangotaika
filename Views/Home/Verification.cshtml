@@ -1,0 +1,169 @@
+@model MangoTaika.Models.VerificationScoutViewModel
+@{
+    ViewData["Title"] = "Verification";
+    var statusClass = Model.Statut == "A jour" ? "verification-result--ok" : Model.Statut == "Non a jour" ? "verification-result--warning" : "verification-result--missing";
+}
+
+<section class="verification-page">
+    <div class="verification-panel">
+        <div class="verification-panel__header">
+            <span class="verification-panel__eyebrow"><i class="bi bi-shield-check"></i> Verification</span>
+            <h1>Verifier une fiche scoute</h1>
+            <p>Renseignez le matricule, le nom et le prenom du scout pour verifier son statut d'inscription annuelle.</p>
+        </div>
+
+        <form asp-action="Verification" method="post" class="verification-form">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-danger small"></div>
+            <div>
+                <label asp-for="Matricule" class="form-label">Matricule</label>
+                <input asp-for="Matricule" class="form-control" placeholder="Ex: 0583753X" autocomplete="off" />
+            </div>
+            <div class="verification-form__grid">
+                <div>
+                    <label asp-for="Nom" class="form-label">Nom</label>
+                    <input asp-for="Nom" class="form-control" autocomplete="off" />
+                </div>
+                <div>
+                    <label asp-for="Prenom" class="form-label">Prenom</label>
+                    <input asp-for="Prenom" class="form-control" autocomplete="off" />
+                </div>
+            </div>
+            <button type="submit" class="btn btn-mango"><i class="bi bi-search"></i> Verifier</button>
+        </form>
+
+        @if (Model.RechercheEffectuee)
+        {
+            <div class="verification-result @statusClass">
+                <div>
+                    <span>Statut</span>
+                    <strong>@(Model.Statut == "Inexistant" ? "Scout inexistant" : Model.Statut)</strong>
+                </div>
+                @if (Model.Statut != "Inexistant")
+                {
+                    <dl>
+                        <dt>Scout</dt>
+                        <dd>@Model.NomComplet</dd>
+                        <dt>Matricule</dt>
+                        <dd>@Model.MatriculeTrouve</dd>
+                        <dt>Groupe</dt>
+                        <dd>@(Model.Groupe ?? "-")</dd>
+                        <dt>Branche</dt>
+                        <dd>@(Model.Branche ?? "-")</dd>
+                    </dl>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+<style>
+    .verification-page {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 48px 16px 72px;
+    }
+
+    .verification-panel {
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(95, 127, 67, 0.16);
+        border-radius: 22px;
+        padding: 28px;
+        box-shadow: 0 18px 45px rgba(20, 34, 45, 0.08);
+    }
+
+    .verification-panel__eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--vert-logo);
+        font-weight: 800;
+        text-transform: uppercase;
+        font-size: 0.78rem;
+        letter-spacing: 0.04em;
+        margin-bottom: 8px;
+    }
+
+    .verification-panel h1 {
+        color: var(--bleu-logo);
+        font-weight: 900;
+        margin-bottom: 8px;
+    }
+
+    .verification-panel p {
+        color: #607086;
+        margin-bottom: 0;
+    }
+
+    .verification-form {
+        display: grid;
+        gap: 18px;
+        margin-top: 28px;
+    }
+
+    .verification-form__grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+    }
+
+    .verification-result {
+        margin-top: 26px;
+        border-radius: 20px;
+        padding: 20px;
+        border: 1px solid transparent;
+    }
+
+    .verification-result span {
+        display: block;
+        color: #607086;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.78rem;
+        margin-bottom: 4px;
+    }
+
+    .verification-result strong {
+        font-size: 1.45rem;
+        color: #223547;
+    }
+
+    .verification-result dl {
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        gap: 8px 14px;
+        margin: 18px 0 0;
+    }
+
+    .verification-result dt {
+        color: #607086;
+    }
+
+    .verification-result dd {
+        margin: 0;
+        color: #223547;
+        font-weight: 700;
+    }
+
+    .verification-result--ok {
+        background: rgba(95, 127, 67, 0.12);
+        border-color: rgba(95, 127, 67, 0.28);
+    }
+
+    .verification-result--warning {
+        background: rgba(245, 158, 11, 0.12);
+        border-color: rgba(245, 158, 11, 0.28);
+    }
+
+    .verification-result--missing {
+        background: rgba(239, 68, 68, 0.1);
+        border-color: rgba(239, 68, 68, 0.22);
+    }
+
+    @@media (max-width: 640px) {
+        .verification-form__grid,
+        .verification-result dl {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>

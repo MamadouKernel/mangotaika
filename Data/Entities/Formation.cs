@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace MangoTaika.Data.Entities;
 
 public class Formation
@@ -6,7 +8,7 @@ public class Formation
     public string Titre { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? ImageUrl { get; set; }
-    public NiveauFormation Niveau { get; set; } = NiveauFormation.Debutant;
+    public NiveauFormation Niveau { get; set; } = NiveauFormation.Sapf;
     public StatutFormation Statut { get; set; } = StatutFormation.Brouillon;
     public int DureeEstimeeHeures { get; set; }
     public DateTime DateCreation { get; set; } = DateTime.UtcNow;
@@ -39,5 +41,27 @@ public class Formation
     public ICollection<FormationPrerequis> FormationDebloqueesParCeCours { get; set; } = [];
 }
 
-public enum NiveauFormation { Debutant, Intermediaire, Avance }
+public enum NiveauFormation
+{
+    [Display(Name = "SAPF")]
+    Sapf,
+    [Display(Name = "AITCHWE")]
+    Aitchwe,
+    [Display(Name = "KLADIGNON")]
+    Kladignon,
+    [Display(Name = "KAFO")]
+    Kafo,
+    [Display(Name = "NANDJELET")]
+    Nandjelet,
+    [Display(Name = "STATPRO")]
+    Statpro,
+    [Display(Name = "NANDJELET (2 Buchettes)")]
+    NandjeletDeuxBuchettes,
+    [Display(Name = "3 BUCHETTES")]
+    TroisBuchettes,
+    [Display(Name = "4 BUCHETTES")]
+    QuatreBuchettes,
+    [Display(Name = "AUTRES")]
+    Autres
+}
 public enum StatutFormation { Brouillon, Publiee, Archivee }

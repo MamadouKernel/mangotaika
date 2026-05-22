@@ -257,6 +257,12 @@ public class ScoutsController(
             .OrderByDescending(i => i.AnneeReference)
             .ToListAsync();
 
+        ViewBag.Participations = await db.ParticipantsActivite.AsNoTracking()
+            .Include(p => p.Activite)
+            .Where(p => p.ScoutId == id && !p.Activite.EstSupprime)
+            .OrderByDescending(p => p.Activite.DateDebut)
+            .ToListAsync();
+
         return View(scout);
     }
 

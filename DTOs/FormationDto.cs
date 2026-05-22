@@ -42,7 +42,7 @@ public class FormationCreateDto
 {
     public string Titre { get; set; } = string.Empty;
     public string? Description { get; set; }
-    public NiveauFormation Niveau { get; set; } = NiveauFormation.Debutant;
+    public NiveauFormation Niveau { get; set; } = NiveauFormation.Sapf;
     public int DureeEstimeeHeures { get; set; }
     public Guid? BrancheCibleId { get; set; }
     public Guid? CompetenceLieeId { get; set; }

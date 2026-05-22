@@ -1,3 +1,4 @@
+@using MangoTaika.Helpers
 @model MangoTaika.DTOs.FormationProgressionDto
 @{
     ViewData["Title"] = Model.Formation.Titre;
@@ -122,7 +123,7 @@
                 </div>
                 <div class="classroom-meta-card">
                     <span class="classroom-meta-card__label">Niveau</span>
-                    <strong>@Model.Formation.Niveau</strong>
+                    <strong>@Model.Formation.Niveau.GetDisplayName()</strong>
                     <small>@Model.Formation.DureeEstimeeHeures h estimees</small>
                 </div>
                 <div class="classroom-meta-card">
