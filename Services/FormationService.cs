@@ -716,7 +716,24 @@ public class FormationService(AppDbContext db) : IFormationService
             .Where(f => f.Statut == StatutFormation.Publiee);
 
         if (brancheId.HasValue)
-            query = query.Where(f => f.BrancheCibleId == null || f.BrancheCibleId == brancheId);
+        {
+            var brancheKey = await db.Branches
+                .AsNoTracking()
+                .Where(b => b.Id == brancheId.Value)
+                .Select(b => b.NomNormalise)
+                .FirstOrDefaultAsync();
+
+            if (string.IsNullOrWhiteSpace(brancheKey))
+            {
+                query = query.Where(f => f.BrancheCibleId == null || f.BrancheCibleId == brancheId);
+            }
+            else
+            {
+                query = query.Where(f =>
+                    f.BrancheCibleId == null
+                    || (f.BrancheCible != null && f.BrancheCible.NomNormalise == brancheKey));
+            }
+        }
 
         var formations = await query
             .OrderByDescending(f => f.DatePublication)

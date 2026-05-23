@@ -46,11 +46,16 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Branche cible</label>
+                    @{
+                        var selectedBrancheCibleKey = ViewBag.SelectedBrancheCibleKey as string;
+                    }
                     <select name="BrancheCibleId" class="form-select">
                         <option value="">— Toutes —</option>
                         @foreach (var b in (List<MangoTaika.Data.Entities.Branche>)ViewBag.Branches)
                         {
-                            <option value="@b.Id" selected="@(b.Id == Model.BrancheCibleId)">@b.Nom</option>
+                            var isSelected = b.Id == Model.BrancheCibleId
+                                || (!string.IsNullOrWhiteSpace(selectedBrancheCibleKey) && b.NomNormalise == selectedBrancheCibleKey);
+                            <option value="@b.Id" selected="@isSelected">@b.Nom - tous les groupes</option>
                         }
                     </select>
                 </div>

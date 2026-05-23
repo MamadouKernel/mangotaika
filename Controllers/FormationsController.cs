@@ -636,10 +636,30 @@ public class FormationsController(
 
     private async Task ChargerViewBags(Guid? currentFormationId = null)
     {
-        ViewBag.Branches = await db.Branches
+        ViewBag.SelectedBrancheCibleKey = currentFormationId.HasValue
+            ? await db.Formations
+                .AsNoTracking()
+                .Where(f => f.Id == currentFormationId.Value)
+                .Select(f => f.BrancheCible != null ? f.BrancheCible.NomNormalise : null)
+                .FirstOrDefaultAsync()
+            : null;
+
+        var branches = await db.Branches
+            .AsNoTracking()
             .Where(b => b.IsActive)
-            .OrderBy(b => b.Nom)
             .ToListAsync();
+
+        ViewBag.Branches = branches
+            .GroupBy(b => string.IsNullOrWhiteSpace(b.NomNormalise)
+                ? DatabaseText.NormalizeSearchKey(b.Nom)
+                : b.NomNormalise)
+            .Select(g => g
+                .OrderBy(b => BranchOrdering.GetSortWeight(b.Nom))
+                .ThenBy(b => b.Nom)
+                .First())
+            .OrderBy(b => BranchOrdering.GetSortWeight(b.Nom))
+            .ThenBy(b => b.Nom)
+            .ToList();
 
         ViewBag.FormationOptions = await db.Formations
             .AsNoTracking()
