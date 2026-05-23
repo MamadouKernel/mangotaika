@@ -41,6 +41,13 @@ services:
       AdminSeed__Password: ${ADMIN_SEED_PASSWORD:-}
       Contact__Email: ${CONTACT_EMAIL:-contact@mangotaika.ci}
       Contact__WhatsAppNumber: ${CONTACT_WHATSAPP_NUMBER:-2250759013291}
+      Email__Provider: ${EMAIL_PROVIDER:-Smtp}
+      Email__From: ${EMAIL_FROM:-contact@mangotaika.ci}
+      Email__Smtp__Host: ${EMAIL_SMTP_HOST:-mail1.netim.hosting}
+      Email__Smtp__Port: ${EMAIL_SMTP_PORT:-587}
+      Email__Smtp__EnableSsl: ${EMAIL_SMTP_ENABLE_SSL:-true}
+      Email__Smtp__Username: ${EMAIL_SMTP_USERNAME:-contact@mangotaika.ci}
+      Email__Smtp__Password: ${EMAIL_SMTP_PASSWORD:-}
       SeedDemoData: ${SEED_DEMO_DATA:-false}
       DataProtection__KeysPath: /app/data-protection-keys
       TZ: ${TZ:-Africa/Abidjan}
