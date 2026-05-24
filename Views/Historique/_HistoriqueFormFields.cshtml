@@ -3,6 +3,7 @@
 @{
     var selectedCategories = Model.GetSelectedCategories().ToHashSet();
     var entries = Model.GetNormalizedEntries();
+    var groupes = ViewBag.Groupes as List<Groupe> ?? new();
 }
 
 <div class="mb-3">
@@ -51,7 +52,13 @@
                 </div>
                 <div class="col-md-4 mb-3">
                     <label asp-for="Entries[i].Groupe" class="form-label"></label>
-                    <input asp-for="Entries[i].Groupe" class="form-control" data-field="Groupe" placeholder="Ex: 1er Abidjan" />
+                    <select asp-for="Entries[i].Groupe" class="form-select" data-field="Groupe">
+                        <option value="">-- Selectionner un groupe --</option>
+                        @foreach (var groupe in groupes)
+                        {
+                            <option value="@groupe.Nom">@groupe.Nom</option>
+                        }
+                    </select>
                     <span asp-validation-for="Entries[i].Groupe" class="text-danger small"></span>
                 </div>
                 <div class="col-md-3 mb-3">

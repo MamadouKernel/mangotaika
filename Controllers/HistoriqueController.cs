@@ -77,8 +77,11 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
     }
 
     [Authorize(Roles = "Administrateur,Gestionnaire")]
-    public IActionResult Create()
-        => View(new HistoriqueFormViewModel());
+    public async Task<IActionResult> Create()
+    {
+        await ChargerGroupesAsync();
+        return View(new HistoriqueFormViewModel());
+    }
 
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     [HttpPost]
@@ -93,6 +96,7 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
 
         if (!ModelState.IsValid)
         {
+            await ChargerGroupesAsync();
             return View(model);
         }
 
@@ -114,6 +118,7 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
 
         if (!await TryApplyEntryPhotosAsync(entries, membre.CategorieDetails.ToList()))
         {
+            await ChargerGroupesAsync();
             return View(model);
         }
 
@@ -131,7 +136,13 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
         var membre = await db.MembresHistoriques
             .Include(m => m.CategorieDetails.OrderBy(detail => detail.Ordre).ThenBy(detail => detail.Categorie))
             .FirstOrDefaultAsync(m => m.Id == id && !m.EstSupprime);
-        return membre is null ? NotFound() : View(HistoriqueFormViewModel.FromEntity(membre));
+        if (membre is null)
+        {
+            return NotFound();
+        }
+
+        await ChargerGroupesAsync();
+        return View(HistoriqueFormViewModel.FromEntity(membre));
     }
 
     [Authorize(Roles = "Administrateur,Gestionnaire")]
@@ -152,6 +163,7 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
 
         if (!ModelState.IsValid)
         {
+            await ChargerGroupesAsync();
             return View(model);
         }
 
@@ -178,6 +190,7 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
 
         if (!await TryApplyEntryPhotosAsync(entries, updatedDetails))
         {
+            await ChargerGroupesAsync();
             return View(model);
         }
 
@@ -278,6 +291,15 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
         }
 
         return query;
+    }
+
+    private async Task ChargerGroupesAsync()
+    {
+        ViewBag.Groupes = await db.Groupes
+            .AsNoTracking()
+            .Where(g => g.IsActive)
+            .OrderBy(g => g.Nom)
+            .ToListAsync();
     }
 
     private static List<CategorieHistorique> NormalizeCategories(List<CategorieHistorique>? categories)

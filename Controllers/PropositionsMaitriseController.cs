@@ -427,6 +427,7 @@ public class PropositionsMaitriseController(
         model.Membres = (model.Membres ?? [])
             .Where(m => !string.IsNullOrWhiteSpace(m.NomChef)
                 || !string.IsNullOrWhiteSpace(m.Fonction)
+                || !string.IsNullOrWhiteSpace(m.Departement)
                 || !string.IsNullOrWhiteSpace(m.Contact)
                 || !string.IsNullOrWhiteSpace(m.NiveauFormation)
                 || m.BrancheId.HasValue)
@@ -435,6 +436,7 @@ public class PropositionsMaitriseController(
                 Id = m.Id,
                 NomChef = m.NomChef?.Trim() ?? string.Empty,
                 Fonction = m.Fonction?.Trim() ?? string.Empty,
+                Departement = string.IsNullOrWhiteSpace(m.Departement) ? null : m.Departement.Trim(),
                 BrancheId = m.BrancheId == Guid.Empty ? null : m.BrancheId,
                 Contact = m.Contact?.Trim() ?? string.Empty,
                 NiveauFormation = string.IsNullOrWhiteSpace(m.NiveauFormation) ? null : m.NiveauFormation.Trim(),
@@ -459,9 +461,13 @@ public class PropositionsMaitriseController(
         return string.Join(Environment.NewLine,
             membres
                 .OrderBy(m => m.OrdreAffichage)
-                .Select(m => string.IsNullOrWhiteSpace(m.NiveauFormation)
-                    ? $"{m.NomChef} - {m.Fonction}"
-                    : $"{m.NomChef} - {m.Fonction} - {m.NiveauFormation}"));
+                .Select(m =>
+                {
+                    var departement = string.IsNullOrWhiteSpace(m.Departement) ? string.Empty : $" - {m.Departement}";
+                    return string.IsNullOrWhiteSpace(m.NiveauFormation)
+                        ? $"{m.NomChef} - {m.Fonction}{departement}"
+                        : $"{m.NomChef} - {m.Fonction}{departement} - {m.NiveauFormation}";
+                }));
     }
 }
 

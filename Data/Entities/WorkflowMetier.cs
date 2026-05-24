@@ -94,6 +94,7 @@ public class ProgrammeAnnuelActivite
     [StringLength(250)]
     public string? Lieu { get; set; }
     public DateTime DateActivite { get; set; }
+    public DateTime? DateFin { get; set; }
     [Required]
     [StringLength(180)]
     public string Responsable { get; set; } = string.Empty;
@@ -201,6 +202,8 @@ public class PropositionMaitriseMembre
     [Required]
     [StringLength(180)]
     public string Fonction { get; set; } = string.Empty;
+    [StringLength(180)]
+    public string? Departement { get; set; }
     public Guid? BrancheId { get; set; }
     public Branche? Branche { get; set; }
     [Required]

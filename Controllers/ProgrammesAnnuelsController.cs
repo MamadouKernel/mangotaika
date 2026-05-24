@@ -439,6 +439,11 @@ public class ProgrammesAnnuelsController(
                 ModelState.AddModelError($"{prefix}.DateActivite", "La date de l'activite doit appartenir a l'annee de reference.");
             }
 
+            if (activite.DateFin.HasValue && activite.DateFin.Value.Date < activite.DateActivite.Date)
+            {
+                ModelState.AddModelError($"{prefix}.DateFin", "La date de fin doit etre posterieure ou egale a la date de debut.");
+            }
+
             if (activite.BrancheId.HasValue)
             {
                 if (!model.GroupeId.HasValue)
@@ -533,6 +538,7 @@ public class ProgrammesAnnuelsController(
                 || !string.IsNullOrWhiteSpace(a.Cible)
                 || !string.IsNullOrWhiteSpace(a.Lieu)
                 || a.DateActivite != default
+                || a.DateFin.HasValue
                 || a.MontantParticipation.HasValue)
             .Select((a, index) => new ProgrammeAnnuelActivite
             {
@@ -543,6 +549,7 @@ public class ProgrammesAnnuelsController(
                 Objectif = a.Objectif?.Trim() ?? string.Empty,
                 Lieu = string.IsNullOrWhiteSpace(a.Lieu) ? null : a.Lieu.Trim(),
                 DateActivite = a.DateActivite == default ? DateTime.UtcNow.Date : a.DateActivite.Date,
+                DateFin = a.DateFin.HasValue ? a.DateFin.Value.Date : null,
                 Responsable = a.Responsable?.Trim() ?? string.Empty,
                 Description = a.Description?.Trim() ?? string.Empty,
                 MontantParticipation = a.MontantParticipation,
@@ -567,7 +574,13 @@ public class ProgrammesAnnuelsController(
             activites
                 .OrderBy(a => a.DateActivite)
                 .ThenBy(a => a.OrdreAffichage)
-                .Select(a => $"{a.DateActivite:dd/MM/yyyy} - {a.NomActivite} - {a.Responsable}"));
+                .Select(a =>
+                {
+                    var dateLabel = a.DateFin.HasValue && a.DateFin.Value.Date != a.DateActivite.Date
+                        ? $"{a.DateActivite:dd/MM/yyyy} au {a.DateFin:dd/MM/yyyy}"
+                        : $"{a.DateActivite:dd/MM/yyyy}";
+                    return $"{dateLabel} - {a.NomActivite} - {a.Responsable}";
+                }));
     }
 }
 

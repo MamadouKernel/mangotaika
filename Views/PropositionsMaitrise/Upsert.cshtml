@@ -11,6 +11,20 @@
         membres.Add(new PropositionMaitriseMembre { OrdreAffichage = 1 });
     }
     var formAction = Model.Id == Guid.Empty ? Url.Action("Create") : Url.Action("Edit", new { id = Model.Id });
+    var fonctions = new[]
+    {
+        "Commissaire de District [CD]",
+        "Commissaire de District Adjoint [CDA]",
+        "Assistant Commissaire de District [ACD]",
+        "Chef de Groupe [CG]",
+        "Chef de Groupe Adjoint [CGA]",
+        "Assistant Chef de Groupe [ACG]",
+        "Chef d'Unite [CU]",
+        "Chef d'Unite Adjoint [CUA]",
+        "Assistant Chef d'Unite [ACU]"
+    };
+    var departements = new[] { "Administration", "Communication", "Finance & Patrimoine", "Programme Jeune" };
+    var formations = new[] { "AITCHWE/CEP", "KAFO/PREBADGE", "NANDJELET/BADGE DE BOIS", "STATPRO", "GNEKPA", "STAFFA" };
 }
 
 <div class="tracking-module tracking-module--maitrise-form">
@@ -72,10 +86,11 @@
                                 </div>
                                 <div class="tracking-form-grid">
                                     <div class="tracking-form-col-4"><label class="form-label">Nom du chef</label><input class="form-control" name="Membres[@i].NomChef" value="@membre.NomChef" /></div>
-                                    <div class="tracking-form-col-4"><label class="form-label">Fonction</label><input class="form-control" name="Membres[@i].Fonction" value="@membre.Fonction" placeholder="Ex: Chef de groupe, CU, CUA" /></div>
+                                    <div class="tracking-form-col-4"><label class="form-label">Fonction</label><select class="form-select" name="Membres[@i].Fonction"><option value="">-- Selectionner --</option>@foreach (var fonction in fonctions){<option value="@fonction" selected="@(membre.Fonction == fonction ? "selected" : null)">@fonction</option>}</select></div>
+                                    <div class="tracking-form-col-4"><label class="form-label">Departement</label><select class="form-select" name="Membres[@i].Departement"><option value="">-- Selectionner --</option>@foreach (var departement in departements){<option value="@departement" selected="@(membre.Departement == departement ? "selected" : null)">@departement</option>}</select></div>
                                     <div class="tracking-form-col-4"><label class="form-label">Branche</label><select class="form-select" name="Membres[@i].BrancheId" data-maitrise-branch-select><option value="">-- Aucune / transverse --</option>@foreach (var branche in branches){<option value="@branche.Id" data-groupe-id="@branche.GroupeId" selected="@(membre.BrancheId == branche.Id ? "selected" : null)">@branche.Nom</option>}</select></div>
                                     <div class="tracking-form-col-4"><label class="form-label">Contact</label><input class="form-control" name="Membres[@i].Contact" value="@membre.Contact" placeholder="Telephone ou email" /></div>
-                                    <div class="tracking-form-col-4"><label class="form-label">Niveau de formation</label><input class="form-control" name="Membres[@i].NiveauFormation" value="@membre.NiveauFormation" placeholder="Ex: Niveau 1, Niveau 2" /></div>
+                                    <div class="tracking-form-col-4"><label class="form-label">Formation</label><select class="form-select" name="Membres[@i].NiveauFormation"><option value="">-- Selectionner --</option>@foreach (var formation in formations){<option value="@formation" selected="@(membre.NiveauFormation == formation ? "selected" : null)">@formation</option>}</select></div>
                                 </div>
                             </div>
                         }
@@ -105,10 +120,11 @@
     </div>
     <div class="tracking-form-grid">
         <div class="tracking-form-col-4"><label class="form-label">Nom du chef</label><input class="form-control" name="Membres[__index__].NomChef" value="" /></div>
-        <div class="tracking-form-col-4"><label class="form-label">Fonction</label><input class="form-control" name="Membres[__index__].Fonction" value="" placeholder="Ex: Chef de groupe, CU, CUA" /></div>
+        <div class="tracking-form-col-4"><label class="form-label">Fonction</label><select class="form-select" name="Membres[__index__].Fonction"><option value="">-- Selectionner --</option>@foreach (var fonction in fonctions){<option value="@fonction">@fonction</option>}</select></div>
+        <div class="tracking-form-col-4"><label class="form-label">Departement</label><select class="form-select" name="Membres[__index__].Departement"><option value="">-- Selectionner --</option>@foreach (var departement in departements){<option value="@departement">@departement</option>}</select></div>
         <div class="tracking-form-col-4"><label class="form-label">Branche</label><select class="form-select" name="Membres[__index__].BrancheId" data-maitrise-branch-select><option value="">-- Aucune / transverse --</option>@foreach (var branche in branches){<option value="@branche.Id" data-groupe-id="@branche.GroupeId">@branche.Nom</option>}</select></div>
         <div class="tracking-form-col-4"><label class="form-label">Contact</label><input class="form-control" name="Membres[__index__].Contact" value="" placeholder="Telephone ou email" /></div>
-        <div class="tracking-form-col-4"><label class="form-label">Niveau de formation</label><input class="form-control" name="Membres[__index__].NiveauFormation" value="" placeholder="Ex: Niveau 1, Niveau 2" /></div>
+        <div class="tracking-form-col-4"><label class="form-label">Formation</label><select class="form-select" name="Membres[__index__].NiveauFormation"><option value="">-- Selectionner --</option>@foreach (var formation in formations){<option value="@formation">@formation</option>}</select></div>
     </div>
 </div>
 </script>

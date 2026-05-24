@@ -56,7 +56,10 @@
                                 <div class="tracking-card__header">
                                     <div>
                                         <h3 class="tracking-card__title">@activite.NomActivite</h3>
-                                        <div class="tracking-card__subtitle">@(activite.ProgrammeAnnuel.Groupe?.Nom ?? "District") - @activite.DateActivite.ToString("dd/MM/yyyy")</div>
+                                        <div class="tracking-card__subtitle">
+                                            @(activite.ProgrammeAnnuel.Groupe?.Nom ?? "District") -
+                                            @activite.DateActivite.ToString("dd/MM/yyyy")@(activite.DateFin.HasValue ? $" au {activite.DateFin:dd/MM/yyyy}" : string.Empty)
+                                        </div>
                                     </div>
                                     <span class="tracking-chip tracking-chip--soft">@(activite.Branche?.Nom ?? activite.Cible ?? "Cible libre")</span>
                                 </div>

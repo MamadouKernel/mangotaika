@@ -63,9 +63,10 @@
                     <tr>
                         <th>Nom</th>
                         <th>Fonction</th>
+                        <th>Departement</th>
                         <th>Branche</th>
                         <th>Contact</th>
-                        <th>Niveau de formation</th>
+                        <th>Formation</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -74,6 +75,7 @@
                     <tr>
                         <td class="fw-semibold" style="color:var(--bleu-logo);">@membre.NomChef</td>
                         <td>@membre.Fonction</td>
+                        <td>@(string.IsNullOrWhiteSpace(membre.Departement) ? "-" : membre.Departement)</td>
                         <td>@(membre.Branche?.Nom ?? "Transverse")</td>
                         <td>@membre.Contact</td>
                         <td>@(string.IsNullOrWhiteSpace(membre.NiveauFormation) ? "Non renseigne" : membre.NiveauFormation)</td>
@@ -81,7 +83,7 @@
                 }
                 @if (!Model.Membres.Any())
                 {
-                    <tr><td colspan="5" class="text-center py-5 text-muted-custom">Aucun chef enregistre.</td></tr>
+                    <tr><td colspan="6" class="text-center py-5 text-muted-custom">Aucun chef enregistre.</td></tr>
                 }
                 </tbody>
             </table>

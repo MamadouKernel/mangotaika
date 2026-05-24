@@ -13,6 +13,14 @@
             return;
         }
 
+        const groupeOptionsHtml = `
+            <option value="">-- Selectionner un groupe --</option>
+            @foreach (var groupe in (ViewBag.Groupes as List<MangoTaika.Data.Entities.Groupe> ?? new List<MangoTaika.Data.Entities.Groupe>()))
+            {
+                <option value="@groupe.Nom">@groupe.Nom</option>
+            }
+        `;
+
         function getPhotoElements(block) {
             return {
                 hiddenInput: block.querySelector('.historique-photo-url'),
@@ -87,7 +95,7 @@
                     </div>
                     <div class="col-md-4 mb-3">
                         <label class="form-label">Groupe</label>
-                        <input class="form-control" data-field="Groupe" placeholder="Ex: 1er Abidjan" />
+                        <select class="form-select" data-field="Groupe">${groupeOptionsHtml}</select>
                     </div>
                     <div class="col-md-3 mb-3">
                         <label class="form-label">Ordre</label>

@@ -81,28 +81,30 @@ public class HomeController(AppDbContext db, IConfiguration configuration) : Con
     {
         model.RechercheEffectuee = true;
 
-        if (string.IsNullOrWhiteSpace(model.Matricule)
-            || string.IsNullOrWhiteSpace(model.Nom)
-            || string.IsNullOrWhiteSpace(model.Prenom))
+        var hasMatricule = !string.IsNullOrWhiteSpace(model.Matricule);
+        var hasIdentity = !string.IsNullOrWhiteSpace(model.Nom) && !string.IsNullOrWhiteSpace(model.Prenom);
+
+        if (!hasMatricule && !hasIdentity)
         {
             model.Statut = "Inexistant";
-            ModelState.AddModelError(string.Empty, "Renseignez le matricule, le nom et le prenom pour lancer la verification.");
+            ModelState.AddModelError(string.Empty, "Renseignez soit le matricule, soit le nom et un prenom pour lancer la verification.");
             return View(model);
         }
 
-        var matricule = model.Matricule.Trim();
-        var nom = NormalizeSearchValue(model.Nom);
-        var prenom = NormalizeSearchValue(model.Prenom);
-
-        var candidates = await db.Scouts
-            .AsNoTracking()
-            .Include(s => s.Groupe)
-            .Include(s => s.Branche)
-            .Where(s => s.IsActive
-                && s.Matricule != null
-                && s.Matricule.ToLower() == matricule.ToLower())
-            .ToListAsync();
-        var scout = candidates.FirstOrDefault(s => NormalizeSearchValue(s.Nom) == nom && NormalizeSearchValue(s.Prenom) == prenom);
+        var matricule = model.Matricule?.Trim().ToLowerInvariant();
+        var scout = hasMatricule
+            ? await db.Scouts
+                .AsNoTracking()
+                .Include(s => s.Groupe)
+                .Include(s => s.Branche)
+                .FirstOrDefaultAsync(s => s.IsActive && s.Matricule != null && s.Matricule.ToLower() == matricule)
+            : (await db.Scouts
+                .AsNoTracking()
+                .Include(s => s.Groupe)
+                .Include(s => s.Branche)
+                .Where(s => s.IsActive)
+                .ToListAsync())
+                .FirstOrDefault(s => IsIdentityMatch(s, model.Nom!, model.Prenom!));
 
         if (scout == null)
         {
@@ -279,5 +281,16 @@ public class HomeController(AppDbContext db, IConfiguration configuration) : Con
             .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
             .ToArray();
         return new string(chars).Normalize(NormalizationForm.FormC).ToLowerInvariant();
+    }
+
+    private static bool IsIdentityMatch(Data.Entities.Scout scout, string nom, string prenom)
+    {
+        var normalizedNom = NormalizeSearchValue(nom);
+        var normalizedPrenom = NormalizeSearchValue(prenom);
+        var scoutPrenoms = NormalizeSearchValue(scout.Prenom)
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        return NormalizeSearchValue(scout.Nom) == normalizedNom
+            && (NormalizeSearchValue(scout.Prenom) == normalizedPrenom || scoutPrenoms.Contains(normalizedPrenom));
     }
 }
