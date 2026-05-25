@@ -22,21 +22,17 @@ public class GroupesController(
         var (page, ps) = ListPagination.Read(Request);
         var all = await groupeService.GetAllAsync();
 
-        var activeRole = activeRoleService.GetActiveRole(User);
-        if (activeRole is "ChefGroupe" or "ChefUnite")
+        var (scopeGroupeId, scopeBrancheId) = await GetCurrentScopeAsync();
+        if (scopeGroupeId.HasValue)
         {
-            var (scopeGroupeId, _) = await operationalAccess.GetScopeAsync(User, activeRole);
-            if (scopeGroupeId.HasValue)
-                all = all.Where(g => g.Id == scopeGroupeId.Value).ToList();
+            all = all.Where(g => g.Id == scopeGroupeId.Value).ToList();
         }
-        else if (activeRole == "EquipeDistrict")
+        else if (scopeBrancheId.HasValue)
         {
-            var (_, scopeBrancheId) = await operationalAccess.GetScopeAsync(User, activeRole);
-            if (scopeBrancheId.HasValue)
+            var branche = await db.Branches.FindAsync(scopeBrancheId.Value);
+            if (branche?.GroupeId is not null)
             {
-                var branche = await db.Branches.FindAsync(scopeBrancheId.Value);
-                if (branche?.GroupeId is not null)
-                    all = all.Where(g => g.Id == branche.GroupeId).ToList();
+                all = all.Where(g => g.Id == branche.GroupeId).ToList();
             }
         }
 
@@ -91,6 +87,10 @@ public class GroupesController(
         if (groupe is null)
         {
             return NotFound();
+        }
+        if (!await CanAccessGroupAsync(groupe.Id))
+        {
+            return Forbid();
         }
 
         return View(groupe);
@@ -266,6 +266,37 @@ public class GroupesController(
 
         ViewBag.ChefsGroupe = items;
     }
-}
 
+    private async Task<(Guid? GroupeId, Guid? BrancheId)> GetCurrentScopeAsync()
+    {
+        if (operationalAccess.IsAdminLike(User) || operationalAccess.IsSupervision(User))
+        {
+            return (null, null);
+        }
+
+        var activeRole = activeRoleService.GetActiveRole(User);
+        if (activeRole is "EquipeDistrict" or "ChefGroupe" or "ChefUnite")
+        {
+            return await operationalAccess.GetScopeAsync(User, activeRole);
+        }
+
+        return (null, null);
+    }
+
+    private async Task<bool> CanAccessGroupAsync(Guid groupeId)
+    {
+        var (scopeGroupeId, scopeBrancheId) = await GetCurrentScopeAsync();
+        if (scopeGroupeId.HasValue)
+        {
+            return scopeGroupeId.Value == groupeId;
+        }
+
+        if (!scopeBrancheId.HasValue)
+        {
+            return true;
+        }
+
+        return await db.Branches.AnyAsync(b => b.Id == scopeBrancheId.Value && b.GroupeId == groupeId);
+    }
+}
 

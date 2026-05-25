@@ -76,7 +76,6 @@ public class DemandeAutorisationCreateDto : IValidatableObject
     [Display(Name = "Groupe concerne")]
     public Guid? GroupeId { get; set; }
 
-    [Required(ErrorMessage = "La branche concernee est obligatoire.")]
     [Display(Name = "Branche concernee")]
     public Guid? BrancheId { get; set; }
 

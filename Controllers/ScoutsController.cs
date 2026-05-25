@@ -22,16 +22,30 @@ public class ScoutsController(
     private const string ImportReportCachePrefix = "scouts-import-report:";
     private static readonly TimeSpan ImportReportLifetime = TimeSpan.FromMinutes(15);
 
-    private async Task LoadDropdownsAsync()
+    private async Task LoadDropdownsAsync(Guid? scopeGroupeId = null, Guid? scopeBrancheId = null)
     {
-        ViewBag.Groupes = await db.Groupes
+        var groupesQuery = db.Groupes
             .Where(g => g.IsActive)
-            .OrderBy(g => g.Nom)
-            .ToListAsync();
+            .AsQueryable();
+        if (scopeGroupeId.HasValue)
+        {
+            groupesQuery = groupesQuery.Where(g => g.Id == scopeGroupeId.Value);
+        }
 
-        ViewBag.Branches = await db.Branches
+        var branchesQuery = db.Branches
             .Where(b => b.IsActive)
-            .ToListAsync();
+            .AsQueryable();
+        if (scopeBrancheId.HasValue)
+        {
+            branchesQuery = branchesQuery.Where(b => b.Id == scopeBrancheId.Value);
+        }
+        else if (scopeGroupeId.HasValue)
+        {
+            branchesQuery = branchesQuery.Where(b => b.GroupeId == scopeGroupeId.Value);
+        }
+
+        ViewBag.Groupes = await groupesQuery.OrderBy(g => g.Nom).ToListAsync();
+        ViewBag.Branches = await branchesQuery.ToListAsync();
     }
 
     public async Task<IActionResult> Index(string? recherche, Guid? groupeId, Guid? brancheId, bool cu = false, bool acd = false, string? importReportId = null)
@@ -43,14 +57,14 @@ public class ScoutsController(
 
         var filtered = scouts.AsEnumerable();
 
-        var activeRole = activeRoleService.GetActiveRole(User);
-        if (activeRole is "EquipeDistrict" or "ChefGroupe" or "ChefUnite")
+        var (scopeGroupeId, scopeBrancheId) = await GetCurrentScopeAsync();
+        if (scopeBrancheId.HasValue)
         {
-            var (scopeGroupeId, scopeBrancheId) = await operationalAccess.GetScopeAsync(User, activeRole);
-            if (scopeBrancheId.HasValue)
-                filtered = filtered.Where(s => s.BrancheId == scopeBrancheId.Value);
-            else if (scopeGroupeId.HasValue)
-                filtered = filtered.Where(s => s.GroupeId == scopeGroupeId.Value);
+            filtered = filtered.Where(s => s.BrancheId == scopeBrancheId.Value);
+        }
+        else if (scopeGroupeId.HasValue)
+        {
+            filtered = filtered.Where(s => s.GroupeId == scopeGroupeId.Value);
         }
 
         if (groupeId.HasValue && groupeId.Value != Guid.Empty)
@@ -79,7 +93,7 @@ public class ScoutsController(
         var (p, pageSize, skip, totalPages) = ListPagination.Normalize(page, ps, total);
         var pageItems = filteredList.Skip(skip).Take(pageSize).ToList();
 
-        await LoadDropdownsAsync();
+        await LoadDropdownsAsync(scopeGroupeId, scopeBrancheId);
         ViewBag.Recherche = recherche;
         ViewBag.SelectedGroupeId = groupeId;
         ViewBag.SelectedBrancheId = brancheId;
@@ -137,6 +151,10 @@ public class ScoutsController(
         if (scout is null)
         {
             return NotFound();
+        }
+        if (!await CanAccessScoutAsync(scout.GroupeId, scout.BrancheId))
+        {
+            return Forbid();
         }
 
         await LoadDropdownsAsync();
@@ -269,6 +287,12 @@ public class ScoutsController(
     [HttpGet]
     public async Task<IActionResult> GetBranchesByGroupe(Guid groupeId)
     {
+        var (scopeGroupeId, _) = await GetCurrentScopeAsync();
+        if (scopeGroupeId.HasValue && scopeGroupeId.Value != groupeId)
+        {
+            return Forbid();
+        }
+
         var branches = (await db.Branches
                 .Where(b => b.GroupeId == groupeId && b.IsActive)
                 .ToListAsync())
@@ -347,5 +371,32 @@ public class ScoutsController(
         return memoryCache.TryGetValue($"{ImportReportCachePrefix}{importReportId}", out ScoutImportResultDto? report)
             ? report
             : null;
+    }
+
+    private async Task<(Guid? GroupeId, Guid? BrancheId)> GetCurrentScopeAsync()
+    {
+        if (operationalAccess.IsAdminLike(User) || operationalAccess.IsSupervision(User))
+        {
+            return (null, null);
+        }
+
+        var activeRole = activeRoleService.GetActiveRole(User);
+        if (activeRole is "EquipeDistrict" or "ChefGroupe" or "ChefUnite")
+        {
+            return await operationalAccess.GetScopeAsync(User, activeRole);
+        }
+
+        return (null, null);
+    }
+
+    private async Task<bool> CanAccessScoutAsync(Guid? groupeId, Guid? brancheId)
+    {
+        var (scopeGroupeId, scopeBrancheId) = await GetCurrentScopeAsync();
+        if (scopeBrancheId.HasValue)
+        {
+            return brancheId == scopeBrancheId.Value;
+        }
+
+        return !scopeGroupeId.HasValue || groupeId == scopeGroupeId.Value;
     }
 }

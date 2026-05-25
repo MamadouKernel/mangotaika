@@ -23,14 +23,14 @@ public class BranchesController(
         var allBranches = await brancheService.GetAllAsync();
         var filteredBranches = allBranches.AsEnumerable();
 
-        var activeRole = activeRoleService.GetActiveRole(User);
-        if (activeRole is "EquipeDistrict" or "ChefGroupe" or "ChefUnite")
+        var (scopeGroupeId, scopeBrancheId) = await GetCurrentScopeAsync();
+        if (scopeBrancheId.HasValue)
         {
-            var (scopeGroupeId, scopeBrancheId) = await operationalAccess.GetScopeAsync(User, activeRole);
-            if (scopeBrancheId.HasValue)
-                filteredBranches = filteredBranches.Where(b => b.Id == scopeBrancheId.Value);
-            else if (scopeGroupeId.HasValue)
-                filteredBranches = filteredBranches.Where(b => b.GroupeId == scopeGroupeId.Value);
+            filteredBranches = filteredBranches.Where(b => b.Id == scopeBrancheId.Value);
+        }
+        else if (scopeGroupeId.HasValue)
+        {
+            filteredBranches = filteredBranches.Where(b => b.GroupeId == scopeGroupeId.Value);
         }
 
         var selectedEntiteId = entiteId.HasValue && entiteId.Value != Guid.Empty
@@ -63,8 +63,15 @@ public class BranchesController(
         var pageItems = filteredList.Skip(skip).Take(pageSize).ToList();
         ListPagination.SetViewData(ViewData, HttpContext, p, pageSize, total, totalPages);
 
-        var entites = await db.Groupes
+        var entitesQuery = db.Groupes
             .Where(g => g.IsActive)
+            .AsQueryable();
+        if (scopeGroupeId.HasValue)
+        {
+            entitesQuery = entitesQuery.Where(g => g.Id == scopeGroupeId.Value);
+        }
+
+        var entites = await entitesQuery
             .OrderBy(g => g.Nom)
             .Select(g => new SelectListItem
             {
@@ -149,6 +156,7 @@ public class BranchesController(
     {
         var branche = await brancheService.GetByIdAsync(id);
         if (branche is null) return NotFound();
+        if (!await CanAccessBranchAsync(branche.GroupeId, branche.Id)) return Forbid();
         return View(branche);
     }
 
@@ -217,6 +225,12 @@ public class BranchesController(
     [HttpGet]
     public async Task<IActionResult> GetScoutsByGroupe(Guid groupeId)
     {
+        var (scopeGroupeId, _) = await GetCurrentScopeAsync();
+        if (scopeGroupeId.HasValue && scopeGroupeId.Value != groupeId)
+        {
+            return Forbid();
+        }
+
         var groupeNom = await db.Groupes
             .Where(g => g.Id == groupeId && g.IsActive)
             .Select(g => g.Nom)
@@ -369,4 +383,31 @@ public class BranchesController(
         ChefUniteId = dto.ChefUniteId,
         GroupeId = dto.GroupeId
     };
+
+    private async Task<(Guid? GroupeId, Guid? BrancheId)> GetCurrentScopeAsync()
+    {
+        if (operationalAccess.IsAdminLike(User) || operationalAccess.IsSupervision(User))
+        {
+            return (null, null);
+        }
+
+        var activeRole = activeRoleService.GetActiveRole(User);
+        if (activeRole is "EquipeDistrict" or "ChefGroupe" or "ChefUnite")
+        {
+            return await operationalAccess.GetScopeAsync(User, activeRole);
+        }
+
+        return (null, null);
+    }
+
+    private async Task<bool> CanAccessBranchAsync(Guid groupeId, Guid brancheId)
+    {
+        var (scopeGroupeId, scopeBrancheId) = await GetCurrentScopeAsync();
+        if (scopeBrancheId.HasValue)
+        {
+            return brancheId == scopeBrancheId.Value;
+        }
+
+        return !scopeGroupeId.HasValue || groupeId == scopeGroupeId.Value;
+    }
 }

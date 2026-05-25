@@ -47,7 +47,7 @@
             <div class="col-md-6 mb-3">
                 <label asp-for="BrancheId" class="form-label"></label>
                 <select asp-for="BrancheId" id="demande-branche" class="form-select">
-                    <option value="">-- Selectionner une branche --</option>
+                    <option value="">-- Tout le groupe --</option>
                     @foreach (var branche in branches)
                     {
                         <option value="@branche.Id" data-groupe-id="@branche.GroupeId">@branche.Nom</option>
@@ -136,8 +136,6 @@
 
             const applyBranchFilter = () => {
                 const selectedGroupId = groupeSelect.value;
-                let hasVisibleOption = false;
-
                 Array.from(brancheSelect.options).forEach((option, index) => {
                     if (index === 0) {
                         option.hidden = false;
@@ -151,12 +149,8 @@
                     if (option.selected && !matches) {
                         brancheSelect.value = '';
                     }
-                    if (matches) {
-                        hasVisibleOption = true;
-                    }
                 });
-
-                brancheSelect.disabled = !hasVisibleOption && !!selectedGroupId;
+                brancheSelect.disabled = false;
             };
 
             groupeSelect.addEventListener('change', applyBranchFilter);

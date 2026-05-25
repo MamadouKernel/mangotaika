@@ -335,11 +335,6 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
             ModelState.AddModelError(nameof(dto.GroupeId), "Le groupe concerne est obligatoire.");
         }
 
-        if (!dto.BrancheId.HasValue)
-        {
-            ModelState.AddModelError(nameof(dto.BrancheId), "La branche concernee est obligatoire.");
-        }
-
         Groupe? groupe = null;
         if (dto.GroupeId.HasValue)
         {
@@ -465,7 +460,7 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
         Type d'activite : {d.TypeActivite}
         Demandeur : {user?.Prenom} {user?.Nom}
         Groupe concerne : {d.Groupe?.Nom ?? "A preciser"}
-        Branche concernee : {d.Branche?.Nom ?? "A preciser"}
+        Branche concernee : {d.Branche?.Nom ?? "Tout le groupe"}
         Date : {d.DateActivite:dd/MM/yyyy}{(d.DateFin.HasValue ? $" au {d.DateFin:dd/MM/yyyy}" : string.Empty)}
         Lieu : {d.Lieu ?? "A preciser"}
         Nombre de participants : {d.NombreParticipants}

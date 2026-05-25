@@ -32,12 +32,24 @@ public sealed class OperationalAccessService(AppDbContext db, UserManager<Applic
     {
         var appUser = await GetCurrentUserAsync(user);
         if (appUser is null) return (null, null);
+        if (appUser.GroupeId.HasValue || appUser.BrancheId.HasValue)
+        {
+            return activeRole switch
+            {
+                "ChefGroupe" => (appUser.GroupeId, null),
+                "EquipeDistrict" => (null, appUser.BrancheId),
+                "ChefUnite" => (appUser.GroupeId, appUser.BrancheId),
+                _ => (null, null)
+            };
+        }
+
+        var scout = await GetCurrentScoutAsync(user);
         return activeRole switch
         {
-            "ChefGroupe"            => (appUser.GroupeId, null),
-            "EquipeDistrict"        => (null, appUser.BrancheId),
-            "ChefUnite"             => (appUser.GroupeId, appUser.BrancheId),
-            _                       => (null, null)
+            "ChefGroupe" => (scout?.GroupeId, null),
+            "EquipeDistrict" => (null, scout?.BrancheId),
+            "ChefUnite" => (scout?.GroupeId, scout?.BrancheId),
+            _ => (null, null)
         };
     }
 
