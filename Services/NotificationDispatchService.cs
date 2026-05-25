@@ -40,7 +40,7 @@ public class NotificationDispatchService(
 
         var contacts = await db.Users
             .Where(u => recipients.Contains(u.Id))
-            .Select(u => new { u.Email, u.PhoneNumber })
+            .Select(u => new { u.Email, u.PhoneNumber, u.Nom, u.Prenom })
             .ToListAsync();
 
         foreach (var contact in contacts)
@@ -49,7 +49,14 @@ public class NotificationDispatchService(
             {
                 try
                 {
-                    await emailService.SendAsync(contact.Email, title, $"{message}\n\n{link ?? string.Empty}".Trim());
+                    var recipientName = $"{contact.Prenom} {contact.Nom}".Trim();
+                    await emailService.SendAsync(
+                        contact.Email,
+                        title,
+                        message,
+                        string.IsNullOrWhiteSpace(recipientName) ? null : recipientName,
+                        category,
+                        link);
                 }
                 catch (Exception ex)
                 {
