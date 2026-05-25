@@ -1,20 +1,33 @@
 using MangoTaika.Data;
 using MangoTaika.Data.Entities;
+using MangoTaika.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace MangoTaika.Controllers;
 
 [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
-public class RessourcesController(AppDbContext db, UserManager<ApplicationUser> userManager) : Controller
+public class RessourcesController(
+    AppDbContext db,
+    OperationalAccessService operationalAccessService,
+    ActiveRoleService activeRoleService) : Controller
 {
     private async Task<Guid?> GetManagedGroupIdAsync()
     {
-        if (!User.IsInRole("ChefGroupe")) return null;
-        var user = await userManager.GetUserAsync(User);
-        return user?.GroupeId;
+        if (!User.IsInRole("ChefGroupe") || operationalAccessService.IsAdminLike(User)) return null;
+
+        var activeRole = activeRoleService.GetActiveRole(User);
+        if (activeRole != "ChefGroupe" && !User.IsInRole("ChefGroupe")) return null;
+
+        var (groupeId, _) = await operationalAccessService.GetScopeAsync(User, "ChefGroupe");
+        return groupeId;
+    }
+
+    private async Task<bool> HasManagedGroupAccessAsync()
+    {
+        if (!User.IsInRole("ChefGroupe") || operationalAccessService.IsAdminLike(User)) return true;
+        return (await GetManagedGroupIdAsync()).HasValue;
     }
 
     private async Task LoadGroupsAsync(Guid? selectedGroupId = null)
@@ -34,6 +47,7 @@ public class RessourcesController(AppDbContext db, UserManager<ApplicationUser> 
     public async Task<IActionResult> Index(Guid? groupeId = null, string? q = null, TypeRessource? type = null)
     {
         var managedGroupId = await GetManagedGroupIdAsync();
+        if (!await HasManagedGroupAccessAsync()) return Forbid();
         if (managedGroupId.HasValue) groupeId = managedGroupId.Value;
 
         var query = db.Ressources.Include(r => r.Groupe).AsQueryable();
@@ -57,6 +71,7 @@ public class RessourcesController(AppDbContext db, UserManager<ApplicationUser> 
 
     public async Task<IActionResult> Create()
     {
+        if (!await HasManagedGroupAccessAsync()) return Forbid();
         await LoadGroupsAsync();
         return View("Upsert", new Ressource { GroupeId = ViewBag.SelectedGroupId });
     }
@@ -65,8 +80,10 @@ public class RessourcesController(AppDbContext db, UserManager<ApplicationUser> 
     public async Task<IActionResult> Create(Ressource model)
     {
         var managedGroupId = await GetManagedGroupIdAsync();
+        if (!await HasManagedGroupAccessAsync()) return Forbid();
         if (managedGroupId.HasValue) model.GroupeId = managedGroupId.Value;
 
+        await ValidateGroupAsync(model.GroupeId);
         if (!ModelState.IsValid)
         {
             await LoadGroupsAsync(model.GroupeId);
@@ -87,6 +104,7 @@ public class RessourcesController(AppDbContext db, UserManager<ApplicationUser> 
         var model = await db.Ressources.FindAsync(id);
         if (model is null) return NotFound();
         var managedGroupId = await GetManagedGroupIdAsync();
+        if (!await HasManagedGroupAccessAsync()) return Forbid();
         if (managedGroupId.HasValue && model.GroupeId != managedGroupId.Value) return Forbid();
         await LoadGroupsAsync(model.GroupeId);
         return View("Upsert", model);
@@ -98,8 +116,10 @@ public class RessourcesController(AppDbContext db, UserManager<ApplicationUser> 
         var existing = await db.Ressources.FindAsync(id);
         if (existing is null) return NotFound();
         var managedGroupId = await GetManagedGroupIdAsync();
+        if (!await HasManagedGroupAccessAsync()) return Forbid();
         if (managedGroupId.HasValue && existing.GroupeId != managedGroupId.Value) return Forbid();
 
+        await ValidateGroupAsync(managedGroupId ?? model.GroupeId);
         if (!ModelState.IsValid)
         {
             await LoadGroupsAsync(model.GroupeId);
@@ -125,10 +145,26 @@ public class RessourcesController(AppDbContext db, UserManager<ApplicationUser> 
         var existing = await db.Ressources.FindAsync(id);
         if (existing is null) return NotFound();
         var managedGroupId = await GetManagedGroupIdAsync();
+        if (!await HasManagedGroupAccessAsync()) return Forbid();
         if (managedGroupId.HasValue && existing.GroupeId != managedGroupId.Value) return Forbid();
         existing.IsActive = false;
         await db.SaveChangesAsync();
         TempData["Success"] = "Ressource desactivee.";
         return RedirectToAction(nameof(Index), new { groupeId = existing.GroupeId });
+    }
+
+    private async Task ValidateGroupAsync(Guid? groupeId)
+    {
+        if (!groupeId.HasValue)
+        {
+            ModelState.AddModelError(nameof(Ressource.GroupeId), "Selectionnez le groupe de rattachement.");
+            return;
+        }
+
+        var exists = await db.Groupes.AnyAsync(g => g.Id == groupeId.Value && g.IsActive);
+        if (!exists)
+        {
+            ModelState.AddModelError(nameof(Ressource.GroupeId), "Le groupe selectionne est invalide.");
+        }
     }
 }

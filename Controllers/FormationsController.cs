@@ -16,8 +16,27 @@ public class FormationsController(
     AppDbContext db,
     UserManager<ApplicationUser> userManager,
     INotificationDispatchService notificationDispatchService,
-    IFileUploadService fileUploadService) : Controller
+    IFileUploadService fileUploadService,
+    OperationalAccessService operationalAccessService,
+    ActiveRoleService activeRoleService) : Controller
 {
+    private async Task<Guid?> GetManagedGroupIdAsync()
+    {
+        if (!User.IsInRole("ChefGroupe") || operationalAccessService.IsAdminLike(User)) return null;
+
+        var activeRole = activeRoleService.GetActiveRole(User);
+        if (activeRole != "ChefGroupe" && !User.IsInRole("ChefGroupe")) return null;
+
+        var (groupeId, _) = await operationalAccessService.GetScopeAsync(User, "ChefGroupe");
+        return groupeId;
+    }
+
+    private async Task<bool> CanManageFormationResourcesAsync()
+    {
+        if (User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire")) return true;
+        return User.IsInRole("ChefGroupe") && (await GetManagedGroupIdAsync()).HasValue;
+    }
+
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> Index()
     {
@@ -100,34 +119,52 @@ public class FormationsController(
         return RedirectToAction(nameof(Edit), new { id });
     }
 
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> Details(Guid id)
     {
         var formation = await formationService.GetDetailAsync(id);
         if (formation is null)
             return NotFound();
 
-        ViewBag.Stats = await formationService.GetStatsAsync(id);
-        ViewBag.Ressources = await db.Ressources
+        var managedGroupId = await GetManagedGroupIdAsync();
+        if (User.IsInRole("ChefGroupe") && !operationalAccessService.IsAdminLike(User) && !managedGroupId.HasValue)
+        {
+            return Forbid();
+        }
+
+        var resourceQuery = db.Ressources
             .Include(r => r.Groupe)
-            .Where(r => r.IsActive)
+            .Where(r => r.IsActive);
+        var formationResourceQuery = db.ParticipationsFormationRessources
+            .Include(p => p.Ressource).ThenInclude(r => r.Groupe)
+            .Where(p => p.FormationId == id);
+        if (managedGroupId.HasValue)
+        {
+            resourceQuery = resourceQuery.Where(r => r.GroupeId == managedGroupId.Value);
+            formationResourceQuery = formationResourceQuery.Where(p => p.Ressource.GroupeId == managedGroupId.Value);
+        }
+
+        ViewBag.Stats = await formationService.GetStatsAsync(id);
+        ViewBag.CanManageFormationResources = await CanManageFormationResourcesAsync();
+        ViewBag.Ressources = await resourceQuery
             .OrderBy(r => r.Groupe!.Nom)
             .ThenBy(r => r.Nom)
             .ToListAsync();
-        ViewBag.RessourcesFormation = await db.ParticipationsFormationRessources
-            .Include(p => p.Ressource).ThenInclude(r => r.Groupe)
-            .Where(p => p.FormationId == id)
+        ViewBag.RessourcesFormation = await formationResourceQuery
             .OrderBy(p => p.Ressource.Nom)
             .ToListAsync();
         return View(formation);
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> AjouterRessources(Guid id, List<Guid>? ressourceIds)
     {
         var formationExists = await db.Formations.AnyAsync(f => f.Id == id);
         if (!formationExists) return NotFound();
+        if (!await CanManageFormationResourcesAsync()) return Forbid();
+
+        var managedGroupId = await GetManagedGroupIdAsync();
 
         var ids = ressourceIds?.Where(x => x != Guid.Empty).Distinct().ToList() ?? [];
         if (ids.Count == 0)
@@ -141,9 +178,14 @@ public class FormationsController(
             .Select(p => p.RessourceId)
             .ToListAsync();
 
-        var toAdd = await db.Ressources
-            .Where(r => r.IsActive && ids.Contains(r.Id) && !existingIds.Contains(r.Id))
-            .ToListAsync();
+        var toAddQuery = db.Ressources
+            .Where(r => r.IsActive && ids.Contains(r.Id) && !existingIds.Contains(r.Id));
+        if (managedGroupId.HasValue)
+        {
+            toAddQuery = toAddQuery.Where(r => r.GroupeId == managedGroupId.Value);
+        }
+
+        var toAdd = await toAddQuery.ToListAsync();
 
         db.ParticipationsFormationRessources.AddRange(toAdd.Select(r => new ParticipationFormationRessource
         {
@@ -158,10 +200,21 @@ public class FormationsController(
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> RetirerRessource(Guid id, Guid participationId)
     {
-        var participation = await db.ParticipationsFormationRessources.FirstOrDefaultAsync(p => p.Id == participationId && p.FormationId == id);
+        if (!await CanManageFormationResourcesAsync()) return Forbid();
+
+        var managedGroupId = await GetManagedGroupIdAsync();
+        var participationQuery = db.ParticipationsFormationRessources
+            .Include(p => p.Ressource)
+            .Where(p => p.Id == participationId && p.FormationId == id);
+        if (managedGroupId.HasValue)
+        {
+            participationQuery = participationQuery.Where(p => p.Ressource.GroupeId == managedGroupId.Value);
+        }
+
+        var participation = await participationQuery.FirstOrDefaultAsync();
         if (participation is null) return NotFound();
         db.ParticipationsFormationRessources.Remove(participation);
         await db.SaveChangesAsync();

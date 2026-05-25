@@ -2,17 +2,19 @@ using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
 using MangoTaika.Helpers;
-using MangoTaika.Hubs;
+using MangoTaika.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace MangoTaika.Controllers;
 
 [Authorize]
-public class DemandesController(AppDbContext db, UserManager<ApplicationUser> userManager, IHubContext<NotificationHub> hub) : Controller
+public class DemandesController(
+    AppDbContext db,
+    UserManager<ApplicationUser> userManager,
+    INotificationDispatchService notificationDispatchService) : Controller
 {
     public async Task<IActionResult> Index()
     {
@@ -194,7 +196,14 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
         AjouterSuivi(demande, ancien, StatutDemande.Soumise, "Demande soumise pour validation district", BuildAuteurLabel(user));
         await db.SaveChangesAsync();
 
-        await hub.Clients.All.SendAsync("RecevoirNotification", $"Nouvelle demande d'autorisation d'activite : {demande.Titre}");
+        var validationRecipients = await GetValidationRecipientIdsAsync();
+        await notificationDispatchService.SendAsync(
+            validationRecipients,
+            "Nouvelle demande d'autorisation",
+            $"Nouvelle demande d'autorisation d'activite : {demande.Titre}",
+            "Demandes",
+            Url.Action(nameof(Details), "Demandes", new { id }, Request.Scheme));
+
         TempData["Success"] = "Demande soumise au commissaire de district.";
         return RedirectToAction(nameof(Details), new { id });
     }
@@ -229,7 +238,13 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
         AjouterSuivi(demande, ancien, StatutDemande.Validee, NormalizeValue(commentaire) ?? (isPlatformAdmin ? "Validation exceptionnelle par administrateur" : "Demande validee par le commissaire de district"), BuildAuteurLabel(user));
         await db.SaveChangesAsync();
 
-        await hub.Clients.User(demande.DemandeurId.ToString()).SendAsync("RecevoirNotification", $"Votre demande \"{demande.Titre}\" a ete validee.");
+        await notificationDispatchService.SendAsync(
+            [demande.DemandeurId],
+            "Demande validee",
+            $"Votre demande \"{demande.Titre}\" a ete validee.",
+            "Demandes",
+            Url.Action(nameof(Details), "Demandes", new { id }, Request.Scheme));
+
         TempData["Success"] = "Demande validee.";
         return RedirectToAction(nameof(Details), new { id });
     }
@@ -265,7 +280,13 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
         AjouterSuivi(demande, ancien, StatutDemande.Rejetee, motifNormalise, BuildAuteurLabel(user));
         await db.SaveChangesAsync();
 
-        await hub.Clients.User(demande.DemandeurId.ToString()).SendAsync("RecevoirNotification", $"Votre demande \"{demande.Titre}\" a ete rejetee.");
+        await notificationDispatchService.SendAsync(
+            [demande.DemandeurId],
+            "Demande rejetee",
+            $"Votre demande \"{demande.Titre}\" a ete rejetee. Motif : {motifNormalise}",
+            "Demandes",
+            Url.Action(nameof(Details), "Demandes", new { id }, Request.Scheme));
+
         TempData["Success"] = "Demande rejetee.";
         return RedirectToAction(nameof(Details), new { id });
     }
@@ -300,7 +321,13 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
         AjouterSuivi(demande, ancien, StatutDemande.EnRevision, commentaireNormalise, BuildAuteurLabel(user));
         await db.SaveChangesAsync();
 
-        await hub.Clients.User(demande.DemandeurId.ToString()).SendAsync("RecevoirNotification", $"Votre demande \"{demande.Titre}\" doit etre modifiee avant une nouvelle validation.");
+        await notificationDispatchService.SendAsync(
+            [demande.DemandeurId],
+            "Demande a reviser",
+            $"Votre demande \"{demande.Titre}\" doit etre modifiee avant une nouvelle validation. Commentaire : {commentaireNormalise}",
+            "Demandes",
+            Url.Action(nameof(Details), "Demandes", new { id }, Request.Scheme));
+
         TempData["Success"] = "Demande renvoyee pour modification.";
         return RedirectToAction(nameof(Details), new { id });
     }
@@ -407,6 +434,31 @@ public class DemandesController(AppDbContext db, UserManager<ApplicationUser> us
         }
 
         return IsDistrictValidationFunction(scout.Fonction);
+    }
+
+    private async Task<List<Guid>> GetValidationRecipientIdsAsync()
+    {
+        var roleRecipients = await db.UserRoles
+            .Join(db.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
+            .Where(x => x.Name == RoleNames.Administrateur
+                || x.Name == RoleNames.Gestionnaire
+                || x.Name == RoleNames.CommissaireDistrict)
+            .Select(x => x.UserId)
+            .ToListAsync();
+
+        var districtReviewers = await db.Scouts
+            .Include(s => s.Groupe)
+            .Where(s => s.IsActive && s.UserId.HasValue)
+            .Where(s => s.Groupe != null && s.Groupe.Nom == "Equipe de District Mango Taika")
+            .Select(s => new { s.UserId, s.Fonction })
+            .ToListAsync();
+
+        return roleRecipients
+            .Concat(districtReviewers
+                .Where(s => IsDistrictValidationFunction(s.Fonction))
+                .Select(s => s.UserId!.Value))
+            .Distinct()
+            .ToList();
     }
 
     private static bool IsLeadershipScout(Scout? scout)

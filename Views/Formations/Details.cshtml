@@ -8,6 +8,7 @@
     var stats = (MangoTaika.DTOs.FormationStatsDto)ViewBag.Stats;
     var lectureSeule = ViewBag.LectureSeule as bool? ?? false;
     var canManage = !lectureSeule && (User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire"));
+    var canManageResources = canManage || (!lectureSeule && (ViewBag.CanManageFormationResources as bool? ?? false));
     var ressources = ViewBag.Ressources as List<Ressource> ?? new();
     var ressourcesFormation = ViewBag.RessourcesFormation as List<ParticipationFormationRessource> ?? new();
     var ressourcesFormationIds = ressourcesFormation.Select(r => r.RessourceId).ToHashSet();
@@ -163,7 +164,7 @@
                     </div>
                 </div>
 
-                @if (canManage)
+                @if (canManageResources)
                 {
                     <form asp-action="AjouterRessources" asp-route-id="@Model.Id" method="post" class="mb-3">
                         @Html.AntiForgeryToken()
@@ -198,7 +199,7 @@
                                         <td>@(participation.Ressource.Groupe?.Nom ?? "District")</td>
                                         <td>@(participation.Ressource.Telephone ?? participation.Ressource.Email ?? "-")</td>
                                         <td class="text-end">
-                                            @if (canManage)
+                                            @if (canManageResources)
                                             {
                                                 <form asp-action="RetirerRessource" asp-route-id="@Model.Id" method="post" onsubmit="return confirm('Retirer cette ressource de la formation ?')">
                                                     @Html.AntiForgeryToken()

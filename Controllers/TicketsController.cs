@@ -2,13 +2,11 @@ using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.DTOs;
 using MangoTaika.Helpers;
-using MangoTaika.Hubs;
 using MangoTaika.Services;
 using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace MangoTaika.Controllers;
@@ -18,9 +16,9 @@ public class TicketsController(
     ITicketService ticketService,
     UserManager<ApplicationUser> userManager,
     AppDbContext db,
-    IHubContext<NotificationHub> hubContext,
     IFileUploadService fileUploadService,
-    IWebHostEnvironment env) : Controller
+    IWebHostEnvironment env,
+    INotificationDispatchService notificationDispatchService) : Controller
 {
     [Authorize(Roles = "Administrateur,Gestionnaire,AgentSupport,Superviseur,Consultant")]
     public async Task<IActionResult> Index(
@@ -264,10 +262,16 @@ public class TicketsController(
         }
 
         var userId = Guid.Parse(userManager.GetUserId(User)!);
-        await ticketService.CreateAsync(dto, userId);
+        var createdTicket = await ticketService.CreateAsync(dto, userId);
         TempData["Success"] = "Ticket cree avec succes. Il a ete place dans la file de support.";
 
-        await hubContext.Clients.All.SendAsync("RecevoirNotification", $"Nouveau ticket : {dto.Sujet}");
+        var supportRecipients = (await GetSupportAgentsAsync()).Select(a => a.Id).ToList();
+        await notificationDispatchService.SendAsync(
+            supportRecipients,
+            "Nouveau ticket",
+            $"Nouveau ticket : {dto.Sujet}",
+            "Support",
+            Url.Action(nameof(Details), "Tickets", new { id = createdTicket.Id }, Request.Scheme));
 
         if (User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire") || User.IsInRole("AgentSupport"))
         {
@@ -335,10 +339,15 @@ public class TicketsController(
         await ticketService.AjouterMessageAsync(ticketId, contenu, userId);
 
         var isSupport = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire") || User.IsInRole("AgentSupport");
-        var targetId = isSupport ? ticket.CreateurId.ToString() : (ticket.AssigneAId?.ToString() ?? "");
-        if (!string.IsNullOrEmpty(targetId))
+        var targetId = isSupport ? ticket.CreateurId : ticket.AssigneAId;
+        if (targetId.HasValue)
         {
-            await hubContext.Clients.User(targetId).SendAsync("RecevoirNotification", $"Nouveau message sur le ticket : {ticket.Sujet}");
+            await notificationDispatchService.SendAsync(
+                [targetId.Value],
+                "Nouveau message sur un ticket",
+                $"Nouveau message sur le ticket : {ticket.Sujet}",
+                "Support",
+                Url.Action(nameof(Details), "Tickets", new { id = ticketId }, Request.Scheme));
         }
 
         TempData["Success"] = "Message envoye.";
@@ -368,6 +377,17 @@ public class TicketsController(
     {
         await ticketService.AssignerAsync(ticketId, agentId);
         var agent = await userManager.FindByIdAsync(agentId.ToString());
+        var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == ticketId);
+        if (ticket is not null)
+        {
+            await notificationDispatchService.SendAsync(
+                [agentId],
+                "Ticket assigne",
+                $"Le ticket {ticket.NumeroTicket} vous a ete assigne : {ticket.Sujet}",
+                "Support",
+                Url.Action(nameof(Details), "Tickets", new { id = ticketId }, Request.Scheme));
+        }
+
         TempData["Success"] = $"Ticket assigne a {agent?.Prenom} {agent?.Nom}.";
         return RedirectToAction(nameof(Details), new { id = ticketId });
     }
@@ -379,6 +399,17 @@ public class TicketsController(
     {
         var userId = Guid.Parse(userManager.GetUserId(User)!);
         await ticketService.UpdateStatutAsync(ticketId, statut, userId);
+        var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == ticketId);
+        if (ticket is not null)
+        {
+            await notificationDispatchService.SendAsync(
+                [ticket.CreateurId],
+                "Statut du ticket mis a jour",
+                $"Le ticket {ticket.NumeroTicket} est maintenant au statut : {statut}.",
+                "Support",
+                Url.Action(nameof(Details), "Tickets", new { id = ticketId }, Request.Scheme));
+        }
+
         TempData["Success"] = $"Statut mis a jour : {statut}.";
         return RedirectToAction(nameof(Details), new { id = ticketId });
     }
@@ -390,6 +421,18 @@ public class TicketsController(
     {
         await ticketService.AssignerGroupeAsync(ticketId, groupeId);
         var groupe = await db.Groupes.FindAsync(groupeId);
+        var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == ticketId);
+        var supportRecipients = (await GetSupportAgentsAsync()).Select(a => a.Id).ToList();
+        if (ticket is not null)
+        {
+            await notificationDispatchService.SendAsync(
+                supportRecipients,
+                "Ticket transfere",
+                $"Le ticket {ticket.NumeroTicket} a ete transfere au groupe {groupe?.Nom}.",
+                "Support",
+                Url.Action(nameof(Details), "Tickets", new { id = ticketId }, Request.Scheme));
+        }
+
         TempData["Success"] = $"Ticket transfere au groupe {groupe?.Nom}.";
         return RedirectToAction(nameof(Details), new { id = ticketId });
     }
@@ -417,6 +460,17 @@ public class TicketsController(
 
         var userId = Guid.Parse(userManager.GetUserId(User)!);
         await ticketService.ResoudreAsync(dto.TicketId, dto.ResumeResolution, dto.FermerApresResolution, userId);
+        var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == dto.TicketId);
+        if (ticket is not null)
+        {
+            await notificationDispatchService.SendAsync(
+                [ticket.CreateurId],
+                dto.FermerApresResolution ? "Ticket resolu et ferme" : "Ticket resolu",
+                $"Le ticket {ticket.NumeroTicket} a ete resolu. Resume : {dto.ResumeResolution}",
+                "Support",
+                Url.Action(nameof(Details), "Tickets", new { id = dto.TicketId }, Request.Scheme));
+        }
+
         TempData["Success"] = dto.FermerApresResolution ? "Ticket resolu et ferme." : "Ticket resolu.";
         return RedirectToAction(nameof(Details), new { id = dto.TicketId });
     }
