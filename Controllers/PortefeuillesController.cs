@@ -104,14 +104,14 @@ public class PortefeuillesController(
     {
         if (montant <= 0)
         {
-            TempData["Error"] = "Le montant du paiement doit etre superieur a 0.";
+            TempData["Error"] = "Paiement impossible : saisissez un montant superieur a 0.";
             return RedirectToAction(nameof(MonPortefeuille));
         }
 
         var portefeuille = await EnsureCurrentUserWalletAsync();
         if (portefeuille.Solde < montant)
         {
-            TempData["Error"] = "Solde insuffisant pour effectuer ce paiement.";
+            TempData["Error"] = $"Solde insuffisant : votre portefeuille contient {portefeuille.Solde:N0} {portefeuille.Devise}, le paiement demande est de {montant:N0} {portefeuille.Devise}. Rechargez votre portefeuille ou reduisez le montant.";
             return RedirectToAction(nameof(MonPortefeuille));
         }
 
@@ -119,7 +119,7 @@ public class PortefeuillesController(
         var isActivite = string.Equals(typePaiement, "Activite", StringComparison.OrdinalIgnoreCase);
         if (!isCotisation && !isActivite)
         {
-            TempData["Error"] = "Selectionnez le type de paiement.";
+            TempData["Error"] = "Paiement impossible : selectionnez Cotisation nationale ou Activite.";
             return RedirectToAction(nameof(MonPortefeuille));
         }
 
@@ -128,14 +128,14 @@ public class PortefeuillesController(
         {
             if (!activiteId.HasValue)
             {
-                TempData["Error"] = "Selectionnez l'activite a payer.";
+                TempData["Error"] = "Paiement d'activite impossible : selectionnez l'activite concernee.";
                 return RedirectToAction(nameof(MonPortefeuille));
             }
 
             activite = await db.Activites.FirstOrDefaultAsync(a => a.Id == activiteId.Value && !a.EstSupprime);
             if (activite is null)
             {
-                TempData["Error"] = "Activite introuvable.";
+                TempData["Error"] = "Paiement impossible : l'activite selectionnee est introuvable ou a ete supprimee. Actualisez la page puis reessayez.";
                 return RedirectToAction(nameof(MonPortefeuille));
             }
         }
@@ -152,13 +152,13 @@ public class PortefeuillesController(
 
         if (comptePaiementId.HasValue && compte is null)
         {
-            TempData["Error"] = "Compte de paiement introuvable ou inactif.";
+            TempData["Error"] = "Compte de paiement introuvable ou inactif. Choisissez un autre compte ou demandez a l'administration de l'activer.";
             return RedirectToAction(nameof(MonPortefeuille));
         }
 
         if (isActivite && compte?.ActiviteId is Guid linkedActivityId && linkedActivityId != activite!.Id)
         {
-            TempData["Error"] = "Le compte de paiement selectionne est rattache a une autre activite.";
+            TempData["Error"] = "Le compte de paiement selectionne est rattache a une autre activite. Utilisez le compte de cette activite ou un compte global.";
             return RedirectToAction(nameof(MonPortefeuille));
         }
 
@@ -264,7 +264,7 @@ public class PortefeuillesController(
         var candidates = await FindBeneficiaryCandidatesAsync(beneficiaire);
         if (candidates.Count == 0)
         {
-            TempData["Error"] = "Beneficiaire introuvable. Recherchez par telephone, email, matricule ou nom.";
+            TempData["Error"] = "Beneficiaire introuvable. Recherchez avec un telephone, un email, un matricule ou le nom complet exactement comme sur son compte.";
             return RedirectToAction(nameof(MonPortefeuille));
         }
 
@@ -293,7 +293,7 @@ public class PortefeuillesController(
         var beneficiaryUser = await db.Users.FirstOrDefaultAsync(u => u.Id == model.BeneficiaireId && u.IsActive);
         if (beneficiaryUser is null || beneficiaryUser.Id == UserId)
         {
-            TempData["Error"] = "Beneficiaire invalide pour ce transfert.";
+            TempData["Error"] = "Transfert impossible : le beneficiaire est inactif, introuvable ou correspond a votre propre compte.";
             return RedirectToAction(nameof(MonPortefeuille));
         }
 
@@ -510,7 +510,7 @@ public class PortefeuillesController(
     {
         if (montant <= 0 || string.IsNullOrWhiteSpace(libelle))
         {
-            TempData["Error"] = "Le montant et le libelle sont obligatoires.";
+            TempData["Error"] = "Creation impossible : renseignez un libelle clair et un montant superieur a 0.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -542,7 +542,7 @@ public class PortefeuillesController(
         if (mouvement is null) return NotFound();
         if (mouvement.Statut != StatutMouvementPortefeuille.Valide)
         {
-            TempData["Error"] = "Le recu est disponible uniquement apres validation.";
+            TempData["Error"] = "Le recu n'est pas encore disponible : le mouvement doit d'abord etre valide.";
             return RedirectToAction(nameof(Details), new { id });
         }
 
@@ -582,7 +582,7 @@ public class PortefeuillesController(
     {
         if (string.IsNullOrWhiteSpace(libelle) || string.IsNullOrWhiteSpace(operateur) || string.IsNullOrWhiteSpace(numeroMobile))
         {
-            TempData["Error"] = "Libelle, operateur et numero mobile sont obligatoires.";
+            TempData["Error"] = "Compte de paiement incomplet : renseignez le libelle, l'operateur et le numero mobile.";
             return RedirectToAction(nameof(ComptesPaiement));
         }
 

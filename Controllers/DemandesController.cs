@@ -363,7 +363,7 @@ public class DemandesController(
     {
         if (!dto.GroupeId.HasValue)
         {
-            ModelState.AddModelError(nameof(dto.GroupeId), "Le groupe concerne est obligatoire.");
+            ModelState.AddModelError(nameof(dto.GroupeId), "Selectionnez le groupe concerne par la demande. Cette information est necessaire pour le suivi et la validation.");
         }
 
         Groupe? groupe = null;
@@ -372,7 +372,7 @@ public class DemandesController(
             groupe = await db.Groupes.FirstOrDefaultAsync(g => g.Id == dto.GroupeId.Value && g.IsActive);
             if (groupe is null)
             {
-                ModelState.AddModelError(nameof(dto.GroupeId), "Le groupe selectionne est introuvable ou inactif.");
+                ModelState.AddModelError(nameof(dto.GroupeId), "Le groupe selectionne est introuvable ou inactif. Choisissez un groupe actif ou contactez l'administration.");
             }
         }
 
@@ -382,13 +382,13 @@ public class DemandesController(
             branche = await db.Branches.FirstOrDefaultAsync(b => b.Id == dto.BrancheId.Value && b.IsActive);
             if (branche is null)
             {
-                ModelState.AddModelError(nameof(dto.BrancheId), "La branche selectionnee est introuvable ou inactive.");
+                ModelState.AddModelError(nameof(dto.BrancheId), "La branche selectionnee est introuvable ou inactive. Choisissez une branche active du groupe.");
             }
         }
 
         if (groupe is not null && branche is not null && branche.GroupeId != groupe.Id)
         {
-            ModelState.AddModelError(nameof(dto.BrancheId), "La branche concernee doit appartenir au groupe selectionne.");
+            ModelState.AddModelError(nameof(dto.BrancheId), "La branche choisie n'appartient pas au groupe selectionne. Selectionnez une branche du meme groupe.");
         }
 
         if (!isAdmin)

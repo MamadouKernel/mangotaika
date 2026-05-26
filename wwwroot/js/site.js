@@ -34,6 +34,68 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 document.addEventListener('DOMContentLoaded', function () {
+    function cssAttributeValue(value) {
+        return String(value || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    }
+
+    function findFieldContainer(field) {
+        return field.closest('.mb-3, .mb-4, .form-group, .form-floating, .col-md-3, .col-md-4, .col-md-6, .col-lg-3, .col-lg-4, .col-lg-6, .col-12')
+            || field.parentElement;
+    }
+
+    function linkValidationMessage(field, container, index) {
+        if (!container) return;
+
+        var fieldName = field.getAttribute('name') || field.id || '';
+        var validation = fieldName
+            ? container.querySelector('[data-valmsg-for="' + cssAttributeValue(fieldName) + '"]')
+            : null;
+
+        if (!validation) {
+            validation = container.querySelector('.field-validation-error');
+        }
+
+        if (!validation) return;
+
+        if (!validation.id) {
+            var baseId = field.id || fieldName || ('field-' + index);
+            validation.id = 'validation-' + baseId.replace(/[^a-zA-Z0-9_-]/g, '-');
+        }
+
+        var describedBy = field.getAttribute('aria-describedby') || '';
+        if (describedBy.indexOf(validation.id) === -1) {
+            field.setAttribute('aria-describedby', (describedBy + ' ' + validation.id).trim());
+        }
+    }
+
+    function enhanceValidationFeedback() {
+        var invalidFields = Array.prototype.slice.call(document.querySelectorAll('.input-validation-error, [aria-invalid="true"]'));
+
+        invalidFields.forEach(function (field, index) {
+            field.setAttribute('aria-invalid', 'true');
+            var container = findFieldContainer(field);
+            if (container) {
+                container.classList.add('ihm-field--invalid');
+            }
+            linkValidationMessage(field, container, index);
+        });
+
+        if (!invalidFields.length) return;
+
+        window.setTimeout(function () {
+            var firstInvalid = invalidFields[0];
+            var firstContainer = findFieldContainer(firstInvalid) || firstInvalid;
+            firstContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (typeof firstInvalid.focus === 'function' && !firstInvalid.disabled && firstInvalid.type !== 'hidden') {
+                firstInvalid.focus({ preventScroll: true });
+            }
+        }, 120);
+    }
+
+    enhanceValidationFeedback();
+});
+
+document.addEventListener('DOMContentLoaded', function () {
     var trigger = document.getElementById('notificationTrigger');
     var panel = document.getElementById('notificationPanel');
     var list = document.getElementById('notificationList');

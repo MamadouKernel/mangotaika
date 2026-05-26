@@ -120,7 +120,11 @@ public class BoutiqueController(
         var article = await db.ArticlesBoutique
             .AsNoTracking()
             .FirstOrDefaultAsync(a => a.Id == articleId && a.EstPublie && !a.EstSupprime);
-        if (article is null) return NotFound();
+        if (article is null)
+        {
+            TempData["Error"] = "Article introuvable ou retire de la boutique. Choisissez un autre article disponible.";
+            return RedirectToAction(nameof(Index));
+        }
 
         quantite = Math.Max(1, quantite);
         var cart = GetCart();
@@ -434,13 +438,13 @@ public class BoutiqueController(
         if (quantite <= 0) quantite = 1;
         if (article.StockDisponible > 0 && quantite > article.StockDisponible)
         {
-            TempData["Error"] = "La quantite demandee depasse le stock disponible.";
+            TempData["Error"] = $"Stock insuffisant : {article.StockDisponible} article(s) disponible(s), quantite demandee {quantite}. Reduisez la quantite.";
             return RedirectToAction(nameof(Details), new { id = articleId });
         }
 
         if (string.IsNullOrWhiteSpace(nomClient) || string.IsNullOrWhiteSpace(telephoneClient))
         {
-            TempData["Error"] = "Le nom et le telephone sont obligatoires pour enregistrer la commande.";
+            TempData["Error"] = "Commande incomplete : renseignez le nom du client et un telephone joignable.";
             return RedirectToAction(nameof(Details), new { id = articleId });
         }
 
@@ -517,20 +521,20 @@ public class BoutiqueController(
         var cart = await BuildCartViewModelAsync();
         if (!cart.Lignes.Any())
         {
-            TempData["Error"] = "Votre panier est vide.";
+            TempData["Error"] = "Votre panier est vide. Ajoutez au moins un article avant de passer la commande.";
             return RedirectToAction(nameof(Index));
         }
 
         if (string.IsNullOrWhiteSpace(nomClient) || string.IsNullOrWhiteSpace(telephoneClient))
         {
-            TempData["Error"] = "Le nom et le telephone sont obligatoires pour enregistrer la commande.";
+            TempData["Error"] = "Commande incomplete : renseignez le nom du client et un telephone joignable.";
             return RedirectToAction(nameof(Checkout));
         }
 
         var mixedCurrencies = cart.Lignes.Select(l => l.Article.Devise).Distinct(StringComparer.OrdinalIgnoreCase).Count() > 1;
         if (mixedCurrencies)
         {
-            TempData["Error"] = "Le panier contient plusieurs devises. Separez les commandes.";
+            TempData["Error"] = "Le panier contient plusieurs devises. Creez une commande separee pour chaque devise.";
             return RedirectToAction(nameof(Panier));
         }
 
@@ -849,12 +853,12 @@ public class BoutiqueController(
     {
         if (string.IsNullOrWhiteSpace(model.Nom))
         {
-            ModelState.AddModelError(nameof(model.Nom), "Le nom de l'article est obligatoire.");
+            ModelState.AddModelError(nameof(model.Nom), "Le nom de l'article est obligatoire pour identifier le produit dans la boutique.");
         }
 
         if (model.Prix < 0)
         {
-            ModelState.AddModelError(nameof(model.Prix), "Le prix ne peut pas etre negatif.");
+            ModelState.AddModelError(nameof(model.Prix), "Le prix ne peut pas etre negatif. Saisissez 0 pour un article gratuit ou un montant positif.");
         }
 
         if (model.StockDisponible < 0)

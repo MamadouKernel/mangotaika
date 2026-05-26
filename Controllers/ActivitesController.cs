@@ -779,7 +779,7 @@ public class ActivitesController(
             return NotFound(new PresenceScoutScanResponse
             {
                 Success = false,
-                Message = "Activite introuvable."
+                Message = "Activite introuvable ou supprimee. Actualisez la page puis reessayez."
             });
         }
         if (!await CanManageActivityAsync(activite.GroupeId))
@@ -811,7 +811,7 @@ public class ActivitesController(
             return BadRequest(new PresenceScoutScanResponse
             {
                 Success = false,
-                Message = errorMessage ?? "Scout introuvable."
+                Message = errorMessage ?? "Scout introuvable. Verifiez le matricule ou scannez le QR officiel du scout."
             });
         }
 
@@ -878,7 +878,7 @@ public class ActivitesController(
             return BadRequest(new PresenceScoutScanResponse
             {
                 Success = false,
-                Message = "Le scout a ajouter n'est pas valide."
+                Message = "Le scout a ajouter n'est pas valide. Selectionnez un scout depuis la liste proposee ou scannez son QR officiel."
             });
         }
 
@@ -888,7 +888,7 @@ public class ActivitesController(
             return NotFound(new PresenceScoutScanResponse
             {
                 Success = false,
-                Message = "Activite introuvable."
+                Message = "Activite introuvable ou supprimee. Actualisez la page puis reessayez."
             });
         }
 
@@ -916,7 +916,7 @@ public class ActivitesController(
             return NotFound(new PresenceScoutScanResponse
             {
                 Success = false,
-                Message = "Scout introuvable ou inactif."
+                Message = "Scout introuvable ou inactif. Verifiez que la fiche scout existe et qu'elle est active."
             });
         }
 
@@ -1069,19 +1069,19 @@ public class ActivitesController(
         {
             if (!scoutQrService.TryReadScoutId(rawValue, out var scoutId))
             {
-                return (null, "Le QR scout scanne est invalide ou corrompu.");
+                return (null, "Le QR scout scanne est invalide ou corrompu. Regenerez le QR depuis la fiche scout puis reessayez.");
             }
 
             var scoutByQr = await db.Scouts.FirstOrDefaultAsync(s => s.Id == scoutId && s.IsActive);
             return scoutByQr is null
-                ? (null, "Le QR scout ne correspond a aucun profil actif.")
+                ? (null, "Le QR scout ne correspond a aucun profil actif. Verifiez que le scout existe et que sa fiche est active.")
                 : (scoutByQr, null);
         }
 
         var normalizedMatricule = rawValue.ToUpperInvariant();
         var scoutByMatricule = await db.Scouts.FirstOrDefaultAsync(s => s.IsActive && s.Matricule != null && s.Matricule.ToUpper() == normalizedMatricule);
         return scoutByMatricule is null
-            ? (null, "Aucun scout actif ne correspond a ce matricule ou code.")
+            ? (null, "Aucun scout actif ne correspond a ce matricule ou code. Verifiez le format du matricule ou demandez une mise a jour de la fiche scout.")
             : (scoutByMatricule, null);
     }
 

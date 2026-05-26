@@ -152,7 +152,7 @@ public class AccountController(
         var user = await db.Users.FirstOrDefaultAsync(u => u.PhoneNumber == model.Telephone);
         if (user == null)
         {
-            ModelState.AddModelError(string.Empty, "Identifiants invalides.");
+            ModelState.AddModelError(string.Empty, "Telephone ou mot de passe incorrect. Verifiez le numero saisi ou utilisez le mot de passe oublie.");
             return View(model);
         }
 
@@ -170,7 +170,7 @@ public class AccountController(
         if (result.IsLockedOut)
             ModelState.AddModelError(string.Empty, "Compte verrouillÃ©. RÃ©essayez plus tard.");
         else
-            ModelState.AddModelError(string.Empty, "Identifiants invalides.");
+            ModelState.AddModelError(string.Empty, "Telephone ou mot de passe incorrect. Verifiez vos informations puis reessayez.");
         return View(model);
     }
 
@@ -184,12 +184,12 @@ public class AccountController(
         if (!ModelState.IsValid) return View(model);
         if (model.Role != "Parent" && model.Role != "Gestionnaire" && model.Role != "Scout")
         {
-            ModelState.AddModelError("Role", "Rôle invalide.");
+            ModelState.AddModelError("Role", "Profil d'inscription non reconnu. Selectionnez Parent / Tuteur, Scout ou Gestionnaire dans la liste.");
             return View(model);
         }
         if (await db.Users.AnyAsync(u => u.PhoneNumber == model.Telephone))
         {
-            ModelState.AddModelError("Telephone", "Ce numéro de téléphone est déjà utilisé.");
+            ModelState.AddModelError("Telephone", "Ce numero de telephone est deja rattache a un compte. Connectez-vous avec ce numero ou utilisez le lien de mot de passe oublie.");
             return View(model);
         }
         CodeInvitation? codeInvitation = null;
@@ -198,7 +198,7 @@ public class AccountController(
             codeInvitation = await ResolveInvitationAsync(model.CodeInvitation);
             if (codeInvitation is null)
             {
-                ModelState.AddModelError("CodeInvitation", "Un code d'invitation valide est requis.");
+                ModelState.AddModelError("CodeInvitation", "Code d'invitation invalide ou deja utilise. Demandez un nouveau code a l'administration du district.");
                 return View(model);
             }
         }
@@ -221,7 +221,7 @@ public class AccountController(
                 var scout = await db.Scouts.FirstOrDefaultAsync(s => s.Matricule == matricule && s.IsActive);
                 if (scout is null)
                 {
-                    ModelState.AddModelError("Matricules", $"Matricule introuvable : {matricule}");
+                    ModelState.AddModelError("Matricules", $"Matricule enfant introuvable ou inactif : {matricule}. Verifiez le matricule ou demandez au chef de groupe de mettre la fiche scout a jour.");
                     return View(model);
                 }
                 scouts.Add(scout);
@@ -242,12 +242,12 @@ public class AccountController(
             parentsLies = await ResolveParentLinksForRegistrationAsync(model, scouts);
             if (parentsLies.Count == 0)
             {
-                ModelState.AddModelError("Matricules", "Aucune fiche parent correspondante n'a été trouvée pour ces scouts avec vos coordonnées.");
+                ModelState.AddModelError("Matricules", "Aucune fiche parent/tuteur ne correspond a ces matricules avec le telephone ou l'email saisi. Utilisez les coordonnees declarees au groupe, ou demandez la correction de la fiche parent.");
                 return View(model);
             }
             if (parentsLies.Any(p => p.UserId.HasValue))
             {
-                ModelState.AddModelError("Matricules", "Une fiche parent correspondant à ces scouts est déjà liée à un compte.");
+                ModelState.AddModelError("Matricules", "Une fiche parent/tuteur correspondant a ces enfants est deja liee a un compte. Connectez-vous avec ce compte ou utilisez le mot de passe oublie.");
                 return View(model);
             }
             var scoutIdsLies = parentsLies
@@ -277,17 +277,17 @@ public class AccountController(
             scoutLie = await db.Scouts.FirstOrDefaultAsync(s => s.Matricule == matriculeScout && s.IsActive);
             if (scoutLie is null)
             {
-                ModelState.AddModelError("MatriculeScout", "Matricule introuvable. Vérifiez auprès de votre chef de groupe.");
+                ModelState.AddModelError("MatriculeScout", "Matricule scout introuvable ou inactif. Verifiez le format du matricule ou demandez au chef de groupe de mettre votre fiche a jour.");
                 return View(model);
             }
             if (scoutLie.UserId.HasValue)
             {
-                ModelState.AddModelError("MatriculeScout", "Ce matricule est déjà lié à un compte.");
+                ModelState.AddModelError("MatriculeScout", "Ce matricule est deja lie a un compte. Connectez-vous avec ce compte ou utilisez le mot de passe oublie.");
                 return View(model);
             }
             if (!ScoutMatchesRegistration(scoutLie, model))
             {
-                ModelState.AddModelError("MatriculeScout", "Les coordonnées saisies ne correspondent pas à la fiche scout existante.");
+                ModelState.AddModelError("MatriculeScout", BuildScoutRegistrationMismatchMessage(scoutLie, model));
                 return View(model);
             }
         }
@@ -392,6 +392,38 @@ public class AccountController(
     }
     private static bool ScoutMatchesRegistration(Scout scout, RegisterViewModel model)
         => ContactMatches(scout.Telephone, scout.Email, model);
+
+    private static string BuildScoutRegistrationMismatchMessage(Scout scout, RegisterViewModel model)
+    {
+        var ficheHasPhone = !string.IsNullOrWhiteSpace(scout.Telephone);
+        var ficheHasEmail = !string.IsNullOrWhiteSpace(scout.Email);
+        var phoneProvided = !string.IsNullOrWhiteSpace(model.Telephone);
+        var emailProvided = !string.IsNullOrWhiteSpace(model.Email);
+        var phoneMatches = ficheHasPhone && phoneProvided && NormalizePhoneKey(scout.Telephone) == NormalizePhoneKey(model.Telephone);
+        var emailMatches = ficheHasEmail && emailProvided && NormalizeEmailKey(scout.Email) == NormalizeEmailKey(model.Email);
+
+        if (!ficheHasPhone && !ficheHasEmail)
+        {
+            return "La fiche scout existe, mais aucun telephone ni email n'y est renseigne. Demandez a votre chef de groupe de mettre votre fiche a jour avant l'inscription.";
+        }
+
+        if (ficheHasPhone && !phoneMatches && !ficheHasEmail)
+        {
+            return "Le telephone saisi ne correspond pas au telephone enregistre sur votre fiche scout. Utilisez le meme numero que celui communique a votre chef de groupe, ou demandez la correction de votre fiche.";
+        }
+
+        if (ficheHasEmail && !emailMatches && !ficheHasPhone)
+        {
+            return "L'email saisi ne correspond pas a l'email enregistre sur votre fiche scout. Utilisez le meme email que celui communique a votre chef de groupe, ou demandez la correction de votre fiche.";
+        }
+
+        if (!phoneMatches && !emailMatches)
+        {
+            return "Le telephone et l'email saisis ne correspondent pas aux coordonnees enregistrees sur votre fiche scout. Utilisez au moins une coordonnee identique a votre fiche, ou demandez a votre chef de groupe de la corriger.";
+        }
+
+        return "Les coordonnees saisies ne correspondent pas a la fiche scout existante. Verifiez le telephone, l'email et le matricule, puis reessayez.";
+    }
     private async Task<List<Parent>> ResolveParentLinksForRegistrationAsync(RegisterViewModel model, IReadOnlyCollection<Scout> scouts)
     {
         if (scouts.Count == 0)
@@ -884,7 +916,7 @@ public class AccountController(
 
         if (string.IsNullOrWhiteSpace(model.Code))
         {
-            ModelState.AddModelError("Code", "Le code est requis.");
+            ModelState.AddModelError("Code", "Saisissez le code SMS recu pour activer la double authentification.");
             model.CodeEnvoye = true;
             return View(model);
         }
@@ -892,7 +924,7 @@ public class AccountController(
         var isValid = await userManager.VerifyChangePhoneNumberTokenAsync(user, model.Code.Trim(), user.PhoneNumber!);
         if (!isValid)
         {
-            ModelState.AddModelError("Code", "Code de vÃ©rification invalide ou expirÃ©.");
+            ModelState.AddModelError("Code", "Code SMS invalide ou expire. Verifiez le dernier code recu ou demandez un nouvel envoi.");
             model.CodeEnvoye = true;
             return View(model);
         }
@@ -948,11 +980,11 @@ public class AccountController(
             return RedirectToAction("Index", "Dashboard");
         if (result.IsLockedOut)
         {
-            ModelState.AddModelError(string.Empty, "Compte verrouillÃ©. RÃ©essayez plus tard.");
+            ModelState.AddModelError(string.Empty, "Compte verrouille apres plusieurs tentatives. Patientez quelques minutes avant de reessayer.");
             return View(model);
         }
 
-        ModelState.AddModelError("Code", "Code invalide ou expirÃ©.");
+        ModelState.AddModelError("Code", "Code de verification invalide ou expire. Utilisez le dernier code SMS recu.");
         return View(model);
     }
 

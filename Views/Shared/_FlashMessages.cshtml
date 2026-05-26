@@ -1,29 +1,41 @@
+@functions {
+    private sealed record FeedbackMessage(string Type, string Title, string Body, string Icon);
+}
+
 @{
-    var success = TempData["Success"] as string;
-    var error = TempData["Error"] as string;
-    var importError = TempData["ImportError"] as string;
+    var messages = new List<FeedbackMessage>();
+
+    void AddMessage(string key, string type, string title, string icon)
+    {
+        var body = TempData[key] as string;
+        if (!string.IsNullOrWhiteSpace(body))
+        {
+            messages.Add(new FeedbackMessage(type, title, body, icon));
+        }
+    }
+
+    AddMessage("Success", "success", "Operation reussie", "bi-check2-circle");
+    AddMessage("Info", "info", "Information utile", "bi-info-circle");
+    AddMessage("Warning", "warning", "Point d'attention", "bi-exclamation-triangle");
+    AddMessage("Error", "error", "Action impossible", "bi-exclamation-octagon");
+    AddMessage("ImportError", "error", "Import impossible", "bi-file-earmark-x");
 }
 
-@if (!string.IsNullOrWhiteSpace(success))
+@if (messages.Count > 0)
 {
-    <div class="alert alert-mango alert-dismissible fade show m-3" role="alert">
-        <i class="bi bi-check-circle-fill"></i> @success
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
-    </div>
-}
-
-@if (!string.IsNullOrWhiteSpace(error))
-{
-    <div class="alert alert-danger alert-dismissible fade show m-3" role="alert">
-        <i class="bi bi-exclamation-triangle-fill"></i> @error
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
-    </div>
-}
-
-@if (!string.IsNullOrWhiteSpace(importError))
-{
-    <div class="alert alert-danger alert-dismissible fade show m-3" role="alert">
-        <i class="bi bi-exclamation-octagon-fill"></i> @importError
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
-    </div>
+    <section class="ihm-feedback-stack" aria-live="polite" aria-label="Messages de la plateforme">
+        @foreach (var message in messages)
+        {
+            <article class="ihm-feedback ihm-feedback--@message.Type alert alert-dismissible fade show" role="alert">
+                <div class="ihm-feedback__icon" aria-hidden="true">
+                    <i class="bi @message.Icon"></i>
+                </div>
+                <div class="ihm-feedback__content">
+                    <div class="ihm-feedback__title">@message.Title</div>
+                    <div class="ihm-feedback__body">@message.Body</div>
+                </div>
+                <button type="button" class="btn-close ihm-feedback__close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+            </article>
+        }
+    </section>
 }
