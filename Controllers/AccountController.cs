@@ -19,7 +19,8 @@ public class AccountController(
     AppDbContext db,
     ISmsService smsService,
     IFileUploadService fileUploadService,
-    ActiveRoleService activeRoleService) : Controller
+    ActiveRoleService activeRoleService,
+    IEmailNotificationService emailService) : Controller
 {
     private const int MaxParentsPerScout = 3;
 
@@ -32,6 +33,113 @@ public class AccountController(
 
     [HttpGet]
     public IActionResult AccessDenied() => View();
+
+    [HttpGet]
+    public IActionResult ForgotPassword() => View(new ForgotPasswordViewModel());
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var normalizedEmail = model.Email.Trim().ToUpperInvariant();
+        var user = await db.Users.FirstOrDefaultAsync(u => u.NormalizedEmail == normalizedEmail);
+        if (user is null)
+        {
+            ModelState.AddModelError(nameof(model.Email), "Aucun compte actif n'utilise cette adresse email.");
+            return View(model);
+        }
+
+        if (!user.IsActive)
+        {
+            ModelState.AddModelError(nameof(model.Email), "Ce compte est inactif. Contactez l'administration du district.");
+            return View(model);
+        }
+
+        var token = await userManager.GeneratePasswordResetTokenAsync(user);
+        var resetUrl = Url.Action(
+            nameof(ResetPassword),
+            "Account",
+            new { userId = user.Id, token },
+            Request.Scheme);
+
+        if (string.IsNullOrWhiteSpace(resetUrl))
+        {
+            ModelState.AddModelError(string.Empty, "Impossible de generer le lien de reinitialisation.");
+            return View(model);
+        }
+
+        await emailService.SendAsync(
+            user.Email!,
+            "Reinitialisation de mot de passe",
+            "Une demande de reinitialisation de mot de passe a ete initiee pour votre compte MANGO TAIKA. Cliquez sur le bouton ci-dessous pour definir un nouveau mot de passe. Si vous n'etes pas a l'origine de cette demande, ignorez ce message.",
+            $"{user.Prenom} {user.Nom}".Trim(),
+            "Compte",
+            resetUrl);
+
+        TempData["Success"] = "Un lien de reinitialisation a ete envoye a votre adresse email.";
+        return RedirectToAction(nameof(ForgotPasswordConfirmation));
+    }
+
+    [HttpGet]
+    public IActionResult ForgotPasswordConfirmation() => View();
+
+    [HttpGet]
+    public async Task<IActionResult> ResetPassword(Guid userId, string? token)
+    {
+        if (userId == Guid.Empty || string.IsNullOrWhiteSpace(token))
+        {
+            return RedirectToAction(nameof(Login));
+        }
+
+        var user = await userManager.FindByIdAsync(userId.ToString());
+        if (user is null || !user.IsActive)
+        {
+            TempData["Error"] = "Lien de reinitialisation invalide ou expire.";
+            return RedirectToAction(nameof(Login));
+        }
+
+        return View(new ResetPasswordViewModel
+        {
+            UserId = userId,
+            Token = token
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var user = await userManager.FindByIdAsync(model.UserId.ToString());
+        if (user is null || !user.IsActive)
+        {
+            ModelState.AddModelError(string.Empty, "Lien de reinitialisation invalide ou expire.");
+            return View(model);
+        }
+
+        var result = await userManager.ResetPasswordAsync(user, model.Token, model.Password);
+        if (!result.Succeeded)
+        {
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+            return View(model);
+        }
+
+        await userManager.UpdateSecurityStampAsync(user);
+        TempData["Success"] = "Votre mot de passe a ete reinitialise. Vous pouvez vous connecter.";
+        return RedirectToAction(nameof(Login));
+    }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
