@@ -33,7 +33,7 @@
         : (isScopedLeader ? activeRole : "");
     var showScopedNav = activeScopedLeader is "EquipeDistrict" or "ChefGroupe" or "ChefUnite";
 
-    var canViewTerritoire = isEncadrement || showScopedNav;
+    var canViewTerritoire = isEncadrement;
     var canViewActivites = isEncadrement || showScopedNav;
     var canViewDemandes = isAdminOrGest || isSuperviseur || isConsultant;
     var canViewFinances = isEncadrement;
@@ -107,7 +107,6 @@
                             <li><a class="nav-link" asp-controller="Formations" asp-action="MesFormations"><i class="bi bi-mortarboard"></i> Mes formations</a></li>
                             <li><a class="nav-link" asp-controller="Formations" asp-action="Catalogue"><i class="bi bi-book"></i> Catalogue formations</a></li>
                             <li><a class="nav-link" asp-controller="Certificats" asp-action="MesCertificats"><i class="bi bi-patch-check"></i> Mes certificats</a></li>
-                            <li><a class="nav-link" asp-controller="Portefeuilles" asp-action="MonPortefeuille"><i class="bi bi-wallet2"></i> Mon portefeuille</a></li>
                             <li><a class="nav-link" asp-controller="Tickets" asp-action="MesTickets"><i class="bi bi-headset"></i> Mes tickets</a></li>
                         </ul>
                     </li>

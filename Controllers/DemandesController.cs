@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace MangoTaika.Controllers;
 
@@ -236,6 +237,7 @@ public class DemandesController(
         demande.DateValidation = DateTime.UtcNow;
         demande.MotifRejet = null;
         AjouterSuivi(demande, ancien, StatutDemande.Validee, NormalizeValue(commentaire) ?? (isPlatformAdmin ? "Validation exceptionnelle par administrateur" : "Demande validee par le commissaire de district"), BuildAuteurLabel(user));
+        var activite = await CreerActiviteDepuisDemandeAsync(demande, user?.Id ?? demande.DemandeurId);
         await db.SaveChangesAsync();
 
         await notificationDispatchService.SendAsync(
@@ -243,7 +245,9 @@ public class DemandesController(
             "Demande validee",
             $"Votre demande \"{demande.Titre}\" a ete validee.",
             "Demandes",
-            Url.Action(nameof(Details), "Demandes", new { id }, Request.Scheme));
+            activite is not null
+                ? Url.Action("Details", "Activites", new { id = activite.Id }, Request.Scheme)
+                : Url.Action(nameof(Details), "Demandes", new { id }, Request.Scheme));
 
         TempData["Success"] = "Demande validee.";
         return RedirectToAction(nameof(Details), new { id });
@@ -546,6 +550,66 @@ public class DemandesController(
             Commentaire = commentaire,
             Auteur = auteur
         });
+    }
+
+    private async Task<Activite?> CreerActiviteDepuisDemandeAsync(DemandeAutorisation demande, Guid createurId)
+    {
+        var existeDeja = await db.Activites.AnyAsync(a =>
+            !a.EstSupprime
+            && a.GroupeId == demande.GroupeId
+            && a.Titre == demande.Titre
+            && a.DateDebut == demande.DateActivite);
+
+        if (existeDeja)
+        {
+            return null;
+        }
+
+        var activite = new Activite
+        {
+            Id = Guid.NewGuid(),
+            Titre = demande.Titre,
+            Description = demande.Description,
+            Type = MapTypeActivite(demande.TypeActivite),
+            DateDebut = demande.DateActivite,
+            DateFin = demande.DateFin,
+            Lieu = demande.Lieu,
+            BudgetPrevisionnel = TryParseBudget(demande.Budget),
+            NomResponsable = demande.Responsables,
+            Statut = StatutActivite.Validee,
+            CreateurId = demande.DemandeurId,
+            GroupeId = demande.GroupeId
+        };
+
+        db.Activites.Add(activite);
+        db.CommentairesActivite.Add(new CommentaireActivite
+        {
+            Id = Guid.NewGuid(),
+            ActiviteId = activite.Id,
+            AuteurId = createurId,
+            Contenu = $"Activite generee automatiquement apres validation de la demande {demande.Titre}.",
+            TypeAction = "Validation"
+        });
+
+        AjouterSuivi(demande, StatutDemande.Validee, StatutDemande.Validee, $"Activite creee automatiquement : {activite.Titre}", "Systeme");
+        return activite;
+    }
+
+    private static TypeActivite MapTypeActivite(TypeActiviteDemande type)
+        => type switch
+        {
+            TypeActiviteDemande.Sortie => TypeActivite.Sortie,
+            TypeActiviteDemande.Camp => TypeActivite.Camp,
+            TypeActiviteDemande.Formation => TypeActivite.Formation,
+            TypeActiviteDemande.Ceremonie => TypeActivite.Ceremonie,
+            _ => TypeActivite.Autre
+        };
+
+    private static decimal? TryParseBudget(string? budget)
+    {
+        if (string.IsNullOrWhiteSpace(budget)) return null;
+        var digits = new string(budget.Where(c => char.IsDigit(c) || c == ',' || c == '.').ToArray()).Replace(',', '.');
+        return decimal.TryParse(digits, NumberStyles.Number, CultureInfo.InvariantCulture, out var value) ? value : null;
     }
 
     private static DemandeAutorisationDto ToDto(DemandeAutorisation d) => new()

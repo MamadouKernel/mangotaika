@@ -10,26 +10,59 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MangoTaika.Controllers;
 
-[Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant")]
+[Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant,ChefGroupe")]
 public class ActivitesController(
     IActiviteService activiteService,
     IScoutQrService scoutQrService,
     UserManager<ApplicationUser> userManager,
     AppDbContext db,
     IFileUploadService fileUploadService,
-    INotificationDispatchService notificationDispatchService) : Controller
+    INotificationDispatchService notificationDispatchService,
+    OperationalAccessService accessService) : Controller
 {
     private Guid UserId => Guid.Parse(userManager.GetUserId(User)!);
 
-    private async Task LoadViewDataAsync()
+    private bool IsAdminOrManager => User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+
+    private async Task<Guid?> GetChefGroupeScopeAsync()
     {
-        ViewBag.Groupes = await db.Groupes.Where(g => g.IsActive).OrderBy(g => g.Nom).ToListAsync();
+        if (IsAdminOrManager)
+        {
+            return null;
+        }
+
+        var currentUser = await accessService.GetCurrentUserAsync(User);
+        if (currentUser?.GroupeId is Guid userGroupId)
+        {
+            return userGroupId;
+        }
+
+        var scout = await accessService.GetCurrentScoutAsync(User);
+        return scout?.GroupeId;
+    }
+
+    private async Task LoadViewDataAsync(Guid? scopedGroupId = null)
+    {
+        var groupes = db.Groupes.Where(g => g.IsActive);
+        if (scopedGroupId.HasValue)
+        {
+            groupes = groupes.Where(g => g.Id == scopedGroupId.Value);
+        }
+
+        ViewBag.Groupes = await groupes.OrderBy(g => g.Nom).ToListAsync();
+        ViewBag.GroupeVerrouille = scopedGroupId.HasValue;
+        ViewBag.GroupeSelectionne = scopedGroupId;
     }
 
     public async Task<IActionResult> Index()
     {
         var (page, ps) = ListPagination.Read(Request);
         var all = await activiteService.GetAllAsync();
+        var scopedGroupId = await GetChefGroupeScopeAsync();
+        if (scopedGroupId.HasValue)
+        {
+            all = all.Where(a => a.GroupeId == scopedGroupId.Value).ToList();
+        }
         var total = all.Count;
         ViewBag.TotalActivites = total;
         ViewBag.CountsByStatut = all.GroupBy(a => a.Statut).ToDictionary(g => g.Key, g => g.Count());
@@ -39,23 +72,31 @@ public class ActivitesController(
         return View(pageItems);
     }
 
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> Create()
     {
-        await LoadViewDataAsync();
+        var scopedGroupId = await GetChefGroupeScopeAsync();
+        await LoadViewDataAsync(scopedGroupId);
         return View(new ActiviteCreateDto
         {
-            DateDebut = DateTime.Now
+            DateDebut = DateTime.Now,
+            GroupeId = scopedGroupId
         });
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> Create(ActiviteCreateDto dto)
     {
+        var scopedGroupId = await GetChefGroupeScopeAsync();
+        if (scopedGroupId.HasValue)
+        {
+            dto.GroupeId = scopedGroupId;
+        }
+
         if (!ModelState.IsValid)
         {
-            await LoadViewDataAsync();
+            await LoadViewDataAsync(scopedGroupId);
             return View(dto);
         }
 
@@ -64,22 +105,32 @@ public class ActivitesController(
         return RedirectToAction(nameof(Index));
     }
 
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> Edit(Guid id)
     {
         var activite = await activiteService.GetByIdAsync(id);
         if (activite is null) return NotFound();
-        await LoadViewDataAsync();
+        if (!await CanManageActivityAsync(activite.GroupeId)) return Forbid();
+        await LoadViewDataAsync(await GetChefGroupeScopeAsync());
         return View(activite);
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> Edit(Guid id, ActiviteCreateDto dto)
     {
+        var existing = await db.Activites.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id && !a.EstSupprime);
+        if (existing is null) return NotFound();
+        if (!await CanManageActivityAsync(existing.GroupeId)) return Forbid();
+        var scopedGroupId = await GetChefGroupeScopeAsync();
+        if (scopedGroupId.HasValue)
+        {
+            dto.GroupeId = scopedGroupId;
+        }
+
         if (!ModelState.IsValid)
         {
-            await LoadViewDataAsync();
+            await LoadViewDataAsync(scopedGroupId);
             return View(dto);
         }
 
@@ -93,6 +144,7 @@ public class ActivitesController(
     {
         var activite = await activiteService.GetByIdAsync(id);
         if (activite is null) return NotFound();
+        if (!await CanViewActivityAsync(activite.GroupeId)) return Forbid();
 
         ViewBag.RapportActivite = await db.RapportsActivite
             .AsNoTracking()
@@ -129,17 +181,19 @@ public class ActivitesController(
     {
         var activite = await activiteService.GetByIdAsync(id);
         if (activite is null) return NotFound();
+        if (!await CanViewActivityAsync(activite.GroupeId)) return Forbid();
 
         ViewBag.PresenceUrl = Url.Action(nameof(Presence), "Activites", new { id }, Request.Scheme) ?? string.Empty;
         return View(activite);
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> Soumettre(Guid id)
     {
         var a = await db.Activites.FindAsync(id);
         if (a is null || a.Statut != StatutActivite.Brouillon) return NotFound();
+        if (!await CanManageActivityAsync(a.GroupeId)) return Forbid();
         a.Statut = StatutActivite.Soumise;
         db.CommentairesActivite.Add(new CommentaireActivite
         {
@@ -156,9 +210,10 @@ public class ActivitesController(
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> Valider(Guid id)
     {
+        if (!IsAdminOrManager) return Forbid();
         var a = await db.Activites.FindAsync(id);
         if (a is null || a.Statut != StatutActivite.Soumise) return NotFound();
         a.Statut = StatutActivite.Validee;
@@ -178,9 +233,10 @@ public class ActivitesController(
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> Rejeter(Guid id, string? motif)
     {
+        if (!IsAdminOrManager) return Forbid();
         var a = await db.Activites.FindAsync(id);
         if (a is null || a.Statut != StatutActivite.Soumise) return NotFound();
         a.Statut = StatutActivite.Rejetee;
@@ -200,11 +256,12 @@ public class ActivitesController(
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> Demarrer(Guid id)
     {
         var a = await db.Activites.FindAsync(id);
         if (a is null || a.Statut != StatutActivite.Validee) return NotFound();
+        if (!await CanManageActivityAsync(a.GroupeId)) return Forbid();
         a.Statut = StatutActivite.EnCours;
         db.CommentairesActivite.Add(new CommentaireActivite
         {
@@ -221,11 +278,12 @@ public class ActivitesController(
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> Terminer(Guid id)
     {
         var a = await db.Activites.FindAsync(id);
         if (a is null || a.Statut != StatutActivite.EnCours) return NotFound();
+        if (!await CanManageActivityAsync(a.GroupeId)) return Forbid();
         a.Statut = StatutActivite.Terminee;
         db.CommentairesActivite.Add(new CommentaireActivite
         {
@@ -242,11 +300,12 @@ public class ActivitesController(
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> Archiver(Guid id)
     {
         var a = await db.Activites.FindAsync(id);
         if (a is null || (a.Statut != StatutActivite.Terminee && a.Statut != StatutActivite.Rejetee)) return NotFound();
+        if (!await CanManageActivityAsync(a.GroupeId)) return Forbid();
 
         if (a.Statut == StatutActivite.Terminee && !a.DateCloturePointage.HasValue)
         {
@@ -276,11 +335,12 @@ public class ActivitesController(
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> Rebrouillon(Guid id)
     {
         var a = await db.Activites.FindAsync(id);
         if (a is null || a.Statut != StatutActivite.Rejetee) return NotFound();
+        if (!await CanManageActivityAsync(a.GroupeId)) return Forbid();
         a.Statut = StatutActivite.Brouillon;
         a.MotifRejet = null;
         db.CommentairesActivite.Add(new CommentaireActivite
@@ -297,11 +357,12 @@ public class ActivitesController(
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> AjouterDocument(Guid id, IFormFile fichier, string? typeDocument)
     {
         var a = await db.Activites.FindAsync(id);
         if (a is null) return NotFound();
+        if (!await CanManageActivityAsync(a.GroupeId)) return Forbid();
         if (fichier is null || fichier.Length == 0)
         {
             TempData["Error"] = "Veuillez selectionner un fichier.";
@@ -346,9 +407,12 @@ public class ActivitesController(
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> SupprimerDocument(Guid id, Guid docId)
     {
+        var activite = await db.Activites.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id && !a.EstSupprime);
+        if (activite is null) return NotFound();
+        if (!await CanManageActivityAsync(activite.GroupeId)) return Forbid();
         var doc = await db.DocumentsActivite.FindAsync(docId);
         if (doc is null) return NotFound();
         db.DocumentsActivite.Remove(doc);
@@ -358,16 +422,17 @@ public class ActivitesController(
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> AjouterParticipant(Guid id, Guid scoutId)
         => await AjouterParticipants(id, scoutId == Guid.Empty ? [] : [scoutId], null, null);
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> AjouterParticipants(Guid id, List<Guid>? scoutIds, List<Guid>? ressourceIds, string? matricules)
     {
         var activite = await db.Activites.FirstOrDefaultAsync(a => a.Id == id && !a.EstSupprime);
         if (activite is null) return NotFound();
+        if (!await CanManageActivityAsync(activite.GroupeId)) return Forbid();
 
         if (activite.DateCloturePointage.HasValue)
         {
@@ -512,11 +577,12 @@ public class ActivitesController(
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> RetirerParticipant(Guid id, Guid participantId)
     {
         var activite = await db.Activites.FirstOrDefaultAsync(a => a.Id == id && !a.EstSupprime);
         if (activite is null) return NotFound();
+        if (!await CanManageActivityAsync(activite.GroupeId)) return Forbid();
 
         if (activite.DateCloturePointage.HasValue)
         {
@@ -536,11 +602,12 @@ public class ActivitesController(
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> MarquerPresence(Guid id, Guid participantId, StatutPresence presence)
     {
         var activite = await db.Activites.FirstOrDefaultAsync(a => a.Id == id && !a.EstSupprime);
         if (activite is null) return NotFound();
+        if (!await CanManageActivityAsync(activite.GroupeId)) return Forbid();
 
         if (!PointageEstAccessible(activite))
         {
@@ -566,11 +633,12 @@ public class ActivitesController(
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> PresenceRapide(Guid id, Guid participantId, StatutPresence presence)
     {
         var activite = await db.Activites.FirstOrDefaultAsync(a => a.Id == id && !a.EstSupprime);
         if (activite is null) return NotFound();
+        if (!await CanManageActivityAsync(activite.GroupeId)) return Forbid();
 
         if (!PointageEstAccessible(activite))
         {
@@ -596,11 +664,12 @@ public class ActivitesController(
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> CloturerPointage(Guid id, string? returnAction)
     {
         var activite = await db.Activites.FirstOrDefaultAsync(a => a.Id == id && !a.EstSupprime);
         if (activite is null) return NotFound();
+        if (!await CanManageActivityAsync(activite.GroupeId)) return Forbid();
 
         if (!PointageEstAccessible(activite))
         {
@@ -630,11 +699,12 @@ public class ActivitesController(
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> ReouvrirPointage(Guid id, string? returnAction)
     {
         var activite = await db.Activites.FirstOrDefaultAsync(a => a.Id == id && !a.EstSupprime);
         if (activite is null) return NotFound();
+        if (!await CanManageActivityAsync(activite.GroupeId)) return Forbid();
 
         if (!activite.DateCloturePointage.HasValue)
         {
@@ -664,9 +734,13 @@ public class ActivitesController(
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> AjouterCommentaire(Guid id, string contenu)
     {
+        var activite = await db.Activites.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id && !a.EstSupprime);
+        if (activite is null) return NotFound();
+        if (!await CanManageActivityAsync(activite.GroupeId)) return Forbid();
+
         if (string.IsNullOrWhiteSpace(contenu))
         {
             TempData["Error"] = "Le commentaire ne peut pas etre vide.";
@@ -687,7 +761,7 @@ public class ActivitesController(
     }
 
     [HttpPost]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> ScannerScoutQr(Guid id, [FromBody] PresenceScoutScanRequest request)
     {
         if (request is null || string.IsNullOrWhiteSpace(request.ScannedCode))
@@ -707,6 +781,10 @@ public class ActivitesController(
                 Success = false,
                 Message = "Activite introuvable."
             });
+        }
+        if (!await CanManageActivityAsync(activite.GroupeId))
+        {
+            return Forbid();
         }
 
         if (!PointageEstAccessible(activite))
@@ -792,7 +870,7 @@ public class ActivitesController(
     }
 
     [HttpPost]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> AjouterParticipantEtMarquerPresent(Guid id, [FromBody] PresenceScoutAddRequest request)
     {
         if (request is null || request.ScoutId == Guid.Empty)
@@ -908,6 +986,27 @@ public class ActivitesController(
         return activite.Statut == StatutActivite.EnCours || activite.Statut == StatutActivite.Terminee;
     }
 
+    private async Task<bool> CanViewActivityAsync(Guid? groupeId)
+    {
+        if (IsAdminOrManager || accessService.IsSupervision(User))
+        {
+            return true;
+        }
+        var scopedGroupId = await GetChefGroupeScopeAsync();
+        return scopedGroupId.HasValue && groupeId == scopedGroupId.Value;
+    }
+
+    private async Task<bool> CanManageActivityAsync(Guid? groupeId)
+    {
+        if (IsAdminOrManager)
+        {
+            return true;
+        }
+
+        var scopedGroupId = await GetChefGroupeScopeAsync();
+        return scopedGroupId.HasValue && groupeId == scopedGroupId.Value;
+    }
+
     private async Task NotifyActivityStakeholdersAsync(Activite activite, string title, string message)
     {
         var recipients = await db.Users
@@ -987,9 +1086,10 @@ public class ActivitesController(
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> Delete(Guid id)
     {
+        if (!IsAdminOrManager) return Forbid();
         await activiteService.DeleteAsync(id);
         TempData["Success"] = "Activite supprimee.";
         return RedirectToAction(nameof(Index));

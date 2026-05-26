@@ -59,122 +59,36 @@
                     </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle nav-link-public-cta nav-link-services" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-grid"></i> Services
+                            <i class="bi bi-grid"></i> Liens utiles
                         </a>
                         <ul class="dropdown-menu public-services-menu">
-                            <li>
-                                <a class="dropdown-item public-services-menu__item" asp-controller="Home" asp-action="Verification">
-                                    <i class="bi bi-shield-check"></i>
-                                    <span>
-                                        <strong>Verification</strong>
-                                        <small>Verifier le statut d'un scout</small>
-                                    </span>
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item public-services-menu__item" asp-controller="Home" asp-action="FaireUnDon">
-                                    <i class="bi bi-heart"></i>
-                                    <span>
-                                        <strong>Faire un don</strong>
-                                        <small>Soutenir les actions du district</small>
-                                    </span>
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item public-services-menu__item" asp-controller="Boutique" asp-action="Index">
-                                    <i class="bi bi-bag"></i>
-                                    <span>
-                                        <strong>Boutique</strong>
-                                        <small>Commander les articles scouts</small>
-                                    </span>
-                                </a>
-                            </li>
+                            <li><a class="dropdown-item public-services-menu__item" asp-controller="Home" asp-action="Verification"><i class="bi bi-shield-check"></i><span><strong>Adhesion SYGESCA</strong><small>Verifier le statut d'un scout</small></span></a></li>
+                            <li><a class="dropdown-item public-services-menu__item" asp-controller="Home" asp-action="FaireUnDon"><i class="bi bi-heart"></i><span><strong>Faire un don</strong><small>Soutenir les actions du district</small></span></a></li>
+                            <li><a class="dropdown-item public-services-menu__item" asp-controller="Boutique" asp-action="Index"><i class="bi bi-bag"></i><span><strong>Boutique</strong><small>Commander les articles scouts</small></span></a></li>
                         </ul>
                     </li>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-info-circle"></i> Découvrir
-                        </a>
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-info-circle"></i> Decouvrir</a>
                         <ul class="dropdown-menu">
-                             <!-- CONTENUS -->
-                             <li class="dropdown-header">📖 Contenus</li>
-                             <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item" asp-controller="Home" asp-action="LivreDor">
-                                    <i class="bi bi-book"></i> Livre d'or
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" asp-controller="Actualites" asp-action="Index">
-                                    <i class="bi bi-newspaper"></i> Actualités
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" asp-controller="Home" asp-action="Galerie">
-                                    <i class="bi bi-images"></i> Galerie
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" asp-controller="Groupes" asp-action="Carte">
-                                    <i class="bi bi-geo-alt"></i> Carte des groupes
-                                </a>
-                            </li>
-
+                            <li class="dropdown-header">Contenus</li>
                             <li><hr class="dropdown-divider"></li>
-                                <!-- SERVICES -->
-                            <li class="dropdown-header">🛠️ Services</li>
-                                <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item" href="https://ascci-checker-web.onrender.com/" target="_blank">
-                                    <i class="bi bi-tools"></i> Vérification ASCCI
-                                </a>
-                            </li>
-
-                            <li>
-                                <a class="dropdown-item" href="https://lms.scout.org/account/course_catalog" target="_blank">
-                                    <i class="bi bi-mortarboard"></i> Formation officielle (Scout.org)
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="https://www.scoutready.net/" target="_blank" rel="noopener">
-                                    <i class="bi bi-compass"></i> ScoutReady
-                                </a>
-                            </li>
-
+                            <li><a class="dropdown-item" asp-controller="Home" asp-action="LivreDor"><i class="bi bi-book"></i> Livre d'or</a></li>
+                            <li><a class="dropdown-item" asp-controller="Actualites" asp-action="Index"><i class="bi bi-newspaper"></i> Actualites</a></li>
+                            <li><a class="dropdown-item" asp-controller="Home" asp-action="Galerie"><i class="bi bi-images"></i> Galerie</a></li>
+                            <li><a class="dropdown-item" asp-controller="Groupes" asp-action="Carte"><i class="bi bi-geo-alt"></i> Carte des groupes</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li class="dropdown-header">Liens utiles</li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="https://ascci-checker-web.onrender.com/" target="_blank"><i class="bi bi-shield-check"></i> Adhesion SYGESCA</a></li>
+                            <li><a class="dropdown-item" href="https://lms.scout.org/account/course_catalog" target="_blank"><i class="bi bi-mortarboard"></i> Formation officielle (Scout.org)</a></li>
+                            <li><a class="dropdown-item" href="https://www.scoutready.net/" target="_blank" rel="noopener"><i class="bi bi-compass"></i> ScoutReady</a></li>
                         </ul>
                     </li>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-envelope"></i> Nous écrire
-                        </a>
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-envelope"></i> Nous ecrire</a>
                         <ul class="dropdown-menu">
-                            <li>
-                                <a class="dropdown-item" asp-controller="Home" asp-action="Contact">
-                                    <i class="bi bi-envelope"></i> Contact
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" asp-controller="Home" asp-action="Avis">
-                                    <i class="bi bi-chat-dots"></i> Avis & Suggestions
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-people"></i> Rejoindre
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li>
-                                <a class="dropdown-item" asp-controller="DemandesGroupe" asp-action="Creer">
-                                    <i class="bi bi-building-add"></i> Créer un groupe
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="https://adhesion.scoutascci.org/" target="_blank" rel="noopener">
-                                    <i class="bi bi-shield-check"></i> Adhésion SYGESCA
-                                </a>
-                            </li>
+                            <li><a class="dropdown-item" asp-controller="Home" asp-action="Contact"><i class="bi bi-envelope"></i> Contact</a></li>
+                            <li><a class="dropdown-item" asp-controller="Home" asp-action="Avis"><i class="bi bi-chat-dots"></i> Avis & Suggestions</a></li>
                         </ul>
                     </li>
                 </ul>

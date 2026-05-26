@@ -48,6 +48,8 @@ public class ComptePaiementMobile
     public string? NomTitulaire { get; set; }
     public bool EstPrincipal { get; set; }
     public bool EstActif { get; set; } = true;
+    public Guid? ActiviteId { get; set; }
+    public Activite? Activite { get; set; }
     public DateTime DateCreation { get; set; } = DateTime.UtcNow;
     public Guid? ModifieParId { get; set; }
     public ApplicationUser? ModifiePar { get; set; }

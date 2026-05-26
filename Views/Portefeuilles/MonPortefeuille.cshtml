@@ -3,6 +3,8 @@
     ViewData["Title"] = "Mon portefeuille";
     Layout = "_LayoutAdmin";
     var compte = ViewBag.ComptePaiement as MangoTaika.Data.Entities.ComptePaiementMobile;
+    var comptesPaiement = ViewBag.ComptesPaiement as List<MangoTaika.Data.Entities.ComptePaiementMobile> ?? new();
+    var activitesPaiement = ViewBag.ActivitesPaiement as List<MangoTaika.Data.Entities.Activite> ?? new();
     decimal? transferMinimum = ViewBag.TransferMinimum as decimal?;
     decimal? transferMaximum = ViewBag.TransferMaximum as decimal?;
     decimal? transferDailyRemaining = ViewBag.TransferDailyRemaining as decimal?;
@@ -51,6 +53,12 @@
         </li>
         <li class="nav-item" role="presentation">
             <button class="btn btn-outline-or" data-bs-toggle="pill" data-bs-target="#wallet-transfer" type="button">Transfert</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="btn btn-outline-or" data-bs-toggle="pill" data-bs-target="#wallet-payment" type="button">Paiement</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="btn btn-outline-or" data-bs-toggle="pill" data-bs-target="#wallet-donation" type="button">Don</button>
         </li>
     </ul>
     <div class="tab-content">
@@ -103,6 +111,64 @@
                     <button class="btn btn-or w-100" type="submit">
                         <i class="bi bi-search"></i> Verifier
                     </button>
+                </div>
+            </form>
+        </div>
+        <div class="tab-pane fade" id="wallet-payment">
+            <h4 class="mb-3">Payer depuis mon portefeuille</h4>
+            <form asp-action="PayerDepuisPortefeuille" method="post" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Type</label>
+                    <select name="typePaiement" class="form-select" required>
+                        <option value="Cotisation">Cotisation nationale</option>
+                        <option value="Activite">Activite</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Activite</label>
+                    <select name="activiteId" class="form-select">
+                        <option value="">Aucune / cotisation</option>
+                        @foreach (var activite in activitesPaiement)
+                        {
+                            <option value="@activite.Id">@activite.Titre - @activite.DateDebut.ToString("dd/MM/yyyy")</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Compte impacte</label>
+                    <select name="comptePaiementId" class="form-select">
+                        <option value="">Compte principal</option>
+                        @foreach (var item in comptesPaiement)
+                        {
+                            <option value="@item.Id">@item.Libelle @(item.Activite is null ? "" : $"({item.Activite.Titre})")</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Montant</label>
+                    <input name="montant" type="number" min="1" step="1" class="form-control" required />
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-or w-100" type="submit"><i class="bi bi-check2-circle"></i> Payer</button>
+                </div>
+                <div class="col-12">
+                    <input name="commentaire" class="form-control" placeholder="Commentaire ou precision de paiement" />
+                </div>
+            </form>
+        </div>
+        <div class="tab-pane fade" id="wallet-donation">
+            <h4 class="mb-3">Faire un don au district</h4>
+            <form asp-action="DonnerDepuisPortefeuille" method="post" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Montant</label>
+                    <input name="montant" type="number" min="1" step="1" class="form-control" required />
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label">Message</label>
+                    <input name="commentaire" class="form-control" />
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-or w-100" type="submit"><i class="bi bi-heart-fill"></i> Donner</button>
                 </div>
             </form>
         </div>

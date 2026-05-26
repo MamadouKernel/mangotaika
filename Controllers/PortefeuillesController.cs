@@ -25,12 +25,195 @@ public class PortefeuillesController(
     public async Task<IActionResult> MonPortefeuille()
     {
         var portefeuille = await EnsureCurrentUserWalletAsync();
-        await LoadPrincipalPaymentAccountAsync();
+        await LoadWalletActionDataAsync();
         var limits = await BuildTransferLimitsAsync(portefeuille);
         ViewBag.TransferMinimum = limits.Minimum;
         ViewBag.TransferMaximum = limits.Maximum;
         ViewBag.TransferDailyRemaining = limits.DailyRemaining;
         return View(portefeuille);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DonnerDepuisPortefeuille(decimal montant, string? commentaire)
+    {
+        if (montant <= 0)
+        {
+            TempData["Error"] = "Le montant du don doit etre superieur a 0.";
+            return RedirectToAction(nameof(MonPortefeuille));
+        }
+
+        var portefeuille = await EnsureCurrentUserWalletAsync();
+        if (portefeuille.Solde < montant)
+        {
+            TempData["Error"] = "Solde insuffisant pour effectuer ce don.";
+            return RedirectToAction(nameof(MonPortefeuille));
+        }
+
+        var user = await userManager.GetUserAsync(User);
+        var reference = $"DON-WAL-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}";
+        var before = portefeuille.Solde;
+        portefeuille.Solde -= montant;
+
+        var mouvement = new MouvementPortefeuille
+        {
+            Id = Guid.NewGuid(),
+            PortefeuilleUtilisateurId = portefeuille.Id,
+            PortefeuilleUtilisateur = portefeuille,
+            Type = TypeMouvementPortefeuille.Don,
+            Statut = StatutMouvementPortefeuille.Valide,
+            Montant = montant,
+            Devise = portefeuille.Devise,
+            Libelle = "Don au district depuis le portefeuille",
+            Reference = reference,
+            Commentaire = NormalizeOptional(commentaire),
+            RecuToken = Guid.NewGuid().ToString("N"),
+            NumeroRecu = reference,
+            SoldeAvant = before,
+            SoldeApres = portefeuille.Solde,
+            DateValidation = DateTime.UtcNow,
+            ValideParId = user?.Id
+        };
+
+        var transaction = new TransactionFinanciere
+        {
+            Id = Guid.NewGuid(),
+            Libelle = mouvement.Libelle,
+            Montant = montant,
+            Type = TypeTransaction.Recette,
+            Categorie = CategorieFinance.Don,
+            DateTransaction = DateTime.UtcNow,
+            Reference = reference,
+            Commentaire = mouvement.Commentaire,
+            CreateurId = user?.Id ?? UserId
+        };
+
+        db.MouvementsPortefeuilles.Add(mouvement);
+        db.TransactionsFinancieres.Add(transaction);
+        mouvement.TransactionFinanciereId = transaction.Id;
+        await db.SaveChangesAsync();
+
+        await NotifyWalletOwnerAsync(mouvement, "Don portefeuille confirme", BuildWalletMessage(mouvement, "Valide"), includeReceiptLink: true);
+        TempData["Success"] = "Don effectue depuis votre portefeuille.";
+        return RedirectToAction(nameof(MonPortefeuille));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> PayerDepuisPortefeuille(string typePaiement, decimal montant, Guid? activiteId, Guid? comptePaiementId, string? commentaire)
+    {
+        if (montant <= 0)
+        {
+            TempData["Error"] = "Le montant du paiement doit etre superieur a 0.";
+            return RedirectToAction(nameof(MonPortefeuille));
+        }
+
+        var portefeuille = await EnsureCurrentUserWalletAsync();
+        if (portefeuille.Solde < montant)
+        {
+            TempData["Error"] = "Solde insuffisant pour effectuer ce paiement.";
+            return RedirectToAction(nameof(MonPortefeuille));
+        }
+
+        var isCotisation = string.Equals(typePaiement, "Cotisation", StringComparison.OrdinalIgnoreCase);
+        var isActivite = string.Equals(typePaiement, "Activite", StringComparison.OrdinalIgnoreCase);
+        if (!isCotisation && !isActivite)
+        {
+            TempData["Error"] = "Selectionnez le type de paiement.";
+            return RedirectToAction(nameof(MonPortefeuille));
+        }
+
+        Activite? activite = null;
+        if (isActivite)
+        {
+            if (!activiteId.HasValue)
+            {
+                TempData["Error"] = "Selectionnez l'activite a payer.";
+                return RedirectToAction(nameof(MonPortefeuille));
+            }
+
+            activite = await db.Activites.FirstOrDefaultAsync(a => a.Id == activiteId.Value && !a.EstSupprime);
+            if (activite is null)
+            {
+                TempData["Error"] = "Activite introuvable.";
+                return RedirectToAction(nameof(MonPortefeuille));
+            }
+        }
+
+        var compte = comptePaiementId.HasValue
+            ? await db.ComptesPaiementMobile.FirstOrDefaultAsync(c => c.Id == comptePaiementId.Value && c.EstActif)
+            : isActivite
+                ? await db.ComptesPaiementMobile
+                    .Where(c => c.EstActif && c.ActiviteId == activite!.Id)
+                    .OrderByDescending(c => c.EstPrincipal)
+                    .FirstOrDefaultAsync()
+                    ?? await db.ComptesPaiementMobile.Where(c => c.EstActif).OrderByDescending(c => c.EstPrincipal).FirstOrDefaultAsync()
+                : await db.ComptesPaiementMobile.Where(c => c.EstActif).OrderByDescending(c => c.EstPrincipal).FirstOrDefaultAsync();
+
+        if (comptePaiementId.HasValue && compte is null)
+        {
+            TempData["Error"] = "Compte de paiement introuvable ou inactif.";
+            return RedirectToAction(nameof(MonPortefeuille));
+        }
+
+        if (isActivite && compte?.ActiviteId is Guid linkedActivityId && linkedActivityId != activite!.Id)
+        {
+            TempData["Error"] = "Le compte de paiement selectionne est rattache a une autre activite.";
+            return RedirectToAction(nameof(MonPortefeuille));
+        }
+
+        var user = await userManager.GetUserAsync(User);
+        var reference = $"PAY-WAL-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}";
+        var before = portefeuille.Solde;
+        portefeuille.Solde -= montant;
+
+        var libelle = isCotisation
+            ? "Paiement cotisation nationale depuis le portefeuille"
+            : $"Paiement activite - {activite!.Titre}";
+
+        var mouvement = new MouvementPortefeuille
+        {
+            Id = Guid.NewGuid(),
+            PortefeuilleUtilisateurId = portefeuille.Id,
+            PortefeuilleUtilisateur = portefeuille,
+            Type = TypeMouvementPortefeuille.Paiement,
+            Statut = StatutMouvementPortefeuille.Valide,
+            Montant = montant,
+            Devise = portefeuille.Devise,
+            Libelle = libelle,
+            Reference = reference,
+            Commentaire = BuildPaymentComment(compte, commentaire),
+            RecuToken = Guid.NewGuid().ToString("N"),
+            NumeroRecu = reference,
+            SoldeAvant = before,
+            SoldeApres = portefeuille.Solde,
+            DateValidation = DateTime.UtcNow,
+            ValideParId = user?.Id
+        };
+
+        var transaction = new TransactionFinanciere
+        {
+            Id = Guid.NewGuid(),
+            Libelle = libelle,
+            Montant = montant,
+            Type = TypeTransaction.Recette,
+            Categorie = isCotisation ? CategorieFinance.Cotisation : CategorieFinance.Activite,
+            DateTransaction = DateTime.UtcNow,
+            Reference = reference,
+            Commentaire = mouvement.Commentaire,
+            CreateurId = user?.Id ?? UserId,
+            ActiviteId = activite?.Id,
+            GroupeId = activite?.GroupeId
+        };
+
+        db.MouvementsPortefeuilles.Add(mouvement);
+        db.TransactionsFinancieres.Add(transaction);
+        mouvement.TransactionFinanciereId = transaction.Id;
+        await db.SaveChangesAsync();
+
+        await NotifyWalletOwnerAsync(mouvement, "Paiement portefeuille confirme", BuildWalletMessage(mouvement, "Valide"), includeReceiptLink: true);
+        TempData["Success"] = "Paiement effectue depuis votre portefeuille.";
+        return RedirectToAction(nameof(MonPortefeuille));
     }
 
     [HttpPost]
@@ -69,7 +252,7 @@ public class PortefeuillesController(
     public async Task<IActionResult> Transferer(string beneficiaire, decimal montant, string? commentaire)
     {
         var senderWallet = await EnsureCurrentUserWalletAsync();
-        await LoadPrincipalPaymentAccountAsync();
+        await LoadWalletActionDataAsync();
 
         var limitError = await ValidateTransferLimitsAsync(senderWallet, montant);
         if (limitError is not null)
@@ -269,7 +452,7 @@ public class PortefeuillesController(
         mouvement.Commentaire = NormalizeOptional(commentaire) ?? mouvement.Commentaire;
         mouvement.NumeroRecu ??= $"WAL-{DateTime.UtcNow:yyyyMMdd}-{mouvement.Id.ToString("N")[..8].ToUpperInvariant()}";
 
-        if (mouvement.Type is TypeMouvementPortefeuille.Rechargement or TypeMouvementPortefeuille.Don)
+        if (mouvement.Type is TypeMouvementPortefeuille.Don)
         {
             var transaction = new TransactionFinanciere
             {
@@ -380,7 +563,13 @@ public class PortefeuillesController(
     [Authorize(Roles = "Administrateur,Gestionnaire,CommissaireDistrict")]
     public async Task<IActionResult> ComptesPaiement()
     {
+        ViewBag.Activites = await db.Activites
+            .Where(a => !a.EstSupprime && (a.Statut == StatutActivite.Validee || a.Statut == StatutActivite.EnCours))
+            .OrderByDescending(a => a.DateDebut)
+            .Take(100)
+            .ToListAsync();
         return View(await db.ComptesPaiementMobile
+            .Include(c => c.Activite)
             .OrderByDescending(c => c.EstPrincipal)
             .ThenBy(c => c.Libelle)
             .ToListAsync());
@@ -389,7 +578,7 @@ public class PortefeuillesController(
     [HttpPost]
     [Authorize(Roles = "Administrateur,Gestionnaire,CommissaireDistrict")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> EnregistrerComptePaiement(Guid? id, string libelle, string operateur, string numeroMobile, string? nomTitulaire)
+    public async Task<IActionResult> EnregistrerComptePaiement(Guid? id, string libelle, string operateur, string numeroMobile, string? nomTitulaire, Guid? activiteId)
     {
         if (string.IsNullOrWhiteSpace(libelle) || string.IsNullOrWhiteSpace(operateur) || string.IsNullOrWhiteSpace(numeroMobile))
         {
@@ -421,6 +610,7 @@ public class PortefeuillesController(
             compte.Operateur = operateur.Trim();
             compte.NumeroMobile = numeroMobile.Trim();
             compte.NomTitulaire = NormalizeOptional(nomTitulaire);
+            compte.ActiviteId = activiteId == Guid.Empty ? null : activiteId;
             compte.EstPrincipal = estPrincipal;
             compte.EstActif = estActif;
             compte.ModifieParId = user?.Id;
@@ -434,6 +624,7 @@ public class PortefeuillesController(
                 Operateur = operateur.Trim(),
                 NumeroMobile = numeroMobile.Trim(),
                 NomTitulaire = NormalizeOptional(nomTitulaire),
+                ActiviteId = activiteId == Guid.Empty ? null : activiteId,
                 EstPrincipal = estPrincipal,
                 EstActif = estActif,
                 ModifieParId = user?.Id
@@ -581,13 +772,24 @@ public class PortefeuillesController(
         return await query.FirstOrDefaultAsync();
     }
 
-    private async Task LoadPrincipalPaymentAccountAsync()
+    private async Task LoadWalletActionDataAsync()
     {
         ViewBag.ComptePaiement = await db.ComptesPaiementMobile
             .Where(c => c.EstActif)
             .OrderByDescending(c => c.EstPrincipal)
             .ThenBy(c => c.Libelle)
             .FirstOrDefaultAsync();
+        ViewBag.ComptesPaiement = await db.ComptesPaiementMobile
+            .Include(c => c.Activite)
+            .Where(c => c.EstActif)
+            .OrderByDescending(c => c.EstPrincipal)
+            .ThenBy(c => c.Libelle)
+            .ToListAsync();
+        ViewBag.ActivitesPaiement = await db.Activites
+            .Where(a => !a.EstSupprime && (a.Statut == StatutActivite.Validee || a.Statut == StatutActivite.EnCours))
+            .OrderByDescending(a => a.DateDebut)
+            .Take(80)
+            .ToListAsync();
     }
 
     private static void ApplyMovementToBalance(MouvementPortefeuille mouvement)
@@ -598,11 +800,11 @@ public class PortefeuillesController(
         {
             case TypeMouvementPortefeuille.Credit:
             case TypeMouvementPortefeuille.Rechargement:
-            case TypeMouvementPortefeuille.Don:
                 wallet.Solde += mouvement.Montant;
                 break;
             case TypeMouvementPortefeuille.Debit:
             case TypeMouvementPortefeuille.Paiement:
+            case TypeMouvementPortefeuille.Don:
                 if (wallet.Solde < mouvement.Montant)
                 {
                     throw new InvalidOperationException("Solde insuffisant pour valider ce debit.");
@@ -678,6 +880,23 @@ public class PortefeuillesController(
         Statut : {statut}
         Solde apres operation : {mouvement.SoldeApres?.ToString("N0") ?? "-"} {mouvement.Devise}
         """;
+
+    private static string? BuildPaymentComment(ComptePaiementMobile? compte, string? commentaire)
+    {
+        var parts = new List<string>();
+        if (compte is not null)
+        {
+            parts.Add($"Compte impacte : {compte.Libelle} - {compte.Operateur} {compte.NumeroMobile}");
+        }
+
+        var normalizedComment = NormalizeOptional(commentaire);
+        if (!string.IsNullOrWhiteSpace(normalizedComment))
+        {
+            parts.Add(normalizedComment);
+        }
+
+        return parts.Count == 0 ? null : string.Join(" | ", parts);
+    }
 
     private static string? NormalizeOptional(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

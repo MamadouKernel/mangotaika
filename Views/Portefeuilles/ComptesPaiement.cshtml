@@ -2,6 +2,7 @@
 @{
     ViewData["Title"] = "Comptes de paiement";
     Layout = "_LayoutAdmin";
+    var activites = ViewBag.Activites as List<MangoTaika.Data.Entities.Activite> ?? new();
 }
 
 <h2 class="section-title mb-3"><i class="bi bi-phone text-or"></i> Comptes de paiement mobile</h2>
@@ -23,6 +24,16 @@
         <div class="col-md-2">
             <label class="form-label">Titulaire</label>
             <input name="nomTitulaire" class="form-control" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Activite rattachee</label>
+            <select name="activiteId" class="form-select">
+                <option value="">Compte global</option>
+                @foreach (var activite in activites)
+                {
+                    <option value="@activite.Id">@activite.Titre</option>
+                }
+            </select>
         </div>
         <div class="col-md-1">
             <div class="form-check">
@@ -53,6 +64,7 @@
                         <th>Operateur</th>
                         <th>Numero</th>
                         <th>Titulaire</th>
+                        <th>Rattachement</th>
                         <th>Statut</th>
                         <th class="text-end">Action</th>
                     </tr>
@@ -61,13 +73,20 @@
                     @foreach (var compte in Model)
                     {
                         <tr>
-                            <td colspan="6">
+                            <td colspan="7">
                                 <form asp-action="EnregistrerComptePaiement" method="post" class="payment-account-row">
                                     <input type="hidden" name="id" value="@compte.Id" />
                                     <input name="libelle" value="@compte.Libelle" class="form-control form-control-sm" aria-label="Libelle" />
                                     <input name="operateur" value="@compte.Operateur" class="form-control form-control-sm" aria-label="Operateur" />
                                     <input name="numeroMobile" value="@compte.NumeroMobile" class="form-control form-control-sm" aria-label="Numero mobile" />
                                     <input name="nomTitulaire" value="@compte.NomTitulaire" class="form-control form-control-sm" aria-label="Titulaire" />
+                                    <select name="activiteId" class="form-select form-select-sm" aria-label="Activite rattachee">
+                                        <option value="">Compte global</option>
+                                        @foreach (var activite in activites)
+                                        {
+                                            <option value="@activite.Id" selected="@(compte.ActiviteId == activite.Id ? "selected" : null)">@activite.Titre</option>
+                                        }
+                                    </select>
                                     <label class="payment-account-row__check">
                                         <input name="estPrincipal" value="true" type="checkbox" class="form-check-input" checked="@(compte.EstPrincipal ? "checked" : null)" />
                                         <span>Principal</span>
