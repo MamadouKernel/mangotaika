@@ -78,7 +78,7 @@ public class EmailNotificationService(ILogger<EmailNotificationService> logger, 
         if (!string.IsNullOrWhiteSpace(link))
         {
             builder.AppendLine();
-            builder.AppendLine($"Consulter le dossier : {link}");
+            builder.AppendLine($"Cliquez ici : {link}");
         }
         builder.AppendLine();
         builder.AppendLine("Ce message a ete genere automatiquement par la plateforme MANGO TAIKA.");
@@ -268,7 +268,7 @@ public class EmailNotificationService(ILogger<EmailNotificationService> logger, 
         return new EmailTheme(
             "Notification officielle de la plateforme",
             "District Scout",
-            "Ouvrir le dossier",
+            "Cliquez ici",
             "linear-gradient(135deg,#2f4328,#597537)",
             "#edf5e3",
             "#eaf4dc",
