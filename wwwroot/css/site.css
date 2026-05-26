@@ -157,6 +157,46 @@ body {
     color: #243746 !important;
     background: rgba(36, 55, 70, 0.07);
 }
+.navbar-mango .nav-link-services {
+    color: #315c25 !important;
+    background: linear-gradient(135deg, rgba(95, 127, 67, 0.12), rgba(36, 55, 70, 0.07));
+}
+.public-services-menu {
+    min-width: 290px;
+    border: 1px solid rgba(95, 127, 67, 0.16);
+    border-radius: 16px;
+    padding: 0.55rem;
+    box-shadow: 0 18px 38px rgba(20, 28, 38, 0.12);
+}
+.public-services-menu__item {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    gap: 0.7rem;
+    align-items: center;
+    border-radius: 12px;
+    padding: 0.72rem 0.8rem;
+}
+.public-services-menu__item i {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--vert-pale);
+    color: var(--vert-logo);
+}
+.public-services-menu__item strong,
+.public-services-menu__item small {
+    display: block;
+}
+.public-services-menu__item strong {
+    color: var(--bleu-logo);
+    font-weight: 800;
+}
+.public-services-menu__item small {
+    color: var(--texte-secondaire);
+    font-size: 0.78rem;
+}
 .platform-slogan-bar {
     background: linear-gradient(90deg, rgba(49,62,69,0.96) 0%, rgba(89,117,55,0.96) 100%);
     color: #fff;

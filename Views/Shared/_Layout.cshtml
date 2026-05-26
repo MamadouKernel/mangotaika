@@ -57,20 +57,39 @@
                             <i class="bi bi-house"></i> Accueil
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-controller="Home" asp-action="Verification">
-                            <i class="bi bi-shield-check"></i> Verification
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle nav-link-public-cta nav-link-services" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-grid"></i> Services
                         </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link nav-link-public-cta nav-link-donate" asp-controller="Home" asp-action="FaireUnDon">
-                            <i class="bi bi-heart"></i> Faire un don
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link nav-link-public-cta nav-link-shop" asp-controller="Boutique" asp-action="Index">
-                            <i class="bi bi-bag"></i> Boutique
-                        </a>
+                        <ul class="dropdown-menu public-services-menu">
+                            <li>
+                                <a class="dropdown-item public-services-menu__item" asp-controller="Home" asp-action="Verification">
+                                    <i class="bi bi-shield-check"></i>
+                                    <span>
+                                        <strong>Verification</strong>
+                                        <small>Verifier le statut d'un scout</small>
+                                    </span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item public-services-menu__item" asp-controller="Home" asp-action="FaireUnDon">
+                                    <i class="bi bi-heart"></i>
+                                    <span>
+                                        <strong>Faire un don</strong>
+                                        <small>Soutenir les actions du district</small>
+                                    </span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item public-services-menu__item" asp-controller="Boutique" asp-action="Index">
+                                    <i class="bi bi-bag"></i>
+                                    <span>
+                                        <strong>Boutique</strong>
+                                        <small>Commander les articles scouts</small>
+                                    </span>
+                                </a>
+                            </li>
+                        </ul>
                     </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
