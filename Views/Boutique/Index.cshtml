@@ -1,0 +1,200 @@
+@model List<MangoTaika.Data.Entities.ArticleBoutique>
+@{
+    ViewData["Title"] = "Boutique";
+    var categories = ViewBag.Categories as List<string> ?? new();
+    var categoryCounts = ViewBag.CategoryCounts as List<BoutiqueCategoryFilter> ?? new();
+    var selectedCategory = ViewBag.Categorie as string;
+    var search = ViewBag.Query as string;
+    var prixMin = ViewBag.PrixMin as decimal?;
+    var prixMax = ViewBag.PrixMax as decimal?;
+    var disponible = ViewBag.Disponible as bool? ?? false;
+    var tri = ViewBag.Tri as string ?? "recent";
+    var articleCount = ViewBag.ArticleCount as int? ?? Model.Count;
+    var totalArticles = ViewBag.TotalArticles as int? ?? Model.Count;
+    var panierCount = ViewBag.PanierCount as int? ?? 0;
+}
+
+<section class="container py-5 scout-marketplace">
+    <div class="marketplace-hero mb-4">
+        <div class="marketplace-hero__content">
+            <span class="boutique-eyebrow"><i class="bi bi-shop"></i> Marketplace scout</span>
+            <h1>Boutique MANGO TAIKA</h1>
+            <p>Un catalogue scout organise pour trouver rapidement les tenues, supports, accessoires et articles utiles aux activites du district.</p>
+
+            <form method="get" class="marketplace-search">
+                <div class="marketplace-search__input">
+                    <i class="bi bi-search"></i>
+                    <input name="q" value="@search" placeholder="Rechercher un foulard, carnet, uniforme, badge..." />
+                </div>
+                <input type="hidden" name="categorie" value="@selectedCategory" />
+                <input type="hidden" name="prixMin" value="@(prixMin?.ToString("0"))" />
+                <input type="hidden" name="prixMax" value="@(prixMax?.ToString("0"))" />
+                <input type="hidden" name="disponible" value="@disponible.ToString().ToLowerInvariant()" />
+                <input type="hidden" name="tri" value="@tri" />
+                <button type="submit" class="btn btn-or"><i class="bi bi-search"></i> Rechercher</button>
+            </form>
+
+            <div class="marketplace-hero__badges">
+                <span><i class="bi bi-phone"></i> Paiement Mobile Money</span>
+                <span><i class="bi bi-truck"></i> Paiement a la livraison</span>
+                <span><i class="bi bi-receipt"></i> Recu apres validation</span>
+                <span><i class="bi bi-box-seam"></i> Stock suivi</span>
+            </div>
+        </div>
+        <div class="marketplace-hero__panel">
+            <img src="~/images/logo.png" alt="Logo MANGO TAIKA" />
+            <div>
+                <strong>@totalArticles</strong>
+                <span>articles publics</span>
+            </div>
+            <div>
+                <strong>@categories.Count</strong>
+                <span>categories</span>
+            </div>
+            @if (User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire") || User.IsInRole("CommissaireDistrict"))
+            {
+                <a asp-action="Admin" class="btn btn-light w-100"><i class="bi bi-gear"></i> Gerer la boutique</a>
+            }
+        </div>
+    </div>
+
+    <div class="marketplace-layout">
+        <aside class="marketplace-sidebar">
+            <form method="get" class="marketplace-filter">
+                <input type="hidden" name="q" value="@search" />
+                <div>
+                    <h2>Filtres</h2>
+                    <p>Affinez le catalogue selon le besoin scout.</p>
+                </div>
+
+                <label class="form-label">Categorie</label>
+                <select name="categorie" class="form-select">
+                    <option value="">Toutes les categories</option>
+                    @foreach (var item in categories)
+                    {
+                        <option value="@item" selected="@(item == selectedCategory ? "selected" : null)">@item</option>
+                    }
+                </select>
+
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label">Prix min</label>
+                        <input name="prixMin" type="number" min="0" step="1" value="@(prixMin?.ToString("0"))" class="form-control" />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Prix max</label>
+                        <input name="prixMax" type="number" min="0" step="1" value="@(prixMax?.ToString("0"))" class="form-control" />
+                    </div>
+                </div>
+
+                <label class="form-label">Tri</label>
+                <select name="tri" class="form-select">
+                    <option value="recent" selected="@(tri == "recent" ? "selected" : null)">Plus recents</option>
+                    <option value="nom" selected="@(tri == "nom" ? "selected" : null)">Nom A-Z</option>
+                    <option value="prix-asc" selected="@(tri == "prix-asc" ? "selected" : null)">Prix croissant</option>
+                    <option value="prix-desc" selected="@(tri == "prix-desc" ? "selected" : null)">Prix decroissant</option>
+                    <option value="stock" selected="@(tri == "stock" ? "selected" : null)">Stock disponible</option>
+                </select>
+
+                <label class="marketplace-check">
+                    <input name="disponible" value="true" type="checkbox" checked="@(disponible ? "checked" : null)" />
+                    <span>Afficher uniquement les articles en stock</span>
+                </label>
+
+                <button type="submit" class="btn btn-or w-100"><i class="bi bi-funnel"></i> Appliquer</button>
+                <a asp-action="Index" class="btn btn-outline-or w-100"><i class="bi bi-x-lg"></i> Reinitialiser</a>
+            </form>
+
+            @if (categoryCounts.Any())
+            {
+                <div class="marketplace-categories">
+                    <h3>Categories populaires</h3>
+                    <a asp-action="Index" asp-route-q="@search" asp-route-prixMin="@prixMin" asp-route-prixMax="@prixMax" asp-route-disponible="@disponible" asp-route-tri="@tri" class="@(string.IsNullOrWhiteSpace(selectedCategory) ? "active" : "")">
+                        <span>Toutes</span>
+                        <strong>@totalArticles</strong>
+                    </a>
+                    @foreach (var item in categoryCounts)
+                    {
+                        <a asp-action="Index" asp-route-q="@search" asp-route-categorie="@item.Categorie" asp-route-prixMin="@prixMin" asp-route-prixMax="@prixMax" asp-route-disponible="@disponible" asp-route-tri="@tri" class="@(item.Categorie == selectedCategory ? "active" : "")">
+                            <span>@item.Categorie</span>
+                            <strong>@item.Count</strong>
+                        </a>
+                    }
+                </div>
+            }
+        </aside>
+
+        <div class="marketplace-results">
+            <div class="marketplace-toolbar">
+                <div>
+                    <span>Catalogue public</span>
+                    <strong>@articleCount article(s) trouve(s)</strong>
+                </div>
+                <div class="marketplace-toolbar__actions">
+                    <a asp-action="Panier" class="btn btn-or btn-sm"><i class="bi bi-cart3"></i> Panier (@panierCount)</a>
+                    <a asp-controller="Home" asp-action="FaireUnDon" class="btn btn-outline-or btn-sm"><i class="bi bi-heart"></i> Faire un don</a>
+                    @if (User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire") || User.IsInRole("CommissaireDistrict"))
+                    {
+                        <a asp-action="Create" class="btn btn-or btn-sm"><i class="bi bi-plus-lg"></i> Nouvel article</a>
+                    }
+                </div>
+            </div>
+
+            @if (Model.Any())
+            {
+                <div class="marketplace-product-grid">
+                    @foreach (var article in Model)
+                    {
+                        var isAvailable = article.StockDisponible > 0;
+                        <article class="marketplace-card">
+                            <div class="marketplace-card__media">
+                                <span class="marketplace-card__status @(isAvailable ? "available" : "order")">@(isAvailable ? "En stock" : "Sur commande")</span>
+                                @if (!string.IsNullOrWhiteSpace(article.ImageUrl))
+                                {
+                                    <img src="@article.ImageUrl" alt="@article.Nom" />
+                                }
+                                else
+                                {
+                                    <img src="~/images/logo.png" alt="@article.Nom" />
+                                }
+                            </div>
+                            <div class="marketplace-card__body">
+                                @if (!string.IsNullOrWhiteSpace(article.Categorie))
+                                {
+                                    <span class="marketplace-card__category">@article.Categorie</span>
+                                }
+                                <h2>@article.Nom</h2>
+                                <p>@(article.Description ?? "Article scout disponible a la commande.")</p>
+                                <div class="marketplace-card__meta">
+                                    <span><i class="bi bi-box-seam"></i> Stock @article.StockDisponible</span>
+                                    <span><i class="bi bi-shield-check"></i> District</span>
+                                </div>
+                                <div class="marketplace-card__price">
+                                    <strong>@article.Prix.ToString("N0")</strong>
+                                    <span>@article.Devise</span>
+                                </div>
+                                <div class="marketplace-card__actions">
+                                    <form asp-action="AjouterAuPanier" method="post" class="d-inline">
+                                        <input type="hidden" name="articleId" value="@article.Id" />
+                                        <input type="hidden" name="quantite" value="1" />
+                                        <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                                        <button type="submit" class="btn btn-or btn-sm"><i class="bi bi-cart-plus"></i> Ajouter</button>
+                                    </form>
+                                    <a asp-action="Details" asp-route-id="@article.Id" class="btn btn-outline-or btn-sm">Details</a>
+                                </div>
+                            </div>
+                        </article>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="boutique-empty card-3d p-5 text-center">
+                    <img src="~/images/logo.png" alt="Logo MANGO TAIKA" />
+                    <h2 class="h4">Aucun article ne correspond a la recherche</h2>
+                    <p class="text-muted-custom mb-0">Modifiez les filtres ou revenez au catalogue complet.</p>
+                </div>
+            }
+        </div>
+    </div>
+</section>

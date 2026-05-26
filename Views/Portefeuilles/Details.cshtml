@@ -1,0 +1,91 @@
+@model MangoTaika.Data.Entities.MouvementPortefeuille
+@{
+    ViewData["Title"] = "Detail mouvement portefeuille";
+    Layout = "_LayoutAdmin";
+    var isPending = Model.Statut == MangoTaika.Data.Entities.StatutMouvementPortefeuille.EnAttente;
+    var isValid = Model.Statut == MangoTaika.Data.Entities.StatutMouvementPortefeuille.Valide;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-wallet2 text-or"></i> Mouvement portefeuille</h2>
+    <div class="d-flex gap-2">
+        @if (isValid)
+        {
+            <a asp-action="Recu" asp-route-id="@Model.Id" class="btn btn-or btn-sm"><i class="bi bi-file-earmark-pdf"></i> Recu</a>
+        }
+        <a asp-action="Index" class="btn btn-outline-or btn-sm"><i class="bi bi-arrow-left"></i></a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card-3d p-4">
+            <div class="d-flex flex-wrap justify-content-between gap-3 mb-4">
+                <div>
+                    <span class="text-muted-custom">Montant</span>
+                    <h1 class="mb-0">@Model.Montant.ToString("N0") @Model.Devise</h1>
+                </div>
+                <span class="badge-3d @(isValid ? "badge-approuvee" : Model.Statut == MangoTaika.Data.Entities.StatutMouvementPortefeuille.Rejete ? "badge-rejetee" : "badge-soumise")">@Model.Statut</span>
+            </div>
+
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Utilisateur</dt>
+                <dd class="col-sm-8">@Model.PortefeuilleUtilisateur.User.Prenom @Model.PortefeuilleUtilisateur.User.Nom</dd>
+                <dt class="col-sm-4">Solde actuel</dt>
+                <dd class="col-sm-8">@Model.PortefeuilleUtilisateur.Solde.ToString("N0") @Model.PortefeuilleUtilisateur.Devise</dd>
+                <dt class="col-sm-4">Solde avant</dt>
+                <dd class="col-sm-8">@(Model.SoldeAvant?.ToString("N0") ?? "-") @Model.Devise</dd>
+                <dt class="col-sm-4">Solde apres</dt>
+                <dd class="col-sm-8">@(Model.SoldeApres?.ToString("N0") ?? "-") @Model.Devise</dd>
+                <dt class="col-sm-4">Type</dt>
+                <dd class="col-sm-8">@Model.Type</dd>
+                <dt class="col-sm-4">Libelle</dt>
+                <dd class="col-sm-8">@Model.Libelle</dd>
+                <dt class="col-sm-4">Reference</dt>
+                <dd class="col-sm-8">@(Model.Reference ?? "-")</dd>
+                <dt class="col-sm-4">Numero recu</dt>
+                <dd class="col-sm-8">@(Model.NumeroRecu ?? "-")</dd>
+                <dt class="col-sm-4">Commentaire</dt>
+                <dd class="col-sm-8">@(Model.Commentaire ?? "-")</dd>
+                <dt class="col-sm-4">Audit</dt>
+                <dd class="col-sm-8">
+                    IP : @(Model.AdresseIp ?? "-")<br />
+                    Navigateur : @(Model.UserAgent ?? "-")
+                </dd>
+                <dt class="col-sm-4">Validation</dt>
+                <dd class="col-sm-8">
+                    @(Model.DateValidation?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "-")
+                    @if (Model.ValidePar is not null)
+                    {
+                        <span>par @Model.ValidePar.Prenom @Model.ValidePar.Nom</span>
+                    }
+                </dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card-3d p-4">
+            <h4 class="mb-3">Traitement</h4>
+            @if (isPending)
+            {
+                <form asp-action="Valider" method="post" class="mb-3">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <label class="form-label">Commentaire validation</label>
+                    <textarea name="commentaire" class="form-control mb-3" rows="3"></textarea>
+                    <button type="submit" class="btn btn-or w-100"><i class="bi bi-check-circle"></i> Valider</button>
+                </form>
+                <form asp-action="Rejeter" method="post">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <label class="form-label">Motif rejet</label>
+                    <textarea name="commentaire" class="form-control mb-3" rows="3"></textarea>
+                    <button type="submit" class="btn btn-outline-danger w-100"><i class="bi bi-x-circle"></i> Rejeter</button>
+                </form>
+            }
+            else
+            {
+                <p class="text-muted-custom mb-0">Aucune action disponible pour ce statut.</p>
+            }
+        </div>
+    </div>
+</div>

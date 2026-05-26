@@ -1,0 +1,53 @@
+@{
+    ViewData["Title"] = "Importer des articles";
+    Layout = "_LayoutAdmin";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+        <h2 class="section-title mb-1"><i class="bi bi-upload text-or"></i> Importer des articles boutique</h2>
+        <p class="text-muted-custom mb-0">Chargez un fichier CSV ou Excel pour creer rapidement plusieurs articles.</p>
+    </div>
+    <a asp-action="Admin" class="btn btn-outline-or btn-sm"><i class="bi bi-arrow-left"></i> Articles</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <form asp-action="Import" method="post" enctype="multipart/form-data" class="card-3d p-4">
+            <div class="mb-3">
+                <label class="form-label">Fichier CSV ou Excel (.xlsx)</label>
+                <input name="fichier" type="file" class="form-control" accept=".csv,.xlsx" required />
+            </div>
+            <label class="marketplace-check mb-3">
+                <input name="mettreAJourExistants" value="true" type="checkbox" checked />
+                <span>Mettre a jour les articles existants portant le meme nom</span>
+            </label>
+            <div class="d-flex justify-content-end gap-2">
+                <a asp-action="Admin" class="btn btn-outline-or">Annuler</a>
+                <button type="submit" class="btn btn-or"><i class="bi bi-upload"></i> Importer</button>
+            </div>
+        </form>
+    </div>
+    <div class="col-lg-5">
+        <div class="card-3d p-4">
+            <h3 class="h5 mb-3">Colonnes reconnues</h3>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <tbody>
+                        <tr><th>Nom</th><td>Obligatoire</td></tr>
+                        <tr><th>Categorie / Catégorie</th><td>Uniforme, Badge, Livre...</td></tr>
+                        <tr><th>Prix</th><td>Nombre, ex: 5000</td></tr>
+                        <tr><th>Stock</th><td>Quantite disponible</td></tr>
+                        <tr><th>Devise</th><td>XOF par defaut</td></tr>
+                        <tr><th>Description</th><td>Texte court</td></tr>
+                        <tr><th>ImageUrl</th><td>URL existante facultative</td></tr>
+                        <tr><th>Publie</th><td>oui/true/1 ou brouillon</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="alert alert-info mb-0">
+                Exemple CSV : <code>Nom;Catégorie;Prix;Stock;Devise;Description;ImageUrl;Publie</code>
+            </div>
+        </div>
+    </div>
+</div>

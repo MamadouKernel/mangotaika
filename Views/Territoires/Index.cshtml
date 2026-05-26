@@ -1,0 +1,164 @@
+@model List<MangoTaika.Data.Entities.RegionScoute>
+@using MangoTaika.Data.Entities
+@{
+    ViewData["Title"] = "Regions et districts";
+    Layout = "_LayoutAdmin";
+    var districtsSansRegion = ViewBag.DistrictsSansRegion as List<DistrictScout> ?? [];
+    var allRegions = Model.OrderBy(r => r.Nom).ToList();
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+        <h2 class="section-title mb-1"><i class="bi bi-globe-africa text-or"></i> Regions et districts</h2>
+        <p class="text-muted-custom mb-0">Structure territoriale Region > District > Entites scouts.</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card-3d p-4 h-100">
+            <h4 class="mb-3">Creer une region</h4>
+            <form asp-action="CreerRegion" method="post" class="row g-3">
+                <div class="col-12">
+                    <label class="form-label">Nom</label>
+                    <input name="nom" class="form-control" required />
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Description</label>
+                    <textarea name="description" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-or w-100" type="submit"><i class="bi bi-plus-circle"></i> Creer la region</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card-3d p-4 h-100">
+            <h4 class="mb-3">Creer un district</h4>
+            <form asp-action="CreerDistrict" method="post" class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Nom</label>
+                    <input name="nom" class="form-control" required />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Region</label>
+                    <select name="regionScouteId" class="form-select">
+                        <option value="">-- Sans region --</option>
+                        @foreach (var region in allRegions)
+                        {
+                            <option value="@region.Id">@region.Nom</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Description</label>
+                    <textarea name="description" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-or w-100" type="submit"><i class="bi bi-plus-circle"></i> Creer le district</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="card-3d p-4 mt-4">
+    <h4 class="mb-3">Territoires actifs</h4>
+    @foreach (var region in Model)
+    {
+        <div class="border rounded-3 p-3 mb-3">
+            <form asp-action="ModifierRegion" method="post" class="row g-2 align-items-end mb-3">
+                <input type="hidden" name="id" value="@region.Id" />
+                <div class="col-md-3">
+                    <label class="form-label">Region</label>
+                    <input name="nom" class="form-control" value="@region.Nom" />
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label">Description</label>
+                    <input name="description" class="form-control" value="@region.Description" />
+                </div>
+                <div class="col-md-2 form-check pt-4">
+                    <input type="checkbox" name="estActive" value="true" class="form-check-input" @(region.EstActive ? "checked" : "") />
+                    <label class="form-check-label">Active</label>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-outline-or w-100" type="submit"><i class="bi bi-check-lg"></i></button>
+                </div>
+            </form>
+
+            @if (region.Districts.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>District</th>
+                                <th>Description</th>
+                                <th>Groupes</th>
+                                <th>Actif</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var district in region.Districts.OrderBy(d => d.Nom))
+                            {
+                                <tr>
+                                    <form asp-action="ModifierDistrict" method="post">
+                                        <input type="hidden" name="id" value="@district.Id" />
+                                        <td><input name="nom" class="form-control form-control-sm" value="@district.Nom" /></td>
+                                        <td><input name="description" class="form-control form-control-sm" value="@district.Description" /></td>
+                                        <td>@district.Groupes.Count(g => g.IsActive)</td>
+                                        <td>
+                                            <input type="checkbox" name="estActif" value="true" class="form-check-input" @(district.EstActif ? "checked" : "") />
+                                            <input type="hidden" name="regionScouteId" value="@region.Id" />
+                                        </td>
+                                        <td class="text-end"><button class="btn btn-outline-or btn-sm" type="submit"><i class="bi bi-check-lg"></i></button></td>
+                                    </form>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted-custom mb-0">Aucun district rattache.</p>
+            }
+        </div>
+    }
+
+    @if (districtsSansRegion.Any())
+    {
+        <h5 class="mt-4">Districts sans region</h5>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <tbody>
+                    @foreach (var district in districtsSansRegion)
+                    {
+                        <tr>
+                            <form asp-action="ModifierDistrict" method="post">
+                                <input type="hidden" name="id" value="@district.Id" />
+                                <td><input name="nom" class="form-control form-control-sm" value="@district.Nom" /></td>
+                                <td>
+                                    <select name="regionScouteId" class="form-select form-select-sm">
+                                        <option value="">-- Sans region --</option>
+                                        @foreach (var region in allRegions)
+                                        {
+                                            <option value="@region.Id">@region.Nom</option>
+                                        }
+                                    </select>
+                                </td>
+                                <td><input name="description" class="form-control form-control-sm" value="@district.Description" /></td>
+                                <td>
+                                    <input type="checkbox" name="estActif" value="true" class="form-check-input" @(district.EstActif ? "checked" : "") />
+                                </td>
+                                <td class="text-end"><button class="btn btn-outline-or btn-sm" type="submit"><i class="bi bi-check-lg"></i></button></td>
+                            </form>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

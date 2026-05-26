@@ -16,7 +16,10 @@ public class ApplicationUser : IdentityUser<Guid>
     public Groupe? Groupe { get; set; }
     public Guid? BrancheId { get; set; }
     public Branche? Branche { get; set; }
+    public Guid? DistrictScoutId { get; set; }
+    public DistrictScout? DistrictScout { get; set; }
     public ICollection<HistoriqueFonction> HistoriqueFonctions { get; set; } = [];
     public ICollection<Ticket> Tickets { get; set; } = [];
     public ICollection<NotificationUtilisateur> Notifications { get; set; } = [];
+    public PortefeuilleUtilisateur? Portefeuille { get; set; }
 }

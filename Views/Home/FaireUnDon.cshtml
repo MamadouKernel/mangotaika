@@ -1,0 +1,145 @@
+@model MangoTaika.Data.Entities.DonPublic
+@{
+    ViewData["Title"] = "Faire un don";
+    var compte = ViewBag.ComptePaiement as MangoTaika.Data.Entities.ComptePaiementMobile;
+}
+
+<section class="container py-5 donation-page donation-experience">
+    <div class="donation-hero-pro mb-4">
+        <div>
+            <span class="donation-hero-pro__eyebrow">Contribution publique</span>
+            <h1>Faire un don au District Scout MANGO TAIKA</h1>
+            <p>Declarez votre contribution, joignez la reference Mobile Money et recevez un suivi clair jusqu'a validation.</p>
+            <div class="donation-trust-row">
+                <span><i class="bi bi-receipt"></i> Recu disponible apres validation</span>
+                <span><i class="bi bi-shield-check"></i> Mouvement trace en finance</span>
+                <span><i class="bi bi-phone"></i> Paiement Mobile Money</span>
+            </div>
+            <div class="donation-hero-pro__actions">
+                <a href="#donation-form" class="btn btn-or"><i class="bi bi-heart-fill"></i> Declarer mon don</a>
+                <a asp-controller="Boutique" asp-action="Index" class="btn btn-outline-or"><i class="bi bi-bag"></i> Voir la boutique</a>
+            </div>
+        </div>
+        <div class="donation-hero-pro__brand">
+            <img src="~/images/logo.png" alt="Logo MANGO TAIKA" />
+            <span>District Scout</span>
+            <strong>Soutien direct</strong>
+        </div>
+    </div>
+
+    <div class="row g-4 align-items-start">
+        <div class="col-lg-5">
+            <div class="donation-side-panel">
+                <div class="donation-account">
+                    <span>Compte mobile principal</span>
+                    @if (compte is not null)
+                    {
+                        <strong>@compte.Operateur - @compte.NumeroMobile</strong>
+                        <small>@(compte.NomTitulaire ?? compte.Libelle)</small>
+                    }
+                    else
+                    {
+                        <strong>Compte en cours de configuration</strong>
+                        <small>Le financier ou le commissaire de district doit definir le compte principal dans Finances & AGR.</small>
+                    }
+                </div>
+                <div class="donation-steps">
+                    <div><i class="bi bi-phone"></i><span>Effectuez le paiement sur le compte principal.</span></div>
+                    <div><i class="bi bi-pencil-square"></i><span>Renseignez votre reference et vos coordonnees.</span></div>
+                    <div><i class="bi bi-check2-circle"></i><span>La tresorerie valide et rattache le mouvement financier.</span></div>
+                </div>
+                <div class="donation-impact">
+                    <strong>Impact direct</strong>
+                    <p>Formations, activites, accompagnement des jeunes et fonctionnement du district.</p>
+                </div>
+                <div class="donation-impact-grid">
+                    <div>
+                        <strong>01</strong>
+                        <span>Activites terrain</span>
+                    </div>
+                    <div>
+                        <strong>02</strong>
+                        <span>Formation</span>
+                    </div>
+                    <div>
+                        <strong>03</strong>
+                        <span>Encadrement</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <form id="donation-form" asp-action="FaireUnDon" method="post" class="donation-form card-3d p-4">
+                <div asp-validation-summary="ModelOnly" class="text-danger small"></div>
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+                    <div>
+                        <h2 class="h4 mb-1">Declaration de don</h2>
+                        <p class="text-muted-custom mb-0">Les champs nom et montant sont obligatoires.</p>
+                    </div>
+                    <span class="badge-3d badge-soumise">Suivi automatique</span>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="NomDonateur" class="form-label">Nom du donateur</label>
+                        <input asp-for="NomDonateur" class="form-control" />
+                        <span asp-validation-for="NomDonateur" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Telephone" class="form-label">Telephone</label>
+                        <input asp-for="Telephone" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Email" class="form-label">Email</label>
+                        <input asp-for="Email" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Montant" class="form-label">Montant</label>
+                        <input asp-for="Montant" class="form-control" type="number" min="1" step="1" />
+                        <div class="donation-amounts mt-2" data-donation-amounts>
+                            <button type="button" data-amount="5000">5 000</button>
+                            <button type="button" data-amount="10000">10 000</button>
+                            <button type="button" data-amount="25000">25 000</button>
+                            <button type="button" data-amount="50000">50 000</button>
+                        </div>
+                        <span asp-validation-for="Montant" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="ReferencePaiement" class="form-label">Reference de paiement</label>
+                        <input asp-for="ReferencePaiement" class="form-control" placeholder="Ex: reference Mobile Money" />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Devise" class="form-label">Devise</label>
+                        <input asp-for="Devise" class="form-control" value="XOF" />
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="Message" class="form-label">Message</label>
+                        <textarea asp-for="Message" class="form-control" rows="4"></textarea>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end mt-4">
+                    <button type="submit" class="btn btn-or btn-lg">
+                        <i class="bi bi-send-check"></i> Declarer le don
+                    </button>
+                </div>
+                <p class="donation-secure-note mb-0 mt-3">
+                    <i class="bi bi-lock"></i> Votre declaration est transmise au circuit financier du district pour controle et validation.
+                </p>
+            </form>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('[data-donation-amounts] button').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var input = document.getElementById('Montant');
+                if (input) {
+                    input.value = button.dataset.amount || '';
+                    input.dispatchEvent(new Event('change'));
+                }
+            });
+        });
+    </script>
+}

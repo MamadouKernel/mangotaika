@@ -1,0 +1,73 @@
+@model List<MangoTaika.Data.Entities.CommandeBoutique>
+@{
+    ViewData["Title"] = "Commandes boutique";
+    Layout = "_LayoutAdmin";
+    var selectedStatut = ViewBag.Statut as MangoTaika.Data.Entities.StatutCommandeBoutique?;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-receipt text-or"></i> Commandes boutique</h2>
+    <a asp-action="Admin" class="btn btn-outline-or btn-sm"><i class="bi bi-bag"></i> Articles</a>
+</div>
+
+<form method="get" class="card-3d p-3 mb-4">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label">Statut</label>
+            <select name="statut" class="form-select">
+                <option value="">Tous</option>
+                @foreach (var statut in Enum.GetValues<MangoTaika.Data.Entities.StatutCommandeBoutique>())
+                {
+                    <option value="@statut" selected="@(selectedStatut == statut ? "selected" : null)">@statut</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-or w-100" type="submit">Filtrer</button>
+        </div>
+    </div>
+</form>
+
+<div class="card-3d p-4">
+    @if (Model.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Client</th>
+                        <th>Articles</th>
+                        <th>Paiement</th>
+                        <th>Statut</th>
+                        <th class="text-end">Total</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var commande in Model)
+                    {
+                        <tr>
+                            <td>@commande.DateCreation.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                <strong>@commande.NomClient</strong>
+                                <div class="small text-muted-custom">@commande.TelephoneClient @commande.EmailClient</div>
+                            </td>
+                            <td>@string.Join(", ", commande.Lignes.Select(l => $"{l.ArticleBoutique.Nom} x{l.Quantite}"))</td>
+                            <td>@(commande.ModePaiement == MangoTaika.Data.Entities.ModePaiementCommandeBoutique.PaiementLivraison ? "A la livraison" : "Mobile Money")</td>
+                            <td><span class="badge-3d @(commande.Statut == MangoTaika.Data.Entities.StatutCommandeBoutique.Annulee ? "badge-rejetee" : commande.Statut == MangoTaika.Data.Entities.StatutCommandeBoutique.EnAttente ? "badge-soumise" : "badge-approuvee")">@commande.Statut</span></td>
+                            <td class="text-end">@commande.Total.ToString("N0") @commande.Devise</td>
+                            <td class="text-end">
+                                <a asp-action="CommandeDetails" asp-route-id="@commande.Id" class="btn btn-outline-or btn-sm"><i class="bi bi-eye"></i></a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <p class="text-muted-custom mb-0">Aucune commande trouvee.</p>
+    }
+</div>

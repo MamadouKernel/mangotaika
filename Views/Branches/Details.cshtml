@@ -1,4 +1,5 @@
 @model BrancheDto
+@using MangoTaika.Helpers
 @{
     ViewData["Title"] = "Detail de la branche";
     Layout = "_LayoutAdmin";
@@ -151,7 +152,7 @@
 
         <div class="col-xl-7 col-lg-6">
             <div class="mb-3">
-                <h4 class="mb-1">@Model.Nom</h4>
+                <h4 class="mb-1">@BranchDisplay.CanonicalLabel(Model.Nom)</h4>
                 <p class="text-muted-custom mb-2">@(Model.NomGroupe ?? "Groupe non renseigne")</p>
                 <p class="text-muted-custom mb-0">@(Model.Description ?? "-")</p>
             </div>
@@ -231,16 +232,7 @@
                 var groupe = Model.TotauxParGroupes[i];
                 var accent = groupPalette[i % groupPalette.Length];
                 <div class="branche-groupe-card" style="--group-accent:@accent">
-                    @if (!string.IsNullOrWhiteSpace(groupe.LogoGroupeUrl))
-                    {
-                        <img src="@groupe.LogoGroupeUrl" alt="Logo du groupe @groupe.NomGroupe" class="branche-groupe-card__logo" />
-                    }
-                    else
-                    {
-                        <div class="branche-groupe-card__logo branche-groupe-card__logo--placeholder">
-                            <i class="bi bi-building"></i>
-                        </div>
-                    }
+                    <img src="@BranchDisplay.LogoOrDefault(groupe.LogoGroupeUrl)" alt="Logo du groupe @groupe.NomGroupe" class="branche-groupe-card__logo" />
                     <span class="branche-groupe-card__name">@groupe.NomGroupe</span>
                     <strong class="branche-groupe-card__total">@groupe.NombreScouts</strong>
                     <small>@groupe.NombreFilles filles | @groupe.NombreGarcons garcons</small>

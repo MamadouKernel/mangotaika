@@ -100,6 +100,7 @@ builder.Services.AddScoped<IFormationService, FormationService>();
 builder.Services.AddScoped<IFileUploadService, FileUploadService>();
 builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>();
 builder.Services.AddScoped<INotificationDispatchService, NotificationDispatchService>();
+builder.Services.AddScoped<IMobilePaymentGateway, ManualMobilePaymentGateway>();
 builder.Services.AddScoped<OperationalAccessService>();
 builder.Services.AddScoped<IClaimsTransformation, CommissaireDistrictClaimsTransformation>();
 builder.Services.AddHttpContextAccessor();

@@ -1,0 +1,121 @@
+@model MangoTaika.Data.Entities.CommandeBoutique
+@{
+    ViewData["Title"] = "Detail commande boutique";
+    Layout = "_LayoutAdmin";
+    var canConfirm = Model.Statut == MangoTaika.Data.Entities.StatutCommandeBoutique.EnAttente;
+    var canDeliver = Model.Statut == MangoTaika.Data.Entities.StatutCommandeBoutique.Payee;
+    var canCancel = Model.Statut is MangoTaika.Data.Entities.StatutCommandeBoutique.EnAttente or MangoTaika.Data.Entities.StatutCommandeBoutique.Payee;
+    var hasReceipt = Model.Statut is MangoTaika.Data.Entities.StatutCommandeBoutique.Payee or MangoTaika.Data.Entities.StatutCommandeBoutique.Livree;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-receipt text-or"></i> Commande @Model.Id.ToString("N")[..8].ToUpperInvariant()</h2>
+    <div class="d-flex gap-2">
+        @if (hasReceipt)
+        {
+            <a asp-action="Recu" asp-route-id="@Model.Id" class="btn btn-or btn-sm"><i class="bi bi-file-earmark-pdf"></i> Recu</a>
+        }
+        <a asp-action="Commandes" class="btn btn-outline-or btn-sm"><i class="bi bi-arrow-left"></i></a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card-3d p-4">
+            <div class="d-flex flex-wrap justify-content-between gap-3 mb-4">
+                <div>
+                    <span class="text-muted-custom">Total</span>
+                    <h1 class="mb-0">@Model.Total.ToString("N0") @Model.Devise</h1>
+                </div>
+                <span class="badge-3d @(Model.Statut == MangoTaika.Data.Entities.StatutCommandeBoutique.Annulee ? "badge-rejetee" : Model.Statut == MangoTaika.Data.Entities.StatutCommandeBoutique.EnAttente ? "badge-soumise" : "badge-approuvee")">@Model.Statut</span>
+            </div>
+
+            <dl class="row">
+                <dt class="col-sm-4">Client</dt>
+                <dd class="col-sm-8">@Model.NomClient</dd>
+                <dt class="col-sm-4">Telephone</dt>
+                <dd class="col-sm-8">@Model.TelephoneClient</dd>
+                <dt class="col-sm-4">Email</dt>
+                <dd class="col-sm-8">@(Model.EmailClient ?? "-")</dd>
+                <dt class="col-sm-4">Mode de paiement</dt>
+                <dd class="col-sm-8">@(Model.ModePaiement == MangoTaika.Data.Entities.ModePaiementCommandeBoutique.PaiementLivraison ? "Paiement a la livraison" : "Mobile Money")</dd>
+                <dt class="col-sm-4">Reference paiement</dt>
+                <dd class="col-sm-8">@(Model.ReferencePaiement ?? "-")</dd>
+                <dt class="col-sm-4">Numero recu</dt>
+                <dd class="col-sm-8">@(Model.NumeroRecu ?? "-")</dd>
+                <dt class="col-sm-4">Traitement</dt>
+                <dd class="col-sm-8">
+                    @(Model.DateTraitement?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "-")
+                    @if (Model.TraitePar is not null)
+                    {
+                        <span>par @Model.TraitePar.Prenom @Model.TraitePar.Nom</span>
+                    }
+                </dd>
+                <dt class="col-sm-4">Commentaire</dt>
+                <dd class="col-sm-8">@(Model.CommentaireTraitement ?? "-")</dd>
+            </dl>
+
+            <h4 class="mt-4">Articles</h4>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Article</th>
+                            <th class="text-end">Quantite</th>
+                            <th class="text-end">Prix</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var ligne in Model.Lignes)
+                        {
+                            <tr>
+                                <td>@ligne.ArticleBoutique.Nom</td>
+                                <td class="text-end">@ligne.Quantite</td>
+                                <td class="text-end">@ligne.PrixUnitaire.ToString("N0") @Model.Devise</td>
+                                <td class="text-end">@((ligne.PrixUnitaire * ligne.Quantite).ToString("N0")) @Model.Devise</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card-3d p-4">
+            <h4 class="mb-3">Traitement</h4>
+            @if (canConfirm)
+            {
+                <form asp-action="ConfirmerCommande" method="post" class="mb-3">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <label class="form-label">Commentaire</label>
+                    <textarea name="commentaireTraitement" class="form-control mb-3" rows="3"></textarea>
+                    <button type="submit" class="btn btn-or w-100"><i class="bi bi-check-circle"></i> Confirmer paiement</button>
+                </form>
+            }
+            @if (canDeliver)
+            {
+                <form asp-action="MarquerLivree" method="post" class="mb-3">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <label class="form-label">Commentaire livraison</label>
+                    <textarea name="commentaireTraitement" class="form-control mb-3" rows="3"></textarea>
+                    <button type="submit" class="btn btn-or w-100"><i class="bi bi-truck"></i> Marquer livree</button>
+                </form>
+            }
+            @if (canCancel)
+            {
+                <form asp-action="AnnulerCommande" method="post">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <label class="form-label">Motif annulation</label>
+                    <textarea name="commentaireTraitement" class="form-control mb-3" rows="3"></textarea>
+                    <button type="submit" class="btn btn-outline-danger w-100"><i class="bi bi-x-circle"></i> Annuler</button>
+                </form>
+            }
+            @if (!canConfirm && !canDeliver && !canCancel)
+            {
+                <p class="text-muted-custom mb-0">Aucune action disponible pour ce statut.</p>
+            }
+        </div>
+    </div>
+</div>

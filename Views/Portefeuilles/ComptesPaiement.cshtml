@@ -1,0 +1,92 @@
+@model List<MangoTaika.Data.Entities.ComptePaiementMobile>
+@{
+    ViewData["Title"] = "Comptes de paiement";
+    Layout = "_LayoutAdmin";
+}
+
+<h2 class="section-title mb-3"><i class="bi bi-phone text-or"></i> Comptes de paiement mobile</h2>
+
+<div class="card-3d p-4 mb-4">
+    <form asp-action="EnregistrerComptePaiement" method="post" class="row g-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label">Libelle</label>
+            <input name="libelle" class="form-control" required />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Operateur</label>
+            <input name="operateur" class="form-control" required />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Numero mobile</label>
+            <input name="numeroMobile" class="form-control" required />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Titulaire</label>
+            <input name="nomTitulaire" class="form-control" />
+        </div>
+        <div class="col-md-1">
+            <div class="form-check">
+                <input name="estPrincipal" value="true" type="checkbox" class="form-check-input" />
+                <label class="form-check-label">Principal</label>
+            </div>
+        </div>
+        <div class="col-md-1">
+            <div class="form-check">
+                <input name="estActif" value="true" type="checkbox" class="form-check-input" checked />
+                <label class="form-check-label">Actif</label>
+            </div>
+        </div>
+        <div class="col-md-12 col-lg-1">
+            <button class="btn btn-or w-100" type="submit"><i class="bi bi-check-lg"></i></button>
+        </div>
+    </form>
+</div>
+
+<div class="card-3d p-4">
+    @if (Model.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Libelle</th>
+                        <th>Operateur</th>
+                        <th>Numero</th>
+                        <th>Titulaire</th>
+                        <th>Statut</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var compte in Model)
+                    {
+                        <tr>
+                            <td colspan="6">
+                                <form asp-action="EnregistrerComptePaiement" method="post" class="payment-account-row">
+                                    <input type="hidden" name="id" value="@compte.Id" />
+                                    <input name="libelle" value="@compte.Libelle" class="form-control form-control-sm" aria-label="Libelle" />
+                                    <input name="operateur" value="@compte.Operateur" class="form-control form-control-sm" aria-label="Operateur" />
+                                    <input name="numeroMobile" value="@compte.NumeroMobile" class="form-control form-control-sm" aria-label="Numero mobile" />
+                                    <input name="nomTitulaire" value="@compte.NomTitulaire" class="form-control form-control-sm" aria-label="Titulaire" />
+                                    <label class="payment-account-row__check">
+                                        <input name="estPrincipal" value="true" type="checkbox" class="form-check-input" checked="@(compte.EstPrincipal ? "checked" : null)" />
+                                        <span>Principal</span>
+                                    </label>
+                                    <label class="payment-account-row__check">
+                                        <input name="estActif" value="true" type="checkbox" class="form-check-input" checked="@(compte.EstActif ? "checked" : null)" />
+                                        <span>Actif</span>
+                                    </label>
+                                    <button type="submit" class="btn btn-or btn-sm"><i class="bi bi-save"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <p class="text-muted-custom mb-0">Aucun compte de paiement mobile configure.</p>
+    }
+</div>

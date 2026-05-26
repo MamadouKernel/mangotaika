@@ -56,6 +56,15 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<PropositionMaitriseMembre> PropositionsMaitriseMembres => Set<PropositionMaitriseMembre>();
     public DbSet<CotisationNationaleImport> CotisationsNationalesImports => Set<CotisationNationaleImport>();
     public DbSet<CotisationNationaleImportLigne> CotisationsNationalesImportLignes => Set<CotisationNationaleImportLigne>();
+    public DbSet<PortefeuilleUtilisateur> PortefeuillesUtilisateurs => Set<PortefeuilleUtilisateur>();
+    public DbSet<MouvementPortefeuille> MouvementsPortefeuilles => Set<MouvementPortefeuille>();
+    public DbSet<ComptePaiementMobile> ComptesPaiementMobile => Set<ComptePaiementMobile>();
+    public DbSet<DonPublic> DonsPublics => Set<DonPublic>();
+    public DbSet<ArticleBoutique> ArticlesBoutique => Set<ArticleBoutique>();
+    public DbSet<CommandeBoutique> CommandesBoutique => Set<CommandeBoutique>();
+    public DbSet<LigneCommandeBoutique> LignesCommandesBoutique => Set<LigneCommandeBoutique>();
+    public DbSet<RegionScoute> RegionsScoutes => Set<RegionScoute>();
+    public DbSet<DistrictScout> DistrictsScouts => Set<DistrictScout>();
 
     // LMS
     public DbSet<Formation> Formations => Set<Formation>();
@@ -120,6 +129,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
                 .IsUnique()
                 .HasFilter("\"IsActive\" = TRUE");
             e.HasOne(g => g.Responsable).WithMany().HasForeignKey(g => g.ResponsableId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(g => g.DistrictScout).WithMany(d => d.Groupes).HasForeignKey(g => g.DistrictScoutId).OnDelete(DeleteBehavior.SetNull);
             e.HasMany(g => g.Membres).WithOne(u => u.Groupe).HasForeignKey(u => u.GroupeId);
             e.HasMany(g => g.Branches).WithOne(b => b.Groupe).HasForeignKey(b => b.GroupeId);
         });
@@ -376,6 +386,80 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasOne(l => l.Scout).WithMany().HasForeignKey(l => l.ScoutId).OnDelete(DeleteBehavior.SetNull);
         });
 
+        builder.Entity<ApplicationUser>(e =>
+        {
+            e.HasOne(u => u.DistrictScout).WithMany().HasForeignKey(u => u.DistrictScoutId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(u => u.Portefeuille).WithOne(p => p.User).HasForeignKey<PortefeuilleUtilisateur>(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<PortefeuilleUtilisateur>(e =>
+        {
+            e.HasIndex(p => p.UserId).IsUnique();
+            e.Property(p => p.Solde).HasPrecision(18, 2);
+        });
+
+        builder.Entity<MouvementPortefeuille>(e =>
+        {
+            e.Property(m => m.Montant).HasPrecision(18, 2);
+            e.Property(m => m.SoldeAvant).HasPrecision(18, 2);
+            e.Property(m => m.SoldeApres).HasPrecision(18, 2);
+            e.HasIndex(m => new { m.PortefeuilleUtilisateurId, m.DateCreation });
+            e.HasIndex(m => m.TransfertId);
+            e.HasIndex(m => m.RecuToken);
+            e.HasOne(m => m.PortefeuilleUtilisateur).WithMany(p => p.Mouvements).HasForeignKey(m => m.PortefeuilleUtilisateurId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(m => m.ValidePar).WithMany().HasForeignKey(m => m.ValideParId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(m => m.TransactionFinanciere).WithMany().HasForeignKey(m => m.TransactionFinanciereId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        builder.Entity<ComptePaiementMobile>(e =>
+        {
+            e.HasIndex(c => new { c.NumeroMobile, c.EstActif });
+            e.HasOne(c => c.ModifiePar).WithMany().HasForeignKey(c => c.ModifieParId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        builder.Entity<DonPublic>(e =>
+        {
+            e.Property(d => d.Montant).HasPrecision(18, 2);
+            e.HasIndex(d => new { d.Statut, d.DateCreation });
+            e.HasIndex(d => d.RecuToken);
+            e.HasOne(d => d.TraitePar).WithMany().HasForeignKey(d => d.TraiteParId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(d => d.TransactionFinanciere).WithMany().HasForeignKey(d => d.TransactionFinanciereId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        builder.Entity<ArticleBoutique>(e =>
+        {
+            e.Property(a => a.Prix).HasPrecision(18, 2);
+            e.HasIndex(a => new { a.EstPublie, a.EstSupprime });
+            e.HasIndex(a => a.Categorie);
+        });
+
+        builder.Entity<CommandeBoutique>(e =>
+        {
+            e.Property(c => c.Total).HasPrecision(18, 2);
+            e.HasIndex(c => new { c.Statut, c.DateCreation });
+            e.HasIndex(c => c.RecuToken);
+            e.HasOne(c => c.Client).WithMany().HasForeignKey(c => c.ClientId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(c => c.TraitePar).WithMany().HasForeignKey(c => c.TraiteParId).OnDelete(DeleteBehavior.SetNull);
+            e.HasMany(c => c.Lignes).WithOne(l => l.CommandeBoutique).HasForeignKey(l => l.CommandeBoutiqueId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<LigneCommandeBoutique>(e =>
+        {
+            e.Property(l => l.PrixUnitaire).HasPrecision(18, 2);
+            e.HasOne(l => l.ArticleBoutique).WithMany().HasForeignKey(l => l.ArticleBoutiqueId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<RegionScoute>(e =>
+        {
+            e.HasIndex(r => r.Nom);
+        });
+
+        builder.Entity<DistrictScout>(e =>
+        {
+            e.HasIndex(d => d.Nom);
+            e.HasOne(d => d.RegionScoute).WithMany(r => r.Districts).HasForeignKey(d => d.RegionScouteId).OnDelete(DeleteBehavior.SetNull);
+        });
+
         // === LMS ===
 
         // Formation
@@ -508,6 +592,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             ("Superviseur",            "f6a7b8c9-d0e1-2345-fabc-456789012345"),
             ("Consultant",             "e5f6a7b8-c9d0-1234-efab-345678901234"),
             ("CommissaireDistrict",    "aa000004-bbbb-cccc-dddd-000000000004"),
+            ("CommissaireDistrictAdjoint", "aa000005-bbbb-cccc-dddd-000000000005"),
+            ("AssistantCommissaireDistrict", "aa000006-bbbb-cccc-dddd-000000000006"),
             ("EquipeDistrict",         "aa000001-bbbb-cccc-dddd-000000000001"),
             ("ChefGroupe",             "aa000002-bbbb-cccc-dddd-000000000002"),
             ("ChefUnite",              "aa000003-bbbb-cccc-dddd-000000000003")

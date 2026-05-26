@@ -13,6 +13,9 @@ public class GroupeDto
     public string? Adresse { get; set; }
     public string? NomChefGroupe { get; set; }
     public Guid? ChefGroupeScoutId { get; set; }
+    public Guid? DistrictScoutId { get; set; }
+    public string? DistrictScoutNom { get; set; }
+    public string? RegionScouteNom { get; set; }
     public Guid? ResponsableId { get; set; }
     public string? ContactChefGroupe { get; set; }
     public string? ResponsablePhotoUrl { get; set; }
@@ -28,6 +31,7 @@ public class GroupeDto
 public class BrancheScoutCountDto
 {
     public string Nom { get; set; } = string.Empty;
+    public string? LogoUrl { get; set; }
     public int NombreScouts { get; set; }
     public int NombreFilles { get; set; }
     public int NombreGarcons { get; set; }
@@ -63,6 +67,7 @@ public class GroupeCreateDto : IValidatableObject
     public string? Quartier { get; set; }
     public string? NomChefGroupe { get; set; }
     public Guid? ChefGroupeScoutId { get; set; }
+    public Guid? DistrictScoutId { get; set; }
     public string? LogoUrl { get; set; }
     public Guid? ResponsableId { get; set; }
     public double? Latitude { get; set; }

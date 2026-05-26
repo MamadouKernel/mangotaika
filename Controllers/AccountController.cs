@@ -980,7 +980,10 @@ public class AccountController(
         if (user is null) return RedirectToAction(nameof(Login));
 
         var format = NormaliserFormatExport(model.FormatExport);
-        if (!model.ConfirmerExport)
+        var exportExplicitementConfirme = model.ConfirmerExport
+            || Request.Form["ConfirmerExport"].Any(v => string.Equals(v, "true", StringComparison.OrdinalIgnoreCase));
+
+        if (!exportExplicitementConfirme)
             return RedirigerErreurExport("Veuillez confirmer explicitement la demande d'export avant le telechargement.", format);
 
         if (string.IsNullOrWhiteSpace(model.MotDePasseConfirmation) ||

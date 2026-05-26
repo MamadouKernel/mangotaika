@@ -1,0 +1,84 @@
+@model MangoTaika.DTOs.ConfirmTransferViewModel
+@{
+    ViewData["Title"] = "Confirmer le transfert";
+    Layout = "_LayoutAdmin";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+        <h2 class="section-title mb-1"><i class="bi bi-arrow-left-right text-or"></i> Confirmer le transfert</h2>
+        <p class="text-muted-custom mb-0">Selectionnez le bon beneficiaire et verifiez les details avant validation.</p>
+    </div>
+    <a asp-action="MonPortefeuille" class="btn btn-outline-or">
+        <i class="bi bi-arrow-left"></i> Retour
+    </a>
+</div>
+
+<form asp-action="ExecuterTransfert" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Montant" />
+    <input type="hidden" asp-for="Commentaire" />
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card-3d p-4">
+                <h4 class="mb-3">Beneficiaire</h4>
+                <div class="d-grid gap-3">
+                    @foreach (var candidat in Model.Candidats)
+                    {
+                        <label class="border rounded-3 p-3 d-flex gap-3 align-items-start transfer-choice">
+                            <input class="form-check-input mt-1" type="radio" asp-for="BeneficiaireId" value="@candidat.Id" required />
+                            <span>
+                                <strong class="d-block">@candidat.NomComplet</strong>
+                                <span class="text-muted-custom d-block">
+                                    @(candidat.Matricule ?? "Matricule non renseigne")
+                                    @if (!string.IsNullOrWhiteSpace(candidat.Telephone))
+                                    {
+                                        <span> · @candidat.Telephone</span>
+                                    }
+                                </span>
+                                @if (!string.IsNullOrWhiteSpace(candidat.Email))
+                                {
+                                    <span class="text-muted-custom d-block">@candidat.Email</span>
+                                }
+                            </span>
+                        </label>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card-3d p-4">
+                <h4 class="mb-3">Resume</h4>
+                <dl class="row mb-0">
+                    <dt class="col-6">Montant</dt>
+                    <dd class="col-6 text-end fw-bold">@Model.Montant.ToString("N0") @Model.Devise</dd>
+                    <dt class="col-6">Solde actuel</dt>
+                    <dd class="col-6 text-end">@Model.SoldeActuel.ToString("N0") @Model.Devise</dd>
+                    <dt class="col-6">Solde apres</dt>
+                    <dd class="col-6 text-end @(Model.SoldeApres < 0 ? "text-danger" : "")">@Model.SoldeApres.ToString("N0") @Model.Devise</dd>
+                    <dt class="col-6">Minimum</dt>
+                    <dd class="col-6 text-end">@Model.MontantMinimum.ToString("N0") @Model.Devise</dd>
+                    <dt class="col-6">Maximum</dt>
+                    <dd class="col-6 text-end">@Model.MontantMaximum.ToString("N0") @Model.Devise</dd>
+                    <dt class="col-6">Restant/jour</dt>
+                    <dd class="col-6 text-end">@Model.PlafondJournalierRestant.ToString("N0") @Model.Devise</dd>
+                </dl>
+                @if (!string.IsNullOrWhiteSpace(Model.Commentaire))
+                {
+                    <hr />
+                    <p class="text-muted-custom mb-1">Commentaire</p>
+                    <p class="mb-0">@Model.Commentaire</p>
+                }
+            </div>
+
+            <div class="d-grid gap-2 mt-3">
+                <button class="btn btn-or btn-lg" type="submit">
+                    <i class="bi bi-check2-circle"></i> Valider le transfert
+                </button>
+                <a asp-action="MonPortefeuille" class="btn btn-outline-secondary">Annuler</a>
+            </div>
+        </div>
+    </div>
+</form>

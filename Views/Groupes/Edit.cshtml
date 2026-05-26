@@ -3,6 +3,7 @@
     ViewData["Title"] = "Modifier l'entite";
     Layout = "_LayoutAdmin";
     var chefsGroupe = ViewBag.ChefsGroupe as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+    var districts = ViewBag.Districts as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
     var parts = (Model.Adresse ?? "").Split(',', 2, StringSplitOptions.TrimEntries);
     var quartier = parts.Length > 0 ? parts[0] : "";
     var commune = parts.Length > 1 ? parts[1] : "";
@@ -51,6 +52,16 @@
                 <label class="form-label">Quartier / Lieu-dit</label>
                 <input name="Quartier" class="form-control" value="@quartier" placeholder="Ex: 2 Plateaux, Carrefour Celeste" />
             </div>
+        </div>
+        <div class="mb-3">
+            <label asp-for="DistrictScoutId" class="form-label">District / region</label>
+            <select asp-for="DistrictScoutId" class="form-select">
+                <option value="">-- Aucun district rattache --</option>
+                @foreach (var district in districts)
+                {
+                    <option value="@district.Value" selected="@(district.Selected ? "selected" : null)">@district.Text</option>
+                }
+            </select>
         </div>
         <div class="mb-3">
             <label asp-for="ChefGroupeScoutId" class="form-label">@responsableLabel</label>

@@ -1,0 +1,155 @@
+@model MangoTaika.Data.Entities.PortefeuilleUtilisateur
+@{
+    ViewData["Title"] = "Mon portefeuille";
+    Layout = "_LayoutAdmin";
+    var compte = ViewBag.ComptePaiement as MangoTaika.Data.Entities.ComptePaiementMobile;
+    decimal? transferMinimum = ViewBag.TransferMinimum as decimal?;
+    decimal? transferMaximum = ViewBag.TransferMaximum as decimal?;
+    decimal? transferDailyRemaining = ViewBag.TransferDailyRemaining as decimal?;
+}
+
+<div class="wallet-hero mb-4">
+    <div>
+        <span class="wallet-hero__eyebrow">Espace financier personnel</span>
+        <h1 class="section-title mb-1"><i class="bi bi-wallet2 text-or"></i> Mon portefeuille</h1>
+        <p class="text-muted-custom mb-0">Recharge, transfert entre utilisateurs, recus et historique des mouvements.</p>
+    </div>
+    <div class="wallet-hero__balance">
+        <span>Solde disponible</span>
+        <strong>@Model.Solde.ToString("N0") @Model.Devise</strong>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="wallet-balance-card card-3d p-4">
+            <span class="text-muted-custom">Solde disponible</span>
+            <h1 class="mb-1">@Model.Solde.ToString("N0") @Model.Devise</h1>
+            <p class="text-muted-custom mb-0">Portefeuille personnel rattache au compte utilisateur.</p>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card-3d p-4">
+            <h4>Compte mobile principal</h4>
+            @if (compte is not null)
+            {
+                <p class="mb-1"><strong>@compte.Operateur</strong> - @compte.NumeroMobile</p>
+                <p class="text-muted-custom mb-0">@(compte.NomTitulaire ?? compte.Libelle)</p>
+            }
+            else
+            {
+                <p class="text-muted-custom mb-0">Aucun compte mobile principal n'est encore configure.</p>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="card-3d p-4 mt-4">
+    <ul class="nav nav-pills gap-2 mb-4" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="btn btn-outline-or active" data-bs-toggle="pill" data-bs-target="#wallet-recharge" type="button">Recharge</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="btn btn-outline-or" data-bs-toggle="pill" data-bs-target="#wallet-transfer" type="button">Transfert</button>
+        </li>
+    </ul>
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="wallet-recharge">
+            <h4 class="mb-3">Demander une recharge</h4>
+            <form asp-action="DemanderRecharge" method="post" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Montant</label>
+                    <input name="montant" type="number" min="1" step="1" class="form-control" required />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Reference paiement</label>
+                    <input name="reference" class="form-control" placeholder="Reference Mobile Money" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Commentaire</label>
+                    <input name="commentaire" class="form-control" />
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-or w-100" type="submit">
+                        <i class="bi bi-plus-circle"></i> Envoyer
+                    </button>
+                </div>
+            </form>
+        </div>
+        <div class="tab-pane fade" id="wallet-transfer">
+            <h4 class="mb-3">Transferer vers un autre portefeuille</h4>
+            @if (transferMinimum.HasValue && transferMaximum.HasValue && transferDailyRemaining.HasValue)
+            {
+                <p class="text-muted-custom">
+                    Limites : minimum @transferMinimum.Value.ToString("N0") @Model.Devise,
+                    maximum @transferMaximum.Value.ToString("N0") @Model.Devise,
+                    restant aujourd'hui @transferDailyRemaining.Value.ToString("N0") @Model.Devise.
+                </p>
+            }
+            <form asp-action="Transferer" method="post" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Beneficiaire</label>
+                    <input name="beneficiaire" class="form-control" placeholder="Telephone, email, matricule ou nom" required />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Montant</label>
+                    <input name="montant" type="number" min="1" step="1" class="form-control" required />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Commentaire</label>
+                    <input name="commentaire" class="form-control" />
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-or w-100" type="submit">
+                        <i class="bi bi-search"></i> Verifier
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="card-3d p-4 mt-4">
+    <h4 class="mb-3">Mouvements</h4>
+    @if (Model.Mouvements.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Libelle</th>
+                        <th>Type</th>
+                        <th>Statut</th>
+                        <th class="text-end">Montant</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var mouvement in Model.Mouvements)
+                    {
+                        <tr>
+                            <td>@mouvement.DateCreation.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@mouvement.Libelle</td>
+                            <td>@mouvement.Type</td>
+                            <td>@mouvement.Statut</td>
+                            <td class="text-end">@mouvement.Montant.ToString("N0") @mouvement.Devise</td>
+                            <td class="text-end">
+                                @if (mouvement.Statut == MangoTaika.Data.Entities.StatutMouvementPortefeuille.Valide)
+                                {
+                                    <a asp-action="RecuPublic" asp-route-id="@mouvement.Id" asp-route-token="@mouvement.RecuToken" class="btn btn-outline-or btn-sm">
+                                        <i class="bi bi-file-earmark-pdf"></i>
+                                    </a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <p class="text-muted-custom mb-0">Aucun mouvement pour le moment.</p>
+    }
+</div>

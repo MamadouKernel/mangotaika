@@ -1,0 +1,67 @@
+@model List<MangoTaika.Data.Entities.MouvementPortefeuille>
+@{
+    ViewData["Title"] = "Portefeuilles";
+    Layout = "_LayoutAdmin";
+    var selectedStatut = ViewBag.Statut as MangoTaika.Data.Entities.StatutMouvementPortefeuille?;
+}
+
+<h2 class="section-title mb-3"><i class="bi bi-wallet2 text-or"></i> Mouvements portefeuilles</h2>
+
+<form method="get" class="card-3d p-3 mb-4">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label">Statut</label>
+            <select name="statut" class="form-select">
+                <option value="">Tous</option>
+                @foreach (var statut in Enum.GetValues<MangoTaika.Data.Entities.StatutMouvementPortefeuille>())
+                {
+                    <option value="@statut" selected="@(selectedStatut == statut ? "selected" : null)">@statut</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-or w-100" type="submit">Filtrer</button>
+        </div>
+    </div>
+</form>
+
+<div class="card-3d p-4">
+    @if (Model.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Utilisateur</th>
+                        <th>Type</th>
+                        <th>Statut</th>
+                        <th>Reference</th>
+                        <th class="text-end">Montant</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var mouvement in Model)
+                    {
+                        <tr>
+                            <td>@mouvement.DateCreation.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@mouvement.PortefeuilleUtilisateur.User.Prenom @mouvement.PortefeuilleUtilisateur.User.Nom</td>
+                            <td>@mouvement.Type</td>
+                            <td><span class="badge-3d @(mouvement.Statut == MangoTaika.Data.Entities.StatutMouvementPortefeuille.Valide ? "badge-approuvee" : mouvement.Statut == MangoTaika.Data.Entities.StatutMouvementPortefeuille.Rejete ? "badge-rejetee" : "badge-soumise")">@mouvement.Statut</span></td>
+                            <td>@(mouvement.Reference ?? "-")</td>
+                            <td class="text-end">@mouvement.Montant.ToString("N0") @mouvement.Devise</td>
+                            <td class="text-end">
+                                <a asp-action="Details" asp-route-id="@mouvement.Id" class="btn btn-outline-or btn-sm"><i class="bi bi-eye"></i></a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <p class="text-muted-custom mb-0">Aucun mouvement trouve.</p>
+    }
+</div>

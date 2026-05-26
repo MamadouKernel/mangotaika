@@ -1,0 +1,80 @@
+@model BoutiqueCartViewModel
+@{
+    ViewData["Title"] = "Valider la commande";
+}
+
+<section class="container py-5 marketplace-detail">
+    <a asp-action="Panier" class="marketplace-back-link"><i class="bi bi-arrow-left"></i> Retour au panier</a>
+
+    <div class="marketplace-detail-grid">
+        <div class="marketplace-detail-panel">
+            <span class="boutique-eyebrow"><i class="bi bi-bag-check"></i> Checkout boutique</span>
+            <h1>Valider ma commande</h1>
+            <p class="marketplace-detail-description">Une seule commande sera creee avec tous les articles de votre panier.</p>
+
+            <form asp-action="Checkout" method="post" class="marketplace-order-form">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Nom complet</label>
+                        <input name="nomClient" class="form-control" required autocomplete="name" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Telephone</label>
+                        <input name="telephoneClient" class="form-control" required autocomplete="tel" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email</label>
+                        <input name="emailClient" type="email" class="form-control" autocomplete="email" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Reference paiement</label>
+                        <input name="referencePaiement" class="form-control" placeholder="Reference Mobile Money si deja paye" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Mode de paiement</label>
+                        <div class="marketplace-payment-options">
+                            <label>
+                                <input type="radio" name="modePaiement" value="MobileMoney" checked />
+                                <span>
+                                    <strong>Mobile Money</strong>
+                                    <small>Paiement par reference Mobile Money.</small>
+                                </span>
+                            </label>
+                            <label>
+                                <input type="radio" name="modePaiement" value="PaiementLivraison" />
+                                <span>
+                                    <strong>Paiement a la livraison</strong>
+                                    <small>Paiement au retrait ou a la livraison.</small>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="marketplace-order-actions">
+                    <a asp-action="Panier" class="btn btn-outline-or">Modifier le panier</a>
+                    <button type="submit" class="btn btn-or btn-lg"><i class="bi bi-send"></i> Envoyer la commande</button>
+                </div>
+            </form>
+        </div>
+
+        <aside class="marketplace-cart-summary">
+            <div class="card-3d p-4">
+                <h2>Votre panier</h2>
+                <div class="marketplace-checkout-lines">
+                    @foreach (var line in Model.Lignes)
+                    {
+                        <div>
+                            <span>@line.Article.Nom x @line.Quantite</span>
+                            <strong>@line.Total.ToString("N0") @line.Article.Devise</strong>
+                        </div>
+                    }
+                </div>
+                <dl>
+                    <dt>Total</dt>
+                    <dd>@Model.Total.ToString("N0") @Model.Devise</dd>
+                </dl>
+            </div>
+        </aside>
+    </div>
+</section>

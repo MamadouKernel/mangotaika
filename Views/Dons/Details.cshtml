@@ -1,0 +1,97 @@
+@model MangoTaika.Data.Entities.DonPublic
+@{
+    ViewData["Title"] = "Detail du don";
+    Layout = "_LayoutAdmin";
+    var isConfirmed = Model.Statut == MangoTaika.Data.Entities.StatutDonPublic.Confirme;
+    var isPending = Model.Statut == MangoTaika.Data.Entities.StatutDonPublic.Declare;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-heart-fill text-or"></i> Don de @Model.NomDonateur</h2>
+    <div class="d-flex gap-2">
+        @if (isConfirmed)
+        {
+            <a asp-action="Recu" asp-route-id="@Model.Id" class="btn btn-or btn-sm"><i class="bi bi-file-earmark-pdf"></i> Recu</a>
+        }
+        <a asp-action="Index" class="btn btn-outline-or btn-sm"><i class="bi bi-arrow-left"></i></a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card-3d p-4">
+            <div class="d-flex flex-wrap justify-content-between gap-3 mb-4">
+                <div>
+                    <span class="text-muted-custom">Montant</span>
+                    <h1 class="mb-0">@Model.Montant.ToString("N0") @Model.Devise</h1>
+                </div>
+                <span class="badge-3d @(isConfirmed ? "badge-approuvee" : Model.Statut == MangoTaika.Data.Entities.StatutDonPublic.Rejete ? "badge-rejetee" : "badge-soumise")">@Model.Statut</span>
+            </div>
+
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Donateur</dt>
+                <dd class="col-sm-8">@Model.NomDonateur</dd>
+                <dt class="col-sm-4">Telephone</dt>
+                <dd class="col-sm-8">@(Model.Telephone ?? "-")</dd>
+                <dt class="col-sm-4">Email</dt>
+                <dd class="col-sm-8">@(Model.Email ?? "-")</dd>
+                <dt class="col-sm-4">Reference paiement</dt>
+                <dd class="col-sm-8">@(Model.ReferencePaiement ?? "-")</dd>
+                <dt class="col-sm-4">Numero recu</dt>
+                <dd class="col-sm-8">@(Model.NumeroRecu ?? "-")</dd>
+                <dt class="col-sm-4">Message</dt>
+                <dd class="col-sm-8">@(Model.Message ?? "-")</dd>
+                <dt class="col-sm-4">Traitement</dt>
+                <dd class="col-sm-8">
+                    @(Model.DateTraitement?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "-")
+                    @if (Model.TraitePar is not null)
+                    {
+                        <span>par @Model.TraitePar.Prenom @Model.TraitePar.Nom</span>
+                    }
+                </dd>
+                <dt class="col-sm-4">Commentaire</dt>
+                <dd class="col-sm-8">@(Model.CommentaireTraitement ?? "-")</dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card-3d p-4">
+            <h4 class="mb-3">Traitement financier</h4>
+            @if (isPending)
+            {
+                <form asp-action="Confirmer" method="post" class="mb-3">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <label class="form-label">Commentaire de confirmation</label>
+                    <textarea name="commentaireTraitement" class="form-control mb-3" rows="3"></textarea>
+                    <button type="submit" class="btn btn-or w-100">
+                        <i class="bi bi-check-circle"></i> Confirmer le paiement
+                    </button>
+                </form>
+
+                <form asp-action="Rejeter" method="post">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <label class="form-label">Motif de rejet</label>
+                    <textarea name="commentaireTraitement" class="form-control mb-3" rows="3"></textarea>
+                    <button type="submit" class="btn btn-outline-danger w-100">
+                        <i class="bi bi-x-circle"></i> Rejeter
+                    </button>
+                </form>
+            }
+            else if (isConfirmed)
+            {
+                <p class="text-muted-custom">Le don est confirme et une recette financiere a ete creee.</p>
+                @if (Model.TransactionFinanciereId.HasValue)
+                {
+                    <a asp-controller="Finances" asp-action="Details" asp-route-id="@Model.TransactionFinanciereId" class="btn btn-outline-or w-100">
+                        Voir la transaction
+                    </a>
+                }
+            }
+            else
+            {
+                <p class="text-muted-custom mb-0">Ce don a ete rejete. Le traitement est termine.</p>
+            }
+        </div>
+    </div>
+</div>

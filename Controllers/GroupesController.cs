@@ -47,6 +47,7 @@ public class GroupesController(
     public async Task<IActionResult> Create()
     {
         await LoadChefsGroupeAsync(null);
+        await LoadDistrictsAsync();
         return View(new GroupeCreateDto());
     }
 
@@ -58,6 +59,7 @@ public class GroupesController(
         if (!ModelState.IsValid)
         {
             await LoadChefsGroupeAsync(null, dto.ChefGroupeScoutId);
+            await LoadDistrictsAsync(dto.DistrictScoutId);
             return View(dto);
         }
 
@@ -74,6 +76,7 @@ public class GroupesController(
         {
             this.AddDomainError(ex);
             await LoadChefsGroupeAsync(null, dto.ChefGroupeScoutId);
+            await LoadDistrictsAsync(dto.DistrictScoutId);
             return View(dto);
         }
 
@@ -106,6 +109,7 @@ public class GroupesController(
         }
 
         await LoadChefsGroupeAsync(id, groupe.ChefGroupeScoutId);
+        await LoadDistrictsAsync(groupe.DistrictScoutId);
         return View(groupe);
     }
 
@@ -117,6 +121,7 @@ public class GroupesController(
         if (!ModelState.IsValid)
         {
             await LoadChefsGroupeAsync(id, dto.ChefGroupeScoutId);
+            await LoadDistrictsAsync(dto.DistrictScoutId);
             return View(ToEditDto(id, dto));
         }
 
@@ -134,6 +139,7 @@ public class GroupesController(
         {
             this.AddDomainError(ex);
             await LoadChefsGroupeAsync(id, dto.ChefGroupeScoutId);
+            await LoadDistrictsAsync(dto.DistrictScoutId);
             return View(ToEditDto(id, dto));
         }
 
@@ -189,6 +195,7 @@ public class GroupesController(
             NomChefGroupe = dto.NomChefGroupe,
             ChefGroupeScoutId = dto.ChefGroupeScoutId,
             ResponsableId = dto.ResponsableId,
+            DistrictScoutId = dto.DistrictScoutId,
             Latitude = dto.Latitude,
             Longitude = dto.Longitude
         };
@@ -267,6 +274,23 @@ public class GroupesController(
         ViewBag.ChefsGroupe = items;
     }
 
+    private async Task LoadDistrictsAsync(Guid? selectedDistrictId = null)
+    {
+        var districts = await db.DistrictsScouts
+            .Include(d => d.RegionScoute)
+            .Where(d => d.EstActif)
+            .OrderBy(d => d.RegionScoute != null ? d.RegionScoute.Nom : "")
+            .ThenBy(d => d.Nom)
+            .ToListAsync();
+
+        ViewBag.Districts = districts.Select(d => new SelectListItem
+        {
+            Value = d.Id.ToString(),
+            Text = d.RegionScoute == null ? d.Nom : $"{d.RegionScoute.Nom} - {d.Nom}",
+            Selected = selectedDistrictId.HasValue && d.Id == selectedDistrictId.Value
+        }).ToList();
+    }
+
     private async Task<(Guid? GroupeId, Guid? BrancheId)> GetCurrentScopeAsync()
     {
         if (operationalAccess.IsAdminLike(User) || operationalAccess.IsSupervision(User))
@@ -299,4 +323,3 @@ public class GroupesController(
         return await db.Branches.AnyAsync(b => b.Id == scopeBrancheId.Value && b.GroupeId == groupeId);
     }
 }
-

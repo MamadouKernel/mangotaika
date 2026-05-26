@@ -12,6 +12,8 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
     {
         var groupes = await db.Groupes
             .Include(g => g.Responsable)
+            .Include(g => g.DistrictScout!)
+            .ThenInclude(d => d.RegionScoute)
             .Where(g => g.IsActive)
             .OrderBy(g => g.Nom)
             .ToListAsync();
@@ -51,6 +53,9 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
                         g.NomChefGroupe,
                         g.Responsable != null ? $"{g.Responsable.Prenom} {g.Responsable.Nom}" : null),
                 ChefGroupeScoutId = chefGroupeScout?.Id,
+                DistrictScoutId = g.DistrictScoutId,
+                DistrictScoutNom = g.DistrictScout?.Nom,
+                RegionScouteNom = g.DistrictScout?.RegionScoute?.Nom,
                 ResponsableId = chefGroupeScout?.UserId ?? g.ResponsableId,
                 ContactChefGroupe = NormalizeOptional(chefGroupeScout?.Telephone) ?? NormalizeOptional(g.Responsable?.PhoneNumber),
                 ResponsablePhotoUrl = NormalizeOptional(chefGroupeScout?.PhotoUrl) ?? NormalizeOptional(g.Responsable?.PhotoUrl),
@@ -61,6 +66,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
                     return new BrancheScoutCountDto
                     {
                         Nom = b.Nom,
+                        LogoUrl = b.LogoUrl,
                         NombreScouts = branchScouts.Count,
                         NombreFilles = branchScouts.Count(s => ClassifySexe(s.Sexe) == SexeCategory.Feminin),
                         NombreGarcons = branchScouts.Count(s => ClassifySexe(s.Sexe) == SexeCategory.Masculin),
@@ -75,6 +81,8 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
     {
         var groupe = await db.Groupes
             .Include(g => g.Responsable)
+            .Include(g => g.DistrictScout!)
+            .ThenInclude(d => d.RegionScoute)
             .FirstOrDefaultAsync(g => g.Id == id);
         if (groupe is null) return null;
 
@@ -109,6 +117,9 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
                     groupe.NomChefGroupe,
                     groupe.Responsable != null ? $"{groupe.Responsable.Prenom} {groupe.Responsable.Nom}" : null),
             ChefGroupeScoutId = chefGroupeScout?.Id,
+            DistrictScoutId = groupe.DistrictScoutId,
+            DistrictScoutNom = groupe.DistrictScout?.Nom,
+            RegionScouteNom = groupe.DistrictScout?.RegionScoute?.Nom,
             ResponsableId = chefGroupeScout?.UserId ?? groupe.ResponsableId,
             ContactChefGroupe = NormalizeOptional(chefGroupeScout?.Telephone) ?? NormalizeOptional(groupe.Responsable?.PhoneNumber),
             ResponsablePhotoUrl = NormalizeOptional(chefGroupeScout?.PhotoUrl) ?? NormalizeOptional(groupe.Responsable?.PhotoUrl),
@@ -123,6 +134,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
                 return new BrancheScoutCountDto
                 {
                     Nom = b.Nom,
+                    LogoUrl = b.LogoUrl,
                     NombreScouts = branchScouts.Count,
                     NombreFilles = branchScouts.Count(s => ClassifySexe(s.Sexe) == SexeCategory.Feminin),
                     NombreGarcons = branchScouts.Count(s => ClassifySexe(s.Sexe) == SexeCategory.Masculin),
@@ -174,6 +186,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
             Latitude = lat ?? dto.Latitude,
             Longitude = lng ?? dto.Longitude,
             Adresse = adresse,
+            DistrictScoutId = dto.DistrictScoutId,
             NomChefGroupe = null,
             ResponsableId = null
         };
@@ -201,6 +214,7 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
         groupe.Latitude = lat ?? dto.Latitude;
         groupe.Longitude = lng ?? dto.Longitude;
         groupe.Adresse = adresse;
+        groupe.DistrictScoutId = dto.DistrictScoutId;
         groupe.NomChefGroupe = chefGroupeScout != null ? BuildScoutDisplayName(chefGroupeScout) : null;
         groupe.ResponsableId = chefGroupeScout?.UserId;
         await SaveChangesAsync();
@@ -225,6 +239,9 @@ public class GroupeService(AppDbContext db, IGeocodingService geocoding, Distric
         Latitude = g.Latitude,
         Longitude = g.Longitude,
         Adresse = g.Adresse,
+        DistrictScoutId = g.DistrictScoutId,
+        DistrictScoutNom = g.DistrictScout?.Nom,
+        RegionScouteNom = g.DistrictScout?.RegionScoute?.Nom,
         NomChefGroupe = BuildChefGroupeName(
             g.NomChefGroupe,
             g.Responsable != null ? $"{g.Responsable.Prenom} {g.Responsable.Nom}" : null),

@@ -1,0 +1,97 @@
+@model BoutiqueCartViewModel
+@{
+    ViewData["Title"] = "Mon panier";
+}
+
+<section class="container py-5 marketplace-detail">
+    <div class="marketplace-toolbar mb-4">
+        <div>
+            <span>Boutique MANGO TAIKA</span>
+            <strong>Mon panier (@Model.NombreArticles article(s))</strong>
+        </div>
+        <div class="marketplace-toolbar__actions">
+            <a asp-action="Index" class="btn btn-outline-or btn-sm"><i class="bi bi-arrow-left"></i> Continuer mes achats</a>
+            @if (Model.Lignes.Any())
+            {
+                <a asp-action="Checkout" class="btn btn-or btn-sm"><i class="bi bi-bag-check"></i> Valider la commande</a>
+            }
+        </div>
+    </div>
+
+    @if (!Model.Lignes.Any())
+    {
+        <div class="boutique-empty card-3d p-5 text-center">
+            <img src="~/images/logo.png" alt="Logo MANGO TAIKA" />
+            <h1 class="h4">Votre panier est vide</h1>
+            <p class="text-muted-custom">Ajoutez des articles depuis la boutique avant de passer commande.</p>
+            <a asp-action="Index" class="btn btn-or"><i class="bi bi-shop"></i> Voir la boutique</a>
+        </div>
+    }
+    else
+    {
+        <div class="marketplace-cart-grid">
+            <div class="card-3d p-4">
+                <div class="table-responsive">
+                    <table class="table align-middle marketplace-cart-table">
+                        <thead>
+                            <tr>
+                                <th>Article</th>
+                                <th class="text-center">Quantite</th>
+                                <th class="text-end">Prix</th>
+                                <th class="text-end">Total</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var line in Model.Lignes)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="marketplace-cart-product">
+                                            <img src="@(string.IsNullOrWhiteSpace(line.Article.ImageUrl) ? Url.Content("~/images/logo.png") : line.Article.ImageUrl)" alt="@line.Article.Nom" />
+                                            <div>
+                                                <strong>@line.Article.Nom</strong>
+                                                <span>@(line.Article.Categorie ?? "Article scout")</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <form asp-action="ModifierPanier" method="post" class="marketplace-cart-quantity">
+                                            <input type="hidden" name="articleId" value="@line.Article.Id" />
+                                            <input name="quantite" type="number" min="0" max="@line.QuantiteMax" value="@line.Quantite" />
+                                            <button type="submit" class="btn btn-outline-or btn-sm"><i class="bi bi-check-lg"></i></button>
+                                        </form>
+                                    </td>
+                                    <td class="text-end">@line.Article.Prix.ToString("N0") @line.Article.Devise</td>
+                                    <td class="text-end fw-bold">@line.Total.ToString("N0") @line.Article.Devise</td>
+                                    <td class="text-end">
+                                        <form asp-action="RetirerDuPanier" method="post">
+                                            <input type="hidden" name="articleId" value="@line.Article.Id" />
+                                            <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <aside class="marketplace-cart-summary">
+                <div class="card-3d p-4">
+                    <h2>Resume</h2>
+                    <dl>
+                        <dt>Articles</dt>
+                        <dd>@Model.NombreArticles</dd>
+                        <dt>Total</dt>
+                        <dd>@Model.Total.ToString("N0") @Model.Devise</dd>
+                    </dl>
+                    <a asp-action="Checkout" class="btn btn-or w-100"><i class="bi bi-bag-check"></i> Valider la commande</a>
+                    <form asp-action="ViderPanier" method="post" class="mt-2">
+                        <button type="submit" class="btn btn-outline-danger w-100"><i class="bi bi-x-lg"></i> Vider le panier</button>
+                    </form>
+                </div>
+            </aside>
+        </div>
+    }
+</section>

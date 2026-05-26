@@ -185,7 +185,6 @@
                         <div class="collapse @(ouvrirExport ? "show" : "") mt-3" id="confirmExportDonnees">
                             <div class="profile-export-panel">
                                 <form asp-action="TelechargerMesDonnees" method="post" class="form-modern">
-                                    <input type="hidden" name="ConfirmerExport" value="false" />
                                     <div class="row">
                                         <div class="col-md-6 mb-3">
                                             <label class="form-label">Format d'export</label>
@@ -208,6 +207,7 @@
                                         <label class="form-check-label" for="ConfirmerExport">
                                             Je confirme vouloir generer une copie complete de mes donnees personnelles.
                                         </label>
+                                        <input type="hidden" name="ConfirmerExport" value="false" />
                                     </div>
                                     <div class="profile-export-panel__actions">
                                         <button type="submit" class="btn btn-sm btn-mango">

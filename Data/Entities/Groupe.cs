@@ -11,6 +11,8 @@ public class Groupe
     public double? Longitude { get; set; }
     public string? Adresse { get; set; }
     public string? NomChefGroupe { get; set; }
+    public Guid? DistrictScoutId { get; set; }
+    public DistrictScout? DistrictScout { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime DateCreation { get; set; } = DateTime.UtcNow;
 

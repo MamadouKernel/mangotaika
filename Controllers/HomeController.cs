@@ -1,5 +1,7 @@
 using MangoTaika.Data;
+using MangoTaika.Data.Entities;
 using MangoTaika.Models;
+using MangoTaika.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
@@ -8,7 +10,7 @@ using System.Diagnostics;
 
 namespace MangoTaika.Controllers;
 
-public class HomeController(AppDbContext db, IConfiguration configuration) : Controller
+public class HomeController(AppDbContext db, IConfiguration configuration, IMobilePaymentGateway mobilePaymentGateway) : Controller
 {
     public async Task<IActionResult> Index()
     {
@@ -71,6 +73,69 @@ public class HomeController(AppDbContext db, IConfiguration configuration) : Con
     }
 
     public IActionResult Contact() => View(new Data.Entities.ContactMessage());
+
+    [HttpGet]
+    public async Task<IActionResult> FaireUnDon()
+    {
+        ViewBag.ComptePaiement = await db.ComptesPaiementMobile
+            .Where(c => c.EstActif)
+            .OrderByDescending(c => c.EstPrincipal)
+            .ThenBy(c => c.Libelle)
+            .FirstOrDefaultAsync();
+
+        return View(new DonPublic());
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> FaireUnDon(DonPublic model)
+    {
+        ViewBag.ComptePaiement = await db.ComptesPaiementMobile
+            .Where(c => c.EstActif)
+            .OrderByDescending(c => c.EstPrincipal)
+            .ThenBy(c => c.Libelle)
+            .FirstOrDefaultAsync();
+
+        if (model.Montant <= 0)
+        {
+            ModelState.AddModelError(nameof(model.Montant), "Le montant du don doit etre superieur a 0.");
+        }
+
+        if (string.IsNullOrWhiteSpace(model.NomDonateur))
+        {
+            ModelState.AddModelError(nameof(model.NomDonateur), "Le nom du donateur est obligatoire.");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        model.Id = Guid.NewGuid();
+        model.NomDonateur = model.NomDonateur.Trim();
+        model.Telephone = string.IsNullOrWhiteSpace(model.Telephone) ? null : model.Telephone.Trim();
+        model.Email = string.IsNullOrWhiteSpace(model.Email) ? null : model.Email.Trim();
+        model.Devise = string.IsNullOrWhiteSpace(model.Devise) ? "XOF" : model.Devise.Trim().ToUpperInvariant();
+        model.ReferencePaiement = string.IsNullOrWhiteSpace(model.ReferencePaiement) ? null : model.ReferencePaiement.Trim();
+        model.Message = string.IsNullOrWhiteSpace(model.Message) ? null : model.Message.Trim();
+        model.Statut = StatutDonPublic.Declare;
+        model.RecuToken = Guid.NewGuid().ToString("N");
+        var payment = await mobilePaymentGateway.CreateRequestAsync(new MobilePaymentRequest(
+            "Don",
+            model.NomDonateur,
+            model.Telephone,
+            model.Email,
+            model.Montant,
+            model.Devise,
+            $"DON-{model.Id:N}",
+            model.ReferencePaiement));
+        model.ReferencePaiement = payment.ProviderReference ?? model.ReferencePaiement;
+        db.DonsPublics.Add(model);
+        await db.SaveChangesAsync();
+
+        TempData["Success"] = $"Merci. Votre intention de don a ete enregistree. {payment.Message}";
+        return RedirectToAction(nameof(FaireUnDon));
+    }
 
     [HttpGet]
     public IActionResult Verification() => View(new VerificationScoutViewModel());

@@ -1,0 +1,85 @@
+@model MangoTaika.Data.Entities.ArticleBoutique
+@{
+    ViewData["Title"] = Model.Nom;
+    var stockMax = Model.StockDisponible > 0 ? Model.StockDisponible : 99;
+    var stockLabel = Model.StockDisponible > 0 ? $"{Model.StockDisponible} disponible(s)" : "Commande a confirmer";
+    var panierCount = ViewBag.PanierCount as int? ?? 0;
+}
+
+<section class="container py-5 marketplace-detail">
+    <a asp-action="Index" class="marketplace-back-link"><i class="bi bi-arrow-left"></i> Retour a la boutique</a>
+
+    <div class="marketplace-detail-grid">
+        <div class="marketplace-detail-media">
+            <span class="marketplace-card__status @(Model.StockDisponible > 0 ? "available" : "order")">@(Model.StockDisponible > 0 ? "En stock" : "Sur commande")</span>
+            <img src="@(string.IsNullOrWhiteSpace(Model.ImageUrl) ? Url.Content("~/images/logo.png") : Model.ImageUrl)" alt="@Model.Nom" />
+        </div>
+
+        <div class="marketplace-detail-panel">
+            <span class="boutique-eyebrow"><i class="bi bi-bag-check"></i> Commande publique</span>
+            <h1>@Model.Nom</h1>
+            @if (!string.IsNullOrWhiteSpace(Model.Categorie))
+            {
+                <span class="marketplace-card__category">@Model.Categorie</span>
+            }
+            <p class="marketplace-detail-description">@(Model.Description ?? "Article scout disponible via la boutique MANGO TAIKA.")</p>
+
+            <div class="marketplace-detail-price">
+                <strong>@Model.Prix.ToString("N0")</strong>
+                <span>@Model.Devise</span>
+            </div>
+
+            <div class="boutique-detail-promises">
+                <span><i class="bi bi-phone"></i> Paiement Mobile Money</span>
+                <span><i class="bi bi-truck"></i> Paiement a la livraison</span>
+                <span><i class="bi bi-receipt"></i> Recu apres validation</span>
+                <span><i class="bi bi-shield-check"></i> Suivi administratif</span>
+                <span><i class="bi bi-box-seam"></i> @stockLabel</span>
+            </div>
+
+            <form asp-action="AjouterAuPanier" method="post" class="marketplace-order-form">
+                <input type="hidden" name="articleId" value="@Model.Id" />
+                <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label class="form-label">Quantite</label>
+                        <input id="quantityInput" name="quantite" type="number" min="1" max="@stockMax" value="1" class="form-control" data-price="@Model.Prix.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-devise="@Model.Devise" />
+                    </div>
+                    <div class="col-md-7">
+                        <div class="marketplace-total-box">
+                            <span>Total estime</span>
+                            <strong id="orderTotal">@Model.Prix.ToString("N0") @Model.Devise</strong>
+                            <small>Validation finale par l'administration apres paiement.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="marketplace-order-actions">
+                    <a asp-action="Index" class="btn btn-outline-or">Continuer mes achats</a>
+                    <a asp-action="Panier" class="btn btn-outline-or">Voir le panier (@panierCount)</a>
+                    <button type="submit" class="btn btn-or btn-lg"><i class="bi bi-cart-plus"></i> Ajouter au panier</button>
+                    <button type="submit" name="checkout" value="true" class="btn btn-bleu btn-lg"><i class="bi bi-bag-check"></i> Commander</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        (() => {
+            const quantityInput = document.getElementById('quantityInput');
+            const total = document.getElementById('orderTotal');
+            if (!quantityInput || !total) return;
+            const price = Number(quantityInput.dataset.price || '0');
+            const devise = quantityInput.dataset.devise || 'XOF';
+            const formatter = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
+            const refresh = () => {
+                const quantity = Math.max(1, Number(quantityInput.value || '1'));
+                total.textContent = `${formatter.format(price * quantity)} ${devise}`;
+            };
+            quantityInput.addEventListener('input', refresh);
+            refresh();
+        })();
+    </script>
+}

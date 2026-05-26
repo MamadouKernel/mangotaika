@@ -8,21 +8,6 @@ public class ActiveRoleService(IHttpContextAccessor httpContextAccessor)
 
     public static readonly string[] AllRoles = RoleNames.All;
 
-    private static readonly Dictionary<string, string> RoleLabels = new()
-    {
-        ["Administrateur"]      = "Administrateur",
-        ["CommissaireDistrict"] = "Commissaire de District",
-        ["Gestionnaire"]        = "Gestionnaire",
-        ["AgentSupport"]        = "Agent de support",
-        ["Superviseur"]         = "Superviseur",
-        ["Consultant"]          = "Consultant",
-        ["EquipeDistrict"]      = "Equipe de District",
-        ["ChefGroupe"]          = "Chef de Groupe",
-        ["ChefUnite"]           = "Chef d'Unite",
-        ["Scout"]               = "Scout",
-        ["Parent"]              = "Parent / Tuteur"
-    };
-
     public string? GetActiveRole(ClaimsPrincipal user)
     {
         var session = httpContextAccessor.HttpContext?.Session;
@@ -53,5 +38,5 @@ public class ActiveRoleService(IHttpContextAccessor httpContextAccessor)
     }
 
     public static string GetLabel(string role)
-        => RoleLabels.TryGetValue(role, out var label) ? label : role;
+        => RoleNames.GetDefinition(role).Label;
 }

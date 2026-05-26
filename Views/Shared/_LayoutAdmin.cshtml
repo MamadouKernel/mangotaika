@@ -5,6 +5,9 @@
     ViewData["IsAdminLayout"] = true;
 
     var isAdmin = User.IsInRole("Administrateur");
+    var isCommissaireDistrict = User.IsInRole("CommissaireDistrict");
+    var isCommissaireDistrictAdjoint = User.IsInRole("CommissaireDistrictAdjoint");
+    var isAssistantCommissaireDistrict = User.IsInRole("AssistantCommissaireDistrict");
     var isGestionnaire = User.IsInRole("Gestionnaire");
     var isAgentSupport = User.IsInRole("AgentSupport");
     var isSuperviseur = User.IsInRole("Superviseur");
@@ -20,9 +23,10 @@
     var userRoles = ActiveRoleService.GetUserRoles(User);
     var hasMultipleRoles = userRoles.Count > 1;
 
+    var isDistrictLeadership = isCommissaireDistrict || isCommissaireDistrictAdjoint || isAssistantCommissaireDistrict;
     var isAdminOrGest = isAdmin || isGestionnaire;
     var isSupportAgent = isAdminOrGest || isAgentSupport;
-    var isEncadrement = isAdminOrGest || isSuperviseur || isConsultant;
+    var isEncadrement = isAdminOrGest || isDistrictLeadership || isSuperviseur || isConsultant;
 
     var activeScopedLeader = isScopedLeader && !isAdminOrGest && !isEncadrement
         ? activeRole
@@ -83,6 +87,11 @@
                         <i class="bi bi-speedometer2"></i> Tableau de bord
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link sidebar-wallet-link" asp-controller="Portefeuilles" asp-action="MonPortefeuille">
+                        <i class="bi bi-wallet2"></i> Mon portefeuille
+                    </a>
+                </li>
 
                 @if (isScout)
                 {
@@ -98,6 +107,7 @@
                             <li><a class="nav-link" asp-controller="Formations" asp-action="MesFormations"><i class="bi bi-mortarboard"></i> Mes formations</a></li>
                             <li><a class="nav-link" asp-controller="Formations" asp-action="Catalogue"><i class="bi bi-book"></i> Catalogue formations</a></li>
                             <li><a class="nav-link" asp-controller="Certificats" asp-action="MesCertificats"><i class="bi bi-patch-check"></i> Mes certificats</a></li>
+                            <li><a class="nav-link" asp-controller="Portefeuilles" asp-action="MonPortefeuille"><i class="bi bi-wallet2"></i> Mon portefeuille</a></li>
                             <li><a class="nav-link" asp-controller="Tickets" asp-action="MesTickets"><i class="bi bi-headset"></i> Mes tickets</a></li>
                         </ul>
                     </li>
@@ -126,6 +136,7 @@
                             <li><a class="nav-link" asp-controller="Activites" asp-action="Index"><i class="bi bi-calendar-event-fill"></i> Activites</a></li>
                             <li><a class="nav-link" asp-controller="Demandes" asp-action="Index"><i class="bi bi-file-earmark-check-fill"></i> Mes demandes</a></li>
                             <li><a class="nav-link" asp-controller="Formations" asp-action="MesFormations"><i class="bi bi-mortarboard"></i> Mes formations</a></li>
+                            <li><a class="nav-link" asp-controller="Portefeuilles" asp-action="MonPortefeuille"><i class="bi bi-wallet2"></i> Mon portefeuille</a></li>
                             <li><a class="nav-link" asp-controller="Tickets" asp-action="MesTickets"><i class="bi bi-headset"></i> Mes tickets</a></li>
                         </ul>
                     </li>
@@ -140,6 +151,7 @@
                         </a>
                         <ul class="sidebar-submenu" id="grp-mon-espace-parent">
                             <li><a class="nav-link" asp-controller="Account" asp-action="MesEnfants"><i class="bi bi-people-fill"></i> Mes enfants</a></li>
+                            <li><a class="nav-link" asp-controller="Portefeuilles" asp-action="MonPortefeuille"><i class="bi bi-wallet2"></i> Mon portefeuille</a></li>
                             <li><a class="nav-link" asp-controller="Tickets" asp-action="MesTickets"><i class="bi bi-headset"></i> Mes tickets</a></li>
                         </ul>
                     </li>
@@ -154,6 +166,10 @@
                         </a>
                         <ul class="sidebar-submenu" id="grp-territoire">
                             <li><a class="nav-link" asp-controller="Scouts" asp-action="Index"><i class="bi bi-people-fill"></i> Scouts</a></li>
+                            @if (isAdminOrGest || isDistrictLeadership)
+                            {
+                                <li><a class="nav-link" asp-controller="Territoires" asp-action="Index"><i class="bi bi-globe-africa"></i> Regions & districts</a></li>
+                            }
                             <li><a class="nav-link" asp-controller="Groupes" asp-action="Index"><i class="bi bi-building"></i> Entites scouts</a></li>
                             <li><a class="nav-link" asp-controller="Branches" asp-action="Index"><i class="bi bi-diagram-3-fill"></i> Branches</a></li>
                             <li><a class="nav-link" asp-controller="Groupes" asp-action="Carte"><i class="bi bi-geo-alt-fill"></i> Carte GPS</a></li>
@@ -215,8 +231,13 @@
                         </a>
                         <ul class="sidebar-submenu" id="grp-finances">
                             <li><a class="nav-link" asp-controller="Finances" asp-action="Index"><i class="bi bi-wallet2"></i> Finances</a></li>
+                            <li><a class="nav-link" asp-controller="Dons" asp-action="Index"><i class="bi bi-heart-fill"></i> Dons</a></li>
+                            <li><a class="nav-link" asp-controller="Portefeuilles" asp-action="Index"><i class="bi bi-wallet-fill"></i> Portefeuilles</a></li>
+                            <li><a class="nav-link" asp-controller="Portefeuilles" asp-action="ComptesPaiement"><i class="bi bi-phone"></i> Comptes de paiement</a></li>
                             <li><a class="nav-link" asp-controller="CotisationsNationales" asp-action="Index"><i class="bi bi-cash-coin"></i> Cotisations nationales</a></li>
                             <li><a class="nav-link" asp-controller="AGR" asp-action="Index"><i class="bi bi-briefcase-fill"></i> Projets AGR</a></li>
+                            <li><a class="nav-link" asp-controller="Boutique" asp-action="Admin"><i class="bi bi-bag"></i> Articles boutique</a></li>
+                            <li><a class="nav-link" asp-controller="Boutique" asp-action="Commandes"><i class="bi bi-receipt"></i> Commandes boutique</a></li>
                         </ul>
                     </li>
                 }
@@ -248,6 +269,7 @@
                             @if (canManageUtilisateurs)
                             {
                                 <li><a class="nav-link" asp-controller="Account" asp-action="Utilisateurs"><i class="bi bi-person-check-fill"></i> Utilisateurs</a></li>
+                                <li><a class="nav-link" asp-controller="Roles" asp-action="Index"><i class="bi bi-person-lock"></i> Roles & visibilite</a></li>
                             }
                             @if (isAdmin)
                             {

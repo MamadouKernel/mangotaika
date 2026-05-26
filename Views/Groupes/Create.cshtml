@@ -3,6 +3,7 @@
     ViewData["Title"] = "Nouvelle entite";
     Layout = "_LayoutAdmin";
     var chefsGroupe = ViewBag.ChefsGroupe as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+    var districts = ViewBag.Districts as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
     var hasChefsGroupe = chefsGroupe.Any();
 }
 
@@ -43,6 +44,16 @@
                 <label asp-for="Quartier" class="form-label">Quartier / Lieu-dit</label>
                 <input asp-for="Quartier" class="form-control" placeholder="Ex: 2 Plateaux, Carrefour Celeste" />
             </div>
+        </div>
+        <div class="mb-3">
+            <label asp-for="DistrictScoutId" class="form-label">District / region</label>
+            <select asp-for="DistrictScoutId" class="form-select">
+                <option value="">-- Aucun district rattache --</option>
+                @foreach (var district in districts)
+                {
+                    <option value="@district.Value" selected="@(district.Selected ? "selected" : null)">@district.Text</option>
+                }
+            </select>
         </div>
         <div class="mb-3">
             <label asp-for="ChefGroupeScoutId" class="form-label">Chef de groupe</label>
