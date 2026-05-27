@@ -266,6 +266,7 @@ public class AccountController(
             }
         }
         Scout? scoutLie = null;
+        var requiresManualActivation = false;
         if (model.Role == "Scout")
         {
             if (string.IsNullOrWhiteSpace(model.MatriculeScout))
@@ -287,8 +288,7 @@ public class AccountController(
             }
             if (!ScoutMatchesRegistration(scoutLie, model))
             {
-                ModelState.AddModelError("MatriculeScout", BuildScoutRegistrationMismatchMessage(scoutLie, model));
-                return View(model);
+                requiresManualActivation = true;
             }
         }
         var user = new ApplicationUser
@@ -299,7 +299,7 @@ public class AccountController(
             Nom = model.Nom,
             Prenom = model.Prenom,
             Matricule = scoutLie?.Matricule,
-            IsActive = true
+            IsActive = !requiresManualActivation
         };
         await using var transaction = await db.Database.BeginTransactionAsync();
         var result = await userManager.CreateAsync(user, model.Password);
@@ -340,7 +340,9 @@ public class AccountController(
 
         await db.SaveChangesAsync();
         await transaction.CommitAsync();
-        TempData["Success"] = "Inscription réussie. Votre compte est maintenant activé.";
+        TempData["Success"] = requiresManualActivation
+            ? "Inscription enregistree. Votre matricule est reconnu, mais le telephone ou l'email ne correspond pas a la fiche scout. Un gestionnaire ou administrateur doit activer votre compte apres verification."
+            : "Inscription réussie. Votre compte est maintenant activé.";
         return RedirectToAction(nameof(Login));
     }
     private async Task<CodeInvitation?> ResolveInvitationAsync(string? rawCode)
