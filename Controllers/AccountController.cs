@@ -148,8 +148,8 @@ public class AccountController(
         ViewData["ReturnUrl"] = returnUrl;
         if (!ModelState.IsValid) return View(model);
 
-        // Trouver l'utilisateur par tÃ©lÃ©phone
-        var user = await db.Users.FirstOrDefaultAsync(u => u.PhoneNumber == model.Telephone);
+        // Trouver l'utilisateur par telephone, en acceptant les formats courants saisis par les utilisateurs.
+        var user = await FindUserForLoginAsync(model.Telephone);
         if (user == null)
         {
             ModelState.AddModelError(string.Empty, "Telephone ou mot de passe incorrect. Verifiez le numero saisi ou utilisez le mot de passe oublie.");
@@ -162,7 +162,7 @@ public class AccountController(
             return View(model);
         }
 
-        var result = await signInManager.PasswordSignInAsync(user.UserName!, model.Password, model.RememberMe, lockoutOnFailure: true);
+        var result = await signInManager.PasswordSignInAsync(user, model.Password, model.RememberMe, lockoutOnFailure: true);
         if (result.Succeeded)
             return LocalRedirect(returnUrl ?? "/Dashboard");
         if (result.RequiresTwoFactor)
@@ -382,6 +382,43 @@ public class AccountController(
         var digits = new string(value.Where(char.IsDigit).ToArray());
         return digits.Length > 10 ? digits[^10..] : digits;
     }
+
+    private async Task<ApplicationUser?> FindUserForLoginAsync(string rawPhone)
+    {
+        var candidates = BuildPhoneLoginCandidates(rawPhone);
+        if (candidates.Count == 0)
+            return null;
+
+        return await db.Users.FirstOrDefaultAsync(u =>
+            (u.PhoneNumber != null && candidates.Contains(u.PhoneNumber)) ||
+            (u.UserName != null && candidates.Contains(u.UserName)));
+    }
+
+    private static HashSet<string> BuildPhoneLoginCandidates(string? value)
+    {
+        var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(value))
+            return candidates;
+
+        var trimmed = value.Trim();
+        candidates.Add(trimmed);
+
+        var digits = new string(trimmed.Where(char.IsDigit).ToArray());
+        if (!string.IsNullOrWhiteSpace(digits))
+            candidates.Add(digits);
+
+        var local = NormalizePhoneKey(trimmed);
+        if (!string.IsNullOrWhiteSpace(local))
+        {
+            candidates.Add(local);
+            candidates.Add($"+225{local}");
+            candidates.Add($"225{local}");
+            candidates.Add($"00225{local}");
+        }
+
+        return candidates;
+    }
+
     private static string? NormalizeEmailKey(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim().ToUpperInvariant();
     private static bool ContactMatches(string? recordPhone, string? recordEmail, RegisterViewModel model)
