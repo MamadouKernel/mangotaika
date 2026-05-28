@@ -38,7 +38,7 @@
                 <dt class="col-sm-4">Email</dt>
                 <dd class="col-sm-8">@(Model.EmailClient ?? "-")</dd>
                 <dt class="col-sm-4">Mode de paiement</dt>
-                <dd class="col-sm-8">@(Model.ModePaiement == MangoTaika.Data.Entities.ModePaiementCommandeBoutique.PaiementLivraison ? "Paiement a la livraison" : "Mobile Money")</dd>
+                <dd class="col-sm-8">@(Model.ModePaiement == MangoTaika.Data.Entities.ModePaiementCommandeBoutique.PaiementLivraison ? "Paiement a la livraison" : Model.ModePaiement == MangoTaika.Data.Entities.ModePaiementCommandeBoutique.Portefeuille ? "Portefeuille" : "Mobile Money")</dd>
                 <dt class="col-sm-4">Reference paiement</dt>
                 <dd class="col-sm-8">@(Model.ReferencePaiement ?? "-")</dd>
                 <dt class="col-sm-4">Numero recu</dt>

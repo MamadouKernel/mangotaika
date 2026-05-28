@@ -126,11 +126,17 @@ public class BoutiqueController(
             return RedirectToAction(nameof(Index));
         }
 
+        if (article.StockDisponible <= 0)
+        {
+            TempData["Error"] = "Cet article est en rupture de stock. La commande est bloquee jusqu'au reapprovisionnement.";
+            return RedirectToSafeUrl(returnUrl, nameof(Details), new { id = articleId });
+        }
+
         quantite = Math.Max(1, quantite);
         var cart = GetCart();
         var existing = cart.FirstOrDefault(i => i.ArticleId == articleId);
         var requestedQuantity = (existing?.Quantite ?? 0) + quantite;
-        if (article.StockDisponible > 0 && requestedQuantity > article.StockDisponible)
+        if (requestedQuantity > article.StockDisponible)
         {
             TempData["Error"] = "La quantite demandee depasse le stock disponible.";
             return RedirectToSafeUrl(returnUrl, nameof(Details), new { id = articleId });
@@ -188,7 +194,15 @@ public class BoutiqueController(
             return RedirectToAction(nameof(Panier));
         }
 
-        if (article.StockDisponible > 0 && quantite > article.StockDisponible)
+        if (article.StockDisponible <= 0)
+        {
+            cart.Remove(item);
+            SaveCart(cart);
+            TempData["Error"] = "Cet article est en rupture de stock et a ete retire du panier.";
+            return RedirectToAction(nameof(Panier));
+        }
+
+        if (quantite > article.StockDisponible)
         {
             TempData["Error"] = "La quantite demandee depasse le stock disponible.";
             return RedirectToAction(nameof(Panier));
@@ -233,6 +247,7 @@ public class BoutiqueController(
         }
 
         ViewBag.PanierCount = cart.NombreArticles;
+        await LoadCheckoutContextAsync();
         return View(cart);
     }
 
@@ -436,7 +451,13 @@ public class BoutiqueController(
 
         if (article is null) return NotFound();
         if (quantite <= 0) quantite = 1;
-        if (article.StockDisponible > 0 && quantite > article.StockDisponible)
+        if (article.StockDisponible <= 0)
+        {
+            TempData["Error"] = "Cet article est en rupture de stock. La commande est bloquee jusqu'au reapprovisionnement.";
+            return RedirectToAction(nameof(Details), new { id = articleId });
+        }
+
+        if (quantite > article.StockDisponible)
         {
             TempData["Error"] = $"Stock insuffisant : {article.StockDisponible} article(s) disponible(s), quantite demandee {quantite}. Reduisez la quantite.";
             return RedirectToAction(nameof(Details), new { id = articleId });
@@ -449,9 +470,12 @@ public class BoutiqueController(
         }
 
         var user = User.Identity?.IsAuthenticated == true ? await userManager.GetUserAsync(User) : null;
-        var paymentMode = string.Equals(modePaiement, "PaiementLivraison", StringComparison.OrdinalIgnoreCase)
-            ? ModePaiementCommandeBoutique.PaiementLivraison
-            : ModePaiementCommandeBoutique.MobileMoney;
+        var paymentMode = ParsePaymentMode(modePaiement);
+        if (paymentMode == ModePaiementCommandeBoutique.Portefeuille && user is null)
+        {
+            TempData["Error"] = "Connectez-vous pour payer avec votre portefeuille.";
+            return RedirectToAction(nameof(Details), new { id = articleId });
+        }
         var commande = new CommandeBoutique
         {
             Id = Guid.NewGuid(),
@@ -476,6 +500,7 @@ public class BoutiqueController(
             ]
         };
 
+        await using var transaction = await db.Database.BeginTransactionAsync();
         var paymentMessage = "Commande recue. Paiement attendu a la livraison.";
         if (paymentMode == ModePaiementCommandeBoutique.MobileMoney)
         {
@@ -491,18 +516,32 @@ public class BoutiqueController(
             commande.ReferencePaiement = payment.ProviderReference ?? commande.ReferencePaiement;
             paymentMessage = payment.Message;
         }
-        else
+        else if (paymentMode == ModePaiementCommandeBoutique.PaiementLivraison)
         {
             commande.ReferencePaiement = "Paiement a la livraison";
         }
 
         db.CommandesBoutique.Add(commande);
+        if (paymentMode == ModePaiementCommandeBoutique.Portefeuille && user is not null)
+        {
+            var walletPayment = await TryApplyWalletPaymentAsync(user, commande, [article]);
+            if (!walletPayment.Success)
+            {
+                await transaction.RollbackAsync();
+                TempData["Error"] = walletPayment.Message;
+                return RedirectToAction(nameof(Details), new { id = articleId });
+            }
+
+            paymentMessage = walletPayment.Message;
+        }
+
         await db.SaveChangesAsync();
+        await transaction.CommitAsync();
         await NotifyCustomerAsync(
             commande,
             "Commande boutique recue",
-            $"Votre commande {article.Nom} a ete enregistree. Statut : En attente. Mode de paiement : {FormatPaymentMode(commande.ModePaiement)}. Montant : {commande.Total:N0} {commande.Devise}.",
-            includeReceiptLink: false);
+            $"Votre commande {article.Nom} a ete enregistree. Statut : {commande.Statut}. Mode de paiement : {FormatPaymentMode(commande.ModePaiement)}. Montant : {commande.Total:N0} {commande.Devise}.",
+            includeReceiptLink: commande.Statut == StatutCommandeBoutique.Payee);
 
         TempData["Success"] = $"Commande enregistree. {paymentMessage}";
         return RedirectToAction(nameof(Index));
@@ -527,8 +566,16 @@ public class BoutiqueController(
 
         if (string.IsNullOrWhiteSpace(nomClient) || string.IsNullOrWhiteSpace(telephoneClient))
         {
-            TempData["Error"] = "Commande incomplete : renseignez le nom du client et un telephone joignable.";
-            return RedirectToAction(nameof(Checkout));
+            var currentUser = User.Identity?.IsAuthenticated == true ? await userManager.GetUserAsync(User) : null;
+            nomClient = string.IsNullOrWhiteSpace(nomClient) ? BuildUserFullName(currentUser) : nomClient;
+            telephoneClient = string.IsNullOrWhiteSpace(telephoneClient) ? currentUser?.PhoneNumber ?? string.Empty : telephoneClient;
+            emailClient = string.IsNullOrWhiteSpace(emailClient) ? currentUser?.Email : emailClient;
+
+            if (string.IsNullOrWhiteSpace(nomClient) || string.IsNullOrWhiteSpace(telephoneClient))
+            {
+                TempData["Error"] = "Commande incomplete : renseignez le nom du client et un telephone joignable.";
+                return RedirectToAction(nameof(Checkout));
+            }
         }
 
         var mixedCurrencies = cart.Lignes.Select(l => l.Article.Devise).Distinct(StringComparer.OrdinalIgnoreCase).Count() > 1;
@@ -540,7 +587,13 @@ public class BoutiqueController(
 
         foreach (var line in cart.Lignes)
         {
-            if (line.Article.StockDisponible > 0 && line.Quantite > line.Article.StockDisponible)
+            if (line.Article.StockDisponible <= 0)
+            {
+                TempData["Error"] = $"Article en rupture de stock : {line.Article.Nom}. Retirez-le du panier pour continuer.";
+                return RedirectToAction(nameof(Panier));
+            }
+
+            if (line.Quantite > line.Article.StockDisponible)
             {
                 TempData["Error"] = $"Stock insuffisant pour : {line.Article.Nom}.";
                 return RedirectToAction(nameof(Panier));
@@ -548,9 +601,13 @@ public class BoutiqueController(
         }
 
         var user = User.Identity?.IsAuthenticated == true ? await userManager.GetUserAsync(User) : null;
-        var paymentMode = string.Equals(modePaiement, "PaiementLivraison", StringComparison.OrdinalIgnoreCase)
-            ? ModePaiementCommandeBoutique.PaiementLivraison
-            : ModePaiementCommandeBoutique.MobileMoney;
+        var paymentMode = ParsePaymentMode(modePaiement);
+        if (paymentMode == ModePaiementCommandeBoutique.Portefeuille && user is null)
+        {
+            TempData["Error"] = "Connectez-vous pour payer avec votre portefeuille.";
+            return RedirectToAction(nameof(Checkout));
+        }
+
         var commande = new CommandeBoutique
         {
             Id = Guid.NewGuid(),
@@ -572,6 +629,7 @@ public class BoutiqueController(
             }).ToList()
         };
 
+        await using var transaction = await db.Database.BeginTransactionAsync();
         var paymentMessage = "Commande recue. Paiement attendu a la livraison.";
         if (paymentMode == ModePaiementCommandeBoutique.MobileMoney)
         {
@@ -587,21 +645,38 @@ public class BoutiqueController(
             commande.ReferencePaiement = payment.ProviderReference ?? commande.ReferencePaiement;
             paymentMessage = payment.Message;
         }
-        else
+        else if (paymentMode == ModePaiementCommandeBoutique.PaiementLivraison)
         {
             commande.ReferencePaiement = "Paiement a la livraison";
         }
 
         db.CommandesBoutique.Add(commande);
+        if (paymentMode == ModePaiementCommandeBoutique.Portefeuille && user is not null)
+        {
+            var walletPayment = await TryApplyWalletPaymentAsync(
+                user,
+                commande,
+                cart.Lignes.Select(line => line.Article).ToList());
+            if (!walletPayment.Success)
+            {
+                await transaction.RollbackAsync();
+                TempData["Error"] = walletPayment.Message;
+                return RedirectToAction(nameof(Checkout));
+            }
+
+            paymentMessage = walletPayment.Message;
+        }
+
         await db.SaveChangesAsync();
+        await transaction.CommitAsync();
         ClearCart();
 
         var articleSummary = string.Join(", ", cart.Lignes.Select(l => $"{l.Article.Nom} x{l.Quantite}"));
         await NotifyCustomerAsync(
             commande,
             "Commande boutique recue",
-            $"Votre commande boutique a ete enregistree. Articles : {articleSummary}. Statut : En attente. Mode de paiement : {FormatPaymentMode(commande.ModePaiement)}. Montant : {commande.Total:N0} {commande.Devise}.",
-            includeReceiptLink: false);
+            $"Votre commande boutique a ete enregistree. Articles : {articleSummary}. Statut : {commande.Statut}. Mode de paiement : {FormatPaymentMode(commande.ModePaiement)}. Montant : {commande.Total:N0} {commande.Devise}.",
+            includeReceiptLink: commande.Statut == StatutCommandeBoutique.Payee);
 
         TempData["Success"] = $"Commande panier enregistree. {paymentMessage}";
         return RedirectToAction(nameof(Index));
@@ -647,8 +722,10 @@ public class BoutiqueController(
         }
 
         var missingStock = commande.Lignes
-            .Where(l => l.ArticleBoutique.StockDisponible > 0 && l.Quantite > l.ArticleBoutique.StockDisponible)
-            .Select(l => l.ArticleBoutique.Nom)
+            .Where(l => l.ArticleBoutique.StockDisponible <= 0 || l.Quantite > l.ArticleBoutique.StockDisponible)
+            .Select(l => l.ArticleBoutique.StockDisponible <= 0
+                ? $"{l.ArticleBoutique.Nom} (rupture)"
+                : $"{l.ArticleBoutique.Nom} ({l.ArticleBoutique.StockDisponible} disponible(s))")
             .ToList();
         if (missingStock.Count > 0)
         {
@@ -658,11 +735,8 @@ public class BoutiqueController(
 
         foreach (var ligne in commande.Lignes)
         {
-            if (ligne.ArticleBoutique.StockDisponible > 0)
-            {
-                ligne.ArticleBoutique.StockDisponible -= ligne.Quantite;
-                ligne.ArticleBoutique.DateModification = DateTime.UtcNow;
-            }
+            ligne.ArticleBoutique.StockDisponible -= ligne.Quantite;
+            ligne.ArticleBoutique.DateModification = DateTime.UtcNow;
         }
 
         await MarkCommandeAsync(commande, StatutCommandeBoutique.Payee, commentaireTraitement);
@@ -876,7 +950,12 @@ public class BoutiqueController(
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static string FormatPaymentMode(ModePaiementCommandeBoutique mode)
-        => mode == ModePaiementCommandeBoutique.PaiementLivraison ? "Paiement a la livraison" : "Mobile Money";
+        => mode switch
+        {
+            ModePaiementCommandeBoutique.PaiementLivraison => "Paiement a la livraison",
+            ModePaiementCommandeBoutique.Portefeuille => "Portefeuille",
+            _ => "Mobile Money"
+        };
 
     private static async Task<List<ArticleBoutique>> ReadArticlesFromCsvAsync(IFormFile file)
     {
@@ -1081,7 +1160,13 @@ public class BoutiqueController(
                 continue;
             }
 
-            var maxQuantity = article.StockDisponible > 0 ? article.StockDisponible : 99;
+            if (article.StockDisponible <= 0)
+            {
+                mustResave = true;
+                continue;
+            }
+
+            var maxQuantity = article.StockDisponible;
             var quantity = Math.Clamp(item.Quantite, 1, maxQuantity);
             if (quantity != item.Quantite)
             {
@@ -1099,7 +1184,9 @@ public class BoutiqueController(
 
         if (mustResave)
         {
-            SaveCart(cart.Where(i => articles.ContainsKey(i.ArticleId)).ToList());
+            SaveCart(cart
+                .Where(i => articles.TryGetValue(i.ArticleId, out var article) && article.StockDisponible > 0)
+                .ToList());
         }
 
         return new BoutiqueCartViewModel
@@ -1107,6 +1194,154 @@ public class BoutiqueController(
             Lignes = lines.OrderBy(l => l.Article.Nom).ToList()
         };
     }
+
+    private async Task LoadCheckoutContextAsync()
+    {
+        if (User.Identity?.IsAuthenticated != true)
+        {
+            ViewBag.IsAuthenticatedCheckout = false;
+            return;
+        }
+
+        var user = await userManager.GetUserAsync(User);
+        if (user is null)
+        {
+            ViewBag.IsAuthenticatedCheckout = false;
+            return;
+        }
+
+        var wallet = await EnsureWalletAsync(user.Id);
+        ViewBag.IsAuthenticatedCheckout = true;
+        ViewBag.CheckoutNomClient = BuildUserFullName(user);
+        ViewBag.CheckoutTelephoneClient = user.PhoneNumber;
+        ViewBag.CheckoutEmailClient = user.Email;
+        ViewBag.PortefeuilleSolde = wallet.Solde;
+        ViewBag.PortefeuilleDevise = wallet.Devise;
+        ViewBag.PortefeuilleActif = wallet.EstActif;
+    }
+
+    private async Task<PortefeuilleUtilisateur> EnsureWalletAsync(Guid userId)
+    {
+        var wallet = await db.PortefeuillesUtilisateurs
+            .Include(p => p.User)
+            .FirstOrDefaultAsync(p => p.UserId == userId);
+        if (wallet is not null)
+        {
+            return wallet;
+        }
+
+        wallet = new PortefeuilleUtilisateur
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Solde = 0,
+            Devise = "XOF",
+            EstActif = true
+        };
+        db.PortefeuillesUtilisateurs.Add(wallet);
+        return wallet;
+    }
+
+    private async Task<(bool Success, string Message)> TryApplyWalletPaymentAsync(
+        ApplicationUser user,
+        CommandeBoutique commande,
+        IReadOnlyList<ArticleBoutique> _)
+    {
+        var wallet = await EnsureWalletAsync(user.Id);
+        if (!wallet.EstActif)
+        {
+            return (false, "Votre portefeuille est inactif. Utilisez Mobile Money ou contactez l'administration.");
+        }
+
+        if (!string.Equals(wallet.Devise, commande.Devise, StringComparison.OrdinalIgnoreCase))
+        {
+            return (false, $"Devise incompatible : votre portefeuille est en {wallet.Devise}, la commande est en {commande.Devise}.");
+        }
+
+        if (wallet.Solde < commande.Total)
+        {
+            return (false, $"Solde portefeuille insuffisant : {wallet.Solde:N0} {wallet.Devise} disponible(s), commande de {commande.Total:N0} {commande.Devise}.");
+        }
+
+        var articleIds = commande.Lignes.Select(line => line.ArticleBoutiqueId).Distinct().ToList();
+        var articles = await db.ArticlesBoutique
+            .Where(article => articleIds.Contains(article.Id) && article.EstPublie && !article.EstSupprime)
+            .ToDictionaryAsync(article => article.Id);
+
+        foreach (var line in commande.Lignes)
+        {
+            if (!articles.TryGetValue(line.ArticleBoutiqueId, out var article))
+            {
+                return (false, "Un article du panier n'est plus disponible.");
+            }
+
+            if (article.StockDisponible <= 0)
+            {
+                return (false, $"Article en rupture de stock : {article.Nom}.");
+            }
+
+            if (line.Quantite > article.StockDisponible)
+            {
+                return (false, $"Stock insuffisant pour {article.Nom} : {article.StockDisponible} disponible(s).");
+            }
+        }
+
+        var before = wallet.Solde;
+        wallet.Solde -= commande.Total;
+        foreach (var line in commande.Lignes)
+        {
+            var article = articles[line.ArticleBoutiqueId];
+            article.StockDisponible -= line.Quantite;
+            article.DateModification = DateTime.UtcNow;
+        }
+
+        commande.Statut = StatutCommandeBoutique.Payee;
+        commande.DateTraitement = DateTime.UtcNow;
+        commande.TraiteParId = user.Id;
+        commande.ReferencePaiement = $"Portefeuille {wallet.Id:N}";
+        commande.NumeroRecu ??= $"CMD-{DateTime.UtcNow:yyyyMMdd}-{commande.Id.ToString("N")[..8].ToUpperInvariant()}";
+
+        db.MouvementsPortefeuilles.Add(new MouvementPortefeuille
+        {
+            Id = Guid.NewGuid(),
+            PortefeuilleUtilisateurId = wallet.Id,
+            PortefeuilleUtilisateur = wallet,
+            Type = TypeMouvementPortefeuille.Paiement,
+            Statut = StatutMouvementPortefeuille.Valide,
+            Montant = commande.Total,
+            Devise = commande.Devise,
+            Libelle = "Paiement boutique",
+            Reference = $"Commande boutique {commande.Id:N}",
+            NumeroRecu = $"WAL-{DateTime.UtcNow:yyyyMMdd}-{commande.Id.ToString("N")[..8].ToUpperInvariant()}",
+            SoldeAvant = before,
+            SoldeApres = wallet.Solde,
+            DateValidation = DateTime.UtcNow,
+            ValideParId = user.Id,
+            Commentaire = string.Join(", ", commande.Lignes.Select(line => $"{articles[line.ArticleBoutiqueId].Nom} x{line.Quantite}")),
+            AdresseIp = HttpContext.Connection.RemoteIpAddress?.ToString(),
+            UserAgent = Request.Headers.UserAgent.ToString()
+        });
+
+        return (true, $"Paiement effectue depuis votre portefeuille. Nouveau solde : {wallet.Solde:N0} {wallet.Devise}.");
+    }
+
+    private static ModePaiementCommandeBoutique ParsePaymentMode(string? value)
+    {
+        if (string.Equals(value, "PaiementLivraison", StringComparison.OrdinalIgnoreCase))
+        {
+            return ModePaiementCommandeBoutique.PaiementLivraison;
+        }
+
+        if (string.Equals(value, "Portefeuille", StringComparison.OrdinalIgnoreCase))
+        {
+            return ModePaiementCommandeBoutique.Portefeuille;
+        }
+
+        return ModePaiementCommandeBoutique.MobileMoney;
+    }
+
+    private static string BuildUserFullName(ApplicationUser? user)
+        => user is null ? string.Empty : $"{user.Prenom} {user.Nom}".Trim();
 
     private IActionResult RedirectToSafeUrl(string? returnUrl, string fallbackAction, object? routeValues = null)
     {

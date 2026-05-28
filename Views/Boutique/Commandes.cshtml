@@ -54,7 +54,7 @@
                                 <div class="small text-muted-custom">@commande.TelephoneClient @commande.EmailClient</div>
                             </td>
                             <td>@string.Join(", ", commande.Lignes.Select(l => $"{l.ArticleBoutique.Nom} x{l.Quantite}"))</td>
-                            <td>@(commande.ModePaiement == MangoTaika.Data.Entities.ModePaiementCommandeBoutique.PaiementLivraison ? "A la livraison" : "Mobile Money")</td>
+                            <td>@(commande.ModePaiement == MangoTaika.Data.Entities.ModePaiementCommandeBoutique.PaiementLivraison ? "A la livraison" : commande.ModePaiement == MangoTaika.Data.Entities.ModePaiementCommandeBoutique.Portefeuille ? "Portefeuille" : "Mobile Money")</td>
                             <td><span class="badge-3d @(commande.Statut == MangoTaika.Data.Entities.StatutCommandeBoutique.Annulee ? "badge-rejetee" : commande.Statut == MangoTaika.Data.Entities.StatutCommandeBoutique.EnAttente ? "badge-soumise" : "badge-approuvee")">@commande.Statut</span></td>
                             <td class="text-end">@commande.Total.ToString("N0") @commande.Devise</td>
                             <td class="text-end">

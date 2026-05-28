@@ -1,8 +1,9 @@
 @model MangoTaika.Data.Entities.ArticleBoutique
 @{
     ViewData["Title"] = Model.Nom;
-    var stockMax = Model.StockDisponible > 0 ? Model.StockDisponible : 99;
-    var stockLabel = Model.StockDisponible > 0 ? $"{Model.StockDisponible} disponible(s)" : "Commande a confirmer";
+    var isAvailable = Model.StockDisponible > 0;
+    var stockMax = isAvailable ? Model.StockDisponible : 1;
+    var stockLabel = isAvailable ? $"{Model.StockDisponible} disponible(s)" : "Rupture de stock";
     var panierCount = ViewBag.PanierCount as int? ?? 0;
 }
 
@@ -11,7 +12,7 @@
 
     <div class="marketplace-detail-grid">
         <div class="marketplace-detail-media">
-            <span class="marketplace-card__status @(Model.StockDisponible > 0 ? "available" : "order")">@(Model.StockDisponible > 0 ? "En stock" : "Sur commande")</span>
+            <span class="marketplace-card__status @(isAvailable ? "available" : "order")">@(isAvailable ? "En stock" : "Rupture")</span>
             <img src="@(string.IsNullOrWhiteSpace(Model.ImageUrl) ? Url.Content("~/images/logo.png") : Model.ImageUrl)" alt="@Model.Nom" />
         </div>
 
@@ -57,9 +58,16 @@
                 <div class="marketplace-order-actions">
                     <a asp-action="Index" class="btn btn-outline-or">Continuer mes achats</a>
                     <a asp-action="Panier" class="btn btn-outline-or">Voir le panier (@panierCount)</a>
-                    <button type="submit" class="btn btn-or btn-lg"><i class="bi bi-cart-plus"></i> Ajouter au panier</button>
-                    <button type="submit" name="checkout" value="true" class="btn btn-bleu btn-lg"><i class="bi bi-bag-check"></i> Commander</button>
+                    <button type="submit" class="btn btn-or btn-lg" disabled="@(!isAvailable)"><i class="bi bi-cart-plus"></i> Ajouter au panier</button>
+                    <button type="submit" name="checkout" value="true" class="btn btn-bleu btn-lg" disabled="@(!isAvailable)"><i class="bi bi-bag-check"></i> Commander</button>
                 </div>
+                @if (!isAvailable)
+                {
+                    <div class="alert alert-warning mt-3 mb-0">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Cet article est actuellement en rupture. La commande est bloquee jusqu'au reapprovisionnement.
+                    </div>
+                }
             </form>
         </div>
     </div>

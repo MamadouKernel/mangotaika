@@ -1,6 +1,17 @@
 @model BoutiqueCartViewModel
 @{
     ViewData["Title"] = "Valider la commande";
+    var isAuthenticatedCheckout = ViewBag.IsAuthenticatedCheckout as bool? ?? false;
+    var checkoutNom = ViewBag.CheckoutNomClient as string ?? string.Empty;
+    var checkoutTelephone = ViewBag.CheckoutTelephoneClient as string ?? string.Empty;
+    var checkoutEmail = ViewBag.CheckoutEmailClient as string ?? string.Empty;
+    var portefeuilleSolde = ViewBag.PortefeuilleSolde as decimal? ?? 0;
+    var portefeuilleDevise = ViewBag.PortefeuilleDevise as string ?? Model.Devise;
+    var portefeuilleActif = ViewBag.PortefeuilleActif as bool? ?? false;
+    var canPayWithWallet = isAuthenticatedCheckout
+        && portefeuilleActif
+        && string.Equals(portefeuilleDevise, Model.Devise, StringComparison.OrdinalIgnoreCase)
+        && portefeuilleSolde >= Model.Total;
 }
 
 <section class="container py-5 marketplace-detail">
@@ -11,20 +22,28 @@
             <span class="boutique-eyebrow"><i class="bi bi-bag-check"></i> Checkout boutique</span>
             <h1>Valider ma commande</h1>
             <p class="marketplace-detail-description">Une seule commande sera creee avec tous les articles de votre panier.</p>
+            @if (isAuthenticatedCheckout)
+            {
+                <div class="alert alert-success">
+                    <i class="bi bi-person-check"></i>
+                    Vos informations de compte sont reprises automatiquement. Solde portefeuille :
+                    <strong>@portefeuilleSolde.ToString("N0") @portefeuilleDevise</strong>.
+                </div>
+            }
 
             <form asp-action="Checkout" method="post" class="marketplace-order-form">
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Nom complet</label>
-                        <input name="nomClient" class="form-control" required autocomplete="name" />
+                        <input name="nomClient" class="form-control" required autocomplete="name" value="@checkoutNom" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Telephone</label>
-                        <input name="telephoneClient" class="form-control" required autocomplete="tel" />
+                        <input name="telephoneClient" class="form-control" required autocomplete="tel" value="@checkoutTelephone" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Email</label>
-                        <input name="emailClient" type="email" class="form-control" autocomplete="email" />
+                        <input name="emailClient" type="email" class="form-control" autocomplete="email" value="@checkoutEmail" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Reference paiement</label>
@@ -40,6 +59,22 @@
                                     <small>Paiement par reference Mobile Money.</small>
                                 </span>
                             </label>
+                            @if (isAuthenticatedCheckout)
+                            {
+                                <label class="@(!canPayWithWallet ? "opacity-50" : string.Empty)">
+                                    <input type="radio" name="modePaiement" value="Portefeuille" disabled="@(!canPayWithWallet)" />
+                                    <span>
+                                        <strong>Mon portefeuille</strong>
+                                        <small>
+                                            Paiement immediat. Solde : @portefeuilleSolde.ToString("N0") @portefeuilleDevise.
+                                            @if (portefeuilleSolde < Model.Total)
+                                            {
+                                                <text> Solde insuffisant.</text>
+                                            }
+                                        </small>
+                                    </span>
+                                </label>
+                            }
                             <label>
                                 <input type="radio" name="modePaiement" value="PaiementLivraison" />
                                 <span>

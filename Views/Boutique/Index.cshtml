@@ -148,7 +148,7 @@
                         var isAvailable = article.StockDisponible > 0;
                         <article class="marketplace-card">
                             <div class="marketplace-card__media">
-                                <span class="marketplace-card__status @(isAvailable ? "available" : "order")">@(isAvailable ? "En stock" : "Sur commande")</span>
+                                <span class="marketplace-card__status @(isAvailable ? "available" : "order")">@(isAvailable ? "En stock" : "Rupture")</span>
                                 @if (!string.IsNullOrWhiteSpace(article.ImageUrl))
                                 {
                                     <img src="@article.ImageUrl" alt="@article.Nom" />
@@ -174,12 +174,19 @@
                                     <span>@article.Devise</span>
                                 </div>
                                 <div class="marketplace-card__actions">
-                                    <form asp-action="AjouterAuPanier" method="post" class="d-inline">
-                                        <input type="hidden" name="articleId" value="@article.Id" />
-                                        <input type="hidden" name="quantite" value="1" />
-                                        <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
-                                        <button type="submit" class="btn btn-or btn-sm"><i class="bi bi-cart-plus"></i> Ajouter</button>
-                                    </form>
+                                    @if (isAvailable)
+                                    {
+                                        <form asp-action="AjouterAuPanier" method="post" class="d-inline">
+                                            <input type="hidden" name="articleId" value="@article.Id" />
+                                            <input type="hidden" name="quantite" value="1" />
+                                            <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                                            <button type="submit" class="btn btn-or btn-sm"><i class="bi bi-cart-plus"></i> Ajouter</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" disabled><i class="bi bi-ban"></i> Indisponible</button>
+                                    }
                                     <a asp-action="Details" asp-route-id="@article.Id" class="btn btn-outline-or btn-sm">Details</a>
                                 </div>
                             </div>

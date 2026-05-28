@@ -61,5 +61,6 @@ public enum StatutCommandeBoutique
 public enum ModePaiementCommandeBoutique
 {
     MobileMoney,
-    PaiementLivraison
+    PaiementLivraison,
+    Portefeuille
 }
