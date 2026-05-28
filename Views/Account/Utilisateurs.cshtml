@@ -12,6 +12,7 @@
         "ChefUnite"            => "Chef d'Unite",
         _                      => r
     };
+    bool PeutSupprimerLogiquement(List<string> roles) => !roles.Contains("Administrateur");
 }
 
 <h2 class="section-title mb-1"><i class="bi bi-people-fill text-or"></i> Gestion des <span class="accent">utilisateurs</span></h2>
@@ -102,6 +103,16 @@
                             @Html.AntiForgeryToken()
                             <button type="submit" class="btn btn-sm btn-outline-or" title="Désactiver">
                                 <i class="bi bi-x-circle"></i>
+                            </button>
+                        </form>
+                    }
+                    @if (PeutSupprimerLogiquement(userRoleList))
+                    {
+                        <form asp-action="SoftDeleteUser" asp-route-id="@user.Id" method="post" class="d-inline"
+                              onsubmit="return confirm('Retirer cet utilisateur de la liste ? Le compte restera conserve en base mais sera desactive.');">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Retirer de la liste">
+                                <i class="bi bi-trash"></i>
                             </button>
                         </form>
                     }

@@ -47,7 +47,7 @@ public class AccountController(
         }
 
         var normalizedEmail = model.Email.Trim().ToUpperInvariant();
-        var user = await db.Users.FirstOrDefaultAsync(u => u.NormalizedEmail == normalizedEmail);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.NormalizedEmail == normalizedEmail && !u.EstSupprime);
         if (user is null)
         {
             ModelState.AddModelError(nameof(model.Email), "Aucun compte actif n'utilise cette adresse email.");
@@ -97,7 +97,7 @@ public class AccountController(
         }
 
         var user = await userManager.FindByIdAsync(userId.ToString());
-        if (user is null || !user.IsActive)
+        if (user is null || user.EstSupprime || !user.IsActive)
         {
             TempData["Error"] = "Lien de reinitialisation invalide ou expire.";
             return RedirectToAction(nameof(Login));
@@ -120,7 +120,7 @@ public class AccountController(
         }
 
         var user = await userManager.FindByIdAsync(model.UserId.ToString());
-        if (user is null || !user.IsActive)
+        if (user is null || user.EstSupprime || !user.IsActive)
         {
             ModelState.AddModelError(string.Empty, "Lien de reinitialisation invalide ou expire.");
             return View(model);
@@ -159,6 +159,11 @@ public class AccountController(
         if (!user.IsActive)
         {
             ModelState.AddModelError(string.Empty, "Votre compte est en attente d'activation par un administrateur.");
+            return View(model);
+        }
+        if (user.EstSupprime)
+        {
+            ModelState.AddModelError(string.Empty, "Ce compte n'est plus disponible. Contactez l'administration du district.");
             return View(model);
         }
 
@@ -389,9 +394,9 @@ public class AccountController(
         if (candidates.Count == 0)
             return null;
 
-        return await db.Users.FirstOrDefaultAsync(u =>
-            (u.PhoneNumber != null && candidates.Contains(u.PhoneNumber)) ||
-            (u.UserName != null && candidates.Contains(u.UserName)));
+        return await db.Users.FirstOrDefaultAsync(u => !u.EstSupprime &&
+            ((u.PhoneNumber != null && candidates.Contains(u.PhoneNumber)) ||
+             (u.UserName != null && candidates.Contains(u.UserName))));
     }
 
     private static HashSet<string> BuildPhoneLoginCandidates(string? value)
@@ -631,7 +636,7 @@ public class AccountController(
     public async Task<IActionResult> Utilisateurs(string? recherche)
     {
         var (page, ps) = ListPagination.Read(Request);
-        var query = db.Users.AsQueryable();
+        var query = db.Users.Where(u => !u.EstSupprime).AsQueryable();
         if (!string.IsNullOrWhiteSpace(recherche))
         {
             var search = recherche.Trim().ToUpperInvariant();
@@ -675,7 +680,7 @@ public class AccountController(
         var user = await db.Users
             .Include(u => u.Groupe)
             .Include(u => u.Branche)
-            .FirstOrDefaultAsync(u => u.Id == id);
+            .FirstOrDefaultAsync(u => u.Id == id && !u.EstSupprime);
         if (user is null) return NotFound();
         if (EstGestionnaireSansAdmin() && await EstUtilisateurAdminAsync(user))
             return Forbid();
@@ -703,7 +708,7 @@ public class AccountController(
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> EditerUtilisateur(Guid id)
     {
-        var user = await db.Users.FindAsync(id);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id && !u.EstSupprime);
         if (user is null) return NotFound();
         if (EstGestionnaireSansAdmin() && await EstUtilisateurAdminAsync(user))
             return Forbid();
@@ -731,7 +736,7 @@ public class AccountController(
     {
         if (id != model.Id) return BadRequest();
 
-        var user = await db.Users.FindAsync(id);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id && !u.EstSupprime);
         if (user is null) return NotFound();
         if (EstGestionnaireSansAdmin() && await EstUtilisateurAdminAsync(user))
             return Forbid();
@@ -839,7 +844,7 @@ public class AccountController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ActivateUser(Guid id)
     {
-        var user = await db.Users.FindAsync(id);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id && !u.EstSupprime);
         if (user != null)
         {
             user.IsActive = true;
@@ -854,7 +859,7 @@ public class AccountController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeactivateUser(Guid id)
     {
-        var user = await db.Users.FindAsync(id);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id && !u.EstSupprime);
         if (user != null)
         {
             user.IsActive = false;
@@ -863,6 +868,42 @@ public class AccountController(
             await db.SaveChangesAsync();
             TempData["Success"] = $"Compte de {user.Prenom} {user.Nom} dÃ©sactivÃ©.";
         }
+        return RedirectToAction(nameof(Utilisateurs));
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SoftDeleteUser(Guid id)
+    {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id && !u.EstSupprime);
+        if (user is null)
+        {
+            TempData["Error"] = "Utilisateur introuvable ou deja retire de la liste.";
+            return RedirectToAction(nameof(Utilisateurs));
+        }
+
+        if (EstGestionnaireSansAdmin() && await EstUtilisateurAdminAsync(user))
+            return Forbid();
+
+        if (await EstUtilisateurAdminAsync(user))
+        {
+            TempData["Error"] = "Un compte administrateur ne peut pas etre supprime de la liste. Vous pouvez uniquement le desactiver.";
+            return RedirectToAction(nameof(Utilisateurs));
+        }
+
+        var currentUserId = Guid.Parse(userManager.GetUserId(User)!);
+        if (id == currentUserId)
+        {
+            TempData["Error"] = "Vous ne pouvez pas supprimer votre propre compte de la liste.";
+            return RedirectToAction(nameof(Utilisateurs));
+        }
+
+        user.EstSupprime = true;
+        user.IsActive = false;
+        await userManager.UpdateSecurityStampAsync(user);
+        await db.SaveChangesAsync();
+        TempData["Success"] = $"Compte de {user.Prenom} {user.Nom} retire de la liste.";
         return RedirectToAction(nameof(Utilisateurs));
     }
 

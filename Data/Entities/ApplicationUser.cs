@@ -9,6 +9,7 @@ public class ApplicationUser : IdentityUser<Guid>
     public string? PhotoUrl { get; set; }
     public string? Matricule { get; set; }
     public bool IsActive { get; set; } = true;
+    public bool EstSupprime { get; set; }
     public DateTime DateCreation { get; set; } = DateTime.UtcNow;
 
     // Navigation
