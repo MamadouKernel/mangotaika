@@ -439,7 +439,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
 
         builder.Entity<ComptePaiementMobile>(e =>
         {
-            e.HasIndex(c => new { c.NumeroMobile, c.EstActif });
+            e.HasIndex(c => new { c.NumeroMobile, c.EstActif, c.EstSupprime });
             e.HasOne(c => c.ModifiePar).WithMany().HasForeignKey(c => c.ModifieParId).OnDelete(DeleteBehavior.SetNull);
             e.HasOne(c => c.Activite).WithMany().HasForeignKey(c => c.ActiviteId).OnDelete(DeleteBehavior.SetNull);
         });

@@ -78,7 +78,7 @@ public class HomeController(AppDbContext db, IConfiguration configuration, IMobi
     public async Task<IActionResult> FaireUnDon()
     {
         ViewBag.ComptePaiement = await db.ComptesPaiementMobile
-            .Where(c => c.EstActif)
+            .Where(c => c.EstActif && !c.EstSupprime)
             .OrderByDescending(c => c.EstPrincipal)
             .ThenBy(c => c.Libelle)
             .FirstOrDefaultAsync();
@@ -91,7 +91,7 @@ public class HomeController(AppDbContext db, IConfiguration configuration, IMobi
     public async Task<IActionResult> FaireUnDon(DonPublic model)
     {
         ViewBag.ComptePaiement = await db.ComptesPaiementMobile
-            .Where(c => c.EstActif)
+            .Where(c => c.EstActif && !c.EstSupprime)
             .OrderByDescending(c => c.EstPrincipal)
             .ThenBy(c => c.Libelle)
             .FirstOrDefaultAsync();

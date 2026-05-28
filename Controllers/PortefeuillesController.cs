@@ -141,14 +141,14 @@ public class PortefeuillesController(
         }
 
         var compte = comptePaiementId.HasValue
-            ? await db.ComptesPaiementMobile.FirstOrDefaultAsync(c => c.Id == comptePaiementId.Value && c.EstActif)
+            ? await db.ComptesPaiementMobile.FirstOrDefaultAsync(c => c.Id == comptePaiementId.Value && c.EstActif && !c.EstSupprime)
             : isActivite
                 ? await db.ComptesPaiementMobile
-                    .Where(c => c.EstActif && c.ActiviteId == activite!.Id)
+                    .Where(c => c.EstActif && !c.EstSupprime && c.ActiviteId == activite!.Id)
                     .OrderByDescending(c => c.EstPrincipal)
                     .FirstOrDefaultAsync()
-                    ?? await db.ComptesPaiementMobile.Where(c => c.EstActif).OrderByDescending(c => c.EstPrincipal).FirstOrDefaultAsync()
-                : await db.ComptesPaiementMobile.Where(c => c.EstActif).OrderByDescending(c => c.EstPrincipal).FirstOrDefaultAsync();
+                    ?? await db.ComptesPaiementMobile.Where(c => c.EstActif && !c.EstSupprime).OrderByDescending(c => c.EstPrincipal).FirstOrDefaultAsync()
+                : await db.ComptesPaiementMobile.Where(c => c.EstActif && !c.EstSupprime).OrderByDescending(c => c.EstPrincipal).FirstOrDefaultAsync();
 
         if (comptePaiementId.HasValue && compte is null)
         {
@@ -570,6 +570,7 @@ public class PortefeuillesController(
             .ToListAsync();
         return View(await db.ComptesPaiementMobile
             .Include(c => c.Activite)
+            .Where(c => !c.EstSupprime)
             .OrderByDescending(c => c.EstPrincipal)
             .ThenBy(c => c.Libelle)
             .ToListAsync());
@@ -588,12 +589,17 @@ public class PortefeuillesController(
 
         var estPrincipal = Request.Form["estPrincipal"].Any(v => string.Equals(v, "true", StringComparison.OrdinalIgnoreCase));
         var estActif = Request.Form["estActif"].Any(v => string.Equals(v, "true", StringComparison.OrdinalIgnoreCase));
+        if (!estActif)
+        {
+            estPrincipal = false;
+        }
+
         var user = await userManager.GetUserAsync(User);
 
         if (estPrincipal)
         {
             var anciensPrincipaux = await db.ComptesPaiementMobile
-                .Where(c => c.EstPrincipal && (!id.HasValue || c.Id != id.Value))
+                .Where(c => !c.EstSupprime && c.EstPrincipal && (!id.HasValue || c.Id != id.Value))
                 .ToListAsync();
             foreach (var compte in anciensPrincipaux)
             {
@@ -603,7 +609,7 @@ public class PortefeuillesController(
 
         if (id.HasValue)
         {
-            var compte = await db.ComptesPaiementMobile.FirstOrDefaultAsync(c => c.Id == id.Value);
+            var compte = await db.ComptesPaiementMobile.FirstOrDefaultAsync(c => c.Id == id.Value && !c.EstSupprime);
             if (compte is null) return NotFound();
 
             compte.Libelle = libelle.Trim();
@@ -633,6 +639,28 @@ public class PortefeuillesController(
 
         await db.SaveChangesAsync();
         TempData["Success"] = id.HasValue ? "Compte de paiement mobile mis a jour." : "Compte de paiement mobile enregistre.";
+        return RedirectToAction(nameof(ComptesPaiement));
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "Administrateur,Gestionnaire,CommissaireDistrict")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SupprimerComptePaiement(Guid id)
+    {
+        var compte = await db.ComptesPaiementMobile.FirstOrDefaultAsync(c => c.Id == id && !c.EstSupprime);
+        if (compte is null)
+        {
+            return NotFound();
+        }
+
+        var user = await userManager.GetUserAsync(User);
+        compte.EstSupprime = true;
+        compte.EstActif = false;
+        compte.EstPrincipal = false;
+        compte.ModifieParId = user?.Id;
+
+        await db.SaveChangesAsync();
+        TempData["Success"] = "Compte de paiement mobile supprime de la liste.";
         return RedirectToAction(nameof(ComptesPaiement));
     }
 
@@ -775,13 +803,13 @@ public class PortefeuillesController(
     private async Task LoadWalletActionDataAsync()
     {
         ViewBag.ComptePaiement = await db.ComptesPaiementMobile
-            .Where(c => c.EstActif)
+            .Where(c => c.EstActif && !c.EstSupprime)
             .OrderByDescending(c => c.EstPrincipal)
             .ThenBy(c => c.Libelle)
             .FirstOrDefaultAsync();
         ViewBag.ComptesPaiement = await db.ComptesPaiementMobile
             .Include(c => c.Activite)
-            .Where(c => c.EstActif)
+            .Where(c => c.EstActif && !c.EstSupprime)
             .OrderByDescending(c => c.EstPrincipal)
             .ThenBy(c => c.Libelle)
             .ToListAsync();

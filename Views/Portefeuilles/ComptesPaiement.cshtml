@@ -88,14 +88,23 @@
                                         }
                                     </select>
                                     <label class="payment-account-row__check">
-                                        <input name="estPrincipal" value="true" type="checkbox" class="form-check-input" checked="@(compte.EstPrincipal ? "checked" : null)" />
+                                        <input name="estPrincipal" value="true" type="checkbox" class="form-check-input" @(compte.EstPrincipal ? "checked" : "") />
                                         <span>Principal</span>
                                     </label>
                                     <label class="payment-account-row__check">
-                                        <input name="estActif" value="true" type="checkbox" class="form-check-input" checked="@(compte.EstActif ? "checked" : null)" />
+                                        <input name="estActif" value="true" type="checkbox" class="form-check-input" @(compte.EstActif ? "checked" : "") />
                                         <span>Actif</span>
                                     </label>
                                     <button type="submit" class="btn btn-or btn-sm"><i class="bi bi-save"></i></button>
+                                    <button type="submit"
+                                            class="btn btn-outline-danger btn-sm"
+                                            formaction="@Url.Action("SupprimerComptePaiement", "Portefeuilles", new { id = compte.Id })"
+                                            formmethod="post"
+                                            formnovalidate
+                                            onclick="return confirm('Supprimer ce compte de paiement de la liste ?');"
+                                            title="Supprimer">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
                                 </form>
                             </td>
                         </tr>
