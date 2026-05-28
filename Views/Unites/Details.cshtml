@@ -1,0 +1,106 @@
+@using MangoTaika.Data.Entities
+@model UniteScoute
+@{
+    ViewData["Title"] = Model.Nom;
+    Layout = "_LayoutAdmin";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <span class="tracking-hero__eyebrow"><i class="bi bi-diagram-2"></i> @Model.Branche?.Nom</span>
+        <h2 class="section-title mb-0">@Model.Nom</h2>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-bleu"><i class="bi bi-pencil"></i></a>
+        <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i></a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card-3d p-4 h-100">
+            @if (!string.IsNullOrWhiteSpace(Model.ImageUrl))
+            {
+                <img src="@Model.ImageUrl" alt="@Model.Nom" class="img-fluid rounded-3 mb-3" />
+            }
+            <h5 class="text-or">Informations</h5>
+            <dl class="row small mb-0">
+                <dt class="col-5 text-muted-custom">Groupe</dt>
+                <dd class="col-7">@Model.Groupe?.Nom</dd>
+                <dt class="col-5 text-muted-custom">Branche</dt>
+                <dd class="col-7">@Model.Branche?.Nom</dd>
+                <dt class="col-5 text-muted-custom">Statut</dt>
+                <dd class="col-7">@(Model.EstActive ? "Active" : "Inactive")</dd>
+            </dl>
+            <hr />
+            <p class="text-muted-custom">@Model.Description</p>
+            @if (!string.IsNullOrWhiteSpace(Model.Attributs))
+            {
+                <div class="alert alert-light border mb-0">@Model.Attributs</div>
+            }
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card-3d p-4 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="text-or mb-0">Scouts affectes</h5>
+                <span class="badge-3d badge-soumise">@Model.Affectations.Count</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table-modern">
+                    <thead><tr><th>Scout</th><th>Matricule</th><th>Role dans l'unite</th><th></th></tr></thead>
+                    <tbody>
+                    @foreach (var affectation in Model.Affectations.OrderBy(a => a.Scout.Nom).ThenBy(a => a.Scout.Prenom))
+                    {
+                        <tr>
+                            <td>@affectation.Scout.Prenom @affectation.Scout.Nom</td>
+                            <td>@(affectation.Scout.Matricule ?? "-")</td>
+                            <td>@(affectation.RoleUniteScoute?.Nom ?? "-")</td>
+                            <td class="text-end">
+                                <form asp-action="AffecterRole" method="post" class="d-inline-flex gap-2">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="affectationId" value="@affectation.Id" />
+                                    <select name="roleId" class="form-select form-select-sm">
+                                        <option value="">-- Aucun role --</option>
+                                        @foreach (var role in Model.Roles)
+                                        {
+                                            <option value="@role.Id" selected="@(affectation.RoleUniteScouteId == role.Id ? "selected" : null)">@role.Nom</option>
+                                        }
+                                    </select>
+                                    <button class="btn btn-sm btn-outline-or" type="submit"><i class="bi bi-check-lg"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card-3d p-4">
+            <h5 class="text-or mb-3">Roles d'unite</h5>
+            <form asp-action="AjouterRole" method="post" class="row g-3 align-items-end mb-3">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="uniteId" value="@Model.Id" />
+                <div class="col-md-4">
+                    <label class="form-label">Nom du role</label>
+                    <input name="nom" class="form-control" placeholder="Ex: Chef de sizaine" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Description</label>
+                    <input name="description" class="form-control" />
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-mango w-100" type="submit"><i class="bi bi-plus-lg"></i></button>
+                </div>
+            </form>
+            <div class="d-flex gap-2 flex-wrap">
+                @foreach (var role in Model.Roles)
+                {
+                    <span class="badge-3d badge-soumise">@role.Nom</span>
+                }
+            </div>
+        </div>
+    </div>
+</div>

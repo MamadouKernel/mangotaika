@@ -1,0 +1,141 @@
+@using MangoTaika.Data.Entities
+@using MangoTaika.Helpers
+@model UniteScoute
+@{
+    var branches = ViewBag.Branches as List<Branche> ?? new();
+    var scouts = ViewBag.Scouts as List<Scout> ?? new();
+    var selectedScoutIds = ViewBag.SelectedScoutIds as HashSet<Guid> ?? new HashSet<Guid>();
+    var isEdit = Model.Id != Guid.Empty;
+    var lockBranch = branches.Count == 1 && !User.IsInRole("Administrateur") && !User.IsInRole("Gestionnaire");
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <span class="tracking-hero__eyebrow"><i class="bi bi-diagram-2"></i> Unite de branche</span>
+        <h2 class="section-title mb-0">@ViewData["Title"]</h2>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i> Retour</a>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="card-3d p-4">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="ImageUrl" />
+    <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label asp-for="Nom" class="form-label">Nom de l'unite</label>
+            <input asp-for="Nom" class="form-control" />
+            <span asp-validation-for="Nom" class="text-danger small"></span>
+        </div>
+        <div class="col-md-6">
+            <label asp-for="BrancheId" class="form-label">Branche</label>
+            <select asp-for="BrancheId" class="form-select" data-create-branch-picker="@(!isEdit ? "true" : "false")" disabled="@(lockBranch ? "disabled" : null)">
+                <option value="">-- Selectionner --</option>
+                @foreach (var branche in branches)
+                {
+                    <option value="@branche.Id" selected="@(Model.BrancheId == branche.Id ? "selected" : null)">@(branche.Groupe?.Nom) - @branche.Nom</option>
+                }
+            </select>
+            @if (branches.Count == 1)
+            {
+                <input type="hidden" asp-for="BrancheId" />
+            }
+            <span asp-validation-for="BrancheId" class="text-danger small"></span>
+        </div>
+        <div class="col-md-12">
+            <label asp-for="Description" class="form-label">Description</label>
+            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+        </div>
+        <div class="col-md-12">
+            <label asp-for="Attributs" class="form-label">Attributs</label>
+            <textarea asp-for="Attributs" class="form-control" rows="2" placeholder="Ex: couleur, cri, devise, symbole"></textarea>
+        </div>
+        <div class="col-md-8">
+            <label class="form-label">Image illustration</label>
+            <input type="file" name="Image" class="form-control" accept="@FileInputAccept.Image" />
+            @if (!string.IsNullOrWhiteSpace(Model.ImageUrl))
+            {
+                <div class="small text-muted-custom mt-2">Image actuelle conservee si aucun nouveau fichier n'est choisi.</div>
+            }
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+            <div class="form-check form-switch mb-2">
+                <input asp-for="EstActive" class="form-check-input" />
+                <label asp-for="EstActive" class="form-check-label">Unite active</label>
+            </div>
+        </div>
+    </div>
+
+    <hr class="my-4" />
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <h5 class="text-or mb-2">Affecter par selection</h5>
+            <div class="unit-scout-picker">
+                @foreach (var scout in scouts)
+                {
+                    <label class="unit-scout-picker__row">
+                        <input type="checkbox" name="scoutIds" value="@scout.Id" checked="@selectedScoutIds.Contains(scout.Id)" />
+                        <span>
+                            <strong>@scout.Prenom @scout.Nom</strong>
+                            <small>@(scout.Matricule ?? "Sans matricule")</small>
+                        </span>
+                    </label>
+                }
+                @if (!scouts.Any())
+                {
+                    <div class="text-muted-custom small">Selectionnez une branche contenant des scouts actifs.</div>
+                }
+            </div>
+        </div>
+        <div class="col-md-6">
+            <h5 class="text-or mb-2">Affecter par matricules</h5>
+            <textarea name="matricules" class="form-control" rows="8" placeholder="Ex: 0583753X, 0547834X"></textarea>
+            <p class="text-muted-custom small mt-2 mb-0">Les matricules peuvent etre separes par virgule, espace ou retour ligne. Un scout deja dans une autre unite sera automatiquement deplace.</p>
+        </div>
+    </div>
+
+    <div class="tracking-actions mt-4">
+        <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> @(isEdit ? "Enregistrer" : "Creer l'unite")</button>
+        <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
+    </div>
+</form>
+
+<style>
+    .unit-scout-picker {
+        display: grid;
+        gap: 8px;
+        max-height: 340px;
+        overflow: auto;
+    }
+
+    .unit-scout-picker__row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        border: 1px solid rgba(86, 124, 54, .18);
+        border-radius: 8px;
+        padding: 10px 12px;
+        background: #fff;
+    }
+
+    .unit-scout-picker__row span {
+        display: flex;
+        flex-direction: column;
+    }
+</style>
+
+@if (!isEdit)
+{
+    <script>
+        (() => {
+            const select = document.querySelector('[data-create-branch-picker="true"]');
+            select?.addEventListener('change', () => {
+                const value = select.value;
+                const url = value ? '@Url.Action("Create", "Unites")' + '?brancheId=' + encodeURIComponent(value) : '@Url.Action("Create", "Unites")';
+                window.location.href = url;
+            });
+        })();
+    </script>
+}

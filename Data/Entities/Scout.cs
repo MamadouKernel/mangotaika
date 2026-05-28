@@ -40,5 +40,6 @@ public class Scout
     public ICollection<TransactionFinanciere> Cotisations { get; set; } = [];
     public ICollection<SuiviAcademique> SuivisAcademiques { get; set; } = [];
     public ICollection<EtapeParcoursScout> EtapesParcours { get; set; } = [];
+    public ICollection<AffectationUniteScoute> AffectationsUnites { get; set; } = [];
 }
 

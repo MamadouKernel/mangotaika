@@ -1,0 +1,8 @@
+@using MangoTaika.Data.Entities
+@model UniteScoute
+@{
+    ViewData["Title"] = "Nouvelle unite";
+    Layout = "_LayoutAdmin";
+}
+
+@await Html.PartialAsync("_UniteForm", Model)

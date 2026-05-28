@@ -190,10 +190,21 @@
                             {
                                 <li><a class="nav-link" asp-controller="Ressources" asp-action="Index"><i class="bi bi-person-workspace"></i> Ressources</a></li>
                             }
+                            @if (isAdminOrGest || activeScopedLeader is "ChefGroupe" or "ChefUnite")
+                            {
+                                <li><a class="nav-link" asp-controller="Unites" asp-action="Index"><i class="bi bi-diagram-2"></i> Unites scoutes</a></li>
+                            }
                             <li><a class="nav-link" asp-controller="Competences" asp-action="Index"><i class="bi bi-award-fill"></i> Competences</a></li>
                             <li><a class="nav-link" asp-controller="ProgrammesAnnuels" asp-action="Index"><i class="bi bi-calendar-range"></i> Programmes annuels</a></li>
+                            @if (activeScopedLeader == "ChefUnite")
+                            {
+                                <li><a class="nav-link" asp-controller="Unites" asp-action="Index"><i class="bi bi-diagram-2"></i> Unites de ma branche</a></li>
+                            }
                             <li><a class="nav-link" asp-controller="RapportsActivite" asp-action="Index"><i class="bi bi-journal-richtext"></i> Rapports d'activite</a></li>
-                            <li><a class="nav-link" asp-controller="PropositionsMaitrise" asp-action="Index"><i class="bi bi-people"></i> Propositions de maitrise</a></li>
+                            @if (activeScopedLeader != "ChefUnite")
+                            {
+                                <li><a class="nav-link" asp-controller="PropositionsMaitrise" asp-action="Index"><i class="bi bi-people"></i> Propositions de maitrise</a></li>
+                            }
                             @if (isAdminOrGest)
                             {
                                 <li><a class="nav-link" asp-controller="Formations" asp-action="Index"><i class="bi bi-mortarboard-fill"></i> Formations</a></li>

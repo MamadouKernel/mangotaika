@@ -1,0 +1,75 @@
+@using MangoTaika.Data.Entities
+@model List<UniteScoute>
+@{
+    ViewData["Title"] = "Unites scoutes";
+    Layout = "_LayoutAdmin";
+    var branches = ViewBag.Branches as List<Branche> ?? new();
+    var selectedBrancheId = ViewBag.SelectedBrancheId as Guid?;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <span class="tracking-hero__eyebrow"><i class="bi bi-diagram-2"></i> Organisation de branche</span>
+        <h2 class="section-title mb-0">Unites <span class="accent">scoutes</span></h2>
+    </div>
+    <a asp-action="Create" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Nouvelle unite</a>
+</div>
+
+<form method="get" class="card-3d p-3 mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-8">
+            <label class="form-label">Branche</label>
+            <select name="brancheId" class="form-select">
+                <option value="">Toutes les branches autorisees</option>
+                @foreach (var branche in branches)
+                {
+                    <option value="@branche.Id" selected="@(selectedBrancheId == branche.Id ? "selected" : null)">
+                        @(branche.Groupe?.Nom) - @branche.Nom
+                    </option>
+                }
+            </select>
+        </div>
+        <div class="col-md-4">
+            <button class="btn btn-outline-or w-100" type="submit"><i class="bi bi-search"></i> Filtrer</button>
+        </div>
+    </div>
+</form>
+
+<div class="row g-3">
+    @foreach (var unite in Model)
+    {
+        <div class="col-lg-4 col-md-6">
+            <div class="card-3d p-4 h-100">
+                <div class="d-flex gap-3 align-items-center mb-3">
+                    @if (!string.IsNullOrWhiteSpace(unite.ImageUrl))
+                    {
+                        <img src="@unite.ImageUrl" alt="@unite.Nom" class="rounded-3" style="width:64px;height:64px;object-fit:cover;" />
+                    }
+                    else
+                    {
+                        <div class="rounded-3 d-flex align-items-center justify-content-center bg-light" style="width:64px;height:64px;">
+                            <i class="bi bi-diagram-2 fs-3 text-or"></i>
+                        </div>
+                    }
+                    <div>
+                        <h5 class="mb-1">@unite.Nom</h5>
+                        <div class="text-muted-custom small">@unite.Branche?.Nom</div>
+                    </div>
+                </div>
+                <p class="text-muted-custom small mb-3">@(unite.Description ?? "Aucune description renseignee.")</p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="badge-3d badge-soumise">@unite.Affectations.Count scout(s)</span>
+                    <div class="d-flex gap-2">
+                        <a asp-action="Details" asp-route-id="@unite.Id" class="btn btn-sm btn-outline-or"><i class="bi bi-eye"></i></a>
+                        <a asp-action="Edit" asp-route-id="@unite.Id" class="btn btn-sm btn-bleu"><i class="bi bi-pencil"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@if (!Model.Any())
+{
+    <div class="card-3d p-4 text-muted-custom">Aucune unite creee sur votre perimetre.</div>
+}

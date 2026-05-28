@@ -65,6 +65,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<LigneCommandeBoutique> LignesCommandesBoutique => Set<LigneCommandeBoutique>();
     public DbSet<RegionScoute> RegionsScoutes => Set<RegionScoute>();
     public DbSet<DistrictScout> DistrictsScouts => Set<DistrictScout>();
+    public DbSet<UniteScoute> UnitesScoutes => Set<UniteScoute>();
+    public DbSet<RoleUniteScoute> RolesUnitesScoutes => Set<RoleUniteScoute>();
+    public DbSet<AffectationUniteScoute> AffectationsUnitesScoutes => Set<AffectationUniteScoute>();
 
     // LMS
     public DbSet<Formation> Formations => Set<Formation>();
@@ -145,6 +148,29 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
                 .IsUnique()
                 .HasFilter("\"IsActive\" = TRUE");
             e.HasOne(b => b.ChefUnite).WithMany().HasForeignKey(b => b.ChefUniteId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        builder.Entity<UniteScoute>(e =>
+        {
+            e.HasIndex(u => new { u.BrancheId, u.Nom, u.EstSupprime });
+            e.HasOne(u => u.Groupe).WithMany().HasForeignKey(u => u.GroupeId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(u => u.Branche).WithMany().HasForeignKey(u => u.BrancheId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(u => u.Createur).WithMany().HasForeignKey(u => u.CreateurId).OnDelete(DeleteBehavior.SetNull);
+            e.HasMany(u => u.Roles).WithOne(r => r.UniteScoute).HasForeignKey(r => r.UniteScouteId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(u => u.Affectations).WithOne(a => a.UniteScoute).HasForeignKey(a => a.UniteScouteId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<RoleUniteScoute>(e =>
+        {
+            e.HasIndex(r => new { r.UniteScouteId, r.Nom }).IsUnique().HasFilter("\"EstSupprime\" = FALSE");
+        });
+
+        builder.Entity<AffectationUniteScoute>(e =>
+        {
+            e.HasOne(a => a.Scout).WithMany(s => s.AffectationsUnites).HasForeignKey(a => a.ScoutId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(a => a.RoleUniteScoute).WithMany().HasForeignKey(a => a.RoleUniteScouteId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(a => a.ScoutId).IsUnique().HasFilter("\"EstActif\" = TRUE");
+            e.HasIndex(a => new { a.UniteScouteId, a.ScoutId }).IsUnique().HasFilter("\"EstActif\" = TRUE");
         });
 
         // Activite
@@ -610,6 +636,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         builder.Entity<SuiviAcademique>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<Ticket>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<TransactionFinanciere>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<UniteScoute>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<RoleUniteScoute>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<AffectationUniteScoute>().HasQueryFilter(e => e.EstActif);
         builder.Entity<AnnonceFormation>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<JalonFormation>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<Lecon>().HasQueryFilter(e => !e.EstSupprime);

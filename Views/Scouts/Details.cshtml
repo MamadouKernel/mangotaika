@@ -5,6 +5,10 @@
     Layout = "_LayoutAdmin";
     var inscriptions = ViewBag.InscriptionsAnnuelles as List<InscriptionAnnuelleScout> ?? new();
     var participations = ViewBag.Participations as List<ParticipantActivite> ?? new();
+    var affectationUnite = ViewBag.AffectationUnite as AffectationUniteScoute;
+    var showUnite = affectationUnite is not null
+        && !MangoTaika.Helpers.DatabaseText.NormalizeSearchKey(Model.NomBranche).Contains("ADULTE")
+        && !MangoTaika.Helpers.DatabaseText.NormalizeSearchKey(Model.NomBranche).Contains("BENEVOLE");
     var scoutQrValue = ViewBag.ScoutQrValue as string ?? string.Empty;
     var contactUrgence = string.IsNullOrWhiteSpace(Model.ContactUrgenceNom)
         ? "Aucun contact d'urgence renseigne"
@@ -143,6 +147,23 @@
         </div>
     </div>
 </div>
+
+@if (showUnite)
+{
+    <div class="card-3d p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h5 class="mb-1 text-or"><i class="bi bi-diagram-2"></i> Unite scoute</h5>
+                <p class="text-muted-custom mb-0">Affectation operationnelle dans la branche.</p>
+            </div>
+            <span class="badge-3d badge-soumise">@(affectationUnite?.RoleUniteScoute?.Nom ?? "Sans role d'unite")</span>
+        </div>
+        <div class="row g-3 mt-2">
+            <div class="col-md-4"><strong>@affectationUnite?.UniteScoute.Nom</strong><div class="text-muted-custom small">@affectationUnite?.UniteScoute.Branche?.Nom</div></div>
+            <div class="col-md-8 text-muted-custom">@(affectationUnite?.UniteScoute.Description ?? "Aucune description renseignee.")</div>
+        </div>
+    </div>
+}
 
 <div class="card-3d p-4 mb-4">
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">

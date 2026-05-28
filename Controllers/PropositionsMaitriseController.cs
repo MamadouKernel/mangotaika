@@ -25,7 +25,7 @@ public class PropositionsMaitriseController(
         var isSupervision = accessService.IsSupervision(User);
         var isDistrictReviewer = await accessService.IsDistrictReviewerAsync(User);
         var currentScout = await accessService.GetCurrentScoutAsync(User);
-        var canCreate = isAdmin || await accessService.IsLeadershipScoutAsync(User);
+        var canCreate = isAdmin || CanPrepareMaitrise(currentScout);
 
         var query = db.PropositionsMaitriseAnnuelles.AsNoTracking()
             .Include(p => p.Groupe)
@@ -38,7 +38,7 @@ public class PropositionsMaitriseController(
 
         if (!isAdmin && !isSupervision && !isDistrictReviewer)
         {
-            if (currentScout?.GroupeId is null || !OperationalAccessService.IsLeadershipFunction(currentScout.Fonction))
+            if (currentScout?.GroupeId is null || !CanPrepareMaitrise(currentScout))
             {
                 return Forbid();
             }
@@ -381,7 +381,7 @@ public class PropositionsMaitriseController(
         }
 
         var scout = await accessService.GetCurrentScoutAsync(User);
-        if (scout is null || !OperationalAccessService.IsLeadershipFunction(scout.Fonction))
+        if (scout is null || !CanPrepareMaitrise(scout))
         {
             return (false, scout);
         }
@@ -403,7 +403,7 @@ public class PropositionsMaitriseController(
 
         var scout = await accessService.GetCurrentScoutAsync(User);
         return scout is not null
-            && OperationalAccessService.IsLeadershipFunction(scout.Fonction)
+            && CanPrepareMaitrise(scout)
             && scout.GroupeId == groupeId;
     }
 
@@ -416,8 +416,20 @@ public class PropositionsMaitriseController(
 
         var scout = await accessService.GetCurrentScoutAsync(User);
         return scout is not null
-            && OperationalAccessService.IsLeadershipFunction(scout.Fonction)
+            && CanPrepareMaitrise(scout)
             && scout.GroupeId == proposition.GroupeId;
+    }
+
+    private static bool CanPrepareMaitrise(Scout? scout)
+    {
+        if (scout is null || !OperationalAccessService.IsLeadershipFunction(scout.Fonction))
+        {
+            return false;
+        }
+
+        var normalized = DatabaseText.NormalizeSearchKey(scout.Fonction);
+        return !normalized.Contains("CHEF D UNITE", StringComparison.Ordinal)
+            && !normalized.Contains("CHEF D'UNITE", StringComparison.Ordinal);
     }
 
     private static void NormalizeModel(PropositionMaitriseAnnuelle model)

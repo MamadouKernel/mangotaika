@@ -281,6 +281,12 @@ public class ScoutsController(
             .OrderByDescending(p => p.Activite.DateDebut)
             .ToListAsync();
 
+        ViewBag.AffectationUnite = await db.AffectationsUnitesScoutes.AsNoTracking()
+            .Include(a => a.UniteScoute)
+                .ThenInclude(u => u.Branche)
+            .Include(a => a.RoleUniteScoute)
+            .FirstOrDefaultAsync(a => a.ScoutId == id && a.EstActif);
+
         return View(scout);
     }
 

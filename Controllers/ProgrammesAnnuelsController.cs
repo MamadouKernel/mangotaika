@@ -25,7 +25,7 @@ public class ProgrammesAnnuelsController(
         var isSupervision = accessService.IsSupervision(User);
         var isDistrictReviewer = await accessService.IsDistrictReviewerAsync(User);
         var currentScout = await accessService.GetCurrentScoutAsync(User);
-        var canCreate = isAdmin || await accessService.IsLeadershipScoutAsync(User);
+        var canCreate = isAdmin || await CanPrepareProgrammeAsync(currentScout);
 
         var query = db.ProgrammesAnnuels.AsNoTracking()
             .Include(p => p.Groupe)
@@ -38,7 +38,7 @@ public class ProgrammesAnnuelsController(
 
         if (!isAdmin && !isSupervision && !isDistrictReviewer)
         {
-            if (currentScout?.GroupeId is null || !OperationalAccessService.IsLeadershipFunction(currentScout.Fonction))
+            if (currentScout?.GroupeId is null || !await CanPrepareProgrammeAsync(currentScout))
             {
                 return Forbid();
             }
@@ -94,7 +94,7 @@ public class ProgrammesAnnuelsController(
 
         if (!isAdmin && !isSupervision && !isDistrictReviewer)
         {
-            if (currentScout?.GroupeId is null || !OperationalAccessService.IsLeadershipFunction(currentScout.Fonction))
+            if (currentScout?.GroupeId is null || !await CanPrepareProgrammeAsync(currentScout))
             {
                 return Forbid();
             }
@@ -199,7 +199,7 @@ public class ProgrammesAnnuelsController(
         }
 
         ViewBag.CanManageProgram = await CanEditProgrammeAsync(programme);
-        ViewBag.CanValidateDistrict = await accessService.IsDistrictReviewerAsync(User);
+        ViewBag.CanValidateDistrict = await accessService.IsDistrictReviewerAsync(User) || await CanChefGroupeValidateProgrammeAsync(programme);
         return View(programme);
     }
 
@@ -308,14 +308,13 @@ public class ProgrammesAnnuelsController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DemanderRevision(Guid id, string? commentaire)
     {
-        if (!await accessService.IsDistrictReviewerAsync(User) && !accessService.IsAdminLike(User)) return Forbid();
-
         var programme = await db.ProgrammesAnnuels.FirstOrDefaultAsync(p => p.Id == id && !p.EstSupprime);
         if (programme is null) return NotFound();
+        if (!await accessService.IsDistrictReviewerAsync(User) && !accessService.IsAdminLike(User) && !await CanChefGroupeValidateProgrammeAsync(programme)) return Forbid();
         if (programme.Statut != StatutWorkflowDocument.Soumis) return BadRequest();
 
         programme.Statut = StatutWorkflowDocument.AReviser;
-        programme.CommentaireValidation = string.IsNullOrWhiteSpace(commentaire) ? "Modifications demandees par le district." : commentaire.Trim();
+        programme.CommentaireValidation = string.IsNullOrWhiteSpace(commentaire) ? "Modifications demandees par le validateur." : commentaire.Trim();
         programme.DateValidation = null;
         programme.ValideurId = null;
         await db.SaveChangesAsync();
@@ -327,16 +326,15 @@ public class ProgrammesAnnuelsController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Rejeter(Guid id, string? commentaire)
     {
-        if (!await accessService.IsDistrictReviewerAsync(User) && !accessService.IsAdminLike(User)) return Forbid();
-
         var programme = await db.ProgrammesAnnuels.FirstOrDefaultAsync(p => p.Id == id && !p.EstSupprime);
         if (programme is null) return NotFound();
+        if (!await accessService.IsDistrictReviewerAsync(User) && !accessService.IsAdminLike(User) && !await CanChefGroupeValidateProgrammeAsync(programme)) return Forbid();
         if (programme.Statut != StatutWorkflowDocument.Soumis) return BadRequest();
 
         programme.Statut = StatutWorkflowDocument.Rejete;
         programme.DateValidation = DateTime.UtcNow;
         programme.ValideurId = CurrentUserId;
-        programme.CommentaireValidation = string.IsNullOrWhiteSpace(commentaire) ? "Programme rejete par le district." : commentaire.Trim();
+        programme.CommentaireValidation = string.IsNullOrWhiteSpace(commentaire) ? "Programme rejete par le validateur." : commentaire.Trim();
         await db.SaveChangesAsync();
         TempData["Success"] = "Le programme annuel a ete rejete.";
         return RedirectToAction(nameof(Details), new { id });
@@ -346,10 +344,9 @@ public class ProgrammesAnnuelsController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Valider(Guid id, string? commentaire)
     {
-        if (!await accessService.IsDistrictReviewerAsync(User) && !accessService.IsAdminLike(User)) return Forbid();
-
         var programme = await db.ProgrammesAnnuels.FirstOrDefaultAsync(p => p.Id == id && !p.EstSupprime);
         if (programme is null) return NotFound();
+        if (!await accessService.IsDistrictReviewerAsync(User) && !accessService.IsAdminLike(User) && !await CanChefGroupeValidateProgrammeAsync(programme)) return Forbid();
         if (programme.Statut != StatutWorkflowDocument.Soumis) return BadRequest();
 
         programme.Statut = StatutWorkflowDocument.Valide;
@@ -401,6 +398,7 @@ public class ProgrammesAnnuelsController(
             return;
         }
 
+        var isChefUnite = IsChefUnite(currentScout);
         var branchIds = activites.Where(a => a.BrancheId.HasValue).Select(a => a.BrancheId!.Value).Distinct().ToList();
         var branches = branchIds.Count == 0
             ? new Dictionary<Guid, Guid>()
@@ -459,6 +457,14 @@ public class ProgrammesAnnuelsController(
                 {
                     ModelState.AddModelError($"{prefix}.BrancheId", "La branche selectionnee doit appartenir au groupe du programme.");
                 }
+                else if (isChefUnite && currentScout?.BrancheId != activite.BrancheId.Value)
+                {
+                    ModelState.AddModelError($"{prefix}.BrancheId", "Un chef d'unite ne peut proposer que les activites de sa branche.");
+                }
+            }
+            else if (isChefUnite)
+            {
+                ModelState.AddModelError($"{prefix}.BrancheId", "La branche est obligatoire pour un chef d'unite.");
             }
         }
     }
@@ -472,8 +478,19 @@ public class ProgrammesAnnuelsController(
             selectedGroupeId ??= scopedGroupId;
         }
 
+        var branchesQuery = db.Branches.Where(b => b.IsActive).AsQueryable();
+        if (!accessService.IsAdminLike(User) && currentScout?.BrancheId is Guid scopedBranchId && IsChefUnite(currentScout))
+        {
+            branchesQuery = branchesQuery.Where(b => b.Id == scopedBranchId);
+        }
+        else if (!accessService.IsAdminLike(User) && currentScout?.GroupeId is Guid scopedGroupIdForBranches)
+        {
+            branchesQuery = branchesQuery.Where(b => b.GroupeId == scopedGroupIdForBranches);
+        }
+
         ViewBag.Groupes = await groupesQuery.ToListAsync();
-        ViewBag.Branches = await db.Branches.Where(b => b.IsActive).OrderBy(b => b.Nom).ToListAsync();
+        ViewBag.Branches = await branchesQuery.OrderBy(b => b.Nom).ToListAsync();
+        ViewBag.ResponsablesBranche = await LoadResponsablesBrancheAsync(currentScout);
         ViewBag.SelectedGroupeId = selectedGroupeId;
     }
 
@@ -485,7 +502,7 @@ public class ProgrammesAnnuelsController(
         }
 
         var scout = await accessService.GetCurrentScoutAsync(User);
-        if (scout is null || !OperationalAccessService.IsLeadershipFunction(scout.Fonction))
+        if (scout is null || !await CanPrepareProgrammeAsync(scout))
         {
             return (false, scout);
         }
@@ -507,7 +524,7 @@ public class ProgrammesAnnuelsController(
 
         var scout = await accessService.GetCurrentScoutAsync(User);
         return scout is not null
-            && OperationalAccessService.IsLeadershipFunction(scout.Fonction)
+            && await CanPrepareProgrammeAsync(scout)
             && scout.GroupeId == groupeId;
     }
 
@@ -520,8 +537,59 @@ public class ProgrammesAnnuelsController(
 
         var scout = await accessService.GetCurrentScoutAsync(User);
         return scout is not null
-            && OperationalAccessService.IsLeadershipFunction(scout.Fonction)
+            && await CanPrepareProgrammeAsync(scout)
             && scout.GroupeId == programme.GroupeId;
+    }
+
+    private async Task<bool> CanChefGroupeValidateProgrammeAsync(ProgrammeAnnuel programme)
+    {
+        if (!User.IsInRole(RoleNames.ChefGroupe))
+        {
+            return false;
+        }
+
+        var currentScout = await accessService.GetCurrentScoutAsync(User);
+        if (currentScout?.GroupeId != programme.GroupeId || !IsChefGroupe(currentScout))
+        {
+            return false;
+        }
+
+        var creatorScout = await db.Scouts.AsNoTracking().FirstOrDefaultAsync(s => s.UserId == programme.CreateurId && s.IsActive);
+        return IsChefUnite(creatorScout);
+    }
+
+    private Task<bool> CanPrepareProgrammeAsync(Scout? scout)
+        => Task.FromResult(scout is not null && OperationalAccessService.IsLeadershipFunction(scout.Fonction));
+
+    private static bool IsChefUnite(Scout? scout)
+    {
+        var normalized = DatabaseText.NormalizeSearchKey(scout?.Fonction);
+        return normalized.Contains("CHEF D UNITE", StringComparison.Ordinal)
+            || normalized.Contains("CHEF D'UNITE", StringComparison.Ordinal)
+            || normalized == DatabaseText.NormalizeSearchKey("CHEF D'UNITE (CU)");
+    }
+
+    private static bool IsChefGroupe(Scout? scout)
+    {
+        var normalized = DatabaseText.NormalizeSearchKey(scout?.Fonction);
+        return normalized.Contains("CHEF DE GROUPE", StringComparison.Ordinal)
+            || normalized.Contains("CHEF GROUPE", StringComparison.Ordinal);
+    }
+
+    private async Task<List<string>> LoadResponsablesBrancheAsync(Scout? currentScout)
+    {
+        if (!IsChefUnite(currentScout) || currentScout?.BrancheId is not Guid brancheId)
+        {
+            return [];
+        }
+
+        return await db.Scouts
+            .Where(s => s.IsActive && s.BrancheId == brancheId)
+            .OrderByDescending(s => s.Id == currentScout.Id)
+            .ThenBy(s => s.Nom)
+            .ThenBy(s => s.Prenom)
+            .Select(s => (s.Matricule == null ? $"{s.Prenom} {s.Nom}" : $"{s.Prenom} {s.Nom} - {s.Matricule}"))
+            .ToListAsync();
     }
 
     private static void NormalizeModel(ProgrammeAnnuel model)
