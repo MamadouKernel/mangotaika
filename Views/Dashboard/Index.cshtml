@@ -102,11 +102,13 @@
                 </div>
                 <div class="dashboard-demography-matrix dashboard-demography-matrix--branches" aria-label="Repartition par branche et par sexe">
                     <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--header"></div>
+                    <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--header">Total</div>
                     <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--header">Filles / Femmes</div>
                     <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--header">Garcons / Hommes</div>
                     @foreach (var b in Model.DemographieParBranche)
                     {
                         <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--label">@b.NomCourt</div>
+                        <div class="dashboard-demography-matrix__cell"><strong>@b.Total</strong></div>
                         <div class="dashboard-demography-matrix__cell"><strong>@b.Filles</strong></div>
                         <div class="dashboard-demography-matrix__cell"><strong>@b.Garcons</strong></div>
                     }
@@ -410,11 +412,13 @@ else if (isSupervision)
                 </div>
                 <div class="dashboard-demography-matrix dashboard-demography-matrix--branches" aria-label="Repartition par branche et par sexe">
                     <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--header"></div>
+                    <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--header">Total</div>
                     <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--header">Filles / Femmes</div>
                     <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--header">Garcons / Hommes</div>
                     @foreach (var b in Model.DemographieParBranche)
                     {
                         <div class="dashboard-demography-matrix__cell dashboard-demography-matrix__cell--label">@b.NomCourt</div>
+                        <div class="dashboard-demography-matrix__cell"><strong>@b.Total</strong></div>
                         <div class="dashboard-demography-matrix__cell"><strong>@b.Filles</strong></div>
                         <div class="dashboard-demography-matrix__cell"><strong>@b.Garcons</strong></div>
                     }
@@ -923,7 +927,7 @@ else if (isParent)
 
     .dashboard-demography-matrix {
         display: grid;
-        grid-template-columns: minmax(90px, 0.8fr) repeat(2, minmax(110px, 1fr));
+        grid-template-columns: minmax(110px, 0.85fr) repeat(3, minmax(95px, 1fr));
         gap: 0.5rem;
         margin-top: 0.3rem;
     }
@@ -1094,7 +1098,7 @@ else if (isParent)
         }
 
         .dashboard-demography-matrix {
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
         }
 
         .dashboard-demography-matrix__cell--header:first-child {
