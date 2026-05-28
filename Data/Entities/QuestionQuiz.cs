@@ -5,6 +5,7 @@ public class QuestionQuiz
     public Guid Id { get; set; }
     public string Enonce { get; set; } = string.Empty;
     public int Ordre { get; set; }
+    public bool EstSupprime { get; set; }
 
     // Navigation
     public Guid QuizId { get; set; }

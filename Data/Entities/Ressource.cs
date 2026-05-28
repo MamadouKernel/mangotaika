@@ -42,6 +42,7 @@ public class ParticipationFormationRessource
     public Formation Formation { get; set; } = null!;
     public DateTime DateInscription { get; set; } = DateTime.UtcNow;
     public StatutParticipationFormationRessource Statut { get; set; } = StatutParticipationFormationRessource.Inscrit;
+    public bool EstSupprime { get; set; }
 }
 
 public enum StatutParticipationFormationRessource

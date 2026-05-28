@@ -250,12 +250,14 @@ public class ProgrammesAnnuelsController(
         programme.CalendrierSynthese = BuildCalendrierSynthese(model.Activites);
         programme.Statut = programme.Statut == StatutWorkflowDocument.AReviser ? StatutWorkflowDocument.AReviser : programme.Statut;
 
-        db.ProgrammesAnnuelsActivites.RemoveRange(programme.Activites);
-        programme.Activites.Clear();
+        foreach (var activiteExistante in programme.Activites)
+        {
+            activiteExistante.EstSupprime = true;
+        }
         PrepareActivitiesForPersistence(model, programme.Id);
         foreach (var activite in model.Activites)
         {
-            programme.Activites.Add(activite);
+            db.ProgrammesAnnuelsActivites.Add(activite);
         }
 
         await db.SaveChangesAsync();

@@ -106,6 +106,7 @@ public class ProgrammeAnnuelActivite
     public decimal? MontantParticipation { get; set; }
     [Range(1, 999)]
     public int OrdreAffichage { get; set; } = 1;
+    public bool EstSupprime { get; set; }
 }
 
 public class RapportActivite
@@ -157,6 +158,7 @@ public class RapportActivitePieceJointe
     [StringLength(150)]
     public string? TypeMime { get; set; }
     public DateTime DateAjout { get; set; } = DateTime.UtcNow;
+    public bool EstSupprime { get; set; }
 }
 
 public class PropositionMaitriseAnnuelle
@@ -189,6 +191,7 @@ public class PropositionMaitriseAnnuelle
     public ApplicationUser Createur { get; set; } = null!;
     public Guid? ValideurId { get; set; }
     public ApplicationUser? Valideur { get; set; }
+    public bool EstSupprime { get; set; }
     public ICollection<PropositionMaitriseMembre> Membres { get; set; } = [];
 }
 
@@ -214,4 +217,5 @@ public class PropositionMaitriseMembre
     public string? NiveauFormation { get; set; }
     [Range(1, 999)]
     public int OrdreAffichage { get; set; } = 1;
+    public bool EstSupprime { get; set; }
 }

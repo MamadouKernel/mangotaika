@@ -200,13 +200,10 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
 
         try
         {
-            if (existingDetails.Count > 0)
+            foreach (var detail in existingDetails)
             {
-                db.MembresHistoriquesCategories.RemoveRange(existingDetails);
-                await db.SaveChangesAsync();
+                detail.EstSupprime = true;
             }
-
-            membre.CategorieDetails = updatedDetails;
             db.MembresHistoriquesCategories.AddRange(updatedDetails);
 
             SyncLegacyFields(membre);

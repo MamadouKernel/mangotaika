@@ -12,8 +12,8 @@ public class ActiviteService(AppDbContext db) : IActiviteService
         return await db.Activites
             .Include(a => a.Groupe)
             .Include(a => a.Createur)
-            .Include(a => a.Participants)
-            .Include(a => a.Documents)
+            .Include(a => a.Participants.Where(p => !p.EstSupprime))
+            .Include(a => a.Documents.Where(d => !d.EstSupprime))
             .Where(a => !a.EstSupprime)
             .OrderByDescending(a => a.DateCreation)
             .Select(a => new ActiviteDto
@@ -44,10 +44,10 @@ public class ActiviteService(AppDbContext db) : IActiviteService
         var a = await db.Activites
             .Include(x => x.Groupe)
             .Include(x => x.Createur)
-            .Include(x => x.Documents)
-            .Include(x => x.Participants).ThenInclude(p => p.Scout)
-            .Include(x => x.Participants).ThenInclude(p => p.Scout!.Branche)
-            .Include(x => x.Participants).ThenInclude(p => p.Ressource)
+            .Include(x => x.Documents.Where(d => !d.EstSupprime))
+            .Include(x => x.Participants.Where(p => !p.EstSupprime)).ThenInclude(p => p.Scout)
+            .Include(x => x.Participants.Where(p => !p.EstSupprime)).ThenInclude(p => p.Scout!.Branche)
+            .Include(x => x.Participants.Where(p => !p.EstSupprime)).ThenInclude(p => p.Ressource)
             .Include(x => x.Commentaires).ThenInclude(c => c.Auteur)
             .FirstOrDefaultAsync(x => x.Id == id && !x.EstSupprime);
         if (a is null) return null;

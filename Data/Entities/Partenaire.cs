@@ -21,5 +21,6 @@ public class LienReseauSocial
     public string Url { get; set; } = string.Empty;
     public string? Icone { get; set; }
     public bool EstActif { get; set; } = true;
+    public bool EstSupprime { get; set; }
     public int Ordre { get; set; } = 0;
 }

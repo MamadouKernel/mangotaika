@@ -11,6 +11,7 @@ public class JalonFormation
     public TypeJalonFormation Type { get; set; } = TypeJalonFormation.Rappel;
     public bool EstPublie { get; set; } = true;
     public DateTime DateCreation { get; set; } = DateTime.UtcNow;
+    public bool EstSupprime { get; set; }
 }
 
 public enum TypeJalonFormation

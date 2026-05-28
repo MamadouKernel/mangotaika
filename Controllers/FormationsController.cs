@@ -216,7 +216,7 @@ public class FormationsController(
 
         var participation = await participationQuery.FirstOrDefaultAsync();
         if (participation is null) return NotFound();
-        db.ParticipationsFormationRessources.Remove(participation);
+        participation.EstSupprime = true;
         await db.SaveChangesAsync();
         TempData["Success"] = "Ressource retiree de la formation.";
         return RedirectToAction(nameof(Details), new { id });

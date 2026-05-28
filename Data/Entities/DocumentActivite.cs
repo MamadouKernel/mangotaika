@@ -7,6 +7,7 @@ public class DocumentActivite
     public string CheminFichier { get; set; } = string.Empty;
     public string? TypeDocument { get; set; }
     public DateTime DateUpload { get; set; } = DateTime.UtcNow;
+    public bool EstSupprime { get; set; }
 
     // Navigation
     public Guid ActiviteId { get; set; }

@@ -6,6 +6,7 @@ public class ModuleFormation
     public string Titre { get; set; } = string.Empty;
     public string? Description { get; set; }
     public int Ordre { get; set; }
+    public bool EstSupprime { get; set; }
 
     // Navigation
     public Guid FormationId { get; set; }

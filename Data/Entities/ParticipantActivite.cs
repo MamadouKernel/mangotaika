@@ -11,6 +11,7 @@ public class ParticipantActivite
     public Ressource? Ressource { get; set; }
     public StatutPresence Presence { get; set; } = StatutPresence.Inscrit;
     public DateTime DateInscription { get; set; } = DateTime.UtcNow;
+    public bool EstSupprime { get; set; }
 }
 
 public enum StatutPresence

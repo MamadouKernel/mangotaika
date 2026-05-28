@@ -7,6 +7,7 @@ public class AnnonceFormation
     public string Contenu { get; set; } = string.Empty;
     public bool EstPubliee { get; set; } = true;
     public DateTime DatePublication { get; set; } = DateTime.UtcNow;
+    public bool EstSupprime { get; set; }
 
     public Guid FormationId { get; set; }
     public Formation Formation { get; set; } = null!;

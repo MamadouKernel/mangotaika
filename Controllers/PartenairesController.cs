@@ -14,7 +14,7 @@ public class PartenairesController(AppDbContext db, IFileUploadService fileUploa
     public async Task<IActionResult> Index()
     {
         var partenaires = await db.Partenaires.Where(p => !p.EstSupprime).OrderBy(p => p.Ordre).ToListAsync();
-        var liens = await db.LiensReseauxSociaux.OrderBy(l => l.Ordre).ToListAsync();
+        var liens = await db.LiensReseauxSociaux.Where(l => !l.EstSupprime).OrderBy(l => l.Ordre).ToListAsync();
         ViewBag.Liens = liens;
         return View(partenaires);
     }
@@ -152,7 +152,7 @@ public class PartenairesController(AppDbContext db, IFileUploadService fileUploa
     public async Task<IActionResult> DeleteLien(Guid id)
     {
         var l = await db.LiensReseauxSociaux.FindAsync(id);
-        if (l is not null) { db.LiensReseauxSociaux.Remove(l); await db.SaveChangesAsync(); }
+        if (l is not null) { l.EstSupprime = true; await db.SaveChangesAsync(); }
         TempData["Success"] = "Lien supprimé.";
         return RedirectToAction(nameof(Index));
     }

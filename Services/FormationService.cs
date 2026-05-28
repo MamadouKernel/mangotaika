@@ -327,7 +327,7 @@ public class FormationService(AppDbContext db) : IFormationService
     public async Task<ModuleFormation> AjouterModuleAsync(Guid formationId, ModuleCreateDto dto)
     {
         var maxOrdre = await db.ModulesFormation
-            .Where(m => m.FormationId == formationId)
+            .Where(m => m.FormationId == formationId && !m.EstSupprime)
             .MaxAsync(m => (int?)m.Ordre) ?? 0;
 
         var module = new ModuleFormation
@@ -346,7 +346,7 @@ public class FormationService(AppDbContext db) : IFormationService
 
     public async Task<bool> UpdateModuleAsync(Guid moduleId, ModuleCreateDto dto)
     {
-        var module = await db.ModulesFormation.FindAsync(moduleId);
+        var module = await db.ModulesFormation.FirstOrDefaultAsync(m => m.Id == moduleId && !m.EstSupprime);
         if (module is null)
             return false;
 
@@ -358,11 +358,11 @@ public class FormationService(AppDbContext db) : IFormationService
 
     public async Task<bool> DeleteModuleAsync(Guid moduleId)
     {
-        var module = await db.ModulesFormation.FindAsync(moduleId);
+        var module = await db.ModulesFormation.FirstOrDefaultAsync(m => m.Id == moduleId && !m.EstSupprime);
         if (module is null)
             return false;
 
-        db.ModulesFormation.Remove(module);
+        module.EstSupprime = true;
         await db.SaveChangesAsync();
         return true;
     }
@@ -370,7 +370,7 @@ public class FormationService(AppDbContext db) : IFormationService
     public async Task<Lecon> AjouterLeconAsync(Guid moduleId, LeconCreateDto dto)
     {
         var maxOrdre = await db.Lecons
-            .Where(l => l.ModuleId == moduleId)
+            .Where(l => l.ModuleId == moduleId && !l.EstSupprime)
             .MaxAsync(l => (int?)l.Ordre) ?? 0;
 
         var lecon = new Lecon
@@ -392,7 +392,7 @@ public class FormationService(AppDbContext db) : IFormationService
 
     public async Task<bool> UpdateLeconAsync(Guid leconId, LeconCreateDto dto)
     {
-        var lecon = await db.Lecons.FindAsync(leconId);
+        var lecon = await db.Lecons.FirstOrDefaultAsync(l => l.Id == leconId && !l.EstSupprime);
         if (lecon is null)
             return false;
 
@@ -407,11 +407,11 @@ public class FormationService(AppDbContext db) : IFormationService
 
     public async Task<bool> DeleteLeconAsync(Guid leconId)
     {
-        var lecon = await db.Lecons.FindAsync(leconId);
+        var lecon = await db.Lecons.FirstOrDefaultAsync(l => l.Id == leconId && !l.EstSupprime);
         if (lecon is null)
             return false;
 
-        db.Lecons.Remove(lecon);
+        lecon.EstSupprime = true;
         await db.SaveChangesAsync();
         return true;
     }
@@ -448,7 +448,7 @@ public class FormationService(AppDbContext db) : IFormationService
         DateTime? dateOuvertureDisponibilite,
         DateTime? dateFermetureDisponibilite)
     {
-        var quiz = await db.Quizzes.FindAsync(quizId);
+        var quiz = await db.Quizzes.FirstOrDefaultAsync(q => q.Id == quizId && !q.EstSupprime);
         if (quiz is null)
             return false;
 
@@ -464,7 +464,7 @@ public class FormationService(AppDbContext db) : IFormationService
     public async Task AjouterQuestionAsync(Guid quizId, QuestionCreateDto dto)
     {
         var maxOrdre = await db.QuestionsQuiz
-            .Where(q => q.QuizId == quizId)
+            .Where(q => q.QuizId == quizId && !q.EstSupprime)
             .MaxAsync(q => (int?)q.Ordre) ?? 0;
 
         var question = new QuestionQuiz
@@ -490,22 +490,22 @@ public class FormationService(AppDbContext db) : IFormationService
 
     public async Task<bool> DeleteQuestionAsync(Guid questionId)
     {
-        var question = await db.QuestionsQuiz.FindAsync(questionId);
+        var question = await db.QuestionsQuiz.FirstOrDefaultAsync(q => q.Id == questionId && !q.EstSupprime);
         if (question is null)
             return false;
 
-        db.QuestionsQuiz.Remove(question);
+        question.EstSupprime = true;
         await db.SaveChangesAsync();
         return true;
     }
 
     public async Task<bool> DeleteQuizAsync(Guid quizId)
     {
-        var quiz = await db.Quizzes.FindAsync(quizId);
+        var quiz = await db.Quizzes.FirstOrDefaultAsync(q => q.Id == quizId && !q.EstSupprime);
         if (quiz is null)
             return false;
 
-        db.Quizzes.Remove(quiz);
+        quiz.EstSupprime = true;
         await db.SaveChangesAsync();
         return true;
     }
@@ -531,11 +531,11 @@ public class FormationService(AppDbContext db) : IFormationService
 
     public async Task<bool> DeleteSessionAsync(Guid sessionId)
     {
-        var session = await db.SessionsFormation.FindAsync(sessionId);
+        var session = await db.SessionsFormation.FirstOrDefaultAsync(s => s.Id == sessionId && !s.EstSupprime);
         if (session is null)
             return false;
 
-        db.SessionsFormation.Remove(session);
+        session.EstSupprime = true;
         await db.SaveChangesAsync();
         return true;
     }
@@ -560,11 +560,11 @@ public class FormationService(AppDbContext db) : IFormationService
 
     public async Task<bool> DeleteAnnonceAsync(Guid annonceId)
     {
-        var annonce = await db.AnnoncesFormation.FindAsync(annonceId);
+        var annonce = await db.AnnoncesFormation.FirstOrDefaultAsync(a => a.Id == annonceId && !a.EstSupprime);
         if (annonce is null)
             return false;
 
-        db.AnnoncesFormation.Remove(annonce);
+        annonce.EstSupprime = true;
         await db.SaveChangesAsync();
         return true;
     }
@@ -589,11 +589,11 @@ public class FormationService(AppDbContext db) : IFormationService
 
     public async Task<bool> DeleteJalonAsync(Guid jalonId)
     {
-        var jalon = await db.JalonsFormation.FindAsync(jalonId);
+        var jalon = await db.JalonsFormation.FirstOrDefaultAsync(j => j.Id == jalonId && !j.EstSupprime);
         if (jalon is null)
             return false;
 
-        db.JalonsFormation.Remove(jalon);
+        jalon.EstSupprime = true;
         await db.SaveChangesAsync();
         return true;
     }

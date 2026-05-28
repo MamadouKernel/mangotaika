@@ -33,7 +33,7 @@ public class PropositionsMaitriseController(
             .Include(p => p.Valideur)
             .Include(p => p.Membres.OrderBy(m => m.OrdreAffichage))
                 .ThenInclude(m => m.Branche)
-            .Where(p => p.AnneeReference == year)
+            .Where(p => !p.EstSupprime && p.AnneeReference == year)
             .AsQueryable();
 
         if (!isAdmin && !isSupervision && !isDistrictReviewer)
@@ -143,7 +143,7 @@ public class PropositionsMaitriseController(
             .Include(p => p.Valideur)
             .Include(p => p.Membres.OrderBy(m => m.OrdreAffichage))
                 .ThenInclude(m => m.Branche)
-            .FirstOrDefaultAsync(p => p.Id == id);
+            .FirstOrDefaultAsync(p => p.Id == id && !p.EstSupprime);
         if (proposition is null) return NotFound();
 
         if (!await CanAccessProposalAsync(proposition.GroupeId))
@@ -160,7 +160,7 @@ public class PropositionsMaitriseController(
     {
         var proposition = await db.PropositionsMaitriseAnnuelles
             .Include(p => p.Membres.OrderBy(m => m.OrdreAffichage))
-            .FirstOrDefaultAsync(p => p.Id == id);
+            .FirstOrDefaultAsync(p => p.Id == id && !p.EstSupprime);
         if (proposition is null) return NotFound();
         if (!await CanEditProposalAsync(proposition))
         {
@@ -178,7 +178,7 @@ public class PropositionsMaitriseController(
     {
         var proposition = await db.PropositionsMaitriseAnnuelles
             .Include(p => p.Membres)
-            .FirstOrDefaultAsync(p => p.Id == id);
+            .FirstOrDefaultAsync(p => p.Id == id && !p.EstSupprime);
         if (proposition is null) return NotFound();
         if (!await CanEditProposalAsync(proposition))
         {
@@ -204,12 +204,14 @@ public class PropositionsMaitriseController(
         proposition.CompositionProposee = BuildCompositionSummary(model.Membres);
         proposition.Statut = proposition.Statut == StatutWorkflowDocument.AReviser ? StatutWorkflowDocument.AReviser : proposition.Statut;
 
-        db.PropositionsMaitriseMembres.RemoveRange(proposition.Membres);
-        proposition.Membres.Clear();
+        foreach (var membre in proposition.Membres)
+        {
+            membre.EstSupprime = true;
+        }
         PrepareMembersForPersistence(model, proposition.Id);
         foreach (var membre in model.Membres)
         {
-            proposition.Membres.Add(membre);
+            db.PropositionsMaitriseMembres.Add(membre);
         }
 
         await db.SaveChangesAsync();
@@ -221,7 +223,7 @@ public class PropositionsMaitriseController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Soumettre(Guid id)
     {
-        var proposition = await db.PropositionsMaitriseAnnuelles.FirstOrDefaultAsync(p => p.Id == id);
+        var proposition = await db.PropositionsMaitriseAnnuelles.FirstOrDefaultAsync(p => p.Id == id && !p.EstSupprime);
         if (proposition is null) return NotFound();
         if (!await CanEditProposalAsync(proposition))
         {
@@ -243,7 +245,7 @@ public class PropositionsMaitriseController(
     {
         if (!await accessService.IsDistrictReviewerAsync(User) && !accessService.IsAdminLike(User)) return Forbid();
 
-        var proposition = await db.PropositionsMaitriseAnnuelles.FirstOrDefaultAsync(p => p.Id == id);
+        var proposition = await db.PropositionsMaitriseAnnuelles.FirstOrDefaultAsync(p => p.Id == id && !p.EstSupprime);
         if (proposition is null) return NotFound();
         if (proposition.Statut != StatutWorkflowDocument.Soumis) return BadRequest();
 
@@ -262,7 +264,7 @@ public class PropositionsMaitriseController(
     {
         if (!await accessService.IsDistrictReviewerAsync(User) && !accessService.IsAdminLike(User)) return Forbid();
 
-        var proposition = await db.PropositionsMaitriseAnnuelles.FirstOrDefaultAsync(p => p.Id == id);
+        var proposition = await db.PropositionsMaitriseAnnuelles.FirstOrDefaultAsync(p => p.Id == id && !p.EstSupprime);
         if (proposition is null) return NotFound();
         if (proposition.Statut != StatutWorkflowDocument.Soumis) return BadRequest();
 
@@ -281,7 +283,7 @@ public class PropositionsMaitriseController(
     {
         if (!await accessService.IsDistrictReviewerAsync(User) && !accessService.IsAdminLike(User)) return Forbid();
 
-        var proposition = await db.PropositionsMaitriseAnnuelles.FirstOrDefaultAsync(p => p.Id == id);
+        var proposition = await db.PropositionsMaitriseAnnuelles.FirstOrDefaultAsync(p => p.Id == id && !p.EstSupprime);
         if (proposition is null) return NotFound();
         if (proposition.Statut != StatutWorkflowDocument.Soumis) return BadRequest();
 
@@ -306,7 +308,7 @@ public class PropositionsMaitriseController(
             ModelState.AddModelError(nameof(model.GroupeId), "Vous ne pouvez preparer qu'une proposition de maitrise pour votre groupe.");
         }
 
-        if (await db.PropositionsMaitriseAnnuelles.AnyAsync(p => p.Id != currentId && p.GroupeId == model.GroupeId && p.AnneeReference == model.AnneeReference))
+        if (await db.PropositionsMaitriseAnnuelles.AnyAsync(p => !p.EstSupprime && p.Id != currentId && p.GroupeId == model.GroupeId && p.AnneeReference == model.AnneeReference))
         {
             ModelState.AddModelError(nameof(model.AnneeReference), "Une proposition annuelle de maitrise existe deja pour cette entite sur cette annee.");
         }

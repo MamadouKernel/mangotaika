@@ -10,6 +10,7 @@ public class Lecon
     public string? DocumentUrl { get; set; }
     public int Ordre { get; set; }
     public int DureeMinutes { get; set; }
+    public bool EstSupprime { get; set; }
 
     // Navigation
     public Guid ModuleId { get; set; }

@@ -1089,7 +1089,7 @@ public class AccountController(
         var competences = await db.Competences.Where(c => c.ScoutId == scout.Id && !c.EstSupprime).ToListAsync();
         var participations = await db.ParticipantsActivite
             .Include(p => p.Activite)
-            .Where(p => p.ScoutId == scout.Id && !p.Activite.EstSupprime)
+            .Where(p => p.ScoutId == scout.Id && !p.EstSupprime && !p.Activite.EstSupprime)
             .OrderByDescending(p => p.Activite.DateDebut)
             .ToListAsync();
         var cotisations = await db.TransactionsFinancieres
@@ -1175,7 +1175,7 @@ public class AccountController(
         var competences = await db.Competences.Where(c => c.ScoutId == scout.Id && !c.EstSupprime).ToListAsync();
         var participations = await db.ParticipantsActivite
             .Include(p => p.Activite)
-            .Where(p => p.ScoutId == scout.Id && !p.Activite.EstSupprime)
+            .Where(p => p.ScoutId == scout.Id && !p.EstSupprime && !p.Activite.EstSupprime)
             .OrderByDescending(p => p.Activite.DateDebut)
             .ToListAsync();
         var cotisations = await db.TransactionsFinancieres
@@ -1301,7 +1301,7 @@ public class AccountController(
 
             donnees["ParticipationsActivites"] = await db.ParticipantsActivite
                 .Include(p => p.Activite)
-                .Where(p => p.ScoutId == scoutLie.Id)
+                .Where(p => p.ScoutId == scoutLie.Id && !p.EstSupprime && !p.Activite.EstSupprime)
                 .Select(p => new { Activite = p.Activite!.Titre, p.Activite.DateDebut, p.Activite.Lieu, p.Presence })
                 .ToListAsync();
 
@@ -1800,7 +1800,7 @@ public class AccountController(
             // Participations aux activitÃ©s
             var participations = await db.ParticipantsActivite
                 .Include(p => p.Activite)
-                .Where(p => p.ScoutId == scoutLie.Id)
+                .Where(p => p.ScoutId == scoutLie.Id && !p.EstSupprime && !p.Activite.EstSupprime)
                 .Select(p => new { Activite = p.Activite!.Titre, p.Activite.DateDebut, p.Activite.Lieu, p.Presence })
                 .ToListAsync();
             donnees["ParticipationsActivites"] = participations;

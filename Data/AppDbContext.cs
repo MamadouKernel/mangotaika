@@ -162,8 +162,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         {
             e.HasOne(p => p.Scout).WithMany().HasForeignKey(p => p.ScoutId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(p => p.Ressource).WithMany(r => r.ParticipationsActivites).HasForeignKey(p => p.RessourceId).OnDelete(DeleteBehavior.Cascade);
-            e.HasIndex(p => new { p.ActiviteId, p.ScoutId }).IsUnique().HasFilter("\"ScoutId\" IS NOT NULL");
-            e.HasIndex(p => new { p.ActiviteId, p.RessourceId }).IsUnique().HasFilter("\"RessourceId\" IS NOT NULL");
+            e.HasIndex(p => new { p.ActiviteId, p.ScoutId }).IsUnique().HasFilter("\"ScoutId\" IS NOT NULL AND \"EstSupprime\" = FALSE");
+            e.HasIndex(p => new { p.ActiviteId, p.RessourceId }).IsUnique().HasFilter("\"RessourceId\" IS NOT NULL AND \"EstSupprime\" = FALSE");
             e.ToTable(t => t.HasCheckConstraint("CK_ParticipantsActivite_ParticipantType", "(\"ScoutId\" IS NOT NULL AND \"RessourceId\" IS NULL) OR (\"ScoutId\" IS NULL AND \"RessourceId\" IS NOT NULL)"));
         });
 
@@ -544,7 +544,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         {
             e.HasOne(p => p.Ressource).WithMany(r => r.ParticipationsFormation).HasForeignKey(p => p.RessourceId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(p => p.Formation).WithMany().HasForeignKey(p => p.FormationId).OnDelete(DeleteBehavior.Cascade);
-            e.HasIndex(p => new { p.RessourceId, p.FormationId }).IsUnique();
+            e.HasIndex(p => new { p.RessourceId, p.FormationId }).IsUnique().HasFilter("\"EstSupprime\" = FALSE");
         });
 
         builder.Entity<CertificationFormation>(e =>
@@ -581,6 +581,54 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         {
             e.HasOne(t => t.Scout).WithMany().HasForeignKey(t => t.ScoutId).OnDelete(DeleteBehavior.Cascade);
         });
+
+        builder.Entity<Actualite>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<Activite>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<ArticleBoutique>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<Competence>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<ContactMessage>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<DocumentActivite>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<EtapeParcoursScout>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<Formation>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<Galerie>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<LienReseauSocial>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<LivreDor>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<MembreHistorique>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<MembreHistoriqueCategorie>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<MessageDiscussionFormation>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<ModuleFormation>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<MotCommissaire>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<ParticipantActivite>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<Partenaire>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<ProgrammeAnnuel>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<ProgrammeAnnuelActivite>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<ProjetAGR>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<QuestionQuiz>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<Quiz>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<RapportActivitePieceJointe>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<SessionFormation>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<SuiviAcademique>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<Ticket>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<TransactionFinanciere>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<AnnonceFormation>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<JalonFormation>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<Lecon>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<PropositionMaitriseAnnuelle>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<PropositionMaitriseMembre>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<CertificationFormation>().HasQueryFilter(e => !e.Formation.EstSupprime);
+        builder.Entity<CommentaireActivite>().HasQueryFilter(e => !e.Activite.EstSupprime);
+        builder.Entity<DiscussionFormation>().HasQueryFilter(e => !e.Formation.EstSupprime);
+        builder.Entity<FormationPrerequis>().HasQueryFilter(e => !e.Formation.EstSupprime && !e.PrerequisFormation.EstSupprime);
+        builder.Entity<HistoriqueTicket>().HasQueryFilter(e => !e.Ticket.EstSupprime);
+        builder.Entity<InscriptionFormation>().HasQueryFilter(e => !e.Formation.EstSupprime);
+        builder.Entity<LigneCommandeBoutique>().HasQueryFilter(e => !e.ArticleBoutique.EstSupprime);
+        builder.Entity<MessageTicket>().HasQueryFilter(e => !e.Ticket.EstSupprime);
+        builder.Entity<ParticipationFormationRessource>().HasQueryFilter(e => !e.EstSupprime && !e.Formation.EstSupprime);
+        builder.Entity<ProgressionLecon>().HasQueryFilter(e => !e.Lecon.EstSupprime);
+        builder.Entity<RapportActivite>().HasQueryFilter(e => !e.Activite.EstSupprime);
+        builder.Entity<ReponseQuiz>().HasQueryFilter(e => !e.Question.EstSupprime);
+        builder.Entity<TentativeQuiz>().HasQueryFilter(e => !e.Quiz.EstSupprime);
+        builder.Entity<TicketPieceJointe>().HasQueryFilter(e => !e.Ticket.EstSupprime);
 
         // Seed des rôles
         var roleData = new (string Name, string Guid)[]

@@ -413,9 +413,9 @@ public class ActivitesController(
         var activite = await db.Activites.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id && !a.EstSupprime);
         if (activite is null) return NotFound();
         if (!await CanManageActivityAsync(activite.GroupeId)) return Forbid();
-        var doc = await db.DocumentsActivite.FindAsync(docId);
+        var doc = await db.DocumentsActivite.FirstOrDefaultAsync(d => d.Id == docId && d.ActiviteId == id && !d.EstSupprime);
         if (doc is null) return NotFound();
-        db.DocumentsActivite.Remove(doc);
+        doc.EstSupprime = true;
         await db.SaveChangesAsync();
         TempData["Success"] = "Document supprime.";
         return RedirectToAction(nameof(Details), new { id });
@@ -466,7 +466,7 @@ public class ActivitesController(
         }
 
         var existingScoutIds = await db.ParticipantsActivite
-            .Where(p => p.ActiviteId == id && p.ScoutId.HasValue && allScoutIds.Contains(p.ScoutId.Value))
+            .Where(p => p.ActiviteId == id && !p.EstSupprime && p.ScoutId.HasValue && allScoutIds.Contains(p.ScoutId.Value))
             .Select(p => p.ScoutId!.Value)
             .ToListAsync();
         var existingScoutSet = existingScoutIds.ToHashSet();
@@ -507,7 +507,7 @@ public class ActivitesController(
         var existingRessourceIds = selectedRessourceIds.Count == 0
             ? []
             : await db.ParticipantsActivite
-                .Where(p => p.ActiviteId == id && p.RessourceId.HasValue && selectedRessourceIds.Contains(p.RessourceId.Value))
+                .Where(p => p.ActiviteId == id && !p.EstSupprime && p.RessourceId.HasValue && selectedRessourceIds.Contains(p.RessourceId.Value))
                 .Select(p => p.RessourceId!.Value)
                 .ToListAsync();
 
@@ -590,10 +590,10 @@ public class ActivitesController(
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        var participant = await db.ParticipantsActivite.FirstOrDefaultAsync(p => p.Id == participantId && p.ActiviteId == id);
+        var participant = await db.ParticipantsActivite.FirstOrDefaultAsync(p => p.Id == participantId && p.ActiviteId == id && !p.EstSupprime);
         if (participant is not null)
         {
-            db.ParticipantsActivite.Remove(participant);
+            participant.EstSupprime = true;
             await db.SaveChangesAsync();
         }
 
@@ -621,7 +621,7 @@ public class ActivitesController(
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        var participant = await db.ParticipantsActivite.FirstOrDefaultAsync(p => p.Id == participantId && p.ActiviteId == id);
+        var participant = await db.ParticipantsActivite.FirstOrDefaultAsync(p => p.Id == participantId && p.ActiviteId == id && !p.EstSupprime);
         if (participant is not null)
         {
             participant.Presence = presence;
@@ -652,7 +652,7 @@ public class ActivitesController(
             return RedirectToAction(nameof(Presence), new { id });
         }
 
-        var participant = await db.ParticipantsActivite.FirstOrDefaultAsync(p => p.Id == participantId && p.ActiviteId == id);
+        var participant = await db.ParticipantsActivite.FirstOrDefaultAsync(p => p.Id == participantId && p.ActiviteId == id && !p.EstSupprime);
         if (participant is not null)
         {
             participant.Presence = presence;
@@ -817,7 +817,7 @@ public class ActivitesController(
 
         var participant = await db.ParticipantsActivite
             .Include(p => p.Scout)
-            .FirstOrDefaultAsync(p => p.ActiviteId == id && p.ScoutId == scout.Id);
+            .FirstOrDefaultAsync(p => p.ActiviteId == id && p.ScoutId == scout.Id && !p.EstSupprime);
 
         if (participant is null)
         {
@@ -837,7 +837,7 @@ public class ActivitesController(
         await db.SaveChangesAsync();
 
         var counts = await db.ParticipantsActivite
-            .Where(p => p.ActiviteId == id)
+            .Where(p => p.ActiviteId == id && !p.EstSupprime)
             .GroupBy(_ => 1)
             .Select(g => new
             {
@@ -922,7 +922,7 @@ public class ActivitesController(
 
         var participant = await db.ParticipantsActivite
             .Include(p => p.Scout)
-            .FirstOrDefaultAsync(p => p.ActiviteId == id && p.ScoutId == scout.Id);
+            .FirstOrDefaultAsync(p => p.ActiviteId == id && p.ScoutId == scout.Id && !p.EstSupprime);
 
         var previousPresence = StatutPresence.Inscrit;
         if (participant is null)
@@ -953,7 +953,7 @@ public class ActivitesController(
         await db.SaveChangesAsync();
 
         var counts = await db.ParticipantsActivite
-            .Where(p => p.ActiviteId == id)
+            .Where(p => p.ActiviteId == id && !p.EstSupprime)
             .GroupBy(_ => 1)
             .Select(g => new
             {

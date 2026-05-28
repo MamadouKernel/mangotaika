@@ -25,6 +25,7 @@ public class MembreHistoriqueCategorie
     public string? Description { get; set; }
     public string? Periode { get; set; }
     public int Ordre { get; set; }
+    public bool EstSupprime { get; set; }
 }
 
 [Flags]

@@ -10,6 +10,7 @@ public class SessionFormation
     public DateTime? DateOuverture { get; set; }
     public DateTime? DateFermeture { get; set; }
     public DateTime DateCreation { get; set; } = DateTime.UtcNow;
+    public bool EstSupprime { get; set; }
 
     public Guid FormationId { get; set; }
     public Formation Formation { get; set; } = null!;

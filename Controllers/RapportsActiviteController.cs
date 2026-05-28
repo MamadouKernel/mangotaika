@@ -31,7 +31,7 @@ public class RapportsActiviteController(
             .Include(r => r.Activite).ThenInclude(a => a.Groupe)
             .Include(r => r.Createur)
             .Include(r => r.Valideur)
-            .Include(r => r.PiecesJointes)
+            .Include(r => r.PiecesJointes.Where(p => !p.EstSupprime))
             .AsQueryable();
 
         if (!isAdmin && !isSupervision && !isDistrictReviewer)
@@ -128,7 +128,7 @@ public class RapportsActiviteController(
             .Include(r => r.Activite).ThenInclude(a => a.Groupe)
             .Include(r => r.Createur)
             .Include(r => r.Valideur)
-            .Include(r => r.PiecesJointes)
+            .Include(r => r.PiecesJointes.Where(p => !p.EstSupprime))
             .FirstOrDefaultAsync(r => r.Id == id);
         if (rapport is null) return NotFound();
         if (!await CanAccessReportAsync(rapport.Activite.GroupeId))
@@ -145,7 +145,7 @@ public class RapportsActiviteController(
     {
         var rapport = await db.RapportsActivite
             .Include(r => r.Activite).ThenInclude(a => a.Groupe)
-            .Include(r => r.PiecesJointes)
+            .Include(r => r.PiecesJointes.Where(p => !p.EstSupprime))
             .FirstOrDefaultAsync(r => r.Id == id);
         if (rapport is null) return NotFound();
         if (!await CanEditReportAsync(rapport))
@@ -169,7 +169,7 @@ public class RapportsActiviteController(
     {
         var rapport = await db.RapportsActivite
             .Include(r => r.Activite)
-            .Include(r => r.PiecesJointes)
+            .Include(r => r.PiecesJointes.Where(p => !p.EstSupprime))
             .FirstOrDefaultAsync(r => r.Id == id);
         if (rapport is null) return NotFound();
         if (!await CanEditReportAsync(rapport))
@@ -206,7 +206,10 @@ public class RapportsActiviteController(
             var pieces = rapport.PiecesJointes.Where(p => piecesASupprimer.Contains(p.Id)).ToList();
             if (pieces.Count != 0)
             {
-                db.RapportsActivitePiecesJointes.RemoveRange(pieces);
+                foreach (var piece in pieces)
+                {
+                    piece.EstSupprime = true;
+                }
             }
         }
 

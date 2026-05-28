@@ -8,6 +8,7 @@ public class Quiz
     public int? NombreTentativesMax { get; set; }
     public DateTime? DateOuvertureDisponibilite { get; set; }
     public DateTime? DateFermetureDisponibilite { get; set; }
+    public bool EstSupprime { get; set; }
 
     public Guid ModuleId { get; set; }
     public ModuleFormation Module { get; set; } = null!;

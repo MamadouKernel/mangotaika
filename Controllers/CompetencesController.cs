@@ -135,7 +135,7 @@ public class CompetencesController(AppDbContext db) : Controller
 
         var activitesParticipees = await db.ParticipantsActivite
             .Include(p => p.Activite).ThenInclude(a => a.Groupe)
-            .Where(p => p.ScoutId == id)
+            .Where(p => p.ScoutId == id && !p.EstSupprime)
             .OrderByDescending(p => p.Activite.DateDebut)
             .ToListAsync();
 
