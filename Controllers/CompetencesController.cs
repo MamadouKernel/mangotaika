@@ -14,7 +14,10 @@ public class CompetencesController(AppDbContext db) : Controller
     public async Task<IActionResult> Index(Guid? scoutId)
     {
         var (page, ps) = ListPagination.Read(Request);
-        var query = db.Competences.Include(c => c.Scout).ThenInclude(s => s.Branche).AsQueryable();
+        var query = db.Competences
+            .Include(c => c.Scout).ThenInclude(s => s.Branche)
+            .Where(c => !c.EstSupprime)
+            .AsQueryable();
         if (scoutId.HasValue) query = query.Where(c => c.ScoutId == scoutId.Value);
         var ordered = query.OrderByDescending(c => c.DateObtention);
         var total = await ordered.CountAsync();
@@ -31,7 +34,7 @@ public class CompetencesController(AppDbContext db) : Controller
         var c = await db.Competences
             .Include(x => x.Scout).ThenInclude(s => s!.Groupe)
             .Include(x => x.Scout).ThenInclude(s => s!.Branche)
-            .FirstOrDefaultAsync(x => x.Id == id);
+            .FirstOrDefaultAsync(x => x.Id == id && !x.EstSupprime);
         if (c is null) return NotFound();
         return View(c);
     }
@@ -39,7 +42,7 @@ public class CompetencesController(AppDbContext db) : Controller
     [Authorize(Roles = "Administrateur,Gestionnaire")]
     public async Task<IActionResult> Edit(Guid id)
     {
-        var c = await db.Competences.Include(x => x.Scout).FirstOrDefaultAsync(x => x.Id == id);
+        var c = await db.Competences.Include(x => x.Scout).FirstOrDefaultAsync(x => x.Id == id && !x.EstSupprime);
         if (c is null) return NotFound();
         ViewBag.Scouts = await db.Scouts.Where(s => s.IsActive).OrderBy(s => s.Nom).ThenBy(s => s.Prenom).ToListAsync();
         return View(c);
@@ -48,7 +51,7 @@ public class CompetencesController(AppDbContext db) : Controller
     [HttpPost, Authorize(Roles = "Administrateur,Gestionnaire"), ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(Guid id, Competence model)
     {
-        var c = await db.Competences.FindAsync(id);
+        var c = await db.Competences.FirstOrDefaultAsync(x => x.Id == id && !x.EstSupprime);
         if (c is null) return NotFound();
         if (string.IsNullOrWhiteSpace(model.Nom))
         {
@@ -84,10 +87,10 @@ public class CompetencesController(AppDbContext db) : Controller
     [HttpPost, Authorize(Roles = "Administrateur,Gestionnaire"), ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var c = await db.Competences.FindAsync(id);
+        var c = await db.Competences.FirstOrDefaultAsync(x => x.Id == id && !x.EstSupprime);
         if (c is not null)
         {
-            db.Competences.Remove(c);
+            c.EstSupprime = true;
             await db.SaveChangesAsync();
         }
 
@@ -101,10 +104,10 @@ public class CompetencesController(AppDbContext db) : Controller
         var scout = await db.Scouts
             .Include(s => s.Groupe)
             .Include(s => s.Branche)
-            .Include(s => s.Competences)
+            .Include(s => s.Competences.Where(c => !c.EstSupprime))
             .Include(s => s.HistoriqueFonctions).ThenInclude(h => h.Groupe)
-            .Include(s => s.SuivisAcademiques)
-            .Include(s => s.EtapesParcours)
+            .Include(s => s.SuivisAcademiques.Where(a => !a.EstSupprime))
+            .Include(s => s.EtapesParcours.Where(e => !e.EstSupprime))
             .FirstOrDefaultAsync(s => s.Id == id && s.IsActive);
         if (scout is null) return NotFound();
 
@@ -158,7 +161,9 @@ public class CompetencesController(AppDbContext db) : Controller
     [HttpPost, Authorize(Roles = "Administrateur,Gestionnaire"), ValidateAntiForgeryToken]
     public async Task<IActionResult> AjouterEtapeParcours(EtapeParcoursScout model)
     {
-        var scout = await db.Scouts.Include(s => s.EtapesParcours).FirstOrDefaultAsync(s => s.Id == model.ScoutId && s.IsActive);
+        var scout = await db.Scouts
+            .Include(s => s.EtapesParcours.Where(e => !e.EstSupprime))
+            .FirstOrDefaultAsync(s => s.Id == model.ScoutId && s.IsActive);
         if (scout is null)
         {
             return NotFound();
@@ -202,7 +207,7 @@ public class CompetencesController(AppDbContext db) : Controller
     public async Task<IActionResult> EnregistrerEtapeParcours(EnregistrerEtapeParcoursDto model)
     {
         var scout = await db.Scouts
-            .Include(s => s.EtapesParcours)
+            .Include(s => s.EtapesParcours.Where(e => !e.EstSupprime))
             .FirstOrDefaultAsync(s => s.Id == model.ScoutId && s.IsActive);
         if (scout is null)
         {
@@ -300,7 +305,7 @@ public class CompetencesController(AppDbContext db) : Controller
     [HttpPost, Authorize(Roles = "Administrateur,Gestionnaire"), ValidateAntiForgeryToken]
     public async Task<IActionResult> MettreAJourEtapeParcours(Guid id, DateTime? dateValidation, DateTime? datePrevisionnelle, string? observations, int ordreAffichage)
     {
-        var etape = await db.EtapesParcoursScouts.FirstOrDefaultAsync(e => e.Id == id);
+        var etape = await db.EtapesParcoursScouts.FirstOrDefaultAsync(e => e.Id == id && !e.EstSupprime);
         if (etape is null)
         {
             return NotFound();
@@ -318,14 +323,14 @@ public class CompetencesController(AppDbContext db) : Controller
     [HttpPost, Authorize(Roles = "Administrateur,Gestionnaire"), ValidateAntiForgeryToken]
     public async Task<IActionResult> SupprimerEtapeParcours(Guid id)
     {
-        var etape = await db.EtapesParcoursScouts.FirstOrDefaultAsync(e => e.Id == id);
+        var etape = await db.EtapesParcoursScouts.FirstOrDefaultAsync(e => e.Id == id && !e.EstSupprime);
         if (etape is null)
         {
             return NotFound();
         }
 
         var scoutId = etape.ScoutId;
-        db.EtapesParcoursScouts.Remove(etape);
+        etape.EstSupprime = true;
         await db.SaveChangesAsync();
         TempData["Success"] = "Etape du parcours supprimee.";
         return RedirectToAction(nameof(Progression), new { id = scoutId });
@@ -423,11 +428,11 @@ public class CompetencesController(AppDbContext db) : Controller
     [HttpPost, Authorize(Roles = "Administrateur,Gestionnaire"), ValidateAntiForgeryToken]
     public async Task<IActionResult> SupprimerSuiviAcademique(Guid id)
     {
-        var s = await db.SuivisAcademiques.FindAsync(id);
+        var s = await db.SuivisAcademiques.FirstOrDefaultAsync(x => x.Id == id && !x.EstSupprime);
         if (s is not null)
         {
             var scoutId = s.ScoutId;
-            db.SuivisAcademiques.Remove(s);
+            s.EstSupprime = true;
             await db.SaveChangesAsync();
             TempData["Success"] = "Suivi academique supprime.";
             return RedirectToAction(nameof(Progression), new { id = scoutId });

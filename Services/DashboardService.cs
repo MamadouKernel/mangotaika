@@ -143,7 +143,7 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
         dto.DemographieParBranche = BuildDemographieParBranche(activeScouts);
         dto.LecturePopulation = BuildPopulationInsight(dto);
         dto.LectureAlertes = BuildAlertInsight(dto, anneeCourante);
-        dto.TotalCompetences = await db.Competences.CountAsync();
+        dto.TotalCompetences = await db.Competences.CountAsync(c => !c.EstSupprime);
         dto.TotalProjetsAGR = await db.ProjetsAGR.CountAsync(p => !p.EstSupprime);
         dto.TotalPartenaires = includePartenaires
             ? await db.Partenaires.CountAsync(p => p.EstActif && !p.EstSupprime)
@@ -315,7 +315,7 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
             .Where(i => i.ScoutId == scout.Id && i.Statut == StatutInscription.EnCours)
             .CountAsync();
         dto.MesCompetences = await db.Competences
-            .Where(c => c.ScoutId == scout.Id)
+            .Where(c => c.ScoutId == scout.Id && !c.EstSupprime)
             .CountAsync();
         dto.MesCertificats = await db.CertificationsFormation
             .Where(c => c.ScoutId == scout.Id)

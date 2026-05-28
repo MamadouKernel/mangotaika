@@ -101,7 +101,7 @@ public class FormationsController(
         {
             try
             {
-                var formation = await db.Formations.FindAsync(id);
+                var formation = await db.Formations.FirstOrDefaultAsync(f => f.Id == id && !f.EstSupprime);
                 if (formation != null)
                 {
                     formation.ImageUrl = await fileUploadService.SaveImageAsync(image, "formations");
@@ -160,7 +160,7 @@ public class FormationsController(
     [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> AjouterRessources(Guid id, List<Guid>? ressourceIds)
     {
-        var formationExists = await db.Formations.AnyAsync(f => f.Id == id);
+        var formationExists = await db.Formations.AnyAsync(f => f.Id == id && !f.EstSupprime);
         if (!formationExists) return NotFound();
         if (!await CanManageFormationResourcesAsync()) return Forbid();
 
@@ -426,7 +426,7 @@ public class FormationsController(
         {
             var formation = await db.Formations
                 .AsNoTracking()
-                .Where(f => f.Id == formationId)
+                .Where(f => f.Id == formationId && !f.EstSupprime)
                 .Select(f => f.Titre)
                 .FirstOrDefaultAsync();
             var recipients = await GetEnrolledLearnerUserIdsAsync(formationId, user?.Id);
@@ -692,7 +692,7 @@ public class FormationsController(
         ViewBag.SelectedBrancheCibleKey = currentFormationId.HasValue
             ? await db.Formations
                 .AsNoTracking()
-                .Where(f => f.Id == currentFormationId.Value)
+                .Where(f => f.Id == currentFormationId.Value && !f.EstSupprime)
                 .Select(f => f.BrancheCible != null ? f.BrancheCible.NomNormalise : null)
                 .FirstOrDefaultAsync()
             : null;
@@ -716,7 +716,7 @@ public class FormationsController(
 
         ViewBag.FormationOptions = await db.Formations
             .AsNoTracking()
-            .Where(f => f.Statut == StatutFormation.Publiee && (!currentFormationId.HasValue || f.Id != currentFormationId.Value))
+            .Where(f => !f.EstSupprime && f.Statut == StatutFormation.Publiee && (!currentFormationId.HasValue || f.Id != currentFormationId.Value))
             .OrderBy(f => f.Titre)
             .Select(f => new FormationDto
             {

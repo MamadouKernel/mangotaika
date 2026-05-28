@@ -164,7 +164,7 @@ public class ForumFormationsController(
     {
         var formation = await db.Formations
             .AsNoTracking()
-            .Where(f => f.Id == formationId)
+            .Where(f => f.Id == formationId && !f.EstSupprime)
             .Select(f => new { f.Id, f.Titre })
             .FirstOrDefaultAsync();
 

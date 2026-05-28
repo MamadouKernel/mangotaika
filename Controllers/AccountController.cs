@@ -1077,7 +1077,7 @@ public class AccountController(
         var scout = await db.Scouts
             .Include(s => s.Groupe)
             .Include(s => s.Branche)
-            .Include(s => s.SuivisAcademiques)
+            .Include(s => s.SuivisAcademiques.Where(a => !a.EstSupprime))
             .FirstOrDefaultAsync(s => s.UserId == userId && s.IsActive);
 
         if (scout is null)
@@ -1086,7 +1086,7 @@ public class AccountController(
             return RedirectToAction(nameof(Profil));
         }
 
-        var competences = await db.Competences.Where(c => c.ScoutId == scout.Id).ToListAsync();
+        var competences = await db.Competences.Where(c => c.ScoutId == scout.Id && !c.EstSupprime).ToListAsync();
         var participations = await db.ParticipantsActivite
             .Include(p => p.Activite)
             .Where(p => p.ScoutId == scout.Id && !p.Activite.EstSupprime)
@@ -1167,12 +1167,12 @@ public class AccountController(
         var scout = await db.Scouts
             .Include(s => s.Groupe)
             .Include(s => s.Branche)
-            .Include(s => s.SuivisAcademiques)
+            .Include(s => s.SuivisAcademiques.Where(a => !a.EstSupprime))
             .FirstOrDefaultAsync(s => s.Id == id && s.IsActive);
 
         if (scout is null) return NotFound();
 
-        var competences = await db.Competences.Where(c => c.ScoutId == scout.Id).ToListAsync();
+        var competences = await db.Competences.Where(c => c.ScoutId == scout.Id && !c.EstSupprime).ToListAsync();
         var participations = await db.ParticipantsActivite
             .Include(p => p.Activite)
             .Where(p => p.ScoutId == scout.Id && !p.Activite.EstSupprime)
@@ -1290,12 +1290,12 @@ public class AccountController(
             };
 
             donnees["Competences"] = await db.Competences
-                .Where(c => c.ScoutId == scoutLie.Id)
+                .Where(c => c.ScoutId == scoutLie.Id && !c.EstSupprime)
                 .Select(c => new { c.Nom, c.Niveau, c.DateObtention })
                 .ToListAsync();
 
             donnees["SuiviAcademique"] = await db.SuivisAcademiques
-                .Where(s => s.ScoutId == scoutLie.Id)
+                .Where(s => s.ScoutId == scoutLie.Id && !s.EstSupprime)
                 .Select(s => new { s.AnneeScolaire, s.Etablissement, s.NiveauScolaire, s.Classe, s.MoyenneGenerale, s.Mention })
                 .ToListAsync();
 
@@ -1785,14 +1785,14 @@ public class AccountController(
 
             // CompÃ©tences du scout
             var competences = await db.Competences
-                .Where(c => c.ScoutId == scoutLie.Id)
+                .Where(c => c.ScoutId == scoutLie.Id && !c.EstSupprime)
                 .Select(c => new { c.Nom, c.Niveau, c.DateObtention })
                 .ToListAsync();
             donnees["Competences"] = competences;
 
             // Suivi acadÃ©mique
             var suivis = await db.SuivisAcademiques
-                .Where(s => s.ScoutId == scoutLie.Id)
+                .Where(s => s.ScoutId == scoutLie.Id && !s.EstSupprime)
                 .Select(s => new { s.AnneeScolaire, s.Etablissement, s.NiveauScolaire, s.Classe, s.MoyenneGenerale, s.Mention })
                 .ToListAsync();
             donnees["SuiviAcademique"] = suivis;

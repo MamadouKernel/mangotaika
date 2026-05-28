@@ -31,13 +31,14 @@ public class FormationService(AppDbContext db) : IFormationService
 
     public Task<int> CountAsync()
     {
-        return db.Formations.AsNoTracking().CountAsync();
+        return db.Formations.AsNoTracking().CountAsync(f => !f.EstSupprime);
     }
 
     public async Task<List<FormationDto>> GetAllAsync()
     {
         var formations = await db.Formations
             .AsNoTracking()
+            .Where(f => !f.EstSupprime)
             .OrderByDescending(f => f.DateCreation)
             .Select(FormationDtoProjection)
             .ToListAsync();
@@ -50,6 +51,7 @@ public class FormationService(AppDbContext db) : IFormationService
     {
         var formations = await db.Formations
             .AsNoTracking()
+            .Where(f => !f.EstSupprime)
             .OrderByDescending(f => f.DateCreation)
             .Skip(skip)
             .Take(take)
@@ -79,7 +81,7 @@ public class FormationService(AppDbContext db) : IFormationService
             .Include(f => f.Jalons)
             .Include(f => f.Prerequis)
                 .ThenInclude(p => p.PrerequisFormation)
-            .FirstOrDefaultAsync(f => f.Id == id);
+            .FirstOrDefaultAsync(f => f.Id == id && !f.EstSupprime);
 
         if (formation is null)
             return null;
@@ -201,6 +203,7 @@ public class FormationService(AppDbContext db) : IFormationService
                 })
                 .ToList(),
             Prerequis = formation.Prerequis
+                .Where(p => !p.PrerequisFormation.EstSupprime)
                 .OrderBy(p => p.PrerequisFormation.Titre)
                 .Select(p => new PrerequisFormationDto
                 {
@@ -267,7 +270,7 @@ public class FormationService(AppDbContext db) : IFormationService
 
     public async Task<bool> UpdateAsync(Guid id, FormationCreateDto dto)
     {
-        var formation = await db.Formations.FindAsync(id);
+        var formation = await db.Formations.FirstOrDefaultAsync(f => f.Id == id && !f.EstSupprime);
         if (formation is null)
             return false;
 
@@ -289,18 +292,18 @@ public class FormationService(AppDbContext db) : IFormationService
 
     public async Task<bool> DeleteAsync(Guid id)
     {
-        var formation = await db.Formations.FindAsync(id);
+        var formation = await db.Formations.FirstOrDefaultAsync(f => f.Id == id && !f.EstSupprime);
         if (formation is null)
             return false;
 
-        db.Formations.Remove(formation);
+        formation.EstSupprime = true;
         await db.SaveChangesAsync();
         return true;
     }
 
     public async Task<bool> PublierAsync(Guid id)
     {
-        var formation = await db.Formations.FindAsync(id);
+        var formation = await db.Formations.FirstOrDefaultAsync(f => f.Id == id && !f.EstSupprime);
         if (formation is null)
             return false;
 
@@ -312,7 +315,7 @@ public class FormationService(AppDbContext db) : IFormationService
 
     public async Task<bool> ArchiverAsync(Guid id)
     {
-        var formation = await db.Formations.FindAsync(id);
+        var formation = await db.Formations.FirstOrDefaultAsync(f => f.Id == id && !f.EstSupprime);
         if (formation is null)
             return false;
 
@@ -713,7 +716,7 @@ public class FormationService(AppDbContext db) : IFormationService
     {
         IQueryable<Formation> query = db.Formations
             .AsNoTracking()
-            .Where(f => f.Statut == StatutFormation.Publiee);
+            .Where(f => !f.EstSupprime && f.Statut == StatutFormation.Publiee);
 
         if (brancheId.HasValue)
         {
@@ -785,7 +788,7 @@ public class FormationService(AppDbContext db) : IFormationService
 
         var inscriptions = await db.InscriptionsFormation
             .AsNoTracking()
-            .Where(i => scoutIdList.Contains(i.ScoutId))
+            .Where(i => scoutIdList.Contains(i.ScoutId) && !i.Formation.EstSupprime)
             .Include(i => i.Formation)
             .Include(i => i.SessionFormation)
             .Include(i => i.Scout)
@@ -1455,7 +1458,7 @@ public class FormationService(AppDbContext db) : IFormationService
             .Include(i => i.Formation)
                 .ThenInclude(f => f.Modules)
             .Include(i => i.SessionFormation)
-            .Where(i => i.ScoutId == scoutId)
+            .Where(i => i.ScoutId == scoutId && !i.Formation.EstSupprime)
             .OrderByDescending(i => i.DateInscription)
             .ToListAsync();
     }
@@ -1527,7 +1530,7 @@ public class FormationService(AppDbContext db) : IFormationService
                 .ThenInclude(m => m.Lecons)
             .Include(f => f.Modules)
                 .ThenInclude(m => m.Quiz)
-            .FirstOrDefaultAsync(f => f.Id == formationId);
+            .FirstOrDefaultAsync(f => f.Id == formationId && !f.EstSupprime);
 
         if (formation is null)
             return;
@@ -1577,7 +1580,7 @@ public class FormationService(AppDbContext db) : IFormationService
         if (formation.CompetenceLieeId.HasValue)
         {
             var dejaCompetence = await db.Competences
-                .AnyAsync(c => c.ScoutId == scoutId && c.Nom == formation.Titre);
+                .AnyAsync(c => c.ScoutId == scoutId && !c.EstSupprime && c.Nom == formation.Titre);
 
             if (!dejaCompetence)
             {
@@ -1643,7 +1646,7 @@ public class FormationService(AppDbContext db) : IFormationService
         var existingIds = existing.Select(p => p.PrerequisFormationId).ToHashSet();
         var validIds = await db.Formations
             .AsNoTracking()
-            .Where(f => requestedIds.Contains(f.Id) && f.Id != formationId)
+            .Where(f => !f.EstSupprime && requestedIds.Contains(f.Id) && f.Id != formationId)
             .Select(f => f.Id)
             .ToListAsync();
 
@@ -1663,7 +1666,7 @@ public class FormationService(AppDbContext db) : IFormationService
     {
         var prerequis = await db.FormationsPrerequis
             .AsNoTracking()
-            .Where(p => p.FormationId == formationId)
+            .Where(p => p.FormationId == formationId && !p.PrerequisFormation.EstSupprime)
             .Select(p => new
             {
                 p.PrerequisFormationId,
@@ -1734,7 +1737,7 @@ public class FormationService(AppDbContext db) : IFormationService
 
         var prerequis = await db.FormationsPrerequis
             .AsNoTracking()
-            .Where(p => formationIds.Contains(p.FormationId))
+            .Where(p => formationIds.Contains(p.FormationId) && !p.PrerequisFormation.EstSupprime)
             .Select(p => new
             {
                 p.FormationId,
@@ -1848,7 +1851,7 @@ public class FormationService(AppDbContext db) : IFormationService
     {
         var sessions = await db.SessionsFormation
             .AsNoTracking()
-            .Where(s => s.FormationId == formationId && s.EstPubliee)
+            .Where(s => s.FormationId == formationId && s.EstPubliee && !s.Formation.EstSupprime)
             .OrderByDescending(s => s.EstSelfPaced)
             .ThenBy(s => s.DateOuverture ?? DateTime.MaxValue)
             .Select(s => new SessionFormationDto

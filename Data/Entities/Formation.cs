@@ -17,6 +17,7 @@ public class Formation
     public bool DelivreAttestation { get; set; } = true;
     public bool DelivreCertificat { get; set; }
     public bool DelivranceConfiguree { get; set; } = true;
+    public bool EstSupprime { get; set; }
 
     // Branche cible (optionnel)
     public Guid? BrancheCibleId { get; set; }

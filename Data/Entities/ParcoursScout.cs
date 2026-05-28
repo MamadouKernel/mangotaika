@@ -26,4 +26,5 @@ public class EtapeParcoursScout
     public string? Observations { get; set; }
 
     public bool EstObligatoire { get; set; } = true;
+    public bool EstSupprime { get; set; }
 }

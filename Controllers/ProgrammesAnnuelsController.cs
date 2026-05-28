@@ -33,7 +33,7 @@ public class ProgrammesAnnuelsController(
             .Include(p => p.Valideur)
             .Include(p => p.Activites)
                 .ThenInclude(a => a.Branche)
-            .Where(p => p.AnneeReference == year)
+            .Where(p => !p.EstSupprime && p.AnneeReference == year)
             .AsQueryable();
 
         if (!isAdmin && !isSupervision && !isDistrictReviewer)
@@ -89,7 +89,7 @@ public class ProgrammesAnnuelsController(
             .Include(a => a.Branche)
             .Include(a => a.ProgrammeAnnuel)
                 .ThenInclude(p => p.Groupe)
-            .Where(a => a.DateActivite.Year == year)
+            .Where(a => !a.ProgrammeAnnuel.EstSupprime && a.DateActivite.Year == year)
             .AsQueryable();
 
         if (!isAdmin && !isSupervision && !isDistrictReviewer)
@@ -189,7 +189,7 @@ public class ProgrammesAnnuelsController(
             .Include(p => p.Valideur)
             .Include(p => p.Activites.OrderBy(a => a.DateActivite).ThenBy(a => a.OrdreAffichage))
                 .ThenInclude(a => a.Branche)
-            .FirstOrDefaultAsync(p => p.Id == id);
+            .FirstOrDefaultAsync(p => p.Id == id && !p.EstSupprime);
         if (programme is null) return NotFound();
 
         var canView = await CanAccessProgrammeAsync(programme.GroupeId);
@@ -207,7 +207,7 @@ public class ProgrammesAnnuelsController(
     {
         var programme = await db.ProgrammesAnnuels
             .Include(p => p.Activites.OrderBy(a => a.DateActivite).ThenBy(a => a.OrdreAffichage))
-            .FirstOrDefaultAsync(p => p.Id == id);
+            .FirstOrDefaultAsync(p => p.Id == id && !p.EstSupprime);
         if (programme is null) return NotFound();
         if (!await CanEditProgrammeAsync(programme))
         {
@@ -225,7 +225,7 @@ public class ProgrammesAnnuelsController(
     {
         var programme = await db.ProgrammesAnnuels
             .Include(p => p.Activites)
-            .FirstOrDefaultAsync(p => p.Id == id);
+            .FirstOrDefaultAsync(p => p.Id == id && !p.EstSupprime);
         if (programme is null) return NotFound();
         if (!await CanEditProgrammeAsync(programme))
         {
@@ -269,17 +269,16 @@ public class ProgrammesAnnuelsController(
     {
         var programme = await db.ProgrammesAnnuels
             .Include(p => p.Activites)
-            .FirstOrDefaultAsync(p => p.Id == id);
+            .FirstOrDefaultAsync(p => p.Id == id && !p.EstSupprime);
         if (programme is null) return NotFound();
         if (!await CanEditProgrammeAsync(programme))
         {
             return Forbid();
         }
 
-        db.ProgrammesAnnuelsActivites.RemoveRange(programme.Activites);
-        db.ProgrammesAnnuels.Remove(programme);
+        programme.EstSupprime = true;
         await db.SaveChangesAsync();
-        TempData["Success"] = "Programme annuel supprime.";
+        TempData["Success"] = "Programme annuel retire de la liste.";
         return RedirectToAction(nameof(Index), new { annee = programme.AnneeReference, groupeId = programme.GroupeId });
     }
 
@@ -287,7 +286,7 @@ public class ProgrammesAnnuelsController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Soumettre(Guid id)
     {
-        var programme = await db.ProgrammesAnnuels.FirstOrDefaultAsync(p => p.Id == id);
+        var programme = await db.ProgrammesAnnuels.FirstOrDefaultAsync(p => p.Id == id && !p.EstSupprime);
         if (programme is null) return NotFound();
         if (!await CanEditProgrammeAsync(programme))
         {
@@ -309,7 +308,7 @@ public class ProgrammesAnnuelsController(
     {
         if (!await accessService.IsDistrictReviewerAsync(User) && !accessService.IsAdminLike(User)) return Forbid();
 
-        var programme = await db.ProgrammesAnnuels.FirstOrDefaultAsync(p => p.Id == id);
+        var programme = await db.ProgrammesAnnuels.FirstOrDefaultAsync(p => p.Id == id && !p.EstSupprime);
         if (programme is null) return NotFound();
         if (programme.Statut != StatutWorkflowDocument.Soumis) return BadRequest();
 
@@ -328,7 +327,7 @@ public class ProgrammesAnnuelsController(
     {
         if (!await accessService.IsDistrictReviewerAsync(User) && !accessService.IsAdminLike(User)) return Forbid();
 
-        var programme = await db.ProgrammesAnnuels.FirstOrDefaultAsync(p => p.Id == id);
+        var programme = await db.ProgrammesAnnuels.FirstOrDefaultAsync(p => p.Id == id && !p.EstSupprime);
         if (programme is null) return NotFound();
         if (programme.Statut != StatutWorkflowDocument.Soumis) return BadRequest();
 
@@ -347,7 +346,7 @@ public class ProgrammesAnnuelsController(
     {
         if (!await accessService.IsDistrictReviewerAsync(User) && !accessService.IsAdminLike(User)) return Forbid();
 
-        var programme = await db.ProgrammesAnnuels.FirstOrDefaultAsync(p => p.Id == id);
+        var programme = await db.ProgrammesAnnuels.FirstOrDefaultAsync(p => p.Id == id && !p.EstSupprime);
         if (programme is null) return NotFound();
         if (programme.Statut != StatutWorkflowDocument.Soumis) return BadRequest();
 
@@ -384,7 +383,7 @@ public class ProgrammesAnnuelsController(
             ModelState.AddModelError(nameof(model.GroupeId), "Vous ne pouvez preparer qu'un programme annuel pour votre groupe.");
         }
 
-        var duplicateQuery = db.ProgrammesAnnuels.AsQueryable().Where(p => p.Id != currentId && p.AnneeReference == model.AnneeReference);
+        var duplicateQuery = db.ProgrammesAnnuels.AsQueryable().Where(p => !p.EstSupprime && p.Id != currentId && p.AnneeReference == model.AnneeReference);
         duplicateQuery = model.GroupeId.HasValue && model.GroupeId.Value != Guid.Empty
             ? duplicateQuery.Where(p => p.GroupeId == model.GroupeId.Value)
             : duplicateQuery.Where(p => p.GroupeId == null);

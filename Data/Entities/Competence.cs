@@ -8,6 +8,7 @@ public class Competence
     public DateTime DateObtention { get; set; }
     public string? Niveau { get; set; }
     public TypeCompetence Type { get; set; } = TypeCompetence.Scoute;
+    public bool EstSupprime { get; set; }
 
     // Navigation
     public Guid ScoutId { get; set; }

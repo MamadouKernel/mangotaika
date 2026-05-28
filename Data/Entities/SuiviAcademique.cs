@@ -12,6 +12,7 @@ public class SuiviAcademique
     public string? Observations { get; set; }
     public bool EstRedoublant { get; set; } = false;
     public DateTime DateSaisie { get; set; } = DateTime.UtcNow;
+    public bool EstSupprime { get; set; }
 
     // Navigation
     public Guid ScoutId { get; set; }

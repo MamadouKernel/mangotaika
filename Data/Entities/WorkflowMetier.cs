@@ -69,6 +69,7 @@ public class ProgrammeAnnuel
     public DateTime DateCreation { get; set; } = DateTime.UtcNow;
     public DateTime? DateSoumission { get; set; }
     public DateTime? DateValidation { get; set; }
+    public bool EstSupprime { get; set; }
     public Guid CreateurId { get; set; }
     public ApplicationUser Createur { get; set; } = null!;
     public Guid? ValideurId { get; set; }
