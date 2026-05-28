@@ -50,8 +50,8 @@ public sealed class HistoriqueFormViewModel
             PhotoUrl = entity.PhotoUrl,
             Entries = entity.CategorieDetails.Any()
                 ? entity.CategorieDetails
-                    .OrderBy(detail => detail.Ordre)
-                    .ThenBy(detail => detail.Categorie)
+                    .OrderBy(detail => detail.Categorie.GetSortOrder())
+                    .ThenBy(detail => detail.Ordre)
                     .Select(detail => new HistoriqueCategorieFormViewModel
                     {
                         Categorie = detail.Categorie,

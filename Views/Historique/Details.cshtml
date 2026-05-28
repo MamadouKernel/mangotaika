@@ -7,8 +7,8 @@
 
     var categoryDetails = Model.CategorieDetails.Any()
         ? Model.CategorieDetails
-            .OrderBy(entry => entry.Ordre)
-            .ThenBy(entry => entry.Categorie)
+            .OrderBy(entry => entry.Categorie.GetSortOrder())
+            .ThenBy(entry => entry.Ordre)
             .ToList()
         : Model.Categories
             .GetSelectedCategories()

@@ -47,8 +47,8 @@
         {
             var details = membre.CategorieDetails.Any()
                 ? membre.CategorieDetails
-                    .OrderBy(detail => detail.Ordre)
-                    .ThenBy(detail => detail.Categorie)
+                    .OrderBy(detail => detail.Categorie.GetSortOrder())
+                    .ThenBy(detail => detail.Ordre)
                     .ToList()
                 : membre.Categories
                     .GetSelectedCategories()

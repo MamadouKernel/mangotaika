@@ -47,9 +47,23 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
             query = query.Where(m => m.CategorieDetails.Any(detail => selectedCategories.Contains(detail.Categorie)));
         }
 
-        var ordered = query
-            .OrderBy(m => m.Ordre)
-            .ThenBy(m => m.Nom);
+        IOrderedQueryable<MembreHistorique> ordered;
+        if (selectedCategories.Count == 1)
+        {
+            var selectedCategory = selectedCategories[0];
+            ordered = query
+                .OrderBy(m => m.CategorieDetails
+                    .Where(detail => detail.Categorie == selectedCategory)
+                    .Select(detail => detail.Ordre)
+                    .FirstOrDefault())
+                .ThenBy(m => m.Nom);
+        }
+        else
+        {
+            ordered = query
+                .OrderBy(m => m.Ordre)
+                .ThenBy(m => m.Nom);
+        }
 
         var (page, ps) = ListPagination.Read(Request);
         var total = await ordered.CountAsync();
@@ -256,7 +270,10 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
         var membres = await BuildHistoriqueQuery(recherche)
             .Include(m => m.CategorieDetails)
             .Where(m => m.CategorieDetails.Any(detail => detail.Categorie == category))
-            .OrderBy(m => m.Ordre)
+            .OrderBy(m => m.CategorieDetails
+                .Where(detail => detail.Categorie == category)
+                .Select(detail => detail.Ordre)
+                .FirstOrDefault())
             .ThenBy(m => m.Nom)
             .ToListAsync();
 
@@ -311,8 +328,8 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
     {
         var details = membre.CategorieDetails
             .Where(detail => CategorieHistoriqueExtensions.All.Contains(detail.Categorie))
-            .OrderBy(detail => detail.Ordre)
-            .ThenBy(detail => detail.Categorie)
+            .OrderBy(detail => detail.Categorie.GetSortOrder())
+            .ThenBy(detail => detail.Ordre)
             .ToList();
 
         membre.Categories = details
