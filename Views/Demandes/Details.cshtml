@@ -5,6 +5,7 @@
     Layout = "_LayoutAdmin";
     var canValidateDistrict = ViewBag.CanValidateDistrict as bool? == true;
     var canSubmit = ViewBag.CanSubmit as bool? == true;
+    var validationTarget = ViewBag.ValidationTarget as string ?? "Commissaire de district";
 
     var badgeClass = Model.Statut switch
     {
@@ -98,6 +99,9 @@
                 }
                 @if (canValidateDistrict && Model.Statut == StatutDemande.Soumise)
                 {
+                    <div class="w-100 alert mb-2" style="background:rgba(89,117,55,0.08);border:1px solid rgba(89,117,55,0.22);border-radius:12px;color:var(--texte);">
+                        <i class="bi bi-person-check"></i> Validation attendue : <strong>@validationTarget</strong>
+                    </div>
                     <form asp-action="Valider" asp-route-id="@Model.Id" method="post">
                         @Html.AntiForgeryToken()
                         
@@ -148,10 +152,15 @@
                             StatutDemande.EnRevision => "Modification demandee",
                             _ => suivi.NouveauStatut.ToString()
                         };
+                        var commentaire = suivi.Commentaire;
+                        if (validationTarget == "Chef de groupe" && commentaire == "Demande soumise pour validation district")
+                        {
+                            commentaire = "Demande soumise pour validation du chef de groupe";
+                        }
                         <div class="mb-3" style="position:relative;">
                             <div style="position:absolute;left:-16px;top:4px;width:12px;height:12px;border-radius:50%;background:@dotColor;border:2px solid #fff;box-shadow:0 0 0 2px @dotColor;"></div>
                             <p class="mb-0" style="font-size:0.8rem;font-weight:600;color:var(--texte);">@suiviLabel</p>
-                            <p class="mb-0 text-muted-custom" style="font-size:0.75rem;">@suivi.Commentaire</p>
+                            <p class="mb-0 text-muted-custom" style="font-size:0.75rem;">@commentaire</p>
                             <p class="mb-0" style="font-size:0.7rem;color:var(--gris-clair);">@suivi.Auteur - @suivi.Date.ToString("dd/MM/yyyy HH:mm")</p>
                         </div>
                     }

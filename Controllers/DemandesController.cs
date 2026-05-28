@@ -17,6 +17,9 @@ public class DemandesController(
     UserManager<ApplicationUser> userManager,
     INotificationDispatchService notificationDispatchService) : Controller
 {
+    private const string ChefGroupeValidationTarget = "chef de groupe";
+    private const string DistrictValidationTarget = "commissaire de district";
+
     public async Task<IActionResult> Index()
     {
         var userId = Guid.Parse(userManager.GetUserId(User)!);
@@ -130,7 +133,8 @@ public class DemandesController(
         AjouterSuivi(demande, StatutDemande.Initialisee, StatutDemande.Initialisee, "Demande creee", BuildAuteurLabel(user));
         await db.SaveChangesAsync();
 
-        TempData["Success"] = "Demande d'autorisation creee. Elle peut maintenant etre soumise au commissaire de district.";
+        var validationTarget = IsChefUniteScout(currentScout, User) ? ChefGroupeValidationTarget : DistrictValidationTarget;
+        TempData["Success"] = $"Demande d'autorisation creee. Elle peut maintenant etre soumise au {validationTarget}.";
         return RedirectToAction(nameof(Details), new { id = demande.Id });
     }
 
@@ -151,7 +155,10 @@ public class DemandesController(
         var isAdmin = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
         var isSupervision = User.IsInRole("Superviseur") || User.IsInRole("Consultant");
         var isDistrictReviewer = await EstValidateurDistrictAsync();
-        var canValidateRequests = User.IsInRole("Administrateur") || isDistrictReviewer || await CanChefGroupeValidateAsync(demande);
+        var chefUniteWorkflow = await IsChefUniteRequestAsync(demande);
+        var canValidateRequests = chefUniteWorkflow
+            ? await CanChefGroupeValidateAsync(demande)
+            : User.IsInRole("Administrateur") || isDistrictReviewer;
         if (!isAdmin && !isSupervision && !canValidateRequests)
         {
             var userId = Guid.Parse(userManager.GetUserId(User)!);
@@ -162,6 +169,7 @@ public class DemandesController(
         }
 
         ViewBag.CanValidateDistrict = canValidateRequests;
+        ViewBag.ValidationTarget = chefUniteWorkflow ? "Chef de groupe" : "Commissaire de district";
         ViewBag.CanSubmit = isAdmin || demande.DemandeurId == Guid.Parse(userManager.GetUserId(User)!);
         return View(ToDto(demande));
     }
@@ -200,7 +208,7 @@ public class DemandesController(
         demande.Statut = StatutDemande.Soumise;
         demande.MotifRejet = null;
         var chefUniteWorkflow = await IsChefUniteRequestAsync(demande);
-        AjouterSuivi(demande, ancien, StatutDemande.Soumise, chefUniteWorkflow ? "Demande soumise pour validation du chef de groupe" : "Demande soumise pour validation district", BuildAuteurLabel(user));
+        AjouterSuivi(demande, ancien, StatutDemande.Soumise, chefUniteWorkflow ? "Demande soumise pour validation du chef de groupe" : "Demande soumise pour validation du commissaire de district", BuildAuteurLabel(user));
         await db.SaveChangesAsync();
 
         var validationRecipients = await GetValidationRecipientIdsAsync(demande, chefUniteWorkflow);
@@ -219,14 +227,13 @@ public class DemandesController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Valider(Guid id, string? commentaire)
     {
-        var isPlatformAdmin = User.IsInRole("Administrateur");
         var demande = await db.DemandesAutorisation.Include(d => d.Suivis).FirstOrDefaultAsync(d => d.Id == id);
         if (demande is null)
         {
             return NotFound();
         }
 
-        if (!isPlatformAdmin && !await EstValidateurDistrictAsync() && !await CanChefGroupeValidateAsync(demande))
+        if (!await CanValidateSubmittedRequestAsync(demande))
         {
             return Forbid();
         }
@@ -242,10 +249,11 @@ public class DemandesController(
         demande.ValideurId = user?.Id;
         demande.DateValidation = DateTime.UtcNow;
         demande.MotifRejet = null;
+        var chefUniteWorkflow = await IsChefUniteRequestAsync(demande);
         var commentaireValidation = NormalizeValue(commentaire)
-            ?? (await IsChefUniteRequestAsync(demande) && await CanChefGroupeValidateAsync(demande)
+            ?? (chefUniteWorkflow
                 ? "Demande validee par le chef de groupe"
-                : isPlatformAdmin ? "Validation exceptionnelle par administrateur" : "Demande validee par le commissaire de district");
+                : User.IsInRole("Administrateur") ? "Validation exceptionnelle par administrateur" : "Demande validee par le commissaire de district");
         AjouterSuivi(demande, ancien, StatutDemande.Validee, commentaireValidation, BuildAuteurLabel(user));
         var activite = await CreerActiviteDepuisDemandeAsync(demande, user?.Id ?? demande.DemandeurId);
         await db.SaveChangesAsync();
@@ -267,14 +275,13 @@ public class DemandesController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Rejeter(Guid id, string? motif)
     {
-        var isPlatformAdmin = User.IsInRole("Administrateur");
         var demande = await db.DemandesAutorisation.Include(d => d.Suivis).FirstOrDefaultAsync(d => d.Id == id);
         if (demande is null)
         {
             return NotFound();
         }
 
-        if (!isPlatformAdmin && !await EstValidateurDistrictAsync() && !await CanChefGroupeValidateAsync(demande))
+        if (!await CanValidateSubmittedRequestAsync(demande))
         {
             return Forbid();
         }
@@ -286,10 +293,11 @@ public class DemandesController(
 
         var user = await userManager.GetUserAsync(User);
         var ancien = demande.Statut;
+        var chefUniteWorkflow = await IsChefUniteRequestAsync(demande);
         var motifNormalise = NormalizeValue(motif)
-            ?? (await IsChefUniteRequestAsync(demande) && await CanChefGroupeValidateAsync(demande)
+            ?? (chefUniteWorkflow
                 ? "Demande rejetee par le chef de groupe"
-                : isPlatformAdmin ? "Rejet exceptionnel par administrateur" : "Demande rejetee");
+                : User.IsInRole("Administrateur") ? "Rejet exceptionnel par administrateur" : "Demande rejetee");
         demande.Statut = StatutDemande.Rejetee;
         demande.MotifRejet = motifNormalise;
         demande.ValideurId = user?.Id;
@@ -312,14 +320,13 @@ public class DemandesController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Reviser(Guid id, string? commentaire)
     {
-        var isPlatformAdmin = User.IsInRole("Administrateur");
         var demande = await db.DemandesAutorisation.Include(d => d.Suivis).FirstOrDefaultAsync(d => d.Id == id);
         if (demande is null)
         {
             return NotFound();
         }
 
-        if (!isPlatformAdmin && !await EstValidateurDistrictAsync() && !await CanChefGroupeValidateAsync(demande))
+        if (!await CanValidateSubmittedRequestAsync(demande))
         {
             return Forbid();
         }
@@ -331,10 +338,11 @@ public class DemandesController(
 
         var user = await userManager.GetUserAsync(User);
         var ancien = demande.Statut;
+        var chefUniteWorkflow = await IsChefUniteRequestAsync(demande);
         var commentaireNormalise = NormalizeValue(commentaire)
-            ?? (await IsChefUniteRequestAsync(demande) && await CanChefGroupeValidateAsync(demande)
+            ?? (chefUniteWorkflow
                 ? "Modification demandee par le chef de groupe"
-                : isPlatformAdmin ? "Modification exceptionnelle demandee par administrateur" : "Modification demandee par le commissaire de district");
+                : User.IsInRole("Administrateur") ? "Modification exceptionnelle demandee par administrateur" : "Modification demandee par le commissaire de district");
         demande.Statut = StatutDemande.EnRevision;
         demande.MotifRejet = null;
         demande.ValideurId = user?.Id;
@@ -364,7 +372,7 @@ public class DemandesController(
         }
 
         var branchesQuery = db.Branches.Where(b => b.IsActive).OrderBy(b => b.Nom).AsQueryable();
-        if (!isAdmin && IsChefUniteFunction(currentScout?.Fonction) && currentScout?.BrancheId is Guid lockedBrancheId)
+        if (!isAdmin && IsChefUniteScout(currentScout, User) && currentScout?.BrancheId is Guid lockedBrancheId)
         {
             branchesQuery = branchesQuery.Where(b => b.Id == lockedBrancheId);
         }
@@ -422,7 +430,7 @@ public class DemandesController(
                 ModelState.AddModelError(nameof(dto.GroupeId), "Vous ne pouvez soumettre que des demandes pour votre propre groupe.");
             }
 
-            if (IsChefUniteFunction(currentScout?.Fonction))
+            if (IsChefUniteScout(currentScout, User))
             {
                 if (!dto.BrancheId.HasValue)
                 {
@@ -476,15 +484,23 @@ public class DemandesController(
     {
         if (chefUniteWorkflow && demande.GroupeId.HasValue)
         {
+            var roleChefGroupeUsers = await db.UserRoles
+                .Join(db.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
+                .Join(db.Users, ur => ur.UserId, u => u.Id, (ur, u) => new { ur.UserId, ur.Name, u.GroupeId, u.IsActive })
+                .Where(x => x.Name == RoleNames.ChefGroupe && x.IsActive && x.GroupeId == demande.GroupeId.Value)
+                .Select(x => x.UserId)
+                .ToListAsync();
+
             var chefGroupeUsers = await db.Scouts
                 .Where(s => s.IsActive && s.UserId.HasValue && s.GroupeId == demande.GroupeId.Value)
                 .Where(s => s.Fonction != null)
                 .Select(s => new { s.UserId, s.Fonction })
                 .ToListAsync();
 
-            return chefGroupeUsers
+            return roleChefGroupeUsers
+                .Concat(chefGroupeUsers
                 .Where(s => IsChefGroupeFunction(s.Fonction))
-                .Select(s => s.UserId!.Value)
+                .Select(s => s.UserId!.Value))
                 .Distinct()
                 .ToList();
         }
@@ -531,12 +547,29 @@ public class DemandesController(
             && await IsChefUniteRequestAsync(demande);
     }
 
+    private async Task<bool> CanValidateSubmittedRequestAsync(DemandeAutorisation demande)
+    {
+        if (await IsChefUniteRequestAsync(demande))
+        {
+            return await CanChefGroupeValidateAsync(demande);
+        }
+
+        return User.IsInRole("Administrateur") || await EstValidateurDistrictAsync();
+    }
+
     private async Task<bool> IsChefUniteRequestAsync(DemandeAutorisation demande)
     {
         var demandeurScout = await db.Scouts
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.UserId == demande.DemandeurId && s.IsActive);
-        return IsChefUniteFunction(demandeurScout?.Fonction);
+        if (IsChefUniteFunction(demandeurScout?.Fonction))
+        {
+            return true;
+        }
+
+        return await db.UserRoles
+            .Join(db.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
+            .AnyAsync(x => x.UserId == demande.DemandeurId && x.Name == RoleNames.ChefUnite);
     }
 
     private static bool IsLeadershipScout(Scout? scout)
@@ -577,8 +610,17 @@ public class DemandesController(
     {
         var normalizedFunction = DatabaseText.NormalizeSearchKey(fonction);
         return normalizedFunction.Contains("CHEF D UNITE", StringComparison.Ordinal)
-            || normalizedFunction.Contains("CHEF UNITE", StringComparison.Ordinal);
+            || normalizedFunction.Contains("CHEF UNITE", StringComparison.Ordinal)
+            || normalizedFunction.Contains("CHEF DE TROUPE", StringComparison.Ordinal)
+            || normalizedFunction.Contains("CHEF TROUPE", StringComparison.Ordinal)
+            || normalizedFunction == "CT"
+            || normalizedFunction.StartsWith("CT ", StringComparison.Ordinal)
+            || normalizedFunction.EndsWith(" CT", StringComparison.Ordinal)
+            || normalizedFunction.Contains(" CT ", StringComparison.Ordinal);
     }
+
+    private static bool IsChefUniteScout(Scout? scout, System.Security.Claims.ClaimsPrincipal user)
+        => user.IsInRole(RoleNames.ChefUnite) || IsChefUniteFunction(scout?.Fonction);
 
     private static string? NormalizeValue(string? value)
     {
