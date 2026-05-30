@@ -130,11 +130,27 @@ public class DemandesController(
         demande.TdrContenu = GenererTdr(demande, user);
 
         db.DemandesAutorisation.Add(demande);
-        AjouterSuivi(demande, StatutDemande.Initialisee, StatutDemande.Initialisee, "Demande creee", BuildAuteurLabel(user));
+        var auteurLabel = BuildAuteurLabel(user);
+        AjouterSuivi(demande, StatutDemande.Initialisee, StatutDemande.Initialisee, "Demande creee", auteurLabel);
+        var chefUniteWorkflow = IsChefUniteScout(currentScout, User);
+        if (chefUniteWorkflow)
+        {
+            demande.Statut = StatutDemande.Soumise;
+            AjouterSuivi(demande, StatutDemande.Initialisee, StatutDemande.Soumise, "Demande transmise automatiquement au chef de groupe pour validation", auteurLabel);
+        }
+
         await db.SaveChangesAsync();
 
-        var validationTarget = IsChefUniteScout(currentScout, User) ? ChefGroupeValidationTarget : DistrictValidationTarget;
-        TempData["Success"] = $"Demande d'autorisation creee. Elle peut maintenant etre soumise au {validationTarget}.";
+        if (chefUniteWorkflow)
+        {
+            await NotifyValidationRecipientsAsync(demande, chefUniteWorkflow);
+            TempData["Success"] = "Demande d'autorisation creee et transmise au chef de groupe.";
+        }
+        else
+        {
+            TempData["Success"] = $"Demande d'autorisation creee. Elle peut maintenant etre soumise au {DistrictValidationTarget}.";
+        }
+
         return RedirectToAction(nameof(Details), new { id = demande.Id });
     }
 
@@ -211,13 +227,7 @@ public class DemandesController(
         AjouterSuivi(demande, ancien, StatutDemande.Soumise, chefUniteWorkflow ? "Demande soumise pour validation du chef de groupe" : "Demande soumise pour validation du commissaire de district", BuildAuteurLabel(user));
         await db.SaveChangesAsync();
 
-        var validationRecipients = await GetValidationRecipientIdsAsync(demande, chefUniteWorkflow);
-        await notificationDispatchService.SendAsync(
-            validationRecipients,
-            "Nouvelle demande d'autorisation",
-            $"Nouvelle demande d'autorisation d'activite : {demande.Titre}",
-            "Demandes",
-            Url.Action(nameof(Details), "Demandes", new { id }, Request.Scheme));
+        await NotifyValidationRecipientsAsync(demande, chefUniteWorkflow);
 
         TempData["Success"] = chefUniteWorkflow ? "Demande soumise au chef de groupe." : "Demande soumise au commissaire de district.";
         return RedirectToAction(nameof(Details), new { id });
@@ -528,15 +538,45 @@ public class DemandesController(
             .ToList();
     }
 
+    private async Task NotifyValidationRecipientsAsync(DemandeAutorisation demande, bool chefUniteWorkflow)
+    {
+        var validationRecipients = await GetValidationRecipientIdsAsync(demande, chefUniteWorkflow);
+        if (validationRecipients.Count == 0)
+        {
+            return;
+        }
+
+        await notificationDispatchService.SendAsync(
+            validationRecipients,
+            "Nouvelle demande d'autorisation",
+            $"Nouvelle demande d'autorisation d'activite : {demande.Titre}",
+            "Demandes",
+            Url.Action(nameof(Details), "Demandes", new { id = demande.Id }, Request.Scheme));
+    }
+
     private async Task<Guid?> GetChefGroupeValidationScopeAsync()
     {
+        var scout = await GetCurrentScoutAsync();
+        if (scout is not null && IsChefGroupeFunction(scout.Fonction))
+        {
+            return scout.GroupeId;
+        }
+
         if (!User.IsInRole(RoleNames.ChefGroupe))
         {
             return null;
         }
 
-        var scout = await GetCurrentScoutAsync();
-        return scout is not null && IsChefGroupeFunction(scout.Fonction) ? scout.GroupeId : null;
+        var currentUserId = userManager.GetUserId(User);
+        if (!Guid.TryParse(currentUserId, out var parsedUserId))
+        {
+            return null;
+        }
+
+        return await db.Users
+            .Where(u => u.Id == parsedUserId && u.IsActive)
+            .Select(u => u.GroupeId)
+            .FirstOrDefaultAsync();
     }
 
     private async Task<bool> CanChefGroupeValidateAsync(DemandeAutorisation demande)

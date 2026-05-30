@@ -40,6 +40,19 @@
                 <span class="badge-3d @badgeClass" style="font-size:0.85rem;">@statutLabel</span>
                 <small class="text-muted-custom">Creee le @Model.DateCreation.ToString("dd/MM/yyyy HH:mm")</small>
             </div>
+            @if (canSubmit && (Model.Statut == StatutDemande.Initialisee || Model.Statut == StatutDemande.EnRevision))
+            {
+                <div class="alert d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4" style="background:rgba(89,117,55,0.08);border:1px solid rgba(89,117,55,0.22);border-radius:14px;color:var(--texte);">
+                    <div>
+                        <strong>Transmission en attente</strong>
+                        <div class="small text-muted-custom">Cette demande doit etre soumise au @validationTarget pour entrer dans le circuit de validation.</div>
+                    </div>
+                    <form asp-action="Soumettre" asp-route-id="@Model.Id" method="post" class="mb-0">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-mango"><i class="bi bi-send"></i> Soumettre</button>
+                    </form>
+                </div>
+            }
 
             <div class="row mb-3">
                 <div class="col-md-6"><p><span class="text-muted-custom">Type :</span> @Model.TypeActivite</p></div>
