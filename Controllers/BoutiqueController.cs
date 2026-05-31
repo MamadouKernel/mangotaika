@@ -444,6 +444,7 @@ public class BoutiqueController(
         string? emailClient,
         string? referencePaiement,
         string? modePaiement,
+        Guid? scoutPayeurId,
         int quantite = 1)
     {
         var article = await db.ArticlesBoutique
@@ -524,7 +525,7 @@ public class BoutiqueController(
         db.CommandesBoutique.Add(commande);
         if (paymentMode == ModePaiementCommandeBoutique.Portefeuille && user is not null)
         {
-            var walletPayment = await TryApplyWalletPaymentAsync(user, commande, [article]);
+            var walletPayment = await TryApplyWalletPaymentAsync(user, commande, [article], scoutPayeurId);
             if (!walletPayment.Success)
             {
                 await transaction.RollbackAsync();
@@ -555,7 +556,8 @@ public class BoutiqueController(
         string telephoneClient,
         string? emailClient,
         string? referencePaiement,
-        string? modePaiement)
+        string? modePaiement,
+        Guid? scoutPayeurId)
     {
         var cart = await BuildCartViewModelAsync();
         if (!cart.Lignes.Any())
@@ -656,7 +658,8 @@ public class BoutiqueController(
             var walletPayment = await TryApplyWalletPaymentAsync(
                 user,
                 commande,
-                cart.Lignes.Select(line => line.Article).ToList());
+                cart.Lignes.Select(line => line.Article).ToList(),
+                scoutPayeurId);
             if (!walletPayment.Success)
             {
                 await transaction.RollbackAsync();
@@ -1218,6 +1221,7 @@ public class BoutiqueController(
         ViewBag.PortefeuilleSolde = wallet.Solde;
         ViewBag.PortefeuilleDevise = wallet.Devise;
         ViewBag.PortefeuilleActif = wallet.EstActif;
+        ViewBag.ScoutsPayeurs = await GetEligiblePayorScoutsAsync(user.Id);
     }
 
     private async Task<PortefeuilleUtilisateur> EnsureWalletAsync(Guid userId)
@@ -1245,7 +1249,8 @@ public class BoutiqueController(
     private async Task<(bool Success, string Message)> TryApplyWalletPaymentAsync(
         ApplicationUser user,
         CommandeBoutique commande,
-        IReadOnlyList<ArticleBoutique> _)
+        IReadOnlyList<ArticleBoutique> _,
+        Guid? scoutPayeurId)
     {
         var wallet = await EnsureWalletAsync(user.Id);
         if (!wallet.EstActif)
@@ -1288,7 +1293,12 @@ public class BoutiqueController(
 
         var before = wallet.Solde;
         wallet.Solde -= commande.Total;
-        var payeurScout = await ResolveFinancePayorScoutAsync(user.Id);
+        var payeurResolution = await ResolveFinancePayorScoutAsync(user.Id, scoutPayeurId);
+        if (!payeurResolution.Success)
+        {
+            return (false, payeurResolution.Message);
+        }
+        var payeurScout = payeurResolution.Scout;
         foreach (var line in commande.Lignes)
         {
             var article = articles[line.ArticleBoutiqueId];
@@ -1341,27 +1351,51 @@ public class BoutiqueController(
         return (true, $"Paiement effectue depuis votre portefeuille. Nouveau solde : {wallet.Solde:N0} {wallet.Devise}.");
     }
 
-    private async Task<Scout?> ResolveFinancePayorScoutAsync(Guid userId)
+    private async Task<(bool Success, Scout? Scout, string Message)> ResolveFinancePayorScoutAsync(Guid userId, Guid? selectedScoutId)
     {
-        var scout = await db.Scouts
-            .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.UserId == userId && s.IsActive);
-        if (scout is not null)
+        var eligibleScouts = await GetEligiblePayorScoutsAsync(userId);
+        if (eligibleScouts.Count == 0)
         {
-            return scout;
+            return (true, null, string.Empty);
         }
 
-        var linkedParentScouts = await db.Parents
+        if (selectedScoutId.HasValue)
+        {
+            var selectedScout = eligibleScouts.FirstOrDefault(s => s.Id == selectedScoutId.Value);
+            return selectedScout is not null
+                ? (true, selectedScout, string.Empty)
+                : (false, null, "Payeur invalide : selectionnez une fiche scout liee a votre compte.");
+        }
+
+        if (eligibleScouts.Count == 1)
+        {
+            return (true, eligibleScouts[0], string.Empty);
+        }
+
+        return (false, null, "Plusieurs fiches scouts sont liees a votre compte. Selectionnez le scout concerne par le paiement portefeuille.");
+    }
+
+    private async Task<List<Scout>> GetEligiblePayorScoutsAsync(Guid userId)
+    {
+        var directScout = await db.Scouts
+            .AsNoTracking()
+            .Where(s => s.UserId == userId && s.IsActive)
+            .OrderBy(s => s.Nom)
+            .ThenBy(s => s.Prenom)
+            .ToListAsync();
+        if (directScout.Count > 0)
+        {
+            return directScout;
+        }
+
+        return await db.Parents
             .AsNoTracking()
             .Where(p => p.UserId == userId)
             .SelectMany(p => p.Scouts)
             .Where(s => s.IsActive)
             .OrderBy(s => s.Nom)
             .ThenBy(s => s.Prenom)
-            .Take(2)
             .ToListAsync();
-
-        return linkedParentScouts.Count == 1 ? linkedParentScouts[0] : null;
     }
 
     private static ModePaiementCommandeBoutique ParsePaymentMode(string? value)

@@ -132,24 +132,9 @@ public class DemandesController(
         db.DemandesAutorisation.Add(demande);
         var auteurLabel = BuildAuteurLabel(user);
         AjouterSuivi(demande, StatutDemande.Initialisee, StatutDemande.Initialisee, "Demande creee", auteurLabel);
-        var chefUniteWorkflow = IsChefUniteScout(currentScout, User);
-        if (chefUniteWorkflow)
-        {
-            demande.Statut = StatutDemande.Soumise;
-            AjouterSuivi(demande, StatutDemande.Initialisee, StatutDemande.Soumise, "Demande transmise automatiquement au chef de groupe pour validation", auteurLabel);
-        }
-
         await db.SaveChangesAsync();
-
-        if (chefUniteWorkflow)
-        {
-            await NotifyValidationRecipientsAsync(demande, chefUniteWorkflow);
-            TempData["Success"] = "Demande d'autorisation creee et transmise au chef de groupe.";
-        }
-        else
-        {
-            TempData["Success"] = $"Demande d'autorisation creee. Elle peut maintenant etre soumise au {DistrictValidationTarget}.";
-        }
+        var validationTarget = IsChefUniteScout(currentScout, User) ? ChefGroupeValidationTarget : DistrictValidationTarget;
+        TempData["Success"] = $"Demande d'autorisation creee. Elle peut maintenant etre soumise au {validationTarget}.";
 
         return RedirectToAction(nameof(Details), new { id = demande.Id });
     }
@@ -172,8 +157,11 @@ public class DemandesController(
         var isSupervision = User.IsInRole("Superviseur") || User.IsInRole("Consultant");
         var isDistrictReviewer = await EstValidateurDistrictAsync();
         var chefUniteWorkflow = await IsChefUniteRequestAsync(demande);
+        var chefGroupeApproved = await HasChefGroupeApprovalAsync(demande);
         var canValidateRequests = chefUniteWorkflow
-            ? await CanChefGroupeValidateAsync(demande)
+            ? chefGroupeApproved
+                ? User.IsInRole("Administrateur") || isDistrictReviewer
+                : await CanChefGroupeValidateAsync(demande)
             : User.IsInRole("Administrateur") || isDistrictReviewer;
         if (!isAdmin && !isSupervision && !canValidateRequests)
         {
@@ -185,7 +173,7 @@ public class DemandesController(
         }
 
         ViewBag.CanValidateDistrict = canValidateRequests;
-        ViewBag.ValidationTarget = chefUniteWorkflow ? "Chef de groupe" : "Commissaire de district";
+        ViewBag.ValidationTarget = chefUniteWorkflow && !chefGroupeApproved ? "Chef de groupe" : "Commissaire de district";
         ViewBag.CanSubmit = isAdmin || demande.DemandeurId == Guid.Parse(userManager.GetUserId(User)!);
         return View(ToDto(demande));
     }
@@ -224,12 +212,13 @@ public class DemandesController(
         demande.Statut = StatutDemande.Soumise;
         demande.MotifRejet = null;
         var chefUniteWorkflow = await IsChefUniteRequestAsync(demande);
-        AjouterSuivi(demande, ancien, StatutDemande.Soumise, chefUniteWorkflow ? "Demande soumise pour validation du chef de groupe" : "Demande soumise pour validation du commissaire de district", BuildAuteurLabel(user));
+        var chefGroupeApproved = await HasChefGroupeApprovalAsync(demande);
+        AjouterSuivi(demande, ancien, StatutDemande.Soumise, chefUniteWorkflow && !chefGroupeApproved ? "Demande soumise pour validation du chef de groupe" : "Demande soumise pour validation du commissaire de district", BuildAuteurLabel(user));
         await db.SaveChangesAsync();
 
-        await NotifyValidationRecipientsAsync(demande, chefUniteWorkflow);
+        await NotifyValidationRecipientsAsync(demande, chefUniteWorkflow && !chefGroupeApproved);
 
-        TempData["Success"] = chefUniteWorkflow ? "Demande soumise au chef de groupe." : "Demande soumise au commissaire de district.";
+        TempData["Success"] = chefUniteWorkflow && !chefGroupeApproved ? "Demande soumise au chef de groupe." : "Demande soumise au commissaire de district.";
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -255,13 +244,27 @@ public class DemandesController(
 
         var user = await userManager.GetUserAsync(User);
         var ancien = demande.Statut;
+        var chefUniteWorkflow = await IsChefUniteRequestAsync(demande);
+        var chefGroupeApproved = await HasChefGroupeApprovalAsync(demande);
+        var isChefGroupeStep = chefUniteWorkflow && !chefGroupeApproved && await CanChefGroupeValidateAsync(demande);
+        if (isChefGroupeStep)
+        {
+            var commentaireGroupe = string.IsNullOrWhiteSpace(commentaire)
+                ? "Demande validee par le chef de groupe et transmise au commissaire de district"
+                : $"Demande validee par le chef de groupe : {commentaire.Trim()}";
+            AjouterSuivi(demande, ancien, StatutDemande.Soumise, commentaireGroupe, BuildAuteurLabel(user));
+            await db.SaveChangesAsync();
+            await NotifyValidationRecipientsAsync(demande, chefUniteWorkflow: false);
+            TempData["Success"] = "Demande validee par le chef de groupe et transmise au commissaire de district.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
         demande.Statut = StatutDemande.Validee;
         demande.ValideurId = user?.Id;
         demande.DateValidation = DateTime.UtcNow;
         demande.MotifRejet = null;
-        var chefUniteWorkflow = await IsChefUniteRequestAsync(demande);
         var commentaireValidation = NormalizeValue(commentaire)
-            ?? (chefUniteWorkflow
+            ?? (chefUniteWorkflow && !chefGroupeApproved
                 ? "Demande validee par le chef de groupe"
                 : User.IsInRole("Administrateur") ? "Validation exceptionnelle par administrateur" : "Demande validee par le commissaire de district");
         AjouterSuivi(demande, ancien, StatutDemande.Validee, commentaireValidation, BuildAuteurLabel(user));
@@ -600,10 +603,39 @@ public class DemandesController(
     {
         if (await IsChefUniteRequestAsync(demande))
         {
-            return await CanChefGroupeValidateAsync(demande);
+            if (!await HasChefGroupeApprovalAsync(demande))
+            {
+                return await CanChefGroupeValidateAsync(demande);
+            }
+
+            return User.IsInRole("Administrateur") || await EstValidateurDistrictAsync();
         }
 
         return User.IsInRole("Administrateur") || await EstValidateurDistrictAsync();
+    }
+
+    private async Task<bool> HasChefGroupeApprovalAsync(DemandeAutorisation demande)
+    {
+        if (demande.Suivis.Any(s => IsChefGroupeApprovalComment(s.Commentaire)))
+        {
+            return true;
+        }
+
+        return await db.SuivisDemande
+            .AsNoTracking()
+            .AnyAsync(s => s.DemandeId == demande.Id
+                && s.Commentaire != null
+                && (s.Commentaire.Contains("validee par le chef de groupe")
+                    || s.Commentaire.Contains("validée par le chef de groupe")
+                    || s.Commentaire.Contains("valide par le chef de groupe")
+                    || s.Commentaire.Contains("validé par le chef de groupe")));
+    }
+
+    private static bool IsChefGroupeApprovalComment(string? commentaire)
+    {
+        var normalized = DatabaseText.NormalizeSearchKey(commentaire);
+        return normalized.Contains("VALIDEE PAR LE CHEF DE GROUPE", StringComparison.Ordinal)
+            || normalized.Contains("VALIDE PAR LE CHEF DE GROUPE", StringComparison.Ordinal);
     }
 
     private async Task<bool> IsChefUniteRequestAsync(DemandeAutorisation demande)

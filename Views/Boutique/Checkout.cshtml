@@ -8,6 +8,7 @@
     var portefeuilleSolde = ViewBag.PortefeuilleSolde as decimal? ?? 0;
     var portefeuilleDevise = ViewBag.PortefeuilleDevise as string ?? Model.Devise;
     var portefeuilleActif = ViewBag.PortefeuilleActif as bool? ?? false;
+    var scoutsPayeurs = ViewBag.ScoutsPayeurs as List<MangoTaika.Data.Entities.Scout> ?? new();
     var canPayWithWallet = isAuthenticatedCheckout
         && portefeuilleActif
         && string.Equals(portefeuilleDevise, Model.Devise, StringComparison.OrdinalIgnoreCase)
@@ -95,6 +96,20 @@
                             </div>
                         }
                     </div>
+                    @if (isAuthenticatedCheckout && scoutsPayeurs.Count > 1)
+                    {
+                        <div class="col-12" id="walletPayorField" style="display:none;">
+                            <label class="form-label">Scout concerne par le paiement portefeuille</label>
+                            <select name="scoutPayeurId" class="form-select">
+                                <option value="">Selectionner</option>
+                                @foreach (var scout in scoutsPayeurs)
+                                {
+                                    <option value="@scout.Id">@scout.Nom @scout.Prenom (@(scout.Matricule ?? "sans matricule"))</option>
+                                }
+                            </select>
+                            <div class="form-text">Obligatoire uniquement si vous payez avec le portefeuille et que plusieurs enfants sont lies au compte.</div>
+                        </div>
+                    }
                 </div>
 
                 <div class="marketplace-order-actions">
@@ -140,6 +155,14 @@
                 }
                 if (walletNotice) {
                     walletNotice.style.display = selected === 'Portefeuille' ? '' : 'none';
+                }
+                const walletPayor = document.getElementById('walletPayorField');
+                if (walletPayor) {
+                    walletPayor.style.display = selected === 'Portefeuille' ? '' : 'none';
+                    const select = walletPayor.querySelector('select');
+                    if (select) {
+                        select.required = selected === 'Portefeuille';
+                    }
                 }
             };
             paymentRadios.forEach(radio => radio.addEventListener('change', refreshPaymentUi));

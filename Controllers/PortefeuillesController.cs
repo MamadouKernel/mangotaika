@@ -35,7 +35,7 @@ public class PortefeuillesController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DonnerDepuisPortefeuille(decimal montant, string? commentaire)
+    public async Task<IActionResult> DonnerDepuisPortefeuille(decimal montant, string? commentaire, Guid? scoutPayeurId)
     {
         if (montant <= 0)
         {
@@ -51,7 +51,13 @@ public class PortefeuillesController(
         }
 
         var user = await userManager.GetUserAsync(User);
-        var payeurScout = await ResolveFinancePayorScoutAsync(user?.Id ?? UserId);
+        var payeurResolution = await ResolveFinancePayorScoutAsync(user?.Id ?? UserId, scoutPayeurId);
+        if (!payeurResolution.Success)
+        {
+            TempData["Error"] = payeurResolution.Message;
+            return RedirectToAction(nameof(MonPortefeuille));
+        }
+        var payeurScout = payeurResolution.Scout;
         var reference = $"DON-WAL-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}";
         var before = portefeuille.Solde;
         portefeuille.Solde -= montant;
@@ -103,7 +109,7 @@ public class PortefeuillesController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> PayerDepuisPortefeuille(string typePaiement, decimal montant, Guid? activiteId, string? commentaire)
+    public async Task<IActionResult> PayerDepuisPortefeuille(string typePaiement, decimal montant, Guid? activiteId, string? commentaire, Guid? scoutPayeurId)
     {
         if (montant <= 0)
         {
@@ -144,7 +150,13 @@ public class PortefeuillesController(
         }
 
         var user = await userManager.GetUserAsync(User);
-        var payeurScout = await ResolveFinancePayorScoutAsync(user?.Id ?? UserId);
+        var payeurResolution = await ResolveFinancePayorScoutAsync(user?.Id ?? UserId, scoutPayeurId);
+        if (!payeurResolution.Success)
+        {
+            TempData["Error"] = payeurResolution.Message;
+            return RedirectToAction(nameof(MonPortefeuille));
+        }
+        var payeurScout = payeurResolution.Scout;
         var reference = $"PAY-WAL-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}";
         var before = portefeuille.Solde;
         portefeuille.Solde -= montant;
@@ -650,27 +662,51 @@ public class PortefeuillesController(
     private async Task<PortefeuilleUtilisateur> EnsureCurrentUserWalletAsync()
         => await EnsureWalletAsync(UserId);
 
-    private async Task<Scout?> ResolveFinancePayorScoutAsync(Guid userId)
+    private async Task<(bool Success, Scout? Scout, string Message)> ResolveFinancePayorScoutAsync(Guid userId, Guid? selectedScoutId)
     {
-        var scout = await db.Scouts
-            .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.UserId == userId && s.IsActive);
-        if (scout is not null)
+        var eligibleScouts = await GetEligiblePayorScoutsAsync(userId);
+        if (eligibleScouts.Count == 0)
         {
-            return scout;
+            return (true, null, string.Empty);
         }
 
-        var linkedParentScouts = await db.Parents
+        if (selectedScoutId.HasValue)
+        {
+            var selectedScout = eligibleScouts.FirstOrDefault(s => s.Id == selectedScoutId.Value);
+            return selectedScout is not null
+                ? (true, selectedScout, string.Empty)
+                : (false, null, "Payeur invalide : selectionnez une fiche scout liee a votre compte.");
+        }
+
+        if (eligibleScouts.Count == 1)
+        {
+            return (true, eligibleScouts[0], string.Empty);
+        }
+
+        return (false, null, "Plusieurs fiches scouts sont liees a votre compte. Selectionnez le scout pour qui ce paiement ou don est effectue.");
+    }
+
+    private async Task<List<Scout>> GetEligiblePayorScoutsAsync(Guid userId)
+    {
+        var directScout = await db.Scouts
+            .AsNoTracking()
+            .Where(s => s.UserId == userId && s.IsActive)
+            .OrderBy(s => s.Nom)
+            .ThenBy(s => s.Prenom)
+            .ToListAsync();
+        if (directScout.Count > 0)
+        {
+            return directScout;
+        }
+
+        return await db.Parents
             .AsNoTracking()
             .Where(p => p.UserId == userId)
             .SelectMany(p => p.Scouts)
             .Where(s => s.IsActive)
             .OrderBy(s => s.Nom)
             .ThenBy(s => s.Prenom)
-            .Take(2)
             .ToListAsync();
-
-        return linkedParentScouts.Count == 1 ? linkedParentScouts[0] : null;
     }
 
     private async Task<PortefeuilleUtilisateur> EnsureWalletAsync(Guid userId)
@@ -824,6 +860,7 @@ public class PortefeuillesController(
             .OrderByDescending(a => a.DateDebut)
             .Take(80)
             .ToListAsync();
+        ViewBag.ScoutsPayeurs = await GetEligiblePayorScoutsAsync(UserId);
     }
 
     private static void ApplyMovementToBalance(MouvementPortefeuille mouvement)
