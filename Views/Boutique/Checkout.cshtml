@@ -45,9 +45,10 @@
                         <label class="form-label">Email</label>
                         <input name="emailClient" type="email" class="form-control" autocomplete="email" value="@checkoutEmail" />
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-6" id="mobileMoneyReferenceField">
                         <label class="form-label">Reference paiement</label>
                         <input name="referencePaiement" class="form-control" placeholder="Reference Mobile Money si deja paye" />
+                        <div class="form-text">Ce champ concerne uniquement un paiement Mobile Money.</div>
                     </div>
                     <div class="col-12">
                         <label class="form-label">Mode de paiement</label>
@@ -56,7 +57,7 @@
                                 <input type="radio" name="modePaiement" value="MobileMoney" checked />
                                 <span>
                                     <strong>Mobile Money</strong>
-                                    <small>Paiement par reference Mobile Money.</small>
+                                    <small>Reference operateur a verifier par l'equipe finance.</small>
                                 </span>
                             </label>
                             @if (isAuthenticatedCheckout)
@@ -66,7 +67,7 @@
                                     <span>
                                         <strong>Mon portefeuille</strong>
                                         <small>
-                                            Paiement immediat. Solde : @portefeuilleSolde.ToString("N0") @portefeuilleDevise.
+                                            Debit interne immediat. Solde : @portefeuilleSolde.ToString("N0") @portefeuilleDevise.
                                             @if (portefeuilleSolde < Model.Total)
                                             {
                                                 <text> Solde insuffisant.</text>
@@ -83,6 +84,16 @@
                                 </span>
                             </label>
                         </div>
+                        @if (isAuthenticatedCheckout)
+                        {
+                            <div id="walletPaymentNotice" class="alert mt-3 mb-0" style="display:none;background:rgba(89,117,55,.08);border:1px solid rgba(89,117,55,.22);border-radius:12px;">
+                                <strong>Paiement portefeuille</strong>
+                                <div class="small text-muted-custom">
+                                    Le montant sera debite directement de votre portefeuille Mango Taika. Aucune reference Mobile Money n'est demandee.
+                                    Solde apres paiement : @((portefeuilleSolde - Model.Total).ToString("N0")) @portefeuilleDevise.
+                                </div>
+                            </div>
+                        }
                     </div>
                 </div>
 
@@ -113,3 +124,26 @@
         </aside>
     </div>
 </section>
+
+@section Scripts {
+    <script>
+        (() => {
+            const referenceField = document.getElementById('mobileMoneyReferenceField');
+            const walletNotice = document.getElementById('walletPaymentNotice');
+            const paymentRadios = document.querySelectorAll('input[name="modePaiement"]');
+            const refreshPaymentUi = () => {
+                const selected = document.querySelector('input[name="modePaiement"]:checked')?.value || 'MobileMoney';
+                if (referenceField) {
+                    referenceField.style.display = selected === 'MobileMoney' ? '' : 'none';
+                    const input = referenceField.querySelector('input');
+                    if (input && selected !== 'MobileMoney') input.value = '';
+                }
+                if (walletNotice) {
+                    walletNotice.style.display = selected === 'Portefeuille' ? '' : 'none';
+                }
+            };
+            paymentRadios.forEach(radio => radio.addEventListener('change', refreshPaymentUi));
+            refreshPaymentUi();
+        })();
+    </script>
+}

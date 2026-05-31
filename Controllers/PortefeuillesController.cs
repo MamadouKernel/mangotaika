@@ -100,7 +100,7 @@ public class PortefeuillesController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> PayerDepuisPortefeuille(string typePaiement, decimal montant, Guid? activiteId, Guid? comptePaiementId, string? commentaire)
+    public async Task<IActionResult> PayerDepuisPortefeuille(string typePaiement, decimal montant, Guid? activiteId, string? commentaire)
     {
         if (montant <= 0)
         {
@@ -140,28 +140,6 @@ public class PortefeuillesController(
             }
         }
 
-        var compte = comptePaiementId.HasValue
-            ? await db.ComptesPaiementMobile.FirstOrDefaultAsync(c => c.Id == comptePaiementId.Value && c.EstActif && !c.EstSupprime)
-            : isActivite
-                ? await db.ComptesPaiementMobile
-                    .Where(c => c.EstActif && !c.EstSupprime && c.ActiviteId == activite!.Id)
-                    .OrderByDescending(c => c.EstPrincipal)
-                    .FirstOrDefaultAsync()
-                    ?? await db.ComptesPaiementMobile.Where(c => c.EstActif && !c.EstSupprime).OrderByDescending(c => c.EstPrincipal).FirstOrDefaultAsync()
-                : await db.ComptesPaiementMobile.Where(c => c.EstActif && !c.EstSupprime).OrderByDescending(c => c.EstPrincipal).FirstOrDefaultAsync();
-
-        if (comptePaiementId.HasValue && compte is null)
-        {
-            TempData["Error"] = "Compte de paiement introuvable ou inactif. Choisissez un autre compte ou demandez a l'administration de l'activer.";
-            return RedirectToAction(nameof(MonPortefeuille));
-        }
-
-        if (isActivite && compte?.ActiviteId is Guid linkedActivityId && linkedActivityId != activite!.Id)
-        {
-            TempData["Error"] = "Le compte de paiement selectionne est rattache a une autre activite. Utilisez le compte de cette activite ou un compte global.";
-            return RedirectToAction(nameof(MonPortefeuille));
-        }
-
         var user = await userManager.GetUserAsync(User);
         var reference = $"PAY-WAL-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}";
         var before = portefeuille.Solde;
@@ -182,7 +160,7 @@ public class PortefeuillesController(
             Devise = portefeuille.Devise,
             Libelle = libelle,
             Reference = reference,
-            Commentaire = BuildPaymentComment(compte, commentaire),
+            Commentaire = BuildPaymentComment(commentaire),
             RecuToken = Guid.NewGuid().ToString("N"),
             NumeroRecu = reference,
             SoldeAvant = before,
@@ -909,21 +887,10 @@ public class PortefeuillesController(
         Solde apres operation : {mouvement.SoldeApres?.ToString("N0") ?? "-"} {mouvement.Devise}
         """;
 
-    private static string? BuildPaymentComment(ComptePaiementMobile? compte, string? commentaire)
+    private static string? BuildPaymentComment(string? commentaire)
     {
-        var parts = new List<string>();
-        if (compte is not null)
-        {
-            parts.Add($"Compte impacte : {compte.Libelle} - {compte.Operateur} {compte.NumeroMobile}");
-        }
-
         var normalizedComment = NormalizeOptional(commentaire);
-        if (!string.IsNullOrWhiteSpace(normalizedComment))
-        {
-            parts.Add(normalizedComment);
-        }
-
-        return parts.Count == 0 ? null : string.Join(" | ", parts);
+        return string.IsNullOrWhiteSpace(normalizedComment) ? null : normalizedComment;
     }
 
     private static string? NormalizeOptional(string? value)

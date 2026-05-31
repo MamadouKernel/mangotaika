@@ -115,7 +115,13 @@
             </form>
         </div>
         <div class="tab-pane fade" id="wallet-payment">
-            <h4 class="mb-3">Payer depuis mon portefeuille</h4>
+            <h4 class="mb-2">Payer depuis mon portefeuille</h4>
+            <div class="alert mb-3" style="background:rgba(89,117,55,.08);border:1px solid rgba(89,117,55,.22);border-radius:12px;">
+                <strong>Paiement interne Mango Taika</strong>
+                <div class="small text-muted-custom">
+                    Ce paiement debite directement votre solde disponible. Aucun compte Mobile Money ni reference operateur n'est requis.
+                </div>
+            </div>
             <form asp-action="PayerDepuisPortefeuille" method="post" class="row g-3 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label">Type</label>
@@ -134,21 +140,11 @@
                         }
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">Compte impacte</label>
-                    <select name="comptePaiementId" class="form-select">
-                        <option value="">Compte principal</option>
-                        @foreach (var item in comptesPaiement)
-                        {
-                            <option value="@item.Id">@item.Libelle @(item.Activite is null ? "" : $"({item.Activite.Titre})")</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label class="form-label">Montant</label>
                     <input name="montant" type="number" min="1" step="1" class="form-control" required />
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <button class="btn btn-or w-100" type="submit"><i class="bi bi-check2-circle"></i> Payer</button>
                 </div>
                 <div class="col-12">
