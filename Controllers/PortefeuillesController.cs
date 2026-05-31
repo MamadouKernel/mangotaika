@@ -51,6 +51,7 @@ public class PortefeuillesController(
         }
 
         var user = await userManager.GetUserAsync(User);
+        var payeurScout = await ResolveFinancePayorScoutAsync(user?.Id ?? UserId);
         var reference = $"DON-WAL-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}";
         var before = portefeuille.Solde;
         portefeuille.Solde -= montant;
@@ -85,7 +86,9 @@ public class PortefeuillesController(
             DateTransaction = DateTime.UtcNow,
             Reference = reference,
             Commentaire = mouvement.Commentaire,
-            CreateurId = user?.Id ?? UserId
+            CreateurId = user?.Id ?? UserId,
+            ScoutId = payeurScout?.Id,
+            GroupeId = payeurScout?.GroupeId
         };
 
         db.MouvementsPortefeuilles.Add(mouvement);
@@ -141,6 +144,7 @@ public class PortefeuillesController(
         }
 
         var user = await userManager.GetUserAsync(User);
+        var payeurScout = await ResolveFinancePayorScoutAsync(user?.Id ?? UserId);
         var reference = $"PAY-WAL-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}";
         var before = portefeuille.Solde;
         portefeuille.Solde -= montant;
@@ -181,7 +185,8 @@ public class PortefeuillesController(
             Commentaire = mouvement.Commentaire,
             CreateurId = user?.Id ?? UserId,
             ActiviteId = activite?.Id,
-            GroupeId = activite?.GroupeId
+            ScoutId = payeurScout?.Id,
+            GroupeId = activite?.GroupeId ?? payeurScout?.GroupeId
         };
 
         db.MouvementsPortefeuilles.Add(mouvement);
@@ -644,6 +649,29 @@ public class PortefeuillesController(
 
     private async Task<PortefeuilleUtilisateur> EnsureCurrentUserWalletAsync()
         => await EnsureWalletAsync(UserId);
+
+    private async Task<Scout?> ResolveFinancePayorScoutAsync(Guid userId)
+    {
+        var scout = await db.Scouts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.UserId == userId && s.IsActive);
+        if (scout is not null)
+        {
+            return scout;
+        }
+
+        var linkedParentScouts = await db.Parents
+            .AsNoTracking()
+            .Where(p => p.UserId == userId)
+            .SelectMany(p => p.Scouts)
+            .Where(s => s.IsActive)
+            .OrderBy(s => s.Nom)
+            .ThenBy(s => s.Prenom)
+            .Take(2)
+            .ToListAsync();
+
+        return linkedParentScouts.Count == 1 ? linkedParentScouts[0] : null;
+    }
 
     private async Task<PortefeuilleUtilisateur> EnsureWalletAsync(Guid userId)
     {

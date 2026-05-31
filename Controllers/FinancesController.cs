@@ -38,6 +38,7 @@ public class FinancesController(AppDbContext db, UserManager<ApplicationUser> us
             .Take(pageSize)
             .Include(t => t.Groupe)
             .Include(t => t.Scout)
+            .Include(t => t.Createur)
             .ToListAsync();
 
         var parCatRows = await baseQuery

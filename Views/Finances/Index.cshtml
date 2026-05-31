@@ -99,7 +99,7 @@
                 <div class="d-flex flex-column gap-1 mb-3 flex-grow-1" style="font-size:0.85rem;">
                     <span><i class="bi bi-calendar3 text-bleu"></i> @t.DateTransaction.ToString("dd/MM/yyyy")</span>
                     <span><i class="bi bi-building text-or"></i> @(t.Groupe?.Nom ?? "-")</span>
-                    <span><i class="bi bi-person text-bleu"></i> @(t.Scout != null ? $"{t.Scout.Nom} {t.Scout.Prenom}" : "-")</span>
+                    <span><i class="bi bi-person text-bleu"></i> @(t.Scout != null ? $"{t.Scout.Nom} {t.Scout.Prenom}" : t.Createur != null ? $"{t.Createur.Prenom} {t.Createur.Nom}".Trim() : "-")</span>
                 </div>
                 <div class="d-flex flex-wrap gap-2 mt-auto">
                     <a asp-action="Details" asp-route-id="@t.Id" class="btn btn-sm btn-outline-or" title="Details"><i class="bi bi-eye"></i></a>
