@@ -1288,6 +1288,7 @@ public class BoutiqueController(
 
         var before = wallet.Solde;
         wallet.Solde -= commande.Total;
+        var payeurScout = await ResolveFinancePayorScoutAsync(user.Id);
         foreach (var line in commande.Lignes)
         {
             var article = articles[line.ArticleBoutiqueId];
@@ -1322,7 +1323,45 @@ public class BoutiqueController(
             UserAgent = Request.Headers.UserAgent.ToString()
         });
 
+        db.TransactionsFinancieres.Add(new TransactionFinanciere
+        {
+            Id = Guid.NewGuid(),
+            Libelle = $"Paiement boutique - {commande.Id.ToString("N")[..8].ToUpperInvariant()}",
+            Montant = commande.Total,
+            Type = TypeTransaction.Recette,
+            Categorie = CategorieFinance.Materiel,
+            DateTransaction = DateTime.UtcNow,
+            Reference = commande.ReferencePaiement,
+            Commentaire = string.Join(", ", commande.Lignes.Select(line => $"{articles[line.ArticleBoutiqueId].Nom} x{line.Quantite}")),
+            CreateurId = user.Id,
+            ScoutId = payeurScout?.Id,
+            GroupeId = payeurScout?.GroupeId
+        });
+
         return (true, $"Paiement effectue depuis votre portefeuille. Nouveau solde : {wallet.Solde:N0} {wallet.Devise}.");
+    }
+
+    private async Task<Scout?> ResolveFinancePayorScoutAsync(Guid userId)
+    {
+        var scout = await db.Scouts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.UserId == userId && s.IsActive);
+        if (scout is not null)
+        {
+            return scout;
+        }
+
+        var linkedParentScouts = await db.Parents
+            .AsNoTracking()
+            .Where(p => p.UserId == userId)
+            .SelectMany(p => p.Scouts)
+            .Where(s => s.IsActive)
+            .OrderBy(s => s.Nom)
+            .ThenBy(s => s.Prenom)
+            .Take(2)
+            .ToListAsync();
+
+        return linkedParentScouts.Count == 1 ? linkedParentScouts[0] : null;
     }
 
     private static ModePaiementCommandeBoutique ParsePaymentMode(string? value)

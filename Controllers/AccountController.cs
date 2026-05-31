@@ -209,6 +209,7 @@ public class AccountController(
         }
 
         var scouts = new List<Scout>();
+        var requiresManualActivation = false;
         if (model.Role == "Parent")
         {
             if (string.IsNullOrWhiteSpace(model.Matricules))
@@ -247,8 +248,26 @@ public class AccountController(
             parentsLies = await ResolveParentLinksForRegistrationAsync(model, scouts);
             if (parentsLies.Count == 0)
             {
-                ModelState.AddModelError("Matricules", "Aucune fiche parent/tuteur ne correspond a ces matricules avec le telephone ou l'email saisi. Utilisez les coordonnees declarees au groupe, ou demandez la correction de la fiche parent.");
-                return View(model);
+                var enfantsDejaAuMaximum = await GetScoutsAtParentLimitAsync(scouts);
+                if (enfantsDejaAuMaximum.Count > 0)
+                {
+                    ModelState.AddModelError(
+                        "Matricules",
+                        $"Impossible de creer un nouveau lien parent/tuteur : la limite de {MaxParentsPerScout} parents/tuteurs est deja atteinte pour : {string.Join(", ", enfantsDejaAuMaximum)}.");
+                    return View(model);
+                }
+
+                parentsLies.Add(new Parent
+                {
+                    Id = Guid.NewGuid(),
+                    Nom = model.Nom.Trim(),
+                    Prenom = model.Prenom.Trim(),
+                    Telephone = model.Telephone.Trim(),
+                    Email = string.IsNullOrWhiteSpace(model.Email) ? null : model.Email.Trim(),
+                    Relation = "Parent / Tuteur",
+                    Scouts = scouts
+                });
+                requiresManualActivation = true;
             }
             if (parentsLies.Any(p => p.UserId.HasValue))
             {
@@ -266,12 +285,30 @@ public class AccountController(
                 .ToList();
             if (matriculesManquants.Count > 0)
             {
-                ModelState.AddModelError("Matricules", $"Fiches parent manquantes pour : {string.Join(", ", matriculesManquants)}");
-                return View(model);
+                var missingScouts = scouts.Where(s => !scoutIdsLies.Contains(s.Id)).ToList();
+                var enfantsDejaAuMaximum = await GetScoutsAtParentLimitAsync(missingScouts);
+                if (enfantsDejaAuMaximum.Count > 0)
+                {
+                    ModelState.AddModelError(
+                        "Matricules",
+                        $"Impossible de creer un nouveau lien parent/tuteur : la limite de {MaxParentsPerScout} parents/tuteurs est deja atteinte pour : {string.Join(", ", enfantsDejaAuMaximum)}.");
+                    return View(model);
+                }
+
+                parentsLies.Add(new Parent
+                {
+                    Id = Guid.NewGuid(),
+                    Nom = model.Nom.Trim(),
+                    Prenom = model.Prenom.Trim(),
+                    Telephone = model.Telephone.Trim(),
+                    Email = string.IsNullOrWhiteSpace(model.Email) ? null : model.Email.Trim(),
+                    Relation = "Parent / Tuteur",
+                    Scouts = missingScouts
+                });
+                requiresManualActivation = true;
             }
         }
         Scout? scoutLie = null;
-        var requiresManualActivation = false;
         if (model.Role == "Scout")
         {
             if (string.IsNullOrWhiteSpace(model.MatriculeScout))
@@ -325,6 +362,10 @@ public class AccountController(
         {
             foreach (var parent in parentsLies)
             {
+                if (parent.Id != Guid.Empty && db.Entry(parent).State == EntityState.Detached)
+                {
+                    db.Parents.Add(parent);
+                }
                 parent.UserId = user.Id;
                 parent.Nom = user.Nom;
                 parent.Prenom = user.Prenom;
@@ -376,6 +417,24 @@ public class AccountController(
                 ParentCount = s.Parents.Count
             })
             .Where(s => s.ParentCount > MaxParentsPerScout)
+            .Select(s => s.Label)
+            .ToListAsync();
+    }
+
+    private async Task<List<string>> GetScoutsAtParentLimitAsync(IReadOnlyCollection<Scout> scouts)
+    {
+        if (scouts.Count == 0)
+            return [];
+
+        var scoutIds = scouts.Select(s => s.Id).ToList();
+        return await db.Scouts
+            .Where(s => scoutIds.Contains(s.Id))
+            .Select(s => new
+            {
+                Label = s.Matricule ?? $"{s.Prenom} {s.Nom}",
+                ParentCount = s.Parents.Count
+            })
+            .Where(s => s.ParentCount >= MaxParentsPerScout)
             .Select(s => s.Label)
             .ToListAsync();
     }

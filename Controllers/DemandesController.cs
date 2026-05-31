@@ -507,7 +507,16 @@ public class DemandesController(
                 .Select(s => new { s.UserId, s.Fonction })
                 .ToListAsync();
 
+            var roleChefGroupeScoutUsers = await db.Scouts
+                .Where(s => s.IsActive
+                    && s.UserId.HasValue
+                    && s.GroupeId == demande.GroupeId.Value
+                    && roleChefGroupeUsers.Contains(s.UserId.Value))
+                .Select(s => s.UserId!.Value)
+                .ToListAsync();
+
             return roleChefGroupeUsers
+                .Concat(roleChefGroupeScoutUsers)
                 .Concat(chefGroupeUsers
                 .Where(s => IsChefGroupeFunction(s.Fonction))
                 .Select(s => s.UserId!.Value))
@@ -643,7 +652,11 @@ public class DemandesController(
     {
         var normalizedFunction = DatabaseText.NormalizeSearchKey(fonction);
         return normalizedFunction.Contains("CHEF DE GROUPE", StringComparison.Ordinal)
-            || normalizedFunction.Contains("CHEF GROUPE", StringComparison.Ordinal);
+            || normalizedFunction.Contains("CHEF GROUPE", StringComparison.Ordinal)
+            || normalizedFunction == "CG"
+            || normalizedFunction.StartsWith("CG ", StringComparison.Ordinal)
+            || normalizedFunction.EndsWith(" CG", StringComparison.Ordinal)
+            || normalizedFunction.Contains(" CG ", StringComparison.Ordinal);
     }
 
     private static bool IsChefUniteFunction(string? fonction)
