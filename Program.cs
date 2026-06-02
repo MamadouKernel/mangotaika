@@ -60,6 +60,7 @@ var trustAllForwardedHeaders = builder.Configuration.GetValue("ReverseProxy:Trus
 var secureCookiePolicy = builder.Environment.IsEnvironment("Testing")
     ? CookieSecurePolicy.SameAsRequest
     : CookieSecurePolicy.Always;
+var sessionIdleTimeout = TimeSpan.FromMinutes(5);
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
@@ -82,7 +83,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.SecurePolicy = secureCookiePolicy;
     options.Cookie.SameSite = SameSiteMode.Strict;
-    options.ExpireTimeSpan = TimeSpan.FromHours(8);
+    options.ExpireTimeSpan = sessionIdleTimeout;
     options.SlidingExpiration = true;
 });
 
@@ -116,7 +117,7 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
     options.Cookie.SecurePolicy = secureCookiePolicy;
-    options.IdleTimeout = TimeSpan.FromHours(8);
+    options.IdleTimeout = sessionIdleTimeout;
 });
 
 builder.Services.AddAntiforgery(options =>
