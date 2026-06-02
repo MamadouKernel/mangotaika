@@ -20,7 +20,7 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
             dto.RoleActif = ActiveRoleService.GetLabel(activeRole!);
             dto.TitreBienvenue = "Mon espace scout";
             dto.SousTitreBienvenue = "Vue personnelle de vos activites, demandes, formations et tickets.";
-            await FillScoutDashboardAsync(dto, userId);
+            await FillScoutDashboardAsync(dto, userId, activeRole);
             return dto;
         }
 
@@ -78,7 +78,7 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
             dto.RoleActif = "Scout";
             dto.TitreBienvenue = "Mon espace scout";
             dto.SousTitreBienvenue = "Vue personnelle de vos activites, demandes, formations et tickets.";
-            await FillScoutDashboardAsync(dto, userId);
+            await FillScoutDashboardAsync(dto, userId, activeRole);
             return dto;
         }
 
@@ -287,7 +287,7 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
             || sexe == "BOY";
     }
 
-    private async Task FillScoutDashboardAsync(DashboardDto dto, Guid? userId)
+    private async Task FillScoutDashboardAsync(DashboardDto dto, Guid? userId, string? activeRole)
     {
         if (userId is null)
         {
@@ -305,9 +305,11 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
         dto.MesActivites = await db.ParticipantsActivite
             .Where(p => p.ScoutId == scout.Id && !p.EstSupprime && !p.Activite.EstSupprime)
             .CountAsync();
-        dto.MesDemandes = await db.DemandesAutorisation
-            .Where(d => d.DemandeurId == userId && d.Statut != StatutDemande.Rejetee && d.Statut != StatutDemande.Validee)
-            .CountAsync();
+        dto.MesDemandes = activeRole == RoleNames.ChefGroupe
+            ? await CountChefGroupeDemandesBacklogAsync(userId.Value, scout)
+            : await db.DemandesAutorisation
+                .Where(d => d.DemandeurId == userId && d.Statut != StatutDemande.Rejetee && d.Statut != StatutDemande.Validee)
+                .CountAsync();
         dto.TicketsOuverts = await db.Tickets
             .Where(t => !t.EstSupprime && t.CreateurId == userId && (t.Statut == StatutTicket.Ouvert || t.Statut == StatutTicket.EnCours || t.Statut == StatutTicket.EnAttente))
             .CountAsync();
@@ -395,6 +397,87 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
             .OrderByDescending(a => a.DateDebut)
             .Take(5)
             .ToListAsync();
+    }
+
+    private async Task<int> CountChefGroupeDemandesBacklogAsync(Guid userId, Scout scout)
+    {
+        var groupeId = IsChefGroupeFunction(scout.Fonction)
+            ? scout.GroupeId
+            : await db.Users
+                .AsNoTracking()
+                .Where(u => u.Id == userId && u.IsActive && !u.EstSupprime)
+                .Select(u => u.GroupeId)
+                .FirstOrDefaultAsync();
+
+        if (!groupeId.HasValue)
+        {
+            return 0;
+        }
+
+        var chefUniteRoleUserIds = await db.UserRoles
+            .Join(db.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
+            .Where(x => x.Name == RoleNames.ChefUnite)
+            .Select(x => x.UserId)
+            .ToListAsync();
+
+        var leadershipScouts = await db.Scouts
+            .AsNoTracking()
+            .Where(s => s.IsActive && s.UserId.HasValue)
+            .Select(s => new { UserId = s.UserId!.Value, s.Fonction })
+            .ToListAsync();
+
+        var chefUniteUserIds = leadershipScouts
+            .Where(s => IsChefUniteFunction(s.Fonction))
+            .Select(s => s.UserId)
+            .Concat(chefUniteRoleUserIds)
+            .Distinct()
+            .ToList();
+
+        if (chefUniteUserIds.Count == 0)
+        {
+            return 0;
+        }
+
+        var demandes = await db.DemandesAutorisation
+            .AsNoTracking()
+            .Include(d => d.Suivis)
+            .Where(d => d.GroupeId == groupeId.Value
+                && d.Statut == StatutDemande.Soumise
+                && chefUniteUserIds.Contains(d.DemandeurId))
+            .ToListAsync();
+
+        return demandes.Count(d => !d.Suivis.Any(s => IsChefGroupeApprovalComment(s.Commentaire)));
+    }
+
+    private static bool IsChefGroupeFunction(string? fonction)
+    {
+        var normalizedFunction = DatabaseText.NormalizeSearchKey(fonction);
+        return normalizedFunction.Contains("CHEF DE GROUPE", StringComparison.Ordinal)
+            || normalizedFunction.Contains("CHEF GROUPE", StringComparison.Ordinal)
+            || normalizedFunction == "CG"
+            || normalizedFunction.StartsWith("CG ", StringComparison.Ordinal)
+            || normalizedFunction.EndsWith(" CG", StringComparison.Ordinal)
+            || normalizedFunction.Contains(" CG ", StringComparison.Ordinal);
+    }
+
+    private static bool IsChefUniteFunction(string? fonction)
+    {
+        var normalizedFunction = DatabaseText.NormalizeSearchKey(fonction);
+        return normalizedFunction.Contains("CHEF D UNITE", StringComparison.Ordinal)
+            || normalizedFunction.Contains("CHEF UNITE", StringComparison.Ordinal)
+            || normalizedFunction.Contains("CHEF DE TROUPE", StringComparison.Ordinal)
+            || normalizedFunction.Contains("CHEF TROUPE", StringComparison.Ordinal)
+            || normalizedFunction == "CT"
+            || normalizedFunction.StartsWith("CT ", StringComparison.Ordinal)
+            || normalizedFunction.EndsWith(" CT", StringComparison.Ordinal)
+            || normalizedFunction.Contains(" CT ", StringComparison.Ordinal);
+    }
+
+    private static bool IsChefGroupeApprovalComment(string? commentaire)
+    {
+        var normalized = DatabaseText.NormalizeSearchKey(commentaire);
+        return normalized.Contains("VALIDEE PAR LE CHEF DE GROUPE", StringComparison.Ordinal)
+            || normalized.Contains("VALIDE PAR LE CHEF DE GROUPE", StringComparison.Ordinal);
     }
 
     private async Task FillParentDashboardAsync(DashboardDto dto, Guid? userId)
