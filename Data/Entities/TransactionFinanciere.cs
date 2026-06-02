@@ -7,6 +7,7 @@ public class TransactionFinanciere
     public decimal Montant { get; set; }
     public TypeTransaction Type { get; set; }
     public CategorieFinance Categorie { get; set; }
+    public StatutTransactionFinanciere Statut { get; set; } = StatutTransactionFinanciere.Validee;
     public DateTime DateTransaction { get; set; } = DateTime.UtcNow;
     public string? Reference { get; set; }
     public string? Commentaire { get; set; }
@@ -25,6 +26,13 @@ public class TransactionFinanciere
 }
 
 public enum TypeTransaction { Recette, Depense }
+
+public enum StatutTransactionFinanciere
+{
+    Declaree,
+    Validee,
+    Rejetee
+}
 
 public enum CategorieFinance
 {

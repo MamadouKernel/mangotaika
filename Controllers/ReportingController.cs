@@ -61,7 +61,7 @@ public class ReportingController(AppDbContext db) : Controller
 
         // Finances mensuelles
         var financesMensuelles = await db.TransactionsFinancieres
-            .Where(t => !t.EstSupprime && t.DateTransaction.Year == year)
+            .Where(t => !t.EstSupprime && t.Statut == StatutTransactionFinanciere.Validee && t.DateTransaction.Year == year)
             .GroupBy(t => t.DateTransaction.Month)
             .Select(g => new
             {
@@ -189,7 +189,7 @@ public class ReportingController(AppDbContext db) : Controller
         var year = annee ?? DateTime.Now.Year;
         var transactions = await db.TransactionsFinancieres
             .Include(t => t.Groupe).Include(t => t.Scout)
-            .Where(t => !t.EstSupprime && t.DateTransaction.Year == year)
+            .Where(t => !t.EstSupprime && t.Statut == StatutTransactionFinanciere.Validee && t.DateTransaction.Year == year)
             .OrderByDescending(t => t.DateTransaction)
             .ToListAsync();
 

@@ -19,15 +19,16 @@ public class FinancesController(AppDbContext db, UserManager<ApplicationUser> us
         var (page, ps) = ListPagination.Read(Request);
 
         var previousYearBalance = await db.TransactionsFinancieres.AsNoTracking()
-            .Where(t => !t.EstSupprime && t.DateTransaction.Year == year - 1)
+            .Where(t => !t.EstSupprime && t.Statut == StatutTransactionFinanciere.Validee && t.DateTransaction.Year == year - 1)
             .Select(t => t.Type == TypeTransaction.Recette ? t.Montant : -t.Montant)
             .SumAsync();
 
         var baseQuery = db.TransactionsFinancieres.AsNoTracking()
             .Where(t => !t.EstSupprime && t.DateTransaction.Year == year);
+        var validatedQuery = baseQuery.Where(t => t.Statut == StatutTransactionFinanciere.Validee);
 
-        var totalRecettes = await baseQuery.Where(t => t.Type == TypeTransaction.Recette).SumAsync(t => (decimal?)t.Montant) ?? 0m;
-        var totalDepenses = await baseQuery.Where(t => t.Type == TypeTransaction.Depense).SumAsync(t => (decimal?)t.Montant) ?? 0m;
+        var totalRecettes = await validatedQuery.Where(t => t.Type == TypeTransaction.Recette).SumAsync(t => (decimal?)t.Montant) ?? 0m;
+        var totalDepenses = await validatedQuery.Where(t => t.Type == TypeTransaction.Depense).SumAsync(t => (decimal?)t.Montant) ?? 0m;
 
         var totalCount = await baseQuery.CountAsync();
         var (p, pageSize, skip, totalPages) = ListPagination.Normalize(page, ps, totalCount);
@@ -38,10 +39,11 @@ public class FinancesController(AppDbContext db, UserManager<ApplicationUser> us
             .Take(pageSize)
             .Include(t => t.Groupe)
             .Include(t => t.Scout)
+            .Include(t => t.Activite)
             .Include(t => t.Createur)
             .ToListAsync();
 
-        var parCatRows = await baseQuery
+        var parCatRows = await validatedQuery
             .GroupBy(t => t.Categorie)
             .Select(g => new
             {
@@ -119,6 +121,7 @@ public class FinancesController(AppDbContext db, UserManager<ApplicationUser> us
     {
         model.Id = Guid.NewGuid();
         model.CreateurId = UserId;
+        model.Statut = StatutTransactionFinanciere.Validee;
         if (model.GroupeId == Guid.Empty) model.GroupeId = null;
         if (model.ActiviteId == Guid.Empty) model.ActiviteId = null;
         if (model.ProjetAGRId == Guid.Empty) model.ProjetAGRId = null;
@@ -130,11 +133,56 @@ public class FinancesController(AppDbContext db, UserManager<ApplicationUser> us
     }
 
     [HttpPost, Authorize(Roles = "Administrateur,Gestionnaire"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> ValiderDeclaration(Guid id)
+    {
+        var t = await db.TransactionsFinancieres.FirstOrDefaultAsync(x => x.Id == id && !x.EstSupprime);
+        if (t is null) return NotFound();
+        if (t.Statut != StatutTransactionFinanciere.Declaree)
+        {
+            TempData["Error"] = "Cette transaction n'est pas en attente de validation.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        t.Statut = StatutTransactionFinanciere.Validee;
+        t.Commentaire = AppendFinanceComment(t.Commentaire, $"Validation finance le {DateTime.UtcNow:dd/MM/yyyy HH:mm} UTC");
+        await db.SaveChangesAsync();
+        TempData["Success"] = "Paiement declare valide et comptabilise.";
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost, Authorize(Roles = "Administrateur,Gestionnaire"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> RejeterDeclaration(Guid id, string? motif)
+    {
+        var t = await db.TransactionsFinancieres.FirstOrDefaultAsync(x => x.Id == id && !x.EstSupprime);
+        if (t is null) return NotFound();
+        if (t.Statut != StatutTransactionFinanciere.Declaree)
+        {
+            TempData["Error"] = "Cette transaction n'est pas en attente de validation.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        t.Statut = StatutTransactionFinanciere.Rejetee;
+        t.Commentaire = AppendFinanceComment(t.Commentaire, $"Rejet finance le {DateTime.UtcNow:dd/MM/yyyy HH:mm} UTC. Motif : {NormalizeOptional(motif) ?? "Non precise"}");
+        await db.SaveChangesAsync();
+        TempData["Success"] = "Paiement declare rejete.";
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost, Authorize(Roles = "Administrateur,Gestionnaire"), ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(Guid id)
     {
         var t = await db.TransactionsFinancieres.FindAsync(id);
         if (t is not null) { t.EstSupprime = true; await db.SaveChangesAsync(); }
         TempData["Success"] = "Transaction supprimée.";
         return RedirectToAction(nameof(Index));
+    }
+
+    private static string AppendFinanceComment(string? current, string addition)
+        => string.IsNullOrWhiteSpace(current) ? addition : $"{current} | {addition}";
+
+    private static string? NormalizeOptional(string? value)
+    {
+        var trimmed = value?.Trim();
+        return string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
     }
 }

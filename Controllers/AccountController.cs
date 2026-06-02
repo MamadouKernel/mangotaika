@@ -1152,7 +1152,7 @@ public class AccountController(
             .OrderByDescending(p => p.Activite.DateDebut)
             .ToListAsync();
         var cotisations = await db.TransactionsFinancieres
-            .Where(t => t.ScoutId == scout.Id && !t.EstSupprime)
+            .Where(t => t.ScoutId == scout.Id && !t.EstSupprime && t.Statut == StatutTransactionFinanciere.Validee)
             .OrderByDescending(t => t.DateTransaction)
             .ToListAsync();
         var historique = await db.HistoriqueFonctions
@@ -1238,7 +1238,7 @@ public class AccountController(
             .OrderByDescending(p => p.Activite.DateDebut)
             .ToListAsync();
         var cotisations = await db.TransactionsFinancieres
-            .Where(t => t.ScoutId == scout.Id && !t.EstSupprime)
+            .Where(t => t.ScoutId == scout.Id && !t.EstSupprime && t.Statut == StatutTransactionFinanciere.Validee)
             .OrderByDescending(t => t.DateTransaction)
             .ToListAsync();
 
@@ -1365,7 +1365,7 @@ public class AccountController(
                 .ToListAsync();
 
             donnees["Cotisations"] = await db.TransactionsFinancieres
-                .Where(t => t.ScoutId == scoutLie.Id && !t.EstSupprime)
+                .Where(t => t.ScoutId == scoutLie.Id && !t.EstSupprime && t.Statut == StatutTransactionFinanciere.Validee)
                 .Select(t => new { t.Libelle, t.Montant, t.Type, t.DateTransaction })
                 .ToListAsync();
         }
@@ -1866,7 +1866,7 @@ public class AccountController(
 
             // Cotisations
             var cotisations = await db.TransactionsFinancieres
-                .Where(t => t.ScoutId == scoutLie.Id && !t.EstSupprime)
+                .Where(t => t.ScoutId == scoutLie.Id && !t.EstSupprime && t.Statut == StatutTransactionFinanciere.Validee)
                 .Select(t => new { t.Libelle, t.Montant, t.Type, t.DateTransaction })
                 .ToListAsync();
             donnees["Cotisations"] = cotisations;

@@ -59,6 +59,9 @@
             <button class="btn btn-outline-or" data-bs-toggle="pill" data-bs-target="#wallet-payment" type="button">Paiement</button>
         </li>
         <li class="nav-item" role="presentation">
+            <button class="btn btn-outline-or" data-bs-toggle="pill" data-bs-target="#activity-payment-declaration" type="button">Declaration activite</button>
+        </li>
+        <li class="nav-item" role="presentation">
             <button class="btn btn-outline-or" data-bs-toggle="pill" data-bs-target="#wallet-donation" type="button">Don</button>
         </li>
     </ul>
@@ -163,6 +166,54 @@
                 </div>
                 <div class="col-12">
                     <input name="commentaire" class="form-control" placeholder="Commentaire ou precision de paiement" />
+                </div>
+            </form>
+        </div>
+        <div class="tab-pane fade" id="activity-payment-declaration">
+            <h4 class="mb-2">Declarer un paiement d'activite</h4>
+            <div class="alert mb-3" style="background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.25);border-radius:12px;">
+                <strong>Paiement externe Mobile Money</strong>
+                <div class="small text-muted-custom">
+                    Cette declaration ne debite pas votre portefeuille. Un gestionnaire la verifiera avant de la comptabiliser dans les finances.
+                </div>
+            </div>
+            <form asp-action="DeclarerPaiementActivite" method="post" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Activite</label>
+                    <select name="activiteId" class="form-select" required>
+                        <option value="">Selectionner une activite</option>
+                        @foreach (var activite in activitesPaiement)
+                        {
+                            <option value="@activite.Id">@activite.Titre - @activite.DateDebut.ToString("dd/MM/yyyy")</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Montant</label>
+                    <input name="montant" type="number" min="1" step="1" class="form-control" required />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Reference Mobile Money</label>
+                    <input name="reference" class="form-control" placeholder="Ex. WAVE/OM..." />
+                </div>
+                @if (scoutsPayeurs.Count > 1)
+                {
+                    <div class="col-md-3">
+                        <label class="form-label">Payeur / scout concerne</label>
+                        <select name="scoutPayeurId" class="form-select" required>
+                            <option value="">Selectionner</option>
+                            @foreach (var scout in scoutsPayeurs)
+                            {
+                                <option value="@scout.Id">@scout.Nom @scout.Prenom (@(scout.Matricule ?? "sans matricule"))</option>
+                            }
+                        </select>
+                    </div>
+                }
+                <div class="col-md-3">
+                    <button class="btn btn-or w-100" type="submit"><i class="bi bi-receipt"></i> Declarer</button>
+                </div>
+                <div class="col-12">
+                    <input name="commentaire" class="form-control" placeholder="Precision utile pour la verification" />
                 </div>
             </form>
         </div>

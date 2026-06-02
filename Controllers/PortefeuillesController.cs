@@ -213,6 +213,74 @@ public class PortefeuillesController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeclarerPaiementActivite(Guid activiteId, decimal montant, string? reference, string? commentaire, Guid? scoutPayeurId)
+    {
+        if (activiteId == Guid.Empty)
+        {
+            TempData["Error"] = "Declaration impossible : selectionnez l'activite concernee.";
+            return RedirectToAction(nameof(MonPortefeuille));
+        }
+
+        if (montant <= 0)
+        {
+            TempData["Error"] = "Declaration impossible : saisissez un montant superieur a 0.";
+            return RedirectToAction(nameof(MonPortefeuille));
+        }
+
+        var activite = await db.Activites
+            .AsNoTracking()
+            .FirstOrDefaultAsync(a => a.Id == activiteId && !a.EstSupprime);
+        if (activite is null)
+        {
+            TempData["Error"] = "Declaration impossible : l'activite selectionnee est introuvable ou a ete supprimee.";
+            return RedirectToAction(nameof(MonPortefeuille));
+        }
+
+        var user = await userManager.GetUserAsync(User);
+        var payeurResolution = await ResolveFinancePayorScoutAsync(user?.Id ?? UserId, scoutPayeurId);
+        if (!payeurResolution.Success)
+        {
+            TempData["Error"] = payeurResolution.Message;
+            return RedirectToAction(nameof(MonPortefeuille));
+        }
+
+        var payeurScout = payeurResolution.Scout;
+        var normalizedReference = NormalizeOptional(reference);
+        var transactionReference = normalizedReference ?? $"ACT-DECL-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}";
+        var details = new List<string> { "Paiement activite declare hors portefeuille" };
+        if (!string.IsNullOrWhiteSpace(normalizedReference))
+        {
+            details.Add($"Reference operateur : {normalizedReference}");
+        }
+        if (!string.IsNullOrWhiteSpace(commentaire))
+        {
+            details.Add($"Precision : {NormalizeOptional(commentaire)}");
+        }
+
+        db.TransactionsFinancieres.Add(new TransactionFinanciere
+        {
+            Id = Guid.NewGuid(),
+            Libelle = $"Declaration paiement activite - {activite.Titre}",
+            Montant = montant,
+            Type = TypeTransaction.Recette,
+            Categorie = CategorieFinance.Activite,
+            Statut = StatutTransactionFinanciere.Declaree,
+            DateTransaction = DateTime.UtcNow,
+            Reference = transactionReference,
+            Commentaire = string.Join(" | ", details),
+            CreateurId = user?.Id ?? UserId,
+            ActiviteId = activite.Id,
+            ScoutId = payeurScout?.Id,
+            GroupeId = activite.GroupeId ?? payeurScout?.GroupeId
+        });
+
+        await db.SaveChangesAsync();
+        TempData["Success"] = "Paiement d'activite declare. Il sera comptabilise apres validation par un gestionnaire.";
+        return RedirectToAction(nameof(MonPortefeuille));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> DemanderRecharge(decimal montant, string? reference, string? commentaire)
     {
         if (montant <= 0)

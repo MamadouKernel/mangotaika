@@ -95,16 +95,30 @@
                 <p class="text-muted-custom small mb-2">
                     <span class="badge bg-secondary bg-opacity-25" style="color:var(--bleu-logo);border-radius:10px;font-size:0.7rem;">@t.Categorie</span>
                     <span class="badge-3d @(t.Type == TypeTransaction.Recette ? "badge-validee" : "badge-rejetee") ms-1" style="font-size:0.7rem;">@t.Type</span>
+                    <span class="badge-3d @(t.Statut == StatutTransactionFinanciere.Validee ? "badge-validee" : t.Statut == StatutTransactionFinanciere.Rejetee ? "badge-rejetee" : "badge-soumise") ms-1" style="font-size:0.7rem;">@t.Statut</span>
                 </p>
                 <div class="d-flex flex-column gap-1 mb-3 flex-grow-1" style="font-size:0.85rem;">
                     <span><i class="bi bi-calendar3 text-bleu"></i> @t.DateTransaction.ToString("dd/MM/yyyy")</span>
                     <span><i class="bi bi-building text-or"></i> @(t.Groupe?.Nom ?? "-")</span>
+                    <span><i class="bi bi-calendar-event text-or"></i> @(t.Activite?.Titre ?? "-")</span>
                     <span><i class="bi bi-person text-bleu"></i> @(t.Scout != null ? $"{t.Scout.Nom} {t.Scout.Prenom}" : t.Createur != null ? $"{t.Createur.Prenom} {t.Createur.Nom}".Trim() : "-")</span>
                 </div>
                 <div class="d-flex flex-wrap gap-2 mt-auto">
                     <a asp-action="Details" asp-route-id="@t.Id" class="btn btn-sm btn-outline-or" title="Details"><i class="bi bi-eye"></i></a>
                     @if (canManage)
                     {
+                        @if (t.Statut == StatutTransactionFinanciere.Declaree)
+                        {
+                            <form asp-action="ValiderDeclaration" asp-route-id="@t.Id" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-mango" title="Valider la declaration"><i class="bi bi-check2-circle"></i></button>
+                            </form>
+                            <form asp-action="RejeterDeclaration" asp-route-id="@t.Id" method="post" class="d-inline" onsubmit="const motif = prompt('Motif de rejet :'); if (motif === null) return false; this.querySelector('[name=motif]').value = motif;">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="motif" />
+                                <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Rejeter la declaration"><i class="bi bi-x-lg"></i></button>
+                            </form>
+                        }
                         <a asp-action="Edit" asp-route-id="@t.Id" class="btn btn-sm btn-bleu" title="Modifier"><i class="bi bi-pencil"></i></a>
                         <form asp-action="Delete" asp-route-id="@t.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer ?')">
                             @Html.AntiForgeryToken()

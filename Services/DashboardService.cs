@@ -155,10 +155,10 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
             ? await db.ContactMessages.CountAsync(m => !m.EstSupprime && !m.EstLu && m.Type == "Avis")
             : 0;
         dto.TotalRecettes = await db.TransactionsFinancieres
-            .Where(t => !t.EstSupprime && t.Type == TypeTransaction.Recette && t.DateTransaction.Year == DateTime.UtcNow.Year)
+            .Where(t => !t.EstSupprime && t.Statut == StatutTransactionFinanciere.Validee && t.Type == TypeTransaction.Recette && t.DateTransaction.Year == DateTime.UtcNow.Year)
             .SumAsync(t => t.Montant);
         dto.TotalDepenses = await db.TransactionsFinancieres
-            .Where(t => !t.EstSupprime && t.Type == TypeTransaction.Depense && t.DateTransaction.Year == DateTime.UtcNow.Year)
+            .Where(t => !t.EstSupprime && t.Statut == StatutTransactionFinanciere.Validee && t.Type == TypeTransaction.Depense && t.DateTransaction.Year == DateTime.UtcNow.Year)
             .SumAsync(t => t.Montant);
         dto.SoldeFinancier = dto.TotalRecettes - dto.TotalDepenses;
 
