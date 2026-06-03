@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MangoTaika.Controllers;
 
-[Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant,EquipeDistrict,ChefGroupe,ChefUnite,Scout")]
+[Authorize(Roles = "Administrateur,Gestionnaire,CommissaireDistrict,CommissaireDistrictAdjoint,AssistantCommissaireDistrict,Superviseur,Consultant,EquipeDistrict,ChefGroupe,ChefUnite,Scout")]
 public class ActivitesController(
     IActiviteService activiteService,
     IScoutQrService scoutQrService,
@@ -22,7 +22,7 @@ public class ActivitesController(
 {
     private Guid UserId => Guid.Parse(userManager.GetUserId(User)!);
 
-    private bool IsAdminOrManager => User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+    private bool IsAdminOrManager => RoleNames.IsAdminLike(User) || User.IsInRole(RoleNames.Gestionnaire);
 
     private async Task<Guid?> GetChefGroupeScopeAsync()
     {
@@ -1107,13 +1107,17 @@ public class ActivitesController(
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
+    [Authorize(Roles = "Administrateur,Gestionnaire,CommissaireDistrict,CommissaireDistrictAdjoint,AssistantCommissaireDistrict")]
     public async Task<IActionResult> Delete(Guid id)
     {
-        if (!IsAdminOrManager) return Forbid();
-        await activiteService.DeleteAsync(id);
+        if (!CanDeleteActivity()) return Forbid();
+        var deleted = await activiteService.DeleteAsync(id);
+        if (!deleted) return NotFound();
         TempData["Success"] = "Activite supprimee.";
         return RedirectToAction(nameof(Index));
     }
+
+    private bool CanDeleteActivity()
+        => RoleNames.IsAdminLike(User) || User.IsInRole(RoleNames.Gestionnaire);
 }
 

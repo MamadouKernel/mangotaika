@@ -4,6 +4,7 @@ using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.Tests.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -151,5 +152,58 @@ public sealed class ActivitesPagesTests
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         detailsHtml.Should().NotContain("Ajouter les participants");
+    }
+
+    [Fact]
+    public async Task Index_AllowsCommissaireDistrict_ToSoftDeleteActivity()
+    {
+        await using var factory = new SupportWebApplicationFactory();
+        ApplicationUser commissaire = null!;
+        Activite activite = null!;
+
+        await factory.SeedAsync(async db =>
+        {
+            await TestDataSeeder.EnsureRolesAsync(db, "CommissaireDistrict");
+            commissaire = await TestDataSeeder.AddUserAsync(db, "Mango", "Admin", ["CommissaireDistrict"]);
+
+            activite = new Activite
+            {
+                Id = Guid.NewGuid(),
+                Titre = "Activite a supprimer",
+                Type = TypeActivite.Autre,
+                DateDebut = DateTime.UtcNow.Date.AddDays(3),
+                CreateurId = commissaire.Id,
+                Statut = StatutActivite.Validee
+            };
+            db.Activites.Add(activite);
+        });
+
+        using var client = factory.CreateAuthenticatedClient(commissaire.Id, "CommissaireDistrict");
+        var indexHtml = await client.GetStringAsync("/Activites");
+
+        indexHtml.Should().Contain("Activite a supprimer");
+        indexHtml.Should().Contain($"/Activites/Delete/{activite.Id}");
+
+        var token = HtmlTestHelpers.ExtractAntiForgeryToken(indexHtml);
+        using var content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = token
+        });
+
+        var response = await client.PostAsync($"/Activites/Delete/{activite.Id}", content);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+
+        var listAfterDelete = await client.GetStringAsync("/Activites");
+        listAfterDelete.Should().NotContain("Activite a supprimer");
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var persistedActivity = await db.Activites
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(a => a.Id == activite.Id);
+
+        persistedActivity.Should().NotBeNull();
+        persistedActivity!.EstSupprime.Should().BeTrue();
     }
 }
