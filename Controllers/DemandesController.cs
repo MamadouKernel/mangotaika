@@ -738,25 +738,21 @@ public class DemandesController(
     private static bool IsChefGroupeFunction(string? fonction)
     {
         var normalizedFunction = DatabaseText.NormalizeSearchKey(fonction);
-        return normalizedFunction.Contains("CHEF DE GROUPE", StringComparison.Ordinal)
-            || normalizedFunction.Contains("CHEF GROUPE", StringComparison.Ordinal)
+        return normalizedFunction.Contains(DatabaseText.NormalizeSearchKey("CHEF DE GROUPE"), StringComparison.Ordinal)
+            || normalizedFunction.Contains(DatabaseText.NormalizeSearchKey("CHEF GROUPE"), StringComparison.Ordinal)
             || normalizedFunction == "CG"
-            || normalizedFunction.StartsWith("CG ", StringComparison.Ordinal)
-            || normalizedFunction.EndsWith(" CG", StringComparison.Ordinal)
-            || normalizedFunction.Contains(" CG ", StringComparison.Ordinal);
+            || normalizedFunction.StartsWith("CG", StringComparison.Ordinal);
     }
 
     private static bool IsChefUniteFunction(string? fonction)
     {
         var normalizedFunction = DatabaseText.NormalizeSearchKey(fonction);
-        return normalizedFunction.Contains("CHEF D UNITE", StringComparison.Ordinal)
-            || normalizedFunction.Contains("CHEF UNITE", StringComparison.Ordinal)
-            || normalizedFunction.Contains("CHEF DE TROUPE", StringComparison.Ordinal)
-            || normalizedFunction.Contains("CHEF TROUPE", StringComparison.Ordinal)
+        return normalizedFunction.Contains(DatabaseText.NormalizeSearchKey("CHEF D UNITE"), StringComparison.Ordinal)
+            || normalizedFunction.Contains(DatabaseText.NormalizeSearchKey("CHEF UNITE"), StringComparison.Ordinal)
+            || normalizedFunction.Contains(DatabaseText.NormalizeSearchKey("CHEF DE TROUPE"), StringComparison.Ordinal)
+            || normalizedFunction.Contains(DatabaseText.NormalizeSearchKey("CHEF TROUPE"), StringComparison.Ordinal)
             || normalizedFunction == "CT"
-            || normalizedFunction.StartsWith("CT ", StringComparison.Ordinal)
-            || normalizedFunction.EndsWith(" CT", StringComparison.Ordinal)
-            || normalizedFunction.Contains(" CT ", StringComparison.Ordinal);
+            || normalizedFunction.StartsWith("CT", StringComparison.Ordinal);
     }
 
     private static bool IsChefUniteScout(Scout? scout, System.Security.Claims.ClaimsPrincipal user)

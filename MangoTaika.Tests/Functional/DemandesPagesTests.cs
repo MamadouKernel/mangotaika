@@ -178,7 +178,7 @@ public sealed class DemandesPagesTests
             });
         });
 
-        using var client = factory.CreateAuthenticatedClient(chefGroupeUser.Id, "Scout", "ChefGroupe");
+        using var client = factory.CreateAuthenticatedClient(chefGroupeUser.Id, "Scout");
 
         var response = await client.GetAsync("/Demandes");
         var html = await response.Content.ReadAsStringAsync();
@@ -253,7 +253,7 @@ public sealed class DemandesPagesTests
             db.DemandesAutorisation.Add(demande);
         });
 
-        using var client = factory.CreateAuthenticatedClient(chefGroupeUser.Id, "Scout", "ChefGroupe");
+        using var client = factory.CreateAuthenticatedClient(chefGroupeUser.Id, "Scout");
         var detailsHtml = await client.GetStringAsync($"/Demandes/Details/{demande.Id}");
         var token = HtmlTestHelpers.ExtractAntiForgeryToken(detailsHtml);
 
