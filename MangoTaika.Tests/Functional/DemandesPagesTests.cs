@@ -1,7 +1,9 @@
 using System.Net;
 using FluentAssertions;
+using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.Tests.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace MangoTaika.Tests.Functional;
@@ -183,6 +185,95 @@ public sealed class DemandesPagesTests
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         html.Should().Contain("Plantain Troup");
+    }
+
+    [Fact]
+    public async Task Valider_ByChefGroupe_ValidatesNonCampDemand_AndCreatesActivity()
+    {
+        await using var factory = new SupportWebApplicationFactory();
+        ApplicationUser chefGroupeUser = null!;
+        ApplicationUser chefUniteUser = null!;
+        DemandeAutorisation demande = null!;
+        Groupe groupe = null!;
+
+        await factory.SeedAsync(async db =>
+        {
+            await TestDataSeeder.EnsureRolesAsync(db, "Scout", "ChefGroupe", "ChefUnite");
+            chefGroupeUser = await TestDataSeeder.AddUserAsync(db, "Joseph", "ChefGroupe", ["Scout", "ChefGroupe"]);
+            chefUniteUser = await TestDataSeeder.AddUserAsync(db, "Aya", "ChefUnite", ["Scout", "ChefUnite"]);
+
+            groupe = new Groupe
+            {
+                Id = Guid.NewGuid(),
+                Nom = "LES KORES MOANAS",
+                IsActive = true,
+                DateCreation = DateTime.UtcNow
+            };
+            db.Groupes.Add(groupe);
+
+            db.Scouts.AddRange(
+                new Scout
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = chefGroupeUser.Id,
+                    Matricule = "0547834X",
+                    Nom = "ChefGroupe",
+                    Prenom = "Joseph",
+                    Fonction = "Chef de Groupe",
+                    GroupeId = groupe.Id,
+                    DateNaissance = new DateTime(1990, 1, 1),
+                    IsActive = true
+                },
+                new Scout
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = chefUniteUser.Id,
+                    Matricule = "0583753X",
+                    Nom = "ChefUnite",
+                    Prenom = "Aya",
+                    Fonction = "Chef de troupe",
+                    GroupeId = groupe.Id,
+                    DateNaissance = new DateTime(2000, 1, 1),
+                    IsActive = true
+                });
+
+            demande = new DemandeAutorisation
+            {
+                Id = Guid.NewGuid(),
+                Titre = "Alloco party",
+                Description = "Demande non camp",
+                TypeActivite = TypeActiviteDemande.Sortie,
+                DateActivite = DateTime.UtcNow.Date.AddDays(7),
+                NombreParticipants = 26,
+                DemandeurId = chefUniteUser.Id,
+                GroupeId = groupe.Id,
+                Statut = StatutDemande.Soumise,
+                DateCreation = DateTime.UtcNow.AddHours(-1)
+            };
+            db.DemandesAutorisation.Add(demande);
+        });
+
+        using var client = factory.CreateAuthenticatedClient(chefGroupeUser.Id, "Scout", "ChefGroupe");
+        var detailsHtml = await client.GetStringAsync($"/Demandes/Details/{demande.Id}");
+        var token = HtmlTestHelpers.ExtractAntiForgeryToken(detailsHtml);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"/Demandes/Valider?id={demande.Id}");
+        request.Headers.Add("RequestVerificationToken", token);
+
+        var response = await client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var persistedDemande = await db.DemandesAutorisation.FindAsync(demande.Id);
+        var createdActivity = db.Activites.SingleOrDefault(a => a.Titre == "Alloco party");
+
+        persistedDemande.Should().NotBeNull();
+        persistedDemande!.Statut.Should().Be(StatutDemande.Validee);
+        createdActivity.Should().NotBeNull();
+        createdActivity!.Statut.Should().Be(StatutActivite.Validee);
+        createdActivity.GroupeId.Should().Be(groupe.Id);
     }
 
     private static DemandeAutorisation CreateDemande(string titre, Guid demandeurId)

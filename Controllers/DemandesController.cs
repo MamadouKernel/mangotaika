@@ -249,6 +249,31 @@ public class DemandesController(
         var isChefGroupeStep = chefUniteWorkflow && !chefGroupeApproved && await CanChefGroupeValidateAsync(demande);
         if (isChefGroupeStep)
         {
+            if (!RequiresDistrictValidation(demande))
+            {
+                demande.Statut = StatutDemande.Validee;
+                demande.ValideurId = user?.Id;
+                demande.DateValidation = DateTime.UtcNow;
+                demande.MotifRejet = null;
+                var commentaireFinalGroupe = NormalizeValue(commentaire)
+                    ?? "Demande validee definitivement par le chef de groupe";
+                AjouterSuivi(demande, ancien, StatutDemande.Validee, commentaireFinalGroupe, BuildAuteurLabel(user));
+                var activiteGroupe = await CreerActiviteDepuisDemandeAsync(demande, user?.Id ?? demande.DemandeurId);
+                await db.SaveChangesAsync();
+
+                await notificationDispatchService.SendAsync(
+                    [demande.DemandeurId],
+                    "Demande validee",
+                    $"Votre demande \"{demande.Titre}\" a ete validee par le chef de groupe.",
+                    "Demandes",
+                    activiteGroupe is not null
+                        ? Url.Action("Details", "Activites", new { id = activiteGroupe.Id }, Request.Scheme)
+                        : Url.Action(nameof(Details), "Demandes", new { id }, Request.Scheme));
+
+                TempData["Success"] = "Demande validee par le chef de groupe.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+
             var commentaireGroupe = string.IsNullOrWhiteSpace(commentaire)
                 ? "Demande validee par le chef de groupe et transmise au commissaire de district"
                 : $"Demande validee par le chef de groupe : {commentaire.Trim()}";
@@ -634,7 +659,8 @@ public class DemandesController(
                 return await CanChefGroupeValidateAsync(demande);
             }
 
-            return User.IsInRole("Administrateur") || await EstValidateurDistrictAsync();
+            return RequiresDistrictValidation(demande)
+                && (User.IsInRole("Administrateur") || await EstValidateurDistrictAsync());
         }
 
         return User.IsInRole("Administrateur") || await EstValidateurDistrictAsync();
@@ -678,6 +704,9 @@ public class DemandesController(
             .Join(db.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
             .AnyAsync(x => x.UserId == demande.DemandeurId && x.Name == RoleNames.ChefUnite);
     }
+
+    private static bool RequiresDistrictValidation(DemandeAutorisation demande)
+        => demande.TypeActivite == TypeActiviteDemande.Camp;
 
     private static bool IsLeadershipScout(Scout? scout)
     {

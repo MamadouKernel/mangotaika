@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MangoTaika.Controllers;
 
-[Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant,ChefGroupe")]
+[Authorize(Roles = "Administrateur,Gestionnaire,Superviseur,Consultant,EquipeDistrict,ChefGroupe,ChefUnite")]
 public class ActivitesController(
     IActiviteService activiteService,
     IScoutQrService scoutQrService,
@@ -213,9 +213,9 @@ public class ActivitesController(
     [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> Valider(Guid id)
     {
-        if (!IsAdminOrManager) return Forbid();
         var a = await db.Activites.FindAsync(id);
         if (a is null || a.Statut != StatutActivite.Soumise) return NotFound();
+        if (!await CanManageActivityAsync(a.GroupeId)) return Forbid();
         a.Statut = StatutActivite.Validee;
         a.MotifRejet = null;
         db.CommentairesActivite.Add(new CommentaireActivite
@@ -236,9 +236,9 @@ public class ActivitesController(
     [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe")]
     public async Task<IActionResult> Rejeter(Guid id, string? motif)
     {
-        if (!IsAdminOrManager) return Forbid();
         var a = await db.Activites.FindAsync(id);
         if (a is null || a.Statut != StatutActivite.Soumise) return NotFound();
+        if (!await CanManageActivityAsync(a.GroupeId)) return Forbid();
         a.Statut = StatutActivite.Rejetee;
         a.MotifRejet = motif;
         db.CommentairesActivite.Add(new CommentaireActivite

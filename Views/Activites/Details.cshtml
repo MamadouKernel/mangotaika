@@ -3,7 +3,7 @@
 @{
     ViewData["Title"] = Model.Titre;
     Layout = "_LayoutAdmin";
-    var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+    var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire") || User.IsInRole("ChefGroupe");
     var scouts = ViewBag.ScoutsGroupe as List<Scout> ?? new();
     var ressources = ViewBag.Ressources as List<Ressource> ?? new();
     var rapportActivite = ViewBag.RapportActivite as RapportActivite;
