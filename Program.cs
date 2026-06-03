@@ -31,7 +31,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
     options.Password.RequireNonAlphanumeric = true;
     options.Password.RequireUppercase = true;
     options.Password.RequireLowercase = true;
-    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.MaxFailedAccessAttempts = 3;
     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
     options.Lockout.AllowedForNewUsers = true;
     options.User.RequireUniqueEmail = false;
@@ -60,7 +60,7 @@ var trustAllForwardedHeaders = builder.Configuration.GetValue("ReverseProxy:Trus
 var secureCookiePolicy = builder.Environment.IsEnvironment("Testing")
     ? CookieSecurePolicy.SameAsRequest
     : CookieSecurePolicy.Always;
-var sessionIdleTimeout = TimeSpan.FromMinutes(5);
+var sessionIdleTimeout = TimeSpan.FromMinutes(30);
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {

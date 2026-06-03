@@ -13,6 +13,8 @@
         _                      => r
     };
     bool PeutSupprimerLogiquement(List<string> roles) => !roles.Contains("Administrateur");
+    bool EstVerrouille(MangoTaika.Data.Entities.ApplicationUser user) =>
+        user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow;
 }
 
 <h2 class="section-title mb-1"><i class="bi bi-people-fill text-or"></i> Gestion des <span class="accent">utilisateurs</span></h2>
@@ -46,6 +48,7 @@
     @foreach (var user in Model)
     {
         var userRoleList = userRoles.GetValueOrDefault(user.Id, []);
+        var estVerrouille = EstVerrouille(user);
         <div class="col-lg-4 col-md-6">
             <div class="card-3d p-4 h-100 d-flex flex-column">
                 <h5 class="text-or mb-2">@user.Prenom @user.Nom</h5>
@@ -71,7 +74,12 @@
                     <span><i class="bi bi-envelope text-or"></i> @(user.Email ?? "—")</span>
                     <span><i class="bi bi-calendar3 text-bleu"></i> Inscrit le @user.DateCreation.ToString("dd/MM/yyyy")</span>
                     <span>
-                        @if (user.IsActive)
+                        @if (estVerrouille)
+                        {
+                            <span class="badge-3d badge-rejetee">Verrouille</span>
+                            <span class="text-muted-custom small d-block mt-1">Jusqu'au @user.LockoutEnd!.Value.LocalDateTime.ToString("dd/MM/yyyy HH:mm")</span>
+                        }
+                        else if (user.IsActive)
                         {
                             <span class="badge-3d badge-validee">Actif</span>
                         }
@@ -88,6 +96,15 @@
                     <a asp-action="EditerUtilisateur" asp-route-id="@user.Id" class="btn btn-sm btn-bleu" title="Modifier">
                         <i class="bi bi-pencil"></i>
                     </a>
+                    @if (estVerrouille)
+                    {
+                        <form asp-action="UnlockUser" asp-route-id="@user.Id" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-mango" title="Deverrouiller">
+                                <i class="bi bi-unlock"></i>
+                            </button>
+                        </form>
+                    }
                     @if (!user.IsActive)
                     {
                         <form asp-action="ActivateUser" asp-route-id="@user.Id" method="post" class="d-inline">

@@ -173,7 +173,13 @@ public class AccountController(
         if (result.RequiresTwoFactor)
             return RedirectToAction(nameof(VerifierMfa), new { rememberMe = model.RememberMe });
         if (result.IsLockedOut)
-            ModelState.AddModelError(string.Empty, "Compte verrouillÃ©. RÃ©essayez plus tard.");
+        {
+            var lockoutEnd = await userManager.GetLockoutEndDateAsync(user);
+            if (lockoutEnd.HasValue && lockoutEnd.Value > DateTimeOffset.UtcNow)
+                ModelState.AddModelError(string.Empty, $"Compte verrouille apres 3 tentatives incorrectes. Reessayez apres le {lockoutEnd.Value.LocalDateTime:dd/MM/yyyy HH:mm} ou demandez a un administrateur de deverrouiller le compte.");
+            else
+                ModelState.AddModelError(string.Empty, "Compte verrouille apres 3 tentatives incorrectes. Reessayez plus tard ou demandez a un administrateur de deverrouiller le compte.");
+        }
         else
             ModelState.AddModelError(string.Empty, "Telephone ou mot de passe incorrect. Verifiez vos informations puis reessayez.");
         return View(model);
@@ -927,6 +933,27 @@ public class AccountController(
             await db.SaveChangesAsync();
             TempData["Success"] = $"Compte de {user.Prenom} {user.Nom} dÃ©sactivÃ©.";
         }
+        return RedirectToAction(nameof(Utilisateurs));
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UnlockUser(Guid id)
+    {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id && !u.EstSupprime);
+        if (user is null)
+        {
+            TempData["Error"] = "Utilisateur introuvable ou deja retire de la liste.";
+            return RedirectToAction(nameof(Utilisateurs));
+        }
+
+        if (EstGestionnaireSansAdmin() && await EstUtilisateurAdminAsync(user))
+            return Forbid();
+
+        await userManager.SetLockoutEndDateAsync(user, null);
+        await userManager.ResetAccessFailedCountAsync(user);
+        TempData["Success"] = $"Compte de {user.Prenom} {user.Nom} deverrouille.";
         return RedirectToAction(nameof(Utilisateurs));
     }
 
