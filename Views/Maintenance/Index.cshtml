@@ -1,0 +1,35 @@
+@{
+    ViewData["Title"] = "Maintenance";
+    Layout = "_LayoutAdmin";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h2 class="section-title mb-1"><i class="bi bi-database-gear text-or"></i> Maintenance <span class="accent">plateforme</span></h2>
+        <p class="text-muted-custom mb-0">Sauvegarde applicative et remise a zero logique des donnees operationnelles.</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card-3d p-4 h-100">
+            <span class="badge-3d badge-validee mb-3">Sauvegarde</span>
+            <h4>Exporter la base applicative</h4>
+            <p class="text-muted-custom">Genere un fichier JSON contenant les donnees metier principales. Ce fichier sert de sauvegarde applicative avant une operation sensible.</p>
+            <a asp-action="Backup" class="btn btn-mango"><i class="bi bi-download"></i> Telecharger la sauvegarde</a>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card-3d p-4 h-100" style="border-color:rgba(239,68,68,.3);">
+            <span class="badge-3d badge-rejetee mb-3">RAZ controlee</span>
+            <h4>Remise a zero operationnelle</h4>
+            <p class="text-muted-custom">Masque les donnees operationnelles par suppression logique. Les lignes restent en base pour audit et restauration.</p>
+            <form asp-action="ResetOperationalData" method="post" onsubmit="return confirm('Confirmer la RAZ operationnelle ? Les donnees seront masquees.')">
+                @Html.AntiForgeryToken()
+                <label class="form-label">Confirmation requise</label>
+                <input name="confirmation" class="form-control mb-3" placeholder="RAZ MANGO TAIKA" autocomplete="off" />
+                <button type="submit" class="btn btn-outline-danger"><i class="bi bi-exclamation-triangle"></i> Appliquer la RAZ logique</button>
+            </form>
+        </div>
+    </div>
+</div>

@@ -5576,6 +5576,38 @@ main { animation: fadeInUp 0.35s ease-out; }
     border-left: 5px solid var(--vert-logo);
 }
 
+.payment-choice-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    min-width: min(100%, 260px);
+    padding: 0.9rem 1rem;
+    border: 1px solid rgba(89, 117, 55, 0.22);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    cursor: pointer;
+}
+
+.payment-choice-card .form-check-input {
+    margin-top: 0.25rem;
+}
+
+.payment-choice-card strong,
+.payment-choice-card small {
+    display: block;
+}
+
+.payment-choice-card strong {
+    color: var(--bleu-logo);
+    line-height: 1.2;
+}
+
+.payment-choice-card small {
+    color: var(--texte-secondaire);
+    margin-top: 0.25rem;
+}
+
 @media (max-width: 768px) {
     .donation-hero-pro,
     .boutique-hero,

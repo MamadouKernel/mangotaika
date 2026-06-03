@@ -244,6 +244,7 @@
                             <li><a class="nav-link" asp-controller="Dons" asp-action="Index"><i class="bi bi-heart-fill"></i> Dons</a></li>
                             <li><a class="nav-link" asp-controller="Portefeuilles" asp-action="Index"><i class="bi bi-wallet-fill"></i> Portefeuilles</a></li>
                             <li><a class="nav-link" asp-controller="Portefeuilles" asp-action="ComptesPaiement"><i class="bi bi-phone"></i> Comptes de paiement</a></li>
+                            <li><a class="nav-link" asp-controller="Abonnements" asp-action="Index"><i class="bi bi-person-vcard"></i> Profils abonnes</a></li>
                             <li><a class="nav-link" asp-controller="CotisationsNationales" asp-action="Index"><i class="bi bi-cash-coin"></i> Cotisations nationales</a></li>
                             <li><a class="nav-link" asp-controller="AGR" asp-action="Index"><i class="bi bi-briefcase-fill"></i> Projets AGR</a></li>
                             <li><a class="nav-link" asp-controller="Boutique" asp-action="Admin"><i class="bi bi-bag"></i> Articles boutique</a></li>
@@ -284,6 +285,7 @@
                             @if (isAdmin)
                             {
                                 <li><a class="nav-link" asp-controller="Account" asp-action="CodesInvitation"><i class="bi bi-key-fill"></i> Codes d'invitation</a></li>
+                                <li><a class="nav-link" asp-controller="Maintenance" asp-action="Index"><i class="bi bi-database-gear"></i> Maintenance</a></li>
                             }
                             @if (canManageMessages)
                             {

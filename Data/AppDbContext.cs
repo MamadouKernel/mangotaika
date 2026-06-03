@@ -59,6 +59,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<PortefeuilleUtilisateur> PortefeuillesUtilisateurs => Set<PortefeuilleUtilisateur>();
     public DbSet<MouvementPortefeuille> MouvementsPortefeuilles => Set<MouvementPortefeuille>();
     public DbSet<ComptePaiementMobile> ComptesPaiementMobile => Set<ComptePaiementMobile>();
+    public DbSet<ProfilAbonnement> ProfilsAbonnements => Set<ProfilAbonnement>();
+    public DbSet<AbonnementUtilisateur> AbonnementsUtilisateurs => Set<AbonnementUtilisateur>();
     public DbSet<DonPublic> DonsPublics => Set<DonPublic>();
     public DbSet<ArticleBoutique> ArticlesBoutique => Set<ArticleBoutique>();
     public DbSet<CommandeBoutique> CommandesBoutique => Set<CommandeBoutique>();
@@ -444,6 +446,20 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasOne(c => c.Activite).WithMany().HasForeignKey(c => c.ActiviteId).OnDelete(DeleteBehavior.SetNull);
         });
 
+        builder.Entity<ProfilAbonnement>(e =>
+        {
+            e.Property(p => p.Montant).HasPrecision(18, 2);
+            e.HasIndex(p => new { p.NomProfil, p.EstSupprime });
+            e.HasOne(p => p.ComptePaiementMobile).WithMany().HasForeignKey(p => p.ComptePaiementMobileId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<AbonnementUtilisateur>(e =>
+        {
+            e.HasIndex(a => new { a.UserId, a.ProfilAbonnementId, a.EstSupprime });
+            e.HasOne(a => a.User).WithMany().HasForeignKey(a => a.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(a => a.ProfilAbonnement).WithMany(p => p.Abonnements).HasForeignKey(a => a.ProfilAbonnementId).OnDelete(DeleteBehavior.Restrict);
+        });
+
         builder.Entity<DonPublic>(e =>
         {
             e.Property(d => d.Montant).HasPrecision(18, 2);
@@ -609,6 +625,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         });
 
         builder.Entity<Actualite>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<AbonnementUtilisateur>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<Activite>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<ArticleBoutique>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<Competence>().HasQueryFilter(e => !e.EstSupprime);
@@ -626,6 +643,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         builder.Entity<MotCommissaire>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<ParticipantActivite>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<Partenaire>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<ProfilAbonnement>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<ProgrammeAnnuel>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<ProgrammeAnnuelActivite>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<ProjetAGR>().HasQueryFilter(e => !e.EstSupprime);

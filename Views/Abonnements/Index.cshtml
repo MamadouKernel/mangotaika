@@ -1,0 +1,161 @@
+@model List<MangoTaika.Data.Entities.ProfilAbonnement>
+@using MangoTaika.Data.Entities
+@{
+    ViewData["Title"] = "Profils abonnes";
+    Layout = "_LayoutAdmin";
+    var comptes = ViewBag.ComptesPaiement as List<ComptePaiementMobile> ?? new();
+    var utilisateurs = ViewBag.Utilisateurs as List<ApplicationUser> ?? new();
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h2 class="section-title mb-1"><i class="bi bi-person-vcard text-or"></i> Profils <span class="accent">abonnes</span></h2>
+        <p class="text-muted-custom mb-0">Parametrez les abonnements, le compte de paiement dedie et le delai hold avant inactivation.</p>
+    </div>
+    <form asp-action="AppliquerHold" method="post">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn-outline-or">
+            <i class="bi bi-shield-check"></i> Controler les echeances
+        </button>
+    </form>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-7">
+        <div class="card-3d p-4 h-100">
+            <h5 class="mb-3">Creer un profil abonne</h5>
+            <form asp-action="CreerProfil" method="post" class="row g-3">
+                @Html.AntiForgeryToken()
+                <div class="col-md-6">
+                    <label class="form-label">Nom profil</label>
+                    <input name="nomProfil" class="form-control" required />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Periodicite</label>
+                    <select name="periodicite" class="form-select" asp-items="Html.GetEnumSelectList<PeriodiciteAbonnement>()"></select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Montant</label>
+                    <input name="montant" type="number" min="1" step="1" class="form-control" required />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Delai hold (jours)</label>
+                    <input name="delaiHoldJours" type="number" min="0" step="1" class="form-control" value="0" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Compte de paiement</label>
+                    <select name="comptePaiementMobileId" class="form-select" required>
+                        <option value="">Selectionner</option>
+                        @foreach (var compte in comptes)
+                        {
+                            <option value="@compte.Id">@compte.Libelle - @compte.Operateur (@compte.NumeroMobile)</option>
+                        }
+                    </select>
+                    <small class="text-muted-custom">Compte global, actif, non principal.</small>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Creer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card-3d p-4 h-100">
+            <h5 class="mb-3">Rattacher un compte utilisateur</h5>
+            <form asp-action="Affecter" method="post" class="row g-3">
+                @Html.AntiForgeryToken()
+                <div class="col-12">
+                    <label class="form-label">Utilisateur</label>
+                    <select name="userId" class="form-select" required>
+                        <option value="">Selectionner</option>
+                        @foreach (var user in utilisateurs)
+                        {
+                            <option value="@user.Id">@user.Nom @user.Prenom - @(user.Email ?? user.PhoneNumber ?? user.UserName)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Profil abonne</label>
+                    <select name="profilAbonnementId" class="form-select" required>
+                        <option value="">Selectionner</option>
+                        @foreach (var profil in Model.Where(p => p.IsActive))
+                        {
+                            <option value="@profil.Id">@profil.NomProfil - @profil.Montant.ToString("N0") XOF / @profil.Periodicite</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-or"><i class="bi bi-link-45deg"></i> Rattacher</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="card-3d p-4">
+    <h5 class="mb-3">Historique et profils</h5>
+    @if (Model.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>Profil</th>
+                        <th>Periodicite</th>
+                        <th>Montant</th>
+                        <th>Hold</th>
+                        <th>Compte</th>
+                        <th>Abonnes</th>
+                        <th>Statut</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var profil in Model)
+                    {
+                        <tr>
+                            <td>@profil.NomProfil</td>
+                            <td>@profil.Periodicite</td>
+                            <td>@profil.Montant.ToString("N0") XOF</td>
+                            <td>@profil.DelaiHoldJours jour(s)</td>
+                            <td>@profil.ComptePaiementMobile.Libelle</td>
+                            <td>
+                                @if (profil.Abonnements.Any())
+                                {
+                                    <span>@profil.Abonnements.Count abonne(s)</span>
+                                    <div class="small text-muted-custom">
+                                        @string.Join(", ", profil.Abonnements.Take(3).Select(a => $"{a.User.Nom} {a.User.Prenom}".Trim()))
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted-custom">Aucun</span>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge-3d @(profil.IsActive ? "badge-validee" : "badge-rejetee")">@(profil.IsActive ? "Actif" : "Inactif")</span>
+                            </td>
+                            <td class="text-end">
+                                @if (profil.IsActive)
+                                {
+                                    <form asp-action="DesactiverProfil" asp-route-id="@profil.Id" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <button class="btn btn-sm btn-outline-or" type="submit" title="Desactiver"><i class="bi bi-pause-circle"></i></button>
+                                    </form>
+                                }
+                                <form asp-action="SupprimerProfil" asp-route-id="@profil.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer ce profil abonne de la liste ?')">
+                                    @Html.AntiForgeryToken()
+                                    <button class="btn btn-sm btn-outline-danger" type="submit" title="Supprimer"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <p class="text-muted-custom mb-0">Aucun profil abonne configure.</p>
+    }
+</div>

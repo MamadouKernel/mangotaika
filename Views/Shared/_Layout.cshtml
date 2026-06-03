@@ -94,6 +94,14 @@
                 </ul>
                 }
                 <ul class="navbar-nav @(ViewData["IsAdminLayout"] != null ? "ms-auto" : "")">
+                    @if (ViewData["IsAdminLayout"] == null)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link nav-link-public-cta" asp-controller="Home" asp-action="FaireUnDon">
+                                <i class="bi bi-heart"></i> Faire un don
+                            </a>
+                        </li>
+                    }
                     @if (User.Identity?.IsAuthenticated == true)
                     {
                         <li class="nav-item notification-nav-item">

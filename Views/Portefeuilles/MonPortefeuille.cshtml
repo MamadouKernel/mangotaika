@@ -59,9 +59,6 @@
             <button class="btn btn-outline-or" data-bs-toggle="pill" data-bs-target="#wallet-payment" type="button">Paiement</button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="btn btn-outline-or" data-bs-toggle="pill" data-bs-target="#activity-payment-declaration" type="button">Declaration activite</button>
-        </li>
-        <li class="nav-item" role="presentation">
             <button class="btn btn-outline-or" data-bs-toggle="pill" data-bs-target="#wallet-donation" type="button">Don</button>
         </li>
     </ul>
@@ -119,14 +116,32 @@
             </form>
         </div>
         <div class="tab-pane fade" id="wallet-payment">
-            <h4 class="mb-2">Payer depuis mon portefeuille</h4>
+            <h4 class="mb-2">Paiement</h4>
             <div class="alert mb-3" style="background:rgba(89,117,55,.08);border:1px solid rgba(89,117,55,.22);border-radius:12px;">
-                <strong>Paiement interne Mango Taika</strong>
+                <strong>Choisissez le circuit de paiement</strong>
                 <div class="small text-muted-custom">
-                    Ce paiement debite directement votre solde disponible. Aucun compte Mobile Money ni reference operateur n'est requis.
+                    Depuis mon portefeuille debite automatiquement votre solde. Payer directement enregistre une declaration Mobile Money hors portefeuille, a valider par la finance.
                 </div>
             </div>
-            <form asp-action="PayerDepuisPortefeuille" method="post" class="row g-3 align-items-end">
+
+            <div class="d-flex flex-wrap gap-3 mb-3">
+                <label class="form-check payment-choice-card">
+                    <input class="form-check-input" type="radio" name="walletPaymentMode" value="wallet" checked data-wallet-payment-choice />
+                    <span class="form-check-label">
+                        <strong>Depuis mon portefeuille</strong>
+                        <small>Debit immediat si le solde est suffisant.</small>
+                    </span>
+                </label>
+                <label class="form-check payment-choice-card">
+                    <input class="form-check-input" type="radio" name="walletPaymentMode" value="direct" data-wallet-payment-choice />
+                    <span class="form-check-label">
+                        <strong>Payer directement</strong>
+                        <small>Declaration Mobile Money hors portefeuille.</small>
+                    </span>
+                </label>
+            </div>
+
+            <form asp-action="PayerDepuisPortefeuille" method="post" class="row g-3 align-items-end" id="walletPaymentForm">
                 <div class="col-md-3">
                     <label class="form-label">Type</label>
                     <select name="typePaiement" class="form-select" required>
@@ -168,16 +183,8 @@
                     <input name="commentaire" class="form-control" placeholder="Commentaire ou precision de paiement" />
                 </div>
             </form>
-        </div>
-        <div class="tab-pane fade" id="activity-payment-declaration">
-            <h4 class="mb-2">Declarer un paiement d'activite</h4>
-            <div class="alert mb-3" style="background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.25);border-radius:12px;">
-                <strong>Paiement externe Mobile Money</strong>
-                <div class="small text-muted-custom">
-                    Cette declaration ne debite pas votre portefeuille. Un gestionnaire la verifiera avant de la comptabiliser dans les finances.
-                </div>
-            </div>
-            <form asp-action="DeclarerPaiementActivite" method="post" class="row g-3 align-items-end">
+
+            <form asp-action="DeclarerPaiementActivite" method="post" class="row g-3 align-items-end" id="directActivityPaymentForm" hidden>
                 <div class="col-md-4">
                     <label class="form-label">Activite</label>
                     <select name="activiteId" class="form-select" required>
@@ -248,6 +255,20 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('[data-wallet-payment-choice]').forEach(function (input) {
+            input.addEventListener('change', function () {
+                var direct = this.value === 'direct';
+                var walletForm = document.getElementById('walletPaymentForm');
+                var directForm = document.getElementById('directActivityPaymentForm');
+                if (walletForm) walletForm.hidden = direct;
+                if (directForm) directForm.hidden = !direct;
+            });
+        });
+    </script>
+}
 
 <div class="card-3d p-4 mt-4">
     <h4 class="mb-3">Mouvements</h4>

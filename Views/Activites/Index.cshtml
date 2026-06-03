@@ -3,8 +3,11 @@
 @{
     ViewData["Title"] = "Activites";
     Layout = "_LayoutAdmin";
-    var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
-    var canDelete = canManage
+    var canManageAll = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+    var canManage = canManageAll
+        || User.IsInRole("ChefGroupe")
+        || User.IsInRole("ChefUnite");
+    var canDelete = canManageAll
         || User.IsInRole("CommissaireDistrict")
         || User.IsInRole("CommissaireDistrictAdjoint")
         || User.IsInRole("AssistantCommissaireDistrict");
