@@ -112,6 +112,79 @@ public sealed class DemandesPagesTests
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    [Fact]
+    public async Task Index_ShowsChefUniteSubmittedDemandes_ForChefGroupeLinkedByScoutProfile()
+    {
+        await using var factory = new SupportWebApplicationFactory();
+        ApplicationUser chefGroupeUser = null!;
+        ApplicationUser chefUniteUser = null!;
+        Groupe groupe = null!;
+
+        await factory.SeedAsync(async db =>
+        {
+            await TestDataSeeder.EnsureRolesAsync(db, "Scout", "ChefGroupe", "ChefUnite");
+            chefGroupeUser = await TestDataSeeder.AddUserAsync(db, "Joseph", "ChefGroupe", ["Scout", "ChefGroupe"]);
+            chefUniteUser = await TestDataSeeder.AddUserAsync(db, "Aya", "ChefUnite", ["Scout", "ChefUnite"]);
+
+            groupe = new Groupe
+            {
+                Id = Guid.NewGuid(),
+                Nom = "LES KORES MOANAS",
+                IsActive = true,
+                DateCreation = DateTime.UtcNow
+            };
+            db.Groupes.Add(groupe);
+
+            db.Scouts.AddRange(
+                new Scout
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = chefGroupeUser.Id,
+                    Matricule = "0547834X",
+                    Nom = "ChefGroupe",
+                    Prenom = "Joseph",
+                    Fonction = "Chef de Groupe",
+                    GroupeId = groupe.Id,
+                    DateNaissance = new DateTime(1990, 1, 1),
+                    IsActive = true
+                },
+                new Scout
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = chefUniteUser.Id,
+                    Matricule = "0583753X",
+                    Nom = "ChefUnite",
+                    Prenom = "Aya",
+                    Fonction = "Chef de troupe",
+                    GroupeId = groupe.Id,
+                    DateNaissance = new DateTime(2000, 1, 1),
+                    IsActive = true
+                });
+
+            db.DemandesAutorisation.Add(new DemandeAutorisation
+            {
+                Id = Guid.NewGuid(),
+                Titre = "Plantain Troup",
+                Description = "Demande pour validation groupe",
+                TypeActivite = TypeActiviteDemande.Sortie,
+                DateActivite = DateTime.UtcNow.Date.AddDays(7),
+                NombreParticipants = 26,
+                DemandeurId = chefUniteUser.Id,
+                GroupeId = groupe.Id,
+                Statut = StatutDemande.Soumise,
+                DateCreation = DateTime.UtcNow.AddHours(-1)
+            });
+        });
+
+        using var client = factory.CreateAuthenticatedClient(chefGroupeUser.Id, "Scout", "ChefGroupe");
+
+        var response = await client.GetAsync("/Demandes");
+        var html = await response.Content.ReadAsStringAsync();
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        html.Should().Contain("Plantain Troup");
+    }
+
     private static DemandeAutorisation CreateDemande(string titre, Guid demandeurId)
     {
         return new DemandeAutorisation

@@ -401,9 +401,8 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
 
     private async Task<int> CountChefGroupeDemandesBacklogAsync(Guid userId, Scout scout)
     {
-        var groupeId = IsChefGroupeFunction(scout.Fonction)
-            ? scout.GroupeId
-            : await db.Users
+        var groupeId = scout.GroupeId
+            ?? await db.Users
                 .AsNoTracking()
                 .Where(u => u.Id == userId && u.IsActive && !u.EstSupprime)
                 .Select(u => u.GroupeId)

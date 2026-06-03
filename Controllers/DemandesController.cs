@@ -504,6 +504,25 @@ public class DemandesController(
                 .Select(x => x.UserId)
                 .ToListAsync();
 
+            var groupeResponsableUsers = await db.Groupes
+                .Where(g => g.Id == demande.GroupeId.Value && g.ResponsableId.HasValue)
+                .Join(db.Users, g => g.ResponsableId!.Value, u => u.Id, (g, u) => new { u.Id, u.IsActive, u.EstSupprime })
+                .Where(x => x.IsActive && !x.EstSupprime)
+                .Select(x => x.Id)
+                .ToListAsync();
+
+            var roleChefGroupeScoutLinkedUsers = await db.UserRoles
+                .Join(db.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
+                .Join(db.Users, ur => ur.UserId, u => u.Id, (ur, u) => new { ur.UserId, ur.Name, u.IsActive, u.EstSupprime })
+                .Join(db.Scouts.Where(s => s.UserId.HasValue), u => u.UserId, s => s.UserId!.Value, (u, s) => new { u.UserId, u.Name, u.IsActive, u.EstSupprime, Scout = s })
+                .Where(x => x.Name == RoleNames.ChefGroupe
+                    && x.IsActive
+                    && !x.EstSupprime
+                    && x.Scout.IsActive
+                    && x.Scout.GroupeId == demande.GroupeId.Value)
+                .Select(x => x.UserId)
+                .ToListAsync();
+
             var chefGroupeUsers = await db.Scouts
                 .Where(s => s.IsActive && s.UserId.HasValue && s.GroupeId == demande.GroupeId.Value)
                 .Where(s => s.Fonction != null)
@@ -519,6 +538,8 @@ public class DemandesController(
                 .ToListAsync();
 
             return roleChefGroupeUsers
+                .Concat(groupeResponsableUsers)
+                .Concat(roleChefGroupeScoutLinkedUsers)
                 .Concat(roleChefGroupeScoutUsers)
                 .Concat(chefGroupeUsers
                 .Where(s => IsChefGroupeFunction(s.Fonction))
@@ -577,6 +598,11 @@ public class DemandesController(
         if (!User.IsInRole(RoleNames.ChefGroupe))
         {
             return null;
+        }
+
+        if (scout?.GroupeId is Guid scoutGroupeId)
+        {
+            return scoutGroupeId;
         }
 
         var currentUserId = userManager.GetUserId(User);

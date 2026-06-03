@@ -44,7 +44,7 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
 
         if (selectedCategories.Count > 0)
         {
-            query = query.Where(m => m.CategorieDetails.Any(detail => selectedCategories.Contains(detail.Categorie)));
+            query = query.Where(m => m.CategorieDetails.Any(detail => !detail.EstSupprime && selectedCategories.Contains(detail.Categorie)));
         }
 
         IOrderedQueryable<MembreHistorique> ordered;
@@ -54,6 +54,7 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
             ordered = query
                 .OrderBy(m => m.CategorieDetails
                     .Where(detail => detail.Categorie == selectedCategory)
+                    .Where(detail => !detail.EstSupprime)
                     .Select(detail => detail.Ordre)
                     .FirstOrDefault())
                 .ThenBy(m => m.Nom);
@@ -269,9 +270,9 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
     {
         var membres = await BuildHistoriqueQuery(recherche)
             .Include(m => m.CategorieDetails)
-            .Where(m => m.CategorieDetails.Any(detail => detail.Categorie == category))
+            .Where(m => m.CategorieDetails.Any(detail => !detail.EstSupprime && detail.Categorie == category))
             .OrderBy(m => m.CategorieDetails
-                .Where(detail => detail.Categorie == category)
+                .Where(detail => !detail.EstSupprime && detail.Categorie == category)
                 .Select(detail => detail.Ordre)
                 .FirstOrDefault())
             .ThenBy(m => m.Nom)
@@ -298,10 +299,10 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
                 EF.Functions.ILike(m.Nom, pattern) ||
                 (m.Description != null && EF.Functions.ILike(m.Description, pattern)) ||
                 (m.Periode != null && EF.Functions.ILike(m.Periode, pattern)) ||
-                m.CategorieDetails.Any(detail =>
-                    (detail.Description != null && EF.Functions.ILike(detail.Description, pattern)) ||
-                    (detail.Periode != null && EF.Functions.ILike(detail.Periode, pattern)) ||
-                    (detail.Groupe != null && EF.Functions.ILike(detail.Groupe, pattern))));
+                m.CategorieDetails.Any(detail => !detail.EstSupprime &&
+                    ((detail.Description != null && EF.Functions.ILike(detail.Description, pattern)) ||
+                     (detail.Periode != null && EF.Functions.ILike(detail.Periode, pattern)) ||
+                     (detail.Groupe != null && EF.Functions.ILike(detail.Groupe, pattern)))));
         }
 
         return query;
@@ -327,7 +328,7 @@ public class HistoriqueController(AppDbContext db, IFileUploadService fileUpload
     private static void SyncLegacyFields(MembreHistorique membre)
     {
         var details = membre.CategorieDetails
-            .Where(detail => CategorieHistoriqueExtensions.All.Contains(detail.Categorie))
+            .Where(detail => !detail.EstSupprime && CategorieHistoriqueExtensions.All.Contains(detail.Categorie))
             .OrderBy(detail => detail.Categorie.GetSortOrder())
             .ThenBy(detail => detail.Ordre)
             .ToList();
