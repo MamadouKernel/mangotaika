@@ -70,6 +70,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<UniteScoute> UnitesScoutes => Set<UniteScoute>();
     public DbSet<RoleUniteScoute> RolesUnitesScoutes => Set<RoleUniteScoute>();
     public DbSet<AffectationUniteScoute> AffectationsUnitesScoutes => Set<AffectationUniteScoute>();
+    public DbSet<Permission> Permissions => Set<Permission>();
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
 
     // LMS
     public DbSet<Formation> Formations => Set<Formation>();
@@ -114,6 +116,21 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasOne(s => s.Branche).WithMany(b => b.Scouts).HasForeignKey(s => s.BrancheId);
             e.HasMany(s => s.Parents).WithMany(p => p.Scouts);
             e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        builder.Entity<Permission>(e =>
+        {
+            e.Property(p => p.Code).HasMaxLength(160);
+            e.Property(p => p.Libelle).HasMaxLength(180);
+            e.Property(p => p.Module).HasMaxLength(80);
+            e.HasIndex(p => p.Code).IsUnique();
+        });
+
+        builder.Entity<RolePermission>(e =>
+        {
+            e.HasIndex(rp => new { rp.RoleId, rp.PermissionId }).IsUnique();
+            e.HasOne(rp => rp.Role).WithMany().HasForeignKey(rp => rp.RoleId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(rp => rp.Permission).WithMany(p => p.RolePermissions).HasForeignKey(rp => rp.PermissionId).OnDelete(DeleteBehavior.Cascade);
         });
 
         builder.Entity<Parent>(e =>

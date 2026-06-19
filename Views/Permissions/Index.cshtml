@@ -1,0 +1,89 @@
+@using MangoTaika.Data.Entities
+@model List<Permission>
+@{
+    Layout = "_LayoutAdmin";
+    ViewData["Title"] = "Permissions roles";
+    var roles = ViewBag.Roles as List<Microsoft.AspNetCore.Identity.IdentityRole<Guid>> ?? new();
+    var selectedRoleId = ViewBag.SelectedRoleId as Guid?;
+    var selectedRoleName = ViewBag.SelectedRoleName as string ?? "Aucun role";
+    var selectedPermissions = ViewBag.SelectedPermissions as HashSet<Guid> ?? new();
+    var grouped = Model.GroupBy(p => p.Module).OrderBy(g => g.Key).ToList();
+}
+
+<section class="container-fluid py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+        <div>
+            <h1 class="page-title"><i class="bi bi-person-lock"></i> Permissions roles</h1>
+            <p class="text-muted-custom mb-0">Controlez les vues et les actions disponibles pour chaque role.</p>
+        </div>
+        <a asp-controller="Roles" asp-action="Index" class="btn btn-outline-or">
+            <i class="bi bi-arrow-left"></i> Roles
+        </a>
+    </div>
+
+    <div class="card-3d p-4 mb-4">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-8 col-lg-6">
+                <label class="form-label">Role a configurer</label>
+                <select name="roleId" class="form-select" onchange="this.form.submit()">
+                    @foreach (var role in roles)
+                    {
+                        <option value="@role.Id" selected="@(role.Id == selectedRoleId ? "selected" : null)">@role.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-auto">
+                <button type="submit" class="btn btn-or"><i class="bi bi-search"></i> Charger</button>
+            </div>
+        </form>
+    </div>
+
+    @if (selectedRoleId.HasValue)
+    {
+        <form asp-action="Enregistrer" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="roleId" value="@selectedRoleId" />
+
+            <div class="permissions-shell">
+                <div class="permissions-summary card-3d p-4">
+                    <span class="badge-soft mb-2">Role selectionne</span>
+                    <h2>@selectedRoleName</h2>
+                    <p class="text-muted-custom">Les permissions cochees donnent acces a la vue et aux actions associees.</p>
+                    <button type="submit" class="btn btn-or w-100">
+                        <i class="bi bi-check2-circle"></i> Enregistrer les permissions
+                    </button>
+                </div>
+
+                <div class="permissions-grid">
+                    @foreach (var module in grouped)
+                    {
+                        <section class="card-3d p-4">
+                            <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                                <div>
+                                    <span class="badge-soft">@module.Key</span>
+                                    <h2 class="h5 mt-2 mb-0">@module.Key</h2>
+                                </div>
+                                <span class="text-muted-custom small">@module.Count() droit(s)</span>
+                            </div>
+
+                            <div class="permissions-list">
+                                @foreach (var permission in module)
+                                {
+                                    var inputId = $"perm_{permission.Id:N}";
+                                    <label class="permission-item" for="@inputId">
+                                        <input id="@inputId" type="checkbox" name="permissionIds" value="@permission.Id" checked="@selectedPermissions.Contains(permission.Id)" />
+                                        <span>
+                                            <strong>@permission.Libelle</strong>
+                                            <small>@permission.Description</small>
+                                            <code>@permission.Code</code>
+                                        </span>
+                                    </label>
+                                }
+                            </div>
+                        </section>
+                    }
+                </div>
+            </div>
+        </form>
+    }
+</section>

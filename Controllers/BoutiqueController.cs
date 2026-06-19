@@ -251,7 +251,8 @@ public class BoutiqueController(
         return View(cart);
     }
 
-    [Authorize(Roles = "Administrateur,Gestionnaire,CommissaireDistrict")]
+    [Authorize]
+    [RequirePermission(PermissionCodes.BoutiqueArticlesVoir)]
     public async Task<IActionResult> Admin()
     {
         return View(await db.ArticlesBoutique
@@ -260,14 +261,17 @@ public class BoutiqueController(
             .ToListAsync());
     }
 
-    [Authorize(Roles = "Administrateur,Gestionnaire,CommissaireDistrict")]
+    [Authorize]
+    [RequirePermission(PermissionCodes.BoutiqueArticlesCreer)]
     public IActionResult Create() => View(new ArticleBoutique { Devise = "XOF", EstPublie = true });
 
-    [Authorize(Roles = "Administrateur,Gestionnaire,CommissaireDistrict")]
+    [Authorize]
+    [RequirePermission(PermissionCodes.BoutiqueArticlesCreer)]
     public IActionResult Import() => View();
 
     [HttpPost]
-    [Authorize(Roles = "Administrateur,Gestionnaire,CommissaireDistrict")]
+    [Authorize]
+    [RequirePermission(PermissionCodes.BoutiqueArticlesCreer)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(ArticleBoutique model, IFormFile? Image)
     {
@@ -295,7 +299,8 @@ public class BoutiqueController(
     }
 
     [HttpPost]
-    [Authorize(Roles = "Administrateur,Gestionnaire,CommissaireDistrict")]
+    [Authorize]
+    [RequirePermission(PermissionCodes.BoutiqueArticlesCreer)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Import(IFormFile? fichier, bool mettreAJourExistants = true)
     {
@@ -372,7 +377,8 @@ public class BoutiqueController(
         return RedirectToAction(nameof(Admin));
     }
 
-    [Authorize(Roles = "Administrateur,Gestionnaire,CommissaireDistrict")]
+    [Authorize]
+    [RequirePermission(PermissionCodes.BoutiqueArticlesModifier)]
     public async Task<IActionResult> Edit(Guid id)
     {
         var article = await db.ArticlesBoutique.FirstOrDefaultAsync(a => a.Id == id && !a.EstSupprime);
@@ -380,7 +386,8 @@ public class BoutiqueController(
     }
 
     [HttpPost]
-    [Authorize(Roles = "Administrateur,Gestionnaire,CommissaireDistrict")]
+    [Authorize]
+    [RequirePermission(PermissionCodes.BoutiqueArticlesModifier)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(Guid id, ArticleBoutique model, IFormFile? Image)
     {
@@ -419,7 +426,8 @@ public class BoutiqueController(
     }
 
     [HttpPost]
-    [Authorize(Roles = "Administrateur,Gestionnaire,CommissaireDistrict")]
+    [Authorize]
+    [RequirePermission(PermissionCodes.BoutiqueArticlesSupprimer)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(Guid id)
     {
@@ -685,7 +693,8 @@ public class BoutiqueController(
         return RedirectToAction(nameof(Index));
     }
 
-    [Authorize(Roles = "Administrateur,Gestionnaire,CommissaireDistrict")]
+    [Authorize]
+    [RequirePermission(PermissionCodes.BoutiqueCommandesVoir)]
     public async Task<IActionResult> Commandes(StatutCommandeBoutique? statut)
     {
         var query = db.CommandesBoutique
@@ -703,7 +712,8 @@ public class BoutiqueController(
         return View(await query.OrderByDescending(c => c.DateCreation).ToListAsync());
     }
 
-    [Authorize(Roles = "Administrateur,Gestionnaire,CommissaireDistrict")]
+    [Authorize]
+    [RequirePermission(PermissionCodes.BoutiqueCommandesVoir)]
     public async Task<IActionResult> CommandeDetails(Guid id)
     {
         var commande = await LoadCommandeAsync(id, asNoTracking: true);
@@ -711,7 +721,8 @@ public class BoutiqueController(
     }
 
     [HttpPost]
-    [Authorize(Roles = "Administrateur,Gestionnaire,CommissaireDistrict")]
+    [Authorize]
+    [RequirePermission(PermissionCodes.BoutiqueCommandesValider)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ConfirmerCommande(Guid id, string? commentaireTraitement)
     {
@@ -757,7 +768,8 @@ public class BoutiqueController(
     }
 
     [HttpPost]
-    [Authorize(Roles = "Administrateur,Gestionnaire,CommissaireDistrict")]
+    [Authorize]
+    [RequirePermission(PermissionCodes.BoutiqueCommandesLivrer)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> MarquerLivree(Guid id, string? commentaireTraitement)
     {
@@ -783,7 +795,8 @@ public class BoutiqueController(
     }
 
     [HttpPost]
-    [Authorize(Roles = "Administrateur,Gestionnaire,CommissaireDistrict")]
+    [Authorize]
+    [RequirePermission(PermissionCodes.BoutiqueCommandesAnnuler)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AnnulerCommande(Guid id, string? commentaireTraitement)
     {
@@ -817,7 +830,8 @@ public class BoutiqueController(
         return RedirectToAction(nameof(CommandeDetails), new { id });
     }
 
-    [Authorize(Roles = "Administrateur,Gestionnaire,CommissaireDistrict")]
+    [Authorize]
+    [RequirePermission(PermissionCodes.BoutiqueCommandesVoir)]
     public async Task<IActionResult> Recu(Guid id)
     {
         var commande = await LoadCommandeAsync(id, asNoTracking: true);

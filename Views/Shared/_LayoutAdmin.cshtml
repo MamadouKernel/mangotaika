@@ -1,5 +1,6 @@
 @using MangoTaika.Services
 @inject ActiveRoleService ActiveRoleService
+@inject IPermissionService PermissionService
 @{
     Layout = "_Layout";
     ViewData["IsAdminLayout"] = true;
@@ -43,6 +44,8 @@
     var canViewSupportCenter = isEncadrement || isAgentSupport;
     var canManageSupport = isSupportAgent;
     var canViewReporting = isEncadrement || isAgentSupport;
+    var canViewBoutiqueArticles = await PermissionService.HasPermissionAsync(User, PermissionCodes.BoutiqueArticlesVoir);
+    var canViewBoutiqueCommandes = await PermissionService.HasPermissionAsync(User, PermissionCodes.BoutiqueCommandesVoir);
 }
 
 <div class="container-fluid">
@@ -232,7 +235,7 @@
                     </li>
                 }
 
-                @if (canViewFinances)
+                @if (canViewFinances || canViewBoutiqueArticles || canViewBoutiqueCommandes)
                 {
                     <li class="nav-item sidebar-group">
                         <a class="nav-link sidebar-toggle" href="#" data-target="grp-finances">
@@ -240,15 +243,24 @@
                             <i class="bi bi-chevron-down sidebar-chevron"></i>
                         </a>
                         <ul class="sidebar-submenu" id="grp-finances">
-                            <li><a class="nav-link" asp-controller="Finances" asp-action="Index"><i class="bi bi-wallet2"></i> Finances</a></li>
-                            <li><a class="nav-link" asp-controller="Dons" asp-action="Index"><i class="bi bi-heart-fill"></i> Dons</a></li>
-                            <li><a class="nav-link" asp-controller="Portefeuilles" asp-action="Index"><i class="bi bi-wallet-fill"></i> Portefeuilles</a></li>
-                            <li><a class="nav-link" asp-controller="Portefeuilles" asp-action="ComptesPaiement"><i class="bi bi-phone"></i> Comptes de paiement</a></li>
-                            <li><a class="nav-link" asp-controller="Abonnements" asp-action="Index"><i class="bi bi-person-vcard"></i> Profils abonnes</a></li>
-                            <li><a class="nav-link" asp-controller="CotisationsNationales" asp-action="Index"><i class="bi bi-cash-coin"></i> Cotisations nationales</a></li>
-                            <li><a class="nav-link" asp-controller="AGR" asp-action="Index"><i class="bi bi-briefcase-fill"></i> Projets AGR</a></li>
-                            <li><a class="nav-link" asp-controller="Boutique" asp-action="Admin"><i class="bi bi-bag"></i> Articles boutique</a></li>
-                            <li><a class="nav-link" asp-controller="Boutique" asp-action="Commandes"><i class="bi bi-receipt"></i> Commandes boutique</a></li>
+                            @if (canViewFinances)
+                            {
+                                <li><a class="nav-link" asp-controller="Finances" asp-action="Index"><i class="bi bi-wallet2"></i> Finances</a></li>
+                                <li><a class="nav-link" asp-controller="Dons" asp-action="Index"><i class="bi bi-heart-fill"></i> Dons</a></li>
+                                <li><a class="nav-link" asp-controller="Portefeuilles" asp-action="Index"><i class="bi bi-wallet-fill"></i> Portefeuilles</a></li>
+                                <li><a class="nav-link" asp-controller="Portefeuilles" asp-action="ComptesPaiement"><i class="bi bi-phone"></i> Comptes de paiement</a></li>
+                                <li><a class="nav-link" asp-controller="Abonnements" asp-action="Index"><i class="bi bi-person-vcard"></i> Profils abonnes</a></li>
+                                <li><a class="nav-link" asp-controller="CotisationsNationales" asp-action="Index"><i class="bi bi-cash-coin"></i> Cotisations nationales</a></li>
+                                <li><a class="nav-link" asp-controller="AGR" asp-action="Index"><i class="bi bi-briefcase-fill"></i> Projets AGR</a></li>
+                            }
+                            @if (canViewBoutiqueArticles)
+                            {
+                                <li><a class="nav-link" asp-controller="Boutique" asp-action="Admin"><i class="bi bi-bag"></i> Articles boutique</a></li>
+                            }
+                            @if (canViewBoutiqueCommandes)
+                            {
+                                <li><a class="nav-link" asp-controller="Boutique" asp-action="Commandes"><i class="bi bi-receipt"></i> Commandes boutique</a></li>
+                            }
                         </ul>
                     </li>
                 }
@@ -281,6 +293,7 @@
                             {
                                 <li><a class="nav-link" asp-controller="Account" asp-action="Utilisateurs"><i class="bi bi-person-check-fill"></i> Utilisateurs</a></li>
                                 <li><a class="nav-link" asp-controller="Roles" asp-action="Index"><i class="bi bi-person-lock"></i> Roles & visibilite</a></li>
+                                <li><a class="nav-link" asp-controller="Permissions" asp-action="Index"><i class="bi bi-shield-lock"></i> Permissions roles</a></li>
                             }
                             @if (isAdmin)
                             {
