@@ -3,27 +3,57 @@
 @{
     Layout = "_LayoutAdmin";
     ViewData["Title"] = "Permissions roles";
+
     var roles = ViewBag.Roles as List<Microsoft.AspNetCore.Identity.IdentityRole<Guid>> ?? new();
     var selectedRoleId = ViewBag.SelectedRoleId as Guid?;
     var selectedRoleName = ViewBag.SelectedRoleName as string ?? "Aucun role";
     var selectedPermissions = ViewBag.SelectedPermissions as HashSet<Guid> ?? new();
     var grouped = Model.GroupBy(p => p.Module).OrderBy(g => g.Key).ToList();
+    var permissionCount = Model.Count;
+    var selectedCount = selectedPermissions.Count;
+    var selectedRatio = permissionCount == 0 ? 0 : (int)Math.Round(selectedCount * 100m / permissionCount);
+    var moduleIcons = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Administration"] = "bi-shield-lock",
+        ["Activites"] = "bi-calendar-check",
+        ["Boutique"] = "bi-bag-check",
+        ["Communication"] = "bi-megaphone",
+        ["Demandes"] = "bi-clipboard-check",
+        ["Finances"] = "bi-wallet2",
+        ["Formations"] = "bi-mortarboard",
+        ["Reporting"] = "bi-graph-up-arrow",
+        ["Support"] = "bi-headset",
+        ["Territoire"] = "bi-diagram-3"
+    };
 }
 
-<section class="container-fluid py-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
-        <div>
-            <h1 class="page-title"><i class="bi bi-person-lock"></i> Permissions roles</h1>
-            <p class="text-muted-custom mb-0">Controlez les vues et les actions disponibles pour chaque role.</p>
+<section class="container-fluid permissions-page py-4" data-permissions-root>
+    <div class="permissions-hero">
+        <div class="permissions-hero__title">
+            <span class="permissions-kicker"><i class="bi bi-person-lock"></i> Administration</span>
+            <h1>Permissions par role</h1>
+            <p>Configurez les vues et les actions autorisees pour chaque profil de la plateforme.</p>
         </div>
-        <a asp-controller="Roles" asp-action="Index" class="btn btn-outline-or">
-            <i class="bi bi-arrow-left"></i> Roles
-        </a>
+
+        <div class="permissions-hero__stats">
+            <div>
+                <strong>@roles.Count</strong>
+                <span>roles</span>
+            </div>
+            <div>
+                <strong>@grouped.Count</strong>
+                <span>modules</span>
+            </div>
+            <div>
+                <strong data-selected-total>@selectedCount</strong>
+                <span>permissions actives</span>
+            </div>
+        </div>
     </div>
 
-    <div class="card-3d p-4 mb-4">
-        <form method="get" class="row g-3 align-items-end">
-            <div class="col-md-8 col-lg-6">
+    <div class="permissions-role-panel">
+        <form method="get" class="permissions-role-form">
+            <div>
                 <label class="form-label">Role a configurer</label>
                 <select name="roleId" class="form-select" onchange="this.form.submit()">
                     @foreach (var role in roles)
@@ -32,47 +62,97 @@
                     }
                 </select>
             </div>
-            <div class="col-md-auto">
-                <button type="submit" class="btn btn-or"><i class="bi bi-search"></i> Charger</button>
-            </div>
+            <button type="submit" class="btn btn-or"><i class="bi bi-arrow-repeat"></i> Charger</button>
+            <a asp-controller="Roles" asp-action="Index" class="btn btn-outline-or">
+                <i class="bi bi-arrow-left"></i> Roles
+            </a>
         </form>
     </div>
 
     @if (selectedRoleId.HasValue)
     {
-        <form asp-action="Enregistrer" method="post">
+        <form asp-action="Enregistrer" method="post" class="permissions-workspace">
             @Html.AntiForgeryToken()
             <input type="hidden" name="roleId" value="@selectedRoleId" />
 
-            <div class="permissions-shell">
-                <div class="permissions-summary card-3d p-4">
-                    <span class="badge-soft mb-2">Role selectionne</span>
-                    <h2>@selectedRoleName</h2>
-                    <p class="text-muted-custom">Les permissions cochees donnent acces a la vue et aux actions associees.</p>
-                    <button type="submit" class="btn btn-or w-100">
-                        <i class="bi bi-check2-circle"></i> Enregistrer les permissions
-                    </button>
+            <aside class="permissions-summary-panel">
+                <span class="badge-soft">Role selectionne</span>
+                <h2>@selectedRoleName</h2>
+                <p>Les permissions cochees pilotent a la fois l'affichage des menus et l'acces direct aux pages protegees.</p>
+
+                <div class="permissions-score">
+                    <div class="permissions-score__head">
+                        <span>Couverture</span>
+                        <strong data-selected-ratio>@selectedRatio%</strong>
+                    </div>
+                    <div class="permissions-meter">
+                        <span style="width: @selectedRatio%"></span>
+                    </div>
+                    <small><span data-selected-total-inline>@selectedCount</span> sur @permissionCount permissions</small>
                 </div>
 
-                <div class="permissions-grid">
+                <button type="submit" class="btn btn-or w-100">
+                    <i class="bi bi-check2-circle"></i> Enregistrer
+                </button>
+            </aside>
+
+            <div class="permissions-board">
+                <div class="permissions-toolbar">
+                    <div class="permissions-search">
+                        <i class="bi bi-search"></i>
+                        <input type="search" class="form-control" placeholder="Rechercher une permission, un module ou un code..." data-permission-search />
+                    </div>
+                    <div class="permissions-toolbar__actions">
+                        <button type="button" class="btn btn-outline-or" data-select-visible>
+                            <i class="bi bi-check2-square"></i> Tout cocher
+                        </button>
+                        <button type="button" class="btn btn-outline-danger" data-clear-visible>
+                            <i class="bi bi-x-square"></i> Tout retirer
+                        </button>
+                    </div>
+                </div>
+
+                <div class="permissions-modules">
                     @foreach (var module in grouped)
                     {
-                        <section class="card-3d p-4">
-                            <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
-                                <div>
-                                    <span class="badge-soft">@module.Key</span>
-                                    <h2 class="h5 mt-2 mb-0">@module.Key</h2>
+                        var icon = moduleIcons.TryGetValue(module.Key, out var moduleIcon) ? moduleIcon : "bi-grid-1x2";
+                        var modulePermissions = module.ToList();
+                        var moduleSelected = modulePermissions.Count(p => selectedPermissions.Contains(p.Id));
+                        var moduleRatio = modulePermissions.Count == 0 ? 0 : (int)Math.Round(moduleSelected * 100m / modulePermissions.Count);
+
+                        <section class="permissions-module" data-permission-module>
+                            <div class="permissions-module__header">
+                                <div class="permissions-module__identity">
+                                    <span><i class="bi @icon"></i></span>
+                                    <div>
+                                        <strong>@module.Key</strong>
+                                        <small><span data-module-selected>@moduleSelected</span> / @modulePermissions.Count droits</small>
+                                    </div>
                                 </div>
-                                <span class="text-muted-custom small">@module.Count() droit(s)</span>
+                                <div class="permissions-module__actions">
+                                    <button type="button" class="btn btn-sm btn-outline-or" data-select-module>Cocher</button>
+                                    <button type="button" class="btn btn-sm btn-light" data-clear-module>Retirer</button>
+                                </div>
+                            </div>
+
+                            <div class="permissions-module__meter">
+                                <span style="width: @moduleRatio%" data-module-meter></span>
                             </div>
 
                             <div class="permissions-list">
-                                @foreach (var permission in module)
+                                @foreach (var permission in modulePermissions)
                                 {
                                     var inputId = $"perm_{permission.Id:N}";
-                                    <label class="permission-item" for="@inputId">
-                                        <input id="@inputId" type="checkbox" name="permissionIds" value="@permission.Id" checked="@selectedPermissions.Contains(permission.Id)" />
-                                        <span>
+                                    var isChecked = selectedPermissions.Contains(permission.Id);
+
+                                    <label class="permission-item @(isChecked ? "is-selected" : null)" for="@inputId">
+                                        <input id="@inputId"
+                                               class="permission-check"
+                                               type="checkbox"
+                                               name="permissionIds"
+                                               value="@permission.Id"
+                                               checked="@isChecked" />
+                                        <span class="permission-item__content">
                                             <strong>@permission.Libelle</strong>
                                             <small>@permission.Description</small>
                                             <code>@permission.Code</code>
@@ -87,3 +167,87 @@
         </form>
     }
 </section>
+
+@section Scripts {
+    <script>
+        (() => {
+            const root = document.querySelector('[data-permissions-root]');
+            if (!root) return;
+
+            const checks = [...root.querySelectorAll('.permission-check')];
+            const search = root.querySelector('[data-permission-search]');
+            const total = checks.length;
+
+            const sync = () => {
+                const selected = checks.filter(check => check.checked).length;
+                const ratio = total === 0 ? 0 : Math.round((selected / total) * 100);
+                root.querySelectorAll('[data-selected-total]').forEach(el => el.textContent = selected);
+                root.querySelectorAll('[data-selected-total-inline]').forEach(el => el.textContent = selected);
+                root.querySelectorAll('[data-selected-ratio]').forEach(el => el.textContent = `${ratio}%`);
+                root.querySelectorAll('.permissions-meter span').forEach(el => el.style.width = `${ratio}%`);
+
+                root.querySelectorAll('[data-permission-module]').forEach(module => {
+                    const moduleChecks = [...module.querySelectorAll('.permission-check')];
+                    const moduleSelected = moduleChecks.filter(check => check.checked).length;
+                    const moduleRatio = moduleChecks.length === 0 ? 0 : Math.round((moduleSelected / moduleChecks.length) * 100);
+                    const moduleCount = module.querySelector('[data-module-selected]');
+                    const moduleMeter = module.querySelector('[data-module-meter]');
+                    if (moduleCount) moduleCount.textContent = moduleSelected;
+                    if (moduleMeter) moduleMeter.style.width = `${moduleRatio}%`;
+                });
+
+                root.querySelectorAll('.permission-item').forEach(item => {
+                    const check = item.querySelector('.permission-check');
+                    item.classList.toggle('is-selected', check?.checked === true);
+                });
+            };
+
+            const visibleChecks = scope => [...scope.querySelectorAll('.permission-item:not([hidden]) .permission-check')];
+
+            root.addEventListener('change', event => {
+                if (event.target.matches('.permission-check')) sync();
+            });
+
+            root.querySelector('[data-select-visible]')?.addEventListener('click', () => {
+                visibleChecks(root).forEach(check => check.checked = true);
+                sync();
+            });
+
+            root.querySelector('[data-clear-visible]')?.addEventListener('click', () => {
+                visibleChecks(root).forEach(check => check.checked = false);
+                sync();
+            });
+
+            root.querySelectorAll('[data-select-module]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const module = button.closest('[data-permission-module]');
+                    visibleChecks(module).forEach(check => check.checked = true);
+                    sync();
+                });
+            });
+
+            root.querySelectorAll('[data-clear-module]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const module = button.closest('[data-permission-module]');
+                    visibleChecks(module).forEach(check => check.checked = false);
+                    sync();
+                });
+            });
+
+            search?.addEventListener('input', () => {
+                const query = search.value.trim().toLowerCase();
+                root.querySelectorAll('[data-permission-module]').forEach(module => {
+                    let hasVisibleItem = false;
+                    module.querySelectorAll('.permission-item').forEach(item => {
+                        const isVisible = !query || item.textContent.toLowerCase().includes(query);
+                        item.hidden = !isVisible;
+                        hasVisibleItem = hasVisibleItem || isVisible;
+                    });
+                    module.hidden = !hasVisibleItem;
+                });
+            });
+
+            sync();
+        })();
+    </script>
+}
