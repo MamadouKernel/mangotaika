@@ -810,7 +810,7 @@ public class AccountController(
 
         if (EstGestionnaireSansAdmin() && model.Roles.Any(RoleNames.IsAdminRole))
         {
-            ModelState.AddModelError(nameof(model.Roles), "Vous ne pouvez pas attribuer un rÃ´le administrateur.");
+            ModelState.AddModelError(nameof(model.Roles), "Vous ne pouvez pas attribuer un role d'administration district.");
         }
 
         var currentUserId = Guid.Parse(userManager.GetUserId(User)!);
@@ -852,11 +852,17 @@ public class AccountController(
 
         await SyncLinkedParentRecordsAsync(user);
 
-        var nouveauxRoles = model.Roles.Where(r => !string.IsNullOrWhiteSpace(r)).Distinct().ToList();
+        var rolesDemandes = model.Roles.Where(r => !string.IsNullOrWhiteSpace(r)).Distinct().ToList();
+        var nouveauxRoles = NormaliserRolesUtilisateur(rolesDemandes);
         if (nouveauxRoles.Count == 0)
         {
             ModelState.AddModelError(nameof(model.Roles), "Veuillez selectionner au moins un role.");
             return View(model);
+        }
+
+        if (rolesDemandes.Count != nouveauxRoles.Count && nouveauxRoles.Contains(RoleNames.Administrateur))
+        {
+            TempData["Info"] = "Le role Administrateur est exclusif : les autres roles ont ete retires automatiquement.";
         }
 
         var anciensRoles = await userManager.GetRolesAsync(user);
@@ -893,8 +899,22 @@ public class AccountController(
         if (!model.IsActive)
             await userManager.UpdateSecurityStampAsync(user);
 
-        TempData["Success"] = "Utilisateur mis Ã  jour.";
+        TempData["Success"] = nouveauxRoles.Contains(RoleNames.Administrateur)
+            ? "Utilisateur mis a jour avec le role Administrateur exclusif."
+            : "Utilisateur mis a jour.";
         return RedirectToAction(nameof(UtilisateurDetails), new { id });
+    }
+
+    private static List<string> NormaliserRolesUtilisateur(IEnumerable<string> roles)
+    {
+        var selection = roles
+            .Where(r => RoleNames.All.Contains(r))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return selection.Contains(RoleNames.Administrateur, StringComparer.OrdinalIgnoreCase)
+            ? [RoleNames.Administrateur]
+            : selection;
     }
 
     private IReadOnlyList<string> RolesPourEdition()

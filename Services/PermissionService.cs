@@ -18,7 +18,7 @@ public sealed class PermissionService(
             return false;
         }
 
-        if (user.IsInRole(RoleNames.Administrateur))
+        if (await HasActualRoleAsync(user, RoleNames.Administrateur))
         {
             return true;
         }
@@ -60,5 +60,11 @@ public sealed class PermissionService(
         }
 
         return (await userManager.GetRolesAsync(appUser)).ToList();
+    }
+
+    private async Task<bool> HasActualRoleAsync(ClaimsPrincipal user, string roleName)
+    {
+        var appUser = await userManager.GetUserAsync(user);
+        return appUser is not null && await userManager.IsInRoleAsync(appUser, roleName);
     }
 }

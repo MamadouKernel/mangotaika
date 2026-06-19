@@ -594,6 +594,67 @@ body {
 /* Roles checkbox grid (edit user form) */
 .roles-checkbox-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem 1.5rem; background: var(--vert-pale); border-radius: 12px; padding: 0.75rem 1rem; }
 .roles-checkbox-grid .form-check-label { font-size: 0.88rem; font-weight: 500; }
+.user-edit-card { max-width: 860px; }
+.role-assignment-hint {
+    display: flex;
+    gap: 0.55rem;
+    align-items: flex-start;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid rgba(95, 127, 67, 0.2);
+    border-radius: 12px;
+    background: #f7faf4;
+    color: var(--texte-secondaire);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+.role-assignment-hint i {
+    color: var(--vert-logo);
+}
+.role-assignment-hint.is-admin-exclusive {
+    border-color: rgba(89, 117, 55, 0.38);
+    background: #edf5e6;
+    color: var(--bleu-logo);
+}
+.role-assignment-grid {
+    gap: 0.65rem;
+    background: #f8fafc;
+}
+.role-choice {
+    display: flex;
+    gap: 0.55rem;
+    align-items: flex-start;
+    min-height: 48px;
+    margin: 0;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid rgba(95, 127, 67, 0.14);
+    border-radius: 12px;
+    background: #fff;
+}
+.role-choice--admin {
+    border-color: rgba(89, 117, 55, 0.42);
+    background: #f1f8ea;
+}
+.role-choice.is-disabled-by-admin {
+    opacity: 0.52;
+}
+.role-choice .form-check-input {
+    margin-top: 0.18rem;
+    accent-color: var(--vert-logo);
+}
+.role-choice .form-check-label {
+    display: grid;
+    gap: 0.12rem;
+    color: var(--bleu-logo);
+    font-size: 0.9rem;
+}
+.role-choice .form-check-label strong {
+    font-weight: 900;
+}
+.role-choice .form-check-label small {
+    color: var(--texte-secondaire);
+    font-size: 0.76rem;
+    font-weight: 800;
+}
 
 /* Role switcher */
 .role-switcher { background: var(--vert-pale); border-radius: 10px; padding: 0.6rem 0.75rem; }
