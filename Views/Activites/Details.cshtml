@@ -668,6 +668,20 @@
             var copyButton = document.getElementById('copyPresenceLink');
             var presenceUrl = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(presenceUrl));
 
+            function activateCurrentHashTab() {
+                if (!window.location.hash) {
+                    return;
+                }
+
+                var tabLink = document.querySelector('.tracking-tabs [data-bs-toggle="tab"][href="' + window.location.hash + '"]');
+                if (!tabLink || typeof bootstrap === 'undefined') {
+                    return;
+                }
+
+                bootstrap.Tab.getOrCreateInstance(tabLink).show();
+                tabLink.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
             function renderFallbackQr() {
                 if (!qrContainer || !presenceUrl) {
                     return;
@@ -724,6 +738,9 @@
                     }
                 });
             }
+
+            activateCurrentHashTab();
+            window.addEventListener('hashchange', activateCurrentHashTab);
         })();
     </script>
 }

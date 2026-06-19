@@ -581,6 +581,7 @@ public class ActivitesController(
     [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe,ChefUnite,Scout")]
     public async Task<IActionResult> RetirerParticipant(Guid id, Guid participantId)
     {
+        var participantsUrl = Url.Action(nameof(Details), new { id }) + "#participants";
         var activite = await db.Activites.FirstOrDefaultAsync(a => a.Id == id && !a.EstSupprime);
         if (activite is null) return NotFound();
         if (!await CanManageActivityAsync(activite.GroupeId)) return Forbid();
@@ -588,7 +589,7 @@ public class ActivitesController(
         if (activite.DateCloturePointage.HasValue)
         {
             TempData["Warning"] = "Le pointage est cloture. Reouvrez-le avant de retirer un participant.";
-            return RedirectToAction(nameof(Details), new { id });
+            return Redirect(participantsUrl);
         }
 
         var participant = await db.ParticipantsActivite.FirstOrDefaultAsync(p => p.Id == participantId && p.ActiviteId == id && !p.EstSupprime);
@@ -599,7 +600,7 @@ public class ActivitesController(
         }
 
         TempData["Success"] = "Participant retire.";
-        return RedirectToAction(nameof(Details), new { id });
+        return Redirect(participantsUrl);
     }
 
     [HttpPost, ValidateAntiForgeryToken]
