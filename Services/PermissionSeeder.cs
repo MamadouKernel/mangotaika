@@ -47,16 +47,26 @@ public sealed class PermissionSeeder(
     {
         var permissions = await db.Permissions.ToDictionaryAsync(p => p.Code);
         var rolePermissions = await db.RolePermissions
-            .Select(rp => new { rp.RoleId, rp.PermissionId })
+            .Include(rp => rp.Permission)
+            .Select(rp => new { rp.RoleId, rp.PermissionId, rp.Permission.Code })
             .ToListAsync();
         var existingPairs = rolePermissions
             .Select(rp => $"{rp.RoleId:N}:{rp.PermissionId:N}")
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var rolesWithGlobalPermissions = rolePermissions
+            .Where(rp => !rp.Code.StartsWith("Boutique.", StringComparison.OrdinalIgnoreCase))
+            .Select(rp => rp.RoleId)
+            .ToHashSet();
 
         foreach (var (roleName, codes) in BuildDefaultMatrix())
         {
             var role = await roleManager.FindByNameAsync(roleName);
             if (role is null)
+            {
+                continue;
+            }
+
+            if (rolesWithGlobalPermissions.Contains(role.Id))
             {
                 continue;
             }
@@ -92,9 +102,87 @@ public sealed class PermissionSeeder(
         var publicCustomer =
             new[]
             {
+                PermissionCodes.DashboardVoir,
+                PermissionCodes.ActivitesVoir,
+                PermissionCodes.DemandesVoir,
+                PermissionCodes.FormationsVoir,
+                PermissionCodes.TicketsVoir,
                 PermissionCodes.BoutiqueCatalogueVoir,
                 PermissionCodes.BoutiquePanierGerer,
                 PermissionCodes.BoutiqueCommandesCreer
+            };
+
+        var territoire =
+            new[]
+            {
+                PermissionCodes.TerritoireScoutsVoir,
+                PermissionCodes.TerritoireGroupesVoir,
+                PermissionCodes.TerritoireBranchesVoir,
+                PermissionCodes.TerritoireRegionsVoir,
+                PermissionCodes.TerritoireCarteVoir,
+                PermissionCodes.TerritoireInscriptionsVoir
+            };
+
+        var activites =
+            new[]
+            {
+                PermissionCodes.ActivitesVoir,
+                PermissionCodes.RessourcesVoir,
+                PermissionCodes.UnitesVoir,
+                PermissionCodes.CompetencesVoir,
+                PermissionCodes.ProgrammesVoir,
+                PermissionCodes.RapportsActiviteVoir,
+                PermissionCodes.PropositionsMaitriseVoir,
+                PermissionCodes.FormationsVoir,
+                PermissionCodes.FormationsStatistiquesVoir
+            };
+
+        var demandes =
+            new[]
+            {
+                PermissionCodes.DemandesVoir,
+                PermissionCodes.DemandesGroupeVoir
+            };
+
+        var finances =
+            new[]
+            {
+                PermissionCodes.FinancesVoir,
+                PermissionCodes.DonsAdminVoir,
+                PermissionCodes.PortefeuillesAdminVoir,
+                PermissionCodes.ComptesPaiementVoir,
+                PermissionCodes.AbonnementsVoir,
+                PermissionCodes.CotisationsVoir,
+                PermissionCodes.AgrVoir
+            };
+
+        var communication =
+            new[]
+            {
+                PermissionCodes.MotCommissaireVoir,
+                PermissionCodes.ActualitesAdminVoir,
+                PermissionCodes.GalerieAdminVoir,
+                PermissionCodes.PartenairesVoir
+            };
+
+        var administration =
+            new[]
+            {
+                PermissionCodes.UtilisateursVoir,
+                PermissionCodes.RolesVoir,
+                PermissionCodes.PermissionsVoir,
+                PermissionCodes.CodesInvitationVoir,
+                PermissionCodes.MaintenanceVoir,
+                PermissionCodes.MessagesVoir,
+                PermissionCodes.HistoriqueVoir
+            };
+
+        var support =
+            new[]
+            {
+                PermissionCodes.TicketsVoir,
+                PermissionCodes.CatalogueSupportVoir,
+                PermissionCodes.BaseConnaissancesVoir
             };
 
         var boutiqueManager =
@@ -112,33 +200,91 @@ public sealed class PermissionSeeder(
                 .Distinct()
                 .ToArray();
 
+        var fullBackOffice =
+            publicCustomer
+                .Concat(territoire)
+                .Concat(activites)
+                .Concat(demandes)
+                .Concat(finances)
+                .Concat(communication)
+                .Concat(administration)
+                .Concat(support)
+                .Concat(boutiqueManager)
+                .Append(PermissionCodes.ReportingVoir)
+                .Distinct()
+                .ToArray();
+
+        var districtLeadership =
+            fullBackOffice
+                .Except([PermissionCodes.MaintenanceVoir])
+                .ToArray();
+
+        var supervision =
+            publicCustomer
+                .Concat(territoire)
+                .Concat([
+                    PermissionCodes.ActivitesVoir,
+                    PermissionCodes.CompetencesVoir,
+                    PermissionCodes.ProgrammesVoir,
+                    PermissionCodes.RapportsActiviteVoir,
+                    PermissionCodes.FormationsVoir,
+                    PermissionCodes.FormationsStatistiquesVoir,
+                    PermissionCodes.DemandesVoir,
+                    PermissionCodes.DemandesGroupeVoir,
+                    PermissionCodes.FinancesVoir,
+                    PermissionCodes.DonsAdminVoir,
+                    PermissionCodes.CotisationsVoir,
+                    PermissionCodes.AgrVoir,
+                    PermissionCodes.HistoriqueVoir,
+                    PermissionCodes.TicketsVoir,
+                    PermissionCodes.ReportingVoir,
+                    PermissionCodes.BoutiqueArticlesVoir,
+                    PermissionCodes.BoutiqueCommandesVoir
+                ])
+                .Distinct()
+                .ToArray();
+
+        var scopedLeader =
+            publicCustomer
+                .Concat([
+                    PermissionCodes.TerritoireScoutsVoir,
+                    PermissionCodes.TerritoireGroupesVoir,
+                    PermissionCodes.TerritoireBranchesVoir,
+                    PermissionCodes.ActivitesVoir,
+                    PermissionCodes.RessourcesVoir,
+                    PermissionCodes.UnitesVoir,
+                    PermissionCodes.RapportsActiviteVoir,
+                    PermissionCodes.PropositionsMaitriseVoir,
+                    PermissionCodes.FormationsVoir
+                ])
+                .Distinct()
+                .ToArray();
+
+        var supportAgent =
+            publicCustomer
+                .Concat(support)
+                .Concat([
+                    PermissionCodes.CatalogueSupportVoir,
+                    PermissionCodes.BaseConnaissancesVoir
+                ])
+                .Distinct()
+                .ToArray();
+
         return new Dictionary<string, string[]>
         {
-            [RoleNames.Administrateur] = boutiqueManager,
-            [RoleNames.Gestionnaire] = boutiqueManager,
-            [RoleNames.CommissaireDistrict] = boutiqueManager,
-            [RoleNames.CommissaireDistrictAdjoint] = boutiqueManager,
-            [RoleNames.AssistantCommissaireDistrict] = boutiqueManager,
-            [RoleNames.EquipeDistrict] = [
-                .. publicCustomer,
-                PermissionCodes.BoutiqueArticlesVoir,
-                PermissionCodes.BoutiqueCommandesVoir
-            ],
-            [RoleNames.ChefGroupe] = publicCustomer,
-            [RoleNames.ChefUnite] = publicCustomer,
+            [RoleNames.Administrateur] = fullBackOffice,
+            [RoleNames.Gestionnaire] = fullBackOffice,
+            [RoleNames.CommissaireDistrict] = districtLeadership,
+            [RoleNames.CommissaireDistrictAdjoint] = districtLeadership,
+            [RoleNames.AssistantCommissaireDistrict] = districtLeadership,
+            [RoleNames.EquipeDistrict] = scopedLeader,
+            [RoleNames.ChefGroupe] = scopedLeader,
+            [RoleNames.ChefUnite] = scopedLeader,
             [RoleNames.Scout] = publicCustomer,
             [RoleNames.Parent] = publicCustomer,
-            [RoleNames.AgentSupport] = publicCustomer,
-            [RoleNames.Superviseur] = [
-                .. publicCustomer,
-                PermissionCodes.BoutiqueArticlesVoir,
-                PermissionCodes.BoutiqueCommandesVoir
-            ],
-            [RoleNames.Consultant] = [
-                .. publicCustomer,
-                PermissionCodes.BoutiqueArticlesVoir,
-                PermissionCodes.BoutiqueCommandesVoir
-            ]
+            [RoleNames.AgentSupport] = supportAgent,
+            [RoleNames.Superviseur] = supervision,
+            [RoleNames.Consultant] = supervision
         };
     }
 }

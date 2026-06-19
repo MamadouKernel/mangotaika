@@ -34,18 +34,55 @@
         : (isScopedLeader ? activeRole : "");
     var showScopedNav = activeScopedLeader is "EquipeDistrict" or "ChefGroupe" or "ChefUnite";
 
-    var canViewTerritoire = isEncadrement;
-    var canViewActivites = isEncadrement || showScopedNav;
-    var canViewDemandes = isAdminOrGest || isSuperviseur || isConsultant;
-    var canViewFinances = isEncadrement;
-    var canManageCommunication = isAdminOrGest;
-    var canManageUtilisateurs = isAdminOrGest;
-    var canManageMessages = isAdminOrGest;
-    var canViewSupportCenter = isEncadrement || isAgentSupport;
-    var canManageSupport = isSupportAgent;
-    var canViewReporting = isEncadrement || isAgentSupport;
+    var canViewDashboard = await PermissionService.HasPermissionAsync(User, PermissionCodes.DashboardVoir);
+    var canViewScouts = await PermissionService.HasPermissionAsync(User, PermissionCodes.TerritoireScoutsVoir);
+    var canViewGroupes = await PermissionService.HasPermissionAsync(User, PermissionCodes.TerritoireGroupesVoir);
+    var canViewBranches = await PermissionService.HasPermissionAsync(User, PermissionCodes.TerritoireBranchesVoir);
+    var canViewRegions = await PermissionService.HasPermissionAsync(User, PermissionCodes.TerritoireRegionsVoir);
+    var canViewCarte = await PermissionService.HasPermissionAsync(User, PermissionCodes.TerritoireCarteVoir);
+    var canViewInscriptions = await PermissionService.HasPermissionAsync(User, PermissionCodes.TerritoireInscriptionsVoir);
+    var canViewActivitesModule = await PermissionService.HasPermissionAsync(User, PermissionCodes.ActivitesVoir);
+    var canViewRessources = await PermissionService.HasPermissionAsync(User, PermissionCodes.RessourcesVoir);
+    var canViewUnites = await PermissionService.HasPermissionAsync(User, PermissionCodes.UnitesVoir);
+    var canViewCompetences = await PermissionService.HasPermissionAsync(User, PermissionCodes.CompetencesVoir);
+    var canViewProgrammes = await PermissionService.HasPermissionAsync(User, PermissionCodes.ProgrammesVoir);
+    var canViewRapportsActivite = await PermissionService.HasPermissionAsync(User, PermissionCodes.RapportsActiviteVoir);
+    var canViewPropositionsMaitrise = await PermissionService.HasPermissionAsync(User, PermissionCodes.PropositionsMaitriseVoir);
+    var canViewFormations = await PermissionService.HasPermissionAsync(User, PermissionCodes.FormationsVoir);
+    var canViewFormationsStats = await PermissionService.HasPermissionAsync(User, PermissionCodes.FormationsStatistiquesVoir);
+    var canViewDemandes = await PermissionService.HasPermissionAsync(User, PermissionCodes.DemandesVoir);
+    var canViewDemandesGroupe = await PermissionService.HasPermissionAsync(User, PermissionCodes.DemandesGroupeVoir);
+    var canViewFinances = await PermissionService.HasPermissionAsync(User, PermissionCodes.FinancesVoir);
+    var canViewDonsAdmin = await PermissionService.HasPermissionAsync(User, PermissionCodes.DonsAdminVoir);
+    var canViewPortefeuillesAdmin = await PermissionService.HasPermissionAsync(User, PermissionCodes.PortefeuillesAdminVoir);
+    var canViewComptesPaiement = await PermissionService.HasPermissionAsync(User, PermissionCodes.ComptesPaiementVoir);
+    var canViewAbonnements = await PermissionService.HasPermissionAsync(User, PermissionCodes.AbonnementsVoir);
+    var canViewCotisations = await PermissionService.HasPermissionAsync(User, PermissionCodes.CotisationsVoir);
+    var canViewAgr = await PermissionService.HasPermissionAsync(User, PermissionCodes.AgrVoir);
+    var canViewMotCommissaire = await PermissionService.HasPermissionAsync(User, PermissionCodes.MotCommissaireVoir);
+    var canViewActualitesAdmin = await PermissionService.HasPermissionAsync(User, PermissionCodes.ActualitesAdminVoir);
+    var canViewGalerieAdmin = await PermissionService.HasPermissionAsync(User, PermissionCodes.GalerieAdminVoir);
+    var canViewPartenaires = await PermissionService.HasPermissionAsync(User, PermissionCodes.PartenairesVoir);
+    var canManageUtilisateurs = await PermissionService.HasPermissionAsync(User, PermissionCodes.UtilisateursVoir);
+    var canViewRoles = await PermissionService.HasPermissionAsync(User, PermissionCodes.RolesVoir);
+    var canViewPermissions = await PermissionService.HasPermissionAsync(User, PermissionCodes.PermissionsVoir);
+    var canViewCodesInvitation = await PermissionService.HasPermissionAsync(User, PermissionCodes.CodesInvitationVoir);
+    var canViewMaintenance = await PermissionService.HasPermissionAsync(User, PermissionCodes.MaintenanceVoir);
+    var canManageMessages = await PermissionService.HasPermissionAsync(User, PermissionCodes.MessagesVoir);
+    var canViewHistorique = await PermissionService.HasPermissionAsync(User, PermissionCodes.HistoriqueVoir);
+    var canViewTickets = await PermissionService.HasPermissionAsync(User, PermissionCodes.TicketsVoir);
+    var canViewSupportCatalog = await PermissionService.HasPermissionAsync(User, PermissionCodes.CatalogueSupportVoir);
+    var canViewKnowledgeBase = await PermissionService.HasPermissionAsync(User, PermissionCodes.BaseConnaissancesVoir);
+    var canViewReporting = await PermissionService.HasPermissionAsync(User, PermissionCodes.ReportingVoir);
     var canViewBoutiqueArticles = await PermissionService.HasPermissionAsync(User, PermissionCodes.BoutiqueArticlesVoir);
     var canViewBoutiqueCommandes = await PermissionService.HasPermissionAsync(User, PermissionCodes.BoutiqueCommandesVoir);
+    var canViewTerritoire = canViewScouts || canViewGroupes || canViewBranches || canViewRegions || canViewCarte || canViewInscriptions;
+    var canViewActivites = canViewActivitesModule || canViewRessources || canViewUnites || canViewCompetences || canViewProgrammes || canViewRapportsActivite || canViewPropositionsMaitrise || canViewFormations || canViewFormationsStats;
+    var canViewDemandesModule = canViewDemandes || canViewDemandesGroupe;
+    var canViewFinancesModule = canViewFinances || canViewDonsAdmin || canViewPortefeuillesAdmin || canViewComptesPaiement || canViewAbonnements || canViewCotisations || canViewAgr || canViewBoutiqueArticles || canViewBoutiqueCommandes;
+    var canManageCommunication = canViewMotCommissaire || canViewActualitesAdmin || canViewGalerieAdmin || canViewPartenaires;
+    var canViewAdministration = canManageUtilisateurs || canViewRoles || canViewPermissions || canViewCodesInvitation || canViewMaintenance || canManageMessages || canViewHistorique;
+    var canViewSupportCenter = canViewTickets || canViewSupportCatalog || canViewKnowledgeBase;
 }
 
 <div class="container-fluid">
@@ -85,11 +122,14 @@
             }
 
             <ul class="nav flex-column">
-                <li class="nav-item">
-                    <a class="nav-link" asp-controller="Dashboard" asp-action="Index">
-                        <i class="bi bi-speedometer2"></i> Tableau de bord
-                    </a>
-                </li>
+                @if (canViewDashboard)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="Dashboard" asp-action="Index">
+                            <i class="bi bi-speedometer2"></i> Tableau de bord
+                        </a>
+                    </li>
+                }
                 <li class="nav-item">
                     <a class="nav-link sidebar-wallet-link" asp-controller="Portefeuilles" asp-action="MonPortefeuille">
                         <i class="bi bi-wallet2"></i> Mon portefeuille
@@ -167,15 +207,30 @@
                             <i class="bi bi-chevron-down sidebar-chevron"></i>
                         </a>
                         <ul class="sidebar-submenu" id="grp-territoire">
-                            <li><a class="nav-link" asp-controller="Scouts" asp-action="Index"><i class="bi bi-people-fill"></i> Scouts</a></li>
-                            @if (isAdminOrGest || isDistrictLeadership)
+                            @if (canViewScouts)
+                            {
+                                <li><a class="nav-link" asp-controller="Scouts" asp-action="Index"><i class="bi bi-people-fill"></i> Scouts</a></li>
+                            }
+                            @if (canViewRegions)
                             {
                                 <li><a class="nav-link" asp-controller="Territoires" asp-action="Index"><i class="bi bi-globe-africa"></i> Regions & districts</a></li>
                             }
-                            <li><a class="nav-link" asp-controller="Groupes" asp-action="Index"><i class="bi bi-building"></i> Entites scouts</a></li>
-                            <li><a class="nav-link" asp-controller="Branches" asp-action="Index"><i class="bi bi-diagram-3-fill"></i> Branches</a></li>
-                            <li><a class="nav-link" asp-controller="Groupes" asp-action="Carte"><i class="bi bi-geo-alt-fill"></i> Carte GPS</a></li>
-                            <li><a class="nav-link" asp-controller="InscriptionsAnnuelles" asp-action="Index"><i class="bi bi-journal-check"></i> Inscriptions annuelles</a></li>
+                            @if (canViewGroupes)
+                            {
+                                <li><a class="nav-link" asp-controller="Groupes" asp-action="Index"><i class="bi bi-building"></i> Entites scouts</a></li>
+                            }
+                            @if (canViewBranches)
+                            {
+                                <li><a class="nav-link" asp-controller="Branches" asp-action="Index"><i class="bi bi-diagram-3-fill"></i> Branches</a></li>
+                            }
+                            @if (canViewCarte)
+                            {
+                                <li><a class="nav-link" asp-controller="Groupes" asp-action="Carte"><i class="bi bi-geo-alt-fill"></i> Carte GPS</a></li>
+                            }
+                            @if (canViewInscriptions)
+                            {
+                                <li><a class="nav-link" asp-controller="InscriptionsAnnuelles" asp-action="Index"><i class="bi bi-journal-check"></i> Inscriptions annuelles</a></li>
+                            }
                         </ul>
                     </li>
                 }
@@ -188,40 +243,47 @@
                             <i class="bi bi-chevron-down sidebar-chevron"></i>
                         </a>
                         <ul class="sidebar-submenu" id="grp-activites">
-                            <li><a class="nav-link" asp-controller="Activites" asp-action="Index"><i class="bi bi-calendar-event-fill"></i> Activites</a></li>
-                            @if (isAdminOrGest)
+                            @if (canViewActivitesModule)
+                            {
+                                <li><a class="nav-link" asp-controller="Activites" asp-action="Index"><i class="bi bi-calendar-event-fill"></i> Activites</a></li>
+                            }
+                            @if (canViewRessources)
                             {
                                 <li><a class="nav-link" asp-controller="Ressources" asp-action="Index"><i class="bi bi-person-workspace"></i> Ressources</a></li>
                             }
-                            @if (isAdminOrGest || activeScopedLeader is "ChefGroupe" or "ChefUnite")
+                            @if (canViewUnites)
                             {
                                 <li><a class="nav-link" asp-controller="Unites" asp-action="Index"><i class="bi bi-diagram-2"></i> Unites scoutes</a></li>
                             }
-                            <li><a class="nav-link" asp-controller="Competences" asp-action="Index"><i class="bi bi-award-fill"></i> Competences</a></li>
-                            <li><a class="nav-link" asp-controller="ProgrammesAnnuels" asp-action="Index"><i class="bi bi-calendar-range"></i> Programmes annuels</a></li>
-                            @if (activeScopedLeader == "ChefUnite")
+                            @if (canViewCompetences)
                             {
-                                <li><a class="nav-link" asp-controller="Unites" asp-action="Index"><i class="bi bi-diagram-2"></i> Unites de ma branche</a></li>
+                                <li><a class="nav-link" asp-controller="Competences" asp-action="Index"><i class="bi bi-award-fill"></i> Competences</a></li>
                             }
-                            <li><a class="nav-link" asp-controller="RapportsActivite" asp-action="Index"><i class="bi bi-journal-richtext"></i> Rapports d'activite</a></li>
-                            @if (activeScopedLeader != "ChefUnite")
+                            @if (canViewProgrammes)
+                            {
+                                <li><a class="nav-link" asp-controller="ProgrammesAnnuels" asp-action="Index"><i class="bi bi-calendar-range"></i> Programmes annuels</a></li>
+                            }
+                            @if (canViewRapportsActivite)
+                            {
+                                <li><a class="nav-link" asp-controller="RapportsActivite" asp-action="Index"><i class="bi bi-journal-richtext"></i> Rapports d'activite</a></li>
+                            }
+                            @if (canViewPropositionsMaitrise && activeScopedLeader != "ChefUnite")
                             {
                                 <li><a class="nav-link" asp-controller="PropositionsMaitrise" asp-action="Index"><i class="bi bi-people"></i> Propositions de maitrise</a></li>
                             }
-                            @if (isAdminOrGest)
+                            @if (canViewFormations)
                             {
                                 <li><a class="nav-link" asp-controller="Formations" asp-action="Index"><i class="bi bi-mortarboard-fill"></i> Formations</a></li>
-                                <li><a class="nav-link" asp-controller="Formations" asp-action="Statistiques"><i class="bi bi-graph-up"></i> Statistiques formations</a></li>
                             }
-                            else
+                            @if (canViewFormationsStats)
                             {
-                                <li><a class="nav-link" asp-controller="Formations" asp-action="ConsulterCatalogue"><i class="bi bi-mortarboard-fill"></i> Formations</a></li>
+                                <li><a class="nav-link" asp-controller="Formations" asp-action="Statistiques"><i class="bi bi-graph-up"></i> Statistiques formations</a></li>
                             }
                         </ul>
                     </li>
                 }
 
-                @if (canViewDemandes)
+                @if (canViewDemandesModule)
                 {
                     <li class="nav-item sidebar-group">
                         <a class="nav-link sidebar-toggle" href="#" data-target="grp-demandes">
@@ -229,13 +291,19 @@
                             <i class="bi bi-chevron-down sidebar-chevron"></i>
                         </a>
                         <ul class="sidebar-submenu" id="grp-demandes">
-                            <li><a class="nav-link" asp-controller="Demandes" asp-action="Index"><i class="bi bi-file-earmark-check-fill"></i> Demandes administratives</a></li>
-                            <li><a class="nav-link" asp-controller="DemandesGroupe" asp-action="Index"><i class="bi bi-building-add"></i> Demandes de groupe</a></li>
+                            @if (canViewDemandes)
+                            {
+                                <li><a class="nav-link" asp-controller="Demandes" asp-action="Index"><i class="bi bi-file-earmark-check-fill"></i> Demandes administratives</a></li>
+                            }
+                            @if (canViewDemandesGroupe)
+                            {
+                                <li><a class="nav-link" asp-controller="DemandesGroupe" asp-action="Index"><i class="bi bi-building-add"></i> Demandes de groupe</a></li>
+                            }
                         </ul>
                     </li>
                 }
 
-                @if (canViewFinances || canViewBoutiqueArticles || canViewBoutiqueCommandes)
+                @if (canViewFinancesModule)
                 {
                     <li class="nav-item sidebar-group">
                         <a class="nav-link sidebar-toggle" href="#" data-target="grp-finances">
@@ -246,11 +314,29 @@
                             @if (canViewFinances)
                             {
                                 <li><a class="nav-link" asp-controller="Finances" asp-action="Index"><i class="bi bi-wallet2"></i> Finances</a></li>
+                            }
+                            @if (canViewDonsAdmin)
+                            {
                                 <li><a class="nav-link" asp-controller="Dons" asp-action="Index"><i class="bi bi-heart-fill"></i> Dons</a></li>
+                            }
+                            @if (canViewPortefeuillesAdmin)
+                            {
                                 <li><a class="nav-link" asp-controller="Portefeuilles" asp-action="Index"><i class="bi bi-wallet-fill"></i> Portefeuilles</a></li>
+                            }
+                            @if (canViewComptesPaiement)
+                            {
                                 <li><a class="nav-link" asp-controller="Portefeuilles" asp-action="ComptesPaiement"><i class="bi bi-phone"></i> Comptes de paiement</a></li>
+                            }
+                            @if (canViewAbonnements)
+                            {
                                 <li><a class="nav-link" asp-controller="Abonnements" asp-action="Index"><i class="bi bi-person-vcard"></i> Profils abonnes</a></li>
+                            }
+                            @if (canViewCotisations)
+                            {
                                 <li><a class="nav-link" asp-controller="CotisationsNationales" asp-action="Index"><i class="bi bi-cash-coin"></i> Cotisations nationales</a></li>
+                            }
+                            @if (canViewAgr)
+                            {
                                 <li><a class="nav-link" asp-controller="AGR" asp-action="Index"><i class="bi bi-briefcase-fill"></i> Projets AGR</a></li>
                             }
                             @if (canViewBoutiqueArticles)
@@ -273,15 +359,27 @@
                             <i class="bi bi-chevron-down sidebar-chevron"></i>
                         </a>
                         <ul class="sidebar-submenu" id="grp-communication">
-                            <li><a class="nav-link" asp-controller="MotCommissaire" asp-action="Index"><i class="bi bi-megaphone-fill"></i> Mot du Commissaire</a></li>
-                            <li><a class="nav-link" asp-controller="Actualites" asp-action="Admin"><i class="bi bi-newspaper"></i> Actualites</a></li>
-                            <li><a class="nav-link" asp-controller="Galerie" asp-action="Index"><i class="bi bi-images"></i> Galerie</a></li>
-                            <li><a class="nav-link" asp-controller="Partenaires" asp-action="Index"><i class="bi bi-handshake"></i> Partenaires & RS</a></li>
+                            @if (canViewMotCommissaire)
+                            {
+                                <li><a class="nav-link" asp-controller="MotCommissaire" asp-action="Index"><i class="bi bi-megaphone-fill"></i> Mot du Commissaire</a></li>
+                            }
+                            @if (canViewActualitesAdmin)
+                            {
+                                <li><a class="nav-link" asp-controller="Actualites" asp-action="Admin"><i class="bi bi-newspaper"></i> Actualites</a></li>
+                            }
+                            @if (canViewGalerieAdmin)
+                            {
+                                <li><a class="nav-link" asp-controller="Galerie" asp-action="Index"><i class="bi bi-images"></i> Galerie</a></li>
+                            }
+                            @if (canViewPartenaires)
+                            {
+                                <li><a class="nav-link" asp-controller="Partenaires" asp-action="Index"><i class="bi bi-handshake"></i> Partenaires & RS</a></li>
+                            }
                         </ul>
                     </li>
                 }
 
-                @if (canManageUtilisateurs || canManageMessages || isAdmin || isSuperviseur || isConsultant)
+                @if (canViewAdministration)
                 {
                     <li class="nav-item sidebar-group">
                         <a class="nav-link sidebar-toggle" href="#" data-target="grp-admin">
@@ -292,19 +390,31 @@
                             @if (canManageUtilisateurs)
                             {
                                 <li><a class="nav-link" asp-controller="Account" asp-action="Utilisateurs"><i class="bi bi-person-check-fill"></i> Utilisateurs</a></li>
+                            }
+                            @if (canViewRoles)
+                            {
                                 <li><a class="nav-link" asp-controller="Roles" asp-action="Index"><i class="bi bi-person-lock"></i> Roles & visibilite</a></li>
+                            }
+                            @if (canViewPermissions)
+                            {
                                 <li><a class="nav-link" asp-controller="Permissions" asp-action="Index"><i class="bi bi-shield-lock"></i> Permissions roles</a></li>
                             }
-                            @if (isAdmin)
+                            @if (canViewCodesInvitation)
                             {
                                 <li><a class="nav-link" asp-controller="Account" asp-action="CodesInvitation"><i class="bi bi-key-fill"></i> Codes d'invitation</a></li>
+                            }
+                            @if (canViewMaintenance)
+                            {
                                 <li><a class="nav-link" asp-controller="Maintenance" asp-action="Index"><i class="bi bi-database-gear"></i> Maintenance</a></li>
                             }
                             @if (canManageMessages)
                             {
                                 <li><a class="nav-link" asp-controller="Messages" asp-action="Index"><i class="bi bi-envelope-fill"></i> Messages & avis</a></li>
                             }
-                            <li><a class="nav-link" asp-controller="Historique" asp-action="Index"><i class="bi bi-clock-history"></i> Historique</a></li>
+                            @if (canViewHistorique)
+                            {
+                                <li><a class="nav-link" asp-controller="Historique" asp-action="Index"><i class="bi bi-clock-history"></i> Historique</a></li>
+                            }
                         </ul>
                     </li>
                 }
@@ -317,9 +427,18 @@
                             <i class="bi bi-chevron-down sidebar-chevron"></i>
                         </a>
                         <ul class="sidebar-submenu" id="grp-support">
-                            <li><a class="nav-link" asp-controller="Tickets" asp-action="Index"><i class="bi bi-headset"></i> Centre de support</a></li>
-                            <li><a class="nav-link" asp-controller="SupportCatalog" asp-action="Index"><i class="bi bi-grid-1x2"></i> Catalogue de services</a></li>
-                            <li><a class="nav-link" asp-controller="KnowledgeBase" asp-action="Index"><i class="bi bi-journal-text"></i> Base de connaissances</a></li>
+                            @if (canViewTickets)
+                            {
+                                <li><a class="nav-link" asp-controller="Tickets" asp-action="Index"><i class="bi bi-headset"></i> Centre de support</a></li>
+                            }
+                            @if (canViewSupportCatalog)
+                            {
+                                <li><a class="nav-link" asp-controller="SupportCatalog" asp-action="Index"><i class="bi bi-grid-1x2"></i> Catalogue de services</a></li>
+                            }
+                            @if (canViewKnowledgeBase)
+                            {
+                                <li><a class="nav-link" asp-controller="KnowledgeBase" asp-action="Index"><i class="bi bi-journal-text"></i> Base de connaissances</a></li>
+                            }
                         </ul>
                     </li>
                 }

@@ -135,6 +135,7 @@ builder.Services.AddSignalR();
 builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute());
+    options.Filters.Add<GlobalPermissionFilter>();
 });
 
 builder.WebHost.ConfigureKestrel(options =>
