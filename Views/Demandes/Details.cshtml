@@ -5,6 +5,7 @@
     Layout = "_LayoutAdmin";
     var canValidateDistrict = ViewBag.CanValidateDistrict as bool? == true;
     var canSubmit = ViewBag.CanSubmit as bool? == true;
+    var canManageDocuments = ViewBag.CanManageDocuments as bool? == true;
     var validationTarget = ViewBag.ValidationTarget as string ?? "Commissaire de district";
 
     var badgeClass = Model.Statut switch
@@ -141,6 +142,72 @@
                 <pre style="white-space:pre-wrap;font-family:'Poppins',sans-serif;font-size:0.85rem;color:var(--texte-secondaire);background:var(--gris-bg);padding:1.5rem;border-radius:12px;">@Model.TdrContenu</pre>
             </div>
         }
+
+        <div class="card-3d p-4 mt-4">
+            <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+                <div>
+                    <h5 class="text-or mb-1"><i class="bi bi-paperclip"></i> Pieces jointes</h5>
+                    <p class="text-muted-custom small mb-0">Documents rattaches a la demande et repris dans l'activite apres validation.</p>
+                </div>
+                <span class="badge-3d badge-brouillon">@Model.Documents.Count</span>
+            </div>
+
+            @if (Model.Documents.Any())
+            {
+                <div class="d-grid gap-2 mb-3">
+                    @foreach (var document in Model.Documents)
+                    {
+                        <div class="d-flex align-items-center justify-content-between gap-3 p-3" style="border:1px solid var(--gris-border);border-radius:14px;background:rgba(255,255,255,0.78);">
+                            <div class="d-flex align-items-center gap-3 min-w-0">
+                                <span class="d-inline-flex align-items-center justify-content-center" style="width:42px;height:42px;border-radius:12px;background:rgba(89,117,55,0.1);color:#597537;">
+                                    <i class="bi bi-file-earmark-text"></i>
+                                </span>
+                                <div class="min-w-0">
+                                    <a href="@document.CheminFichier" target="_blank" rel="noopener" class="fw-semibold text-decoration-none" style="color:var(--texte);">@document.NomFichier</a>
+                                    <div class="text-muted-custom small">@(!string.IsNullOrWhiteSpace(document.TypeDocument) ? document.TypeDocument : "Piece jointe") - @document.DateUpload.ToString("dd/MM/yyyy HH:mm")</div>
+                                </div>
+                            </div>
+                            @if (canManageDocuments)
+                            {
+                                <form asp-action="SupprimerDocument" asp-route-id="@Model.Id" asp-route-documentId="@document.Id" method="post" class="mb-0" onsubmit="return confirm('Retirer cette piece jointe de la demande ?');">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm" title="Retirer" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.25);border-radius:12px;">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="alert mb-3" style="background:rgba(148,163,184,0.08);border:1px solid rgba(148,163,184,0.22);border-radius:14px;color:var(--texte-secondaire);">
+                    Aucun document joint a cette demande.
+                </div>
+            }
+
+            @if (canManageDocuments)
+            {
+                <form asp-action="AjouterDocument" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data" class="row g-2 align-items-end">
+                    @Html.AntiForgeryToken()
+                    <div class="col-md-5">
+                        <label class="form-label small">Type de document</label>
+                        <input name="typeDocument" class="form-control" placeholder="Ex: TDR, Budget, Autorisation" />
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label small">Document</label>
+                        <input name="fichier" class="form-control" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt" required />
+                    </div>
+                    <div class="col-md-2 d-grid">
+                        <button type="submit" class="btn btn-mango"><i class="bi bi-upload"></i> Ajouter</button>
+                    </div>
+                    <div class="col-12">
+                        <p class="text-muted-custom small mb-0">Possible uniquement tant que la demande est initialisee ou en revision.</p>
+                    </div>
+                </form>
+            }
+        </div>
     </div>
 
     <div class="col-lg-4">

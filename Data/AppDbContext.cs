@@ -29,6 +29,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<Galerie> Galeries => Set<Galerie>();
     public DbSet<MotCommissaire> MotsCommissaire => Set<MotCommissaire>();
     public DbSet<DemandeAutorisation> DemandesAutorisation => Set<DemandeAutorisation>();
+    public DbSet<DocumentDemandeAutorisation> DocumentsDemandesAutorisation => Set<DocumentDemandeAutorisation>();
     public DbSet<SuiviDemande> SuivisDemande => Set<SuiviDemande>();
     public DbSet<DemandeGroupe> DemandesGroupe => Set<DemandeGroupe>();
     public DbSet<MembreHistorique> MembresHistoriques => Set<MembreHistorique>();
@@ -533,6 +534,14 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasOne(d => d.RegionScoute).WithMany(r => r.Districts).HasForeignKey(d => d.RegionScouteId).OnDelete(DeleteBehavior.SetNull);
         });
 
+        builder.Entity<DemandeAutorisation>(e =>
+        {
+            e.HasMany(d => d.Documents)
+                .WithOne(doc => doc.Demande)
+                .HasForeignKey(doc => doc.DemandeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         // === LMS ===
 
         // Formation
@@ -661,6 +670,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         builder.Entity<Competence>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<ContactMessage>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<DocumentActivite>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<DocumentDemandeAutorisation>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<EtapeParcoursScout>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<Formation>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<Galerie>().HasQueryFilter(e => !e.EstSupprime);

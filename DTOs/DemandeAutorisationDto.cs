@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using MangoTaika.Data.Entities;
+using Microsoft.AspNetCore.Http;
 
 namespace MangoTaika.DTOs;
 
@@ -30,6 +31,7 @@ public class DemandeAutorisationDto
     public string? NomBranche { get; set; }
     public Guid? BrancheId { get; set; }
     public List<SuiviDemandeDto> Suivis { get; set; } = [];
+    public List<DocumentDemandeDto> Documents { get; set; } = [];
 }
 
 public class DemandeAutorisationCreateDto : IValidatableObject
@@ -79,6 +81,9 @@ public class DemandeAutorisationCreateDto : IValidatableObject
     [Display(Name = "Branche concernee")]
     public Guid? BrancheId { get; set; }
 
+    [Display(Name = "Pieces jointes")]
+    public List<IFormFile> Documents { get; set; } = [];
+
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (DateFin.HasValue && DateFin.Value.Date < DateActivite.Date)
@@ -97,4 +102,13 @@ public class SuiviDemandeDto
     public string? Commentaire { get; set; }
     public string? Auteur { get; set; }
     public DateTime Date { get; set; }
+}
+
+public class DocumentDemandeDto
+{
+    public Guid Id { get; set; }
+    public string NomFichier { get; set; } = string.Empty;
+    public string CheminFichier { get; set; } = string.Empty;
+    public string? TypeDocument { get; set; }
+    public DateTime DateUpload { get; set; }
 }

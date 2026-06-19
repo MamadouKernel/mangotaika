@@ -15,7 +15,8 @@ namespace MangoTaika.Controllers;
 public class DemandesController(
     AppDbContext db,
     UserManager<ApplicationUser> userManager,
-    INotificationDispatchService notificationDispatchService) : Controller
+    INotificationDispatchService notificationDispatchService,
+    IFileUploadService fileUploadService) : Controller
 {
     private const string ChefGroupeValidationTarget = "chef de groupe";
     private const string DistrictValidationTarget = "commissaire de district";
@@ -89,6 +90,7 @@ public class DemandesController(
         }
 
         await ValiderCreationAsync(dto, isAdmin, currentScout);
+        ValiderDocuments(dto.Documents);
         if (!ModelState.IsValid)
         {
             await LoadFormDataAsync(currentScout, dto.GroupeId);
@@ -132,6 +134,7 @@ public class DemandesController(
         db.DemandesAutorisation.Add(demande);
         var auteurLabel = BuildAuteurLabel(user);
         AjouterSuivi(demande, StatutDemande.Initialisee, StatutDemande.Initialisee, "Demande creee", auteurLabel);
+        await AjouterDocumentsDemandeAsync(demande, dto.Documents, "Piece jointe", auteurLabel);
         await db.SaveChangesAsync();
         var validationTarget = IsChefUniteScout(currentScout, User) ? ChefGroupeValidationTarget : DistrictValidationTarget;
         TempData["Success"] = $"Demande d'autorisation creee. Elle peut maintenant etre soumise au {validationTarget}.";
@@ -146,6 +149,7 @@ public class DemandesController(
             .Include(d => d.Valideur)
             .Include(d => d.Groupe)
             .Include(d => d.Branche)
+            .Include(d => d.Documents)
             .Include(d => d.Suivis)
             .FirstOrDefaultAsync(d => d.Id == id);
         if (demande is null)
@@ -175,7 +179,78 @@ public class DemandesController(
         ViewBag.CanValidateDistrict = canValidateRequests;
         ViewBag.ValidationTarget = chefUniteWorkflow && !chefGroupeApproved ? "Chef de groupe" : "Commissaire de district";
         ViewBag.CanSubmit = isAdmin || demande.DemandeurId == Guid.Parse(userManager.GetUserId(User)!);
+        ViewBag.CanManageDocuments = CanManageDocuments(demande);
         return View(ToDto(demande));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AjouterDocument(Guid id, IFormFile? fichier, string? typeDocument)
+    {
+        var demande = await db.DemandesAutorisation
+            .Include(d => d.Suivis)
+            .FirstOrDefaultAsync(d => d.Id == id);
+        if (demande is null)
+        {
+            return NotFound();
+        }
+
+        if (!CanManageDocuments(demande))
+        {
+            return Forbid();
+        }
+
+        if (fichier is null || fichier.Length == 0)
+        {
+            TempData["Error"] = "Selectionnez un document avant l'ajout.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        if (!fileUploadService.IsValidDocument(fichier))
+        {
+            TempData["Error"] = "Document refuse. Formats autorises : PDF, Word, Excel, CSV ou TXT, 15 Mo maximum.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        var user = await userManager.GetUserAsync(User);
+        await AjouterDocumentsDemandeAsync(demande, [fichier], typeDocument, BuildAuteurLabel(user));
+        await db.SaveChangesAsync();
+
+        TempData["Success"] = "Piece jointe ajoutee a la demande.";
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SupprimerDocument(Guid id, Guid documentId)
+    {
+        var demande = await db.DemandesAutorisation
+            .Include(d => d.Suivis)
+            .FirstOrDefaultAsync(d => d.Id == id);
+        if (demande is null)
+        {
+            return NotFound();
+        }
+
+        if (!CanManageDocuments(demande))
+        {
+            return Forbid();
+        }
+
+        var document = await db.DocumentsDemandesAutorisation
+            .FirstOrDefaultAsync(d => d.Id == documentId && d.DemandeId == id);
+        if (document is null)
+        {
+            return NotFound();
+        }
+
+        document.EstSupprime = true;
+        var user = await userManager.GetUserAsync(User);
+        AjouterSuivi(demande, demande.Statut, demande.Statut, $"Piece jointe retiree : {document.NomFichier}", BuildAuteurLabel(user));
+        await db.SaveChangesAsync();
+
+        TempData["Success"] = "Piece jointe retiree de la demande.";
+        return RedirectToAction(nameof(Details), new { id });
     }
 
     [HttpPost]
@@ -758,6 +833,40 @@ public class DemandesController(
     private static bool IsChefUniteScout(Scout? scout, System.Security.Claims.ClaimsPrincipal user)
         => user.IsInRole(RoleNames.ChefUnite) || IsChefUniteFunction(scout?.Fonction);
 
+    private bool CanManageDocuments(DemandeAutorisation demande)
+    {
+        if (demande.Statut != StatutDemande.Initialisee && demande.Statut != StatutDemande.EnRevision)
+        {
+            return false;
+        }
+
+        if (User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire"))
+        {
+            return true;
+        }
+
+        return Guid.TryParse(userManager.GetUserId(User), out var currentUserId)
+            && demande.DemandeurId == currentUserId;
+    }
+
+    private void ValiderDocuments(IEnumerable<IFormFile>? documents)
+    {
+        foreach (var document in documents ?? [])
+        {
+            if (document.Length == 0)
+            {
+                continue;
+            }
+
+            if (!fileUploadService.IsValidDocument(document))
+            {
+                ModelState.AddModelError(
+                    nameof(DemandeAutorisationCreateDto.Documents),
+                    $"Le fichier \"{document.FileName}\" n'est pas accepte. Formats autorises : PDF, Word, Excel, CSV ou TXT, 15 Mo maximum.");
+            }
+        }
+    }
+
     private static string? NormalizeValue(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
@@ -818,6 +927,36 @@ public class DemandesController(
         });
     }
 
+    private async Task AjouterDocumentsDemandeAsync(DemandeAutorisation demande, IEnumerable<IFormFile>? documents, string? typeDocument, string? auteur)
+    {
+        var documentsValides = (documents ?? []).Where(d => d.Length > 0).ToList();
+        if (documentsValides.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var document in documentsValides)
+        {
+            var chemin = await fileUploadService.SaveDocumentAsync(document, "demandes");
+            db.DocumentsDemandesAutorisation.Add(new DocumentDemandeAutorisation
+            {
+                Id = Guid.NewGuid(),
+                DemandeId = demande.Id,
+                NomFichier = Path.GetFileName(document.FileName),
+                CheminFichier = chemin,
+                TypeDocument = NormalizeValue(typeDocument) ?? "Piece jointe",
+                DateUpload = DateTime.UtcNow
+            });
+        }
+
+        AjouterSuivi(
+            demande,
+            demande.Statut,
+            demande.Statut,
+            $"{documentsValides.Count} piece(s) jointe(s) ajoutee(s)",
+            auteur);
+    }
+
     private async Task<Activite?> CreerActiviteDepuisDemandeAsync(DemandeAutorisation demande, Guid createurId)
     {
         var existeDeja = await db.Activites.AnyAsync(a =>
@@ -848,6 +987,20 @@ public class DemandesController(
         };
 
         db.Activites.Add(activite);
+        await db.Entry(demande).Collection(d => d.Documents).LoadAsync();
+        foreach (var document in demande.Documents.Where(d => !d.EstSupprime))
+        {
+            db.DocumentsActivite.Add(new DocumentActivite
+            {
+                Id = Guid.NewGuid(),
+                ActiviteId = activite.Id,
+                NomFichier = document.NomFichier,
+                CheminFichier = document.CheminFichier,
+                TypeDocument = document.TypeDocument ?? "Document de demande",
+                DateUpload = document.DateUpload
+            });
+        }
+
         db.CommentairesActivite.Add(new CommentaireActivite
         {
             Id = Guid.NewGuid(),
@@ -904,6 +1057,14 @@ public class DemandesController(
         GroupeId = d.GroupeId,
         NomBranche = d.Branche?.Nom,
         BrancheId = d.BrancheId,
+        Documents = d.Documents.OrderByDescending(doc => doc.DateUpload).Select(doc => new DocumentDemandeDto
+        {
+            Id = doc.Id,
+            NomFichier = doc.NomFichier,
+            CheminFichier = doc.CheminFichier,
+            TypeDocument = doc.TypeDocument,
+            DateUpload = doc.DateUpload
+        }).ToList(),
         Suivis = d.Suivis.OrderBy(s => s.Date).Select(s => new SuiviDemandeDto
         {
             AncienStatut = s.AncienStatut,

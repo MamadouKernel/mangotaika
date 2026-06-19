@@ -16,7 +16,7 @@
         <p class="text-muted-custom mb-1">Cette demande est soumise au validateur competent : chef de groupe pour une demande de chef d'unite, commissaire de district pour les autres demandes.</p>
     </div>
 
-    <form asp-action="Create" method="post" class="form-modern" novalidate>
+    <form asp-action="Create" method="post" class="form-modern" enctype="multipart/form-data" novalidate>
         <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
 
         <div class="row">
@@ -114,6 +114,15 @@
                 <label asp-for="Observations" class="form-label"></label>
                 <input asp-for="Observations" class="form-control" placeholder="Informations complementaires" />
                 <span asp-validation-for="Observations" class="text-danger small"></span>
+            </div>
+        </div>
+
+        <div class="mb-3 p-3" style="border:1px solid var(--gris-border);border-radius:14px;background:rgba(89,117,55,0.05);">
+            <label asp-for="Documents" class="form-label mb-1">Pieces jointes (optionnel)</label>
+            <input asp-for="Documents" class="form-control" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt" />
+            <span asp-validation-for="Documents" class="text-danger small"></span>
+            <div class="form-text text-muted-custom">
+                Ajoutez les documents utiles a la validation : TDR, budget, autorisations, listes ou tout justificatif. Formats acceptes : PDF, Word, Excel, CSV ou TXT. Taille maximale : 15 Mo par fichier.
             </div>
         </div>
 
