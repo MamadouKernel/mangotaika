@@ -817,6 +817,28 @@ public class AccountController(
         if (id == currentUserId && !model.IsActive)
             ModelState.AddModelError(nameof(model.IsActive), "Vous ne pouvez pas dÃ©sactiver votre propre compte.");
 
+        var anciensRoles = (await userManager.GetRolesAsync(user)).ToList();
+        var rolesDemandes = model.Roles.Where(r => !string.IsNullOrWhiteSpace(r)).Distinct().ToList();
+        var nouveauxRoles = NormaliserRolesUtilisateur(rolesDemandes);
+        var adminAvant = anciensRoles.Contains(RoleNames.Administrateur);
+        var adminApres = nouveauxRoles.Contains(RoleNames.Administrateur);
+        var actionAdminCritique = adminAvant != adminApres || adminApres;
+
+        if (nouveauxRoles.Count == 0)
+        {
+            ModelState.AddModelError(nameof(model.Roles), "Veuillez selectionner au moins un role.");
+        }
+
+        if (actionAdminCritique && !model.ConfirmerActionCritique)
+        {
+            ModelState.AddModelError(nameof(model.ConfirmerActionCritique), "Confirmez explicitement cette action critique avant d'enregistrer.");
+        }
+
+        if (adminAvant && (!adminApres || !model.IsActive) && await EstDernierAdministrateurActifAsync(user.Id))
+        {
+            ModelState.AddModelError(nameof(model.Roles), "Impossible de retirer ou desactiver le dernier administrateur actif de la plateforme.");
+        }
+
         if (!string.IsNullOrWhiteSpace(model.NouveauMotDePasse))
         {
             if (model.NouveauMotDePasse != model.ConfirmationMotDePasse)
@@ -852,20 +874,11 @@ public class AccountController(
 
         await SyncLinkedParentRecordsAsync(user);
 
-        var rolesDemandes = model.Roles.Where(r => !string.IsNullOrWhiteSpace(r)).Distinct().ToList();
-        var nouveauxRoles = NormaliserRolesUtilisateur(rolesDemandes);
-        if (nouveauxRoles.Count == 0)
-        {
-            ModelState.AddModelError(nameof(model.Roles), "Veuillez selectionner au moins un role.");
-            return View(model);
-        }
-
         if (rolesDemandes.Count != nouveauxRoles.Count && nouveauxRoles.Contains(RoleNames.Administrateur))
         {
             TempData["Info"] = "Le role Administrateur est exclusif : les autres roles ont ete retires automatiquement.";
         }
 
-        var anciensRoles = await userManager.GetRolesAsync(user);
         var aRetirer = anciensRoles.Except(nouveauxRoles).ToList();
         var aAjouter = nouveauxRoles.Except(anciensRoles).ToList();
 
@@ -899,11 +912,79 @@ public class AccountController(
         if (!model.IsActive)
             await userManager.UpdateSecurityStampAsync(user);
 
+        if (!anciensRoles.OrderBy(r => r).SequenceEqual(nouveauxRoles.OrderBy(r => r)))
+        {
+            await JournaliserChangementRolesAsync(user, anciensRoles, nouveauxRoles);
+            await NotifierChangementRolesAsync(user, anciensRoles, nouveauxRoles);
+        }
+
         TempData["Success"] = nouveauxRoles.Contains(RoleNames.Administrateur)
             ? "Utilisateur mis a jour avec le role Administrateur exclusif."
             : "Utilisateur mis a jour.";
         return RedirectToAction(nameof(UtilisateurDetails), new { id });
     }
+
+    private async Task<bool> EstDernierAdministrateurActifAsync(Guid userId)
+    {
+        var adminRole = await db.Roles.FirstOrDefaultAsync(r => r.Name == RoleNames.Administrateur);
+        if (adminRole is null)
+        {
+            return false;
+        }
+
+        var activeAdminCount = await db.UserRoles
+            .Join(db.Users, ur => ur.UserId, u => u.Id, (ur, u) => new { ur.RoleId, User = u })
+            .CountAsync(x => x.RoleId == adminRole.Id && x.User.IsActive && !x.User.EstSupprime);
+
+        return activeAdminCount <= 1
+            && await db.UserRoles.AnyAsync(ur => ur.UserId == userId && ur.RoleId == adminRole.Id);
+    }
+
+    private async Task JournaliserChangementRolesAsync(ApplicationUser user, IReadOnlyCollection<string> anciensRoles, IReadOnlyCollection<string> nouveauxRoles)
+    {
+        var auteurId = Guid.TryParse(userManager.GetUserId(User), out var parsedAuteurId) ? parsedAuteurId : (Guid?)null;
+        db.SecurityAuditLogs.Add(new SecurityAuditLog
+        {
+            Id = Guid.NewGuid(),
+            AuteurId = auteurId,
+            UtilisateurCibleId = user.Id,
+            Action = "ModificationRolesUtilisateur",
+            AncienneValeur = string.Join(", ", anciensRoles.OrderBy(r => r)),
+            NouvelleValeur = string.Join(", ", nouveauxRoles.OrderBy(r => r)),
+            Commentaire = "Modification des roles depuis l'administration des utilisateurs.",
+            AdresseIp = HttpContext.Connection.RemoteIpAddress?.ToString()
+        });
+
+        await db.SaveChangesAsync();
+    }
+
+    private async Task NotifierChangementRolesAsync(ApplicationUser user, IReadOnlyCollection<string> anciensRoles, IReadOnlyCollection<string> nouveauxRoles)
+    {
+        if (string.IsNullOrWhiteSpace(user.Email))
+        {
+            return;
+        }
+
+        var recipientName = $"{user.Prenom} {user.Nom}".Trim();
+        var body = $"""
+        Vos droits d'acces MANGO TAIKA ont ete mis a jour.
+
+        Anciens roles : {FormatRoles(anciensRoles)}
+        Nouveaux roles : {FormatRoles(nouveauxRoles)}
+
+        Si vous n'etes pas a l'origine de cette demande ou si ce changement vous semble anormal, contactez l'administration du district.
+        """;
+
+        await emailService.SendAsync(
+            user.Email,
+            "Mise a jour de vos droits d'acces",
+            body,
+            string.IsNullOrWhiteSpace(recipientName) ? null : recipientName,
+            "Compte");
+    }
+
+    private static string FormatRoles(IEnumerable<string> roles)
+        => string.Join(", ", roles.OrderBy(r => r).Select(r => RoleNames.GetDefinition(r).Label));
 
     private static List<string> NormaliserRolesUtilisateur(IEnumerable<string> roles)
     {

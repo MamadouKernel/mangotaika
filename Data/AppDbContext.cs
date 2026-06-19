@@ -72,6 +72,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<AffectationUniteScoute> AffectationsUnitesScoutes => Set<AffectationUniteScoute>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<SecurityAuditLog> SecurityAuditLogs => Set<SecurityAuditLog>();
 
     // LMS
     public DbSet<Formation> Formations => Set<Formation>();
@@ -131,6 +132,18 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasIndex(rp => new { rp.RoleId, rp.PermissionId }).IsUnique();
             e.HasOne(rp => rp.Role).WithMany().HasForeignKey(rp => rp.RoleId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(rp => rp.Permission).WithMany(p => p.RolePermissions).HasForeignKey(rp => rp.PermissionId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<SecurityAuditLog>(e =>
+        {
+            e.Property(a => a.Action).HasMaxLength(120);
+            e.Property(a => a.AncienneValeur).HasMaxLength(1200);
+            e.Property(a => a.NouvelleValeur).HasMaxLength(1200);
+            e.Property(a => a.Commentaire).HasMaxLength(1200);
+            e.Property(a => a.AdresseIp).HasMaxLength(80);
+            e.HasIndex(a => new { a.UtilisateurCibleId, a.DateCreation });
+            e.HasOne(a => a.Auteur).WithMany().HasForeignKey(a => a.AuteurId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(a => a.UtilisateurCible).WithMany().HasForeignKey(a => a.UtilisateurCibleId).OnDelete(DeleteBehavior.Cascade);
         });
 
         builder.Entity<Parent>(e =>

@@ -80,6 +80,17 @@
             <span class="text-danger small">@ViewData.ModelState["Roles"]?.Errors.FirstOrDefault()?.ErrorMessage</span>
         </div>
 
+        <div class="role-critical-confirm mt-3" data-role-critical-confirm>
+            <div class="form-check">
+                <input asp-for="ConfirmerActionCritique" class="form-check-input" />
+                <label asp-for="ConfirmerActionCritique" class="form-check-label">
+                    Je confirme cette action critique sur les droits d'administration.
+                </label>
+            </div>
+            <small>Cette confirmation est requise pour attribuer, conserver ou retirer le role Administrateur.</small>
+            <span asp-validation-for="ConfirmerActionCritique" class="text-danger small d-block"></span>
+        </div>
+
         <div class="mt-3 form-check">
             <input asp-for="IsActive" class="form-check-input" />
             <label asp-for="IsActive" class="form-check-label"></label>
@@ -118,6 +129,7 @@
             const admin = root.querySelector('[data-admin-role="true"]');
             const others = [...root.querySelectorAll('input[type="checkbox"]:not([data-admin-role="true"])')];
             const hint = document.querySelector('[data-role-admin-hint]');
+            const criticalConfirm = document.querySelector('[data-role-critical-confirm]');
 
             const sync = () => {
                 const adminChecked = admin?.checked === true;
@@ -127,6 +139,7 @@
                     if (adminChecked) input.checked = false;
                 });
                 hint?.classList.toggle('is-admin-exclusive', adminChecked);
+                criticalConfirm?.classList.toggle('is-visible', adminChecked);
             };
 
             admin?.addEventListener('change', sync);
