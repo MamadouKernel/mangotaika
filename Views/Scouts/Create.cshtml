@@ -26,37 +26,52 @@
         .ToList();
     var scoutFunctionOptions = new[]
     {
-        "OISILLON (4 - 7 ANS)",
-        "LOUVETEAU (8 - 11 ANS)",
-        "ECLAIREUR (12 - 14 ANS)",
-        "CHEMINOT (15 - 17 ANS)",
-        "ROUTIER (18 - 21 ANS)",
-        "BENEVOLES (+ de 21 ANS)",
-        "CHEF D'UNITE (CU)",
-        "CHEF D'UNITE ADJOINT (CUA)",
-        "CHEF DE GROUPE (CG)",
-        "COMMISSAIRE DE DISTRICT (CD)",
-        "ASSISTANT COMMISSAIRE DE DISTRICT (ACD)"
+        new { Group = "Membres jeunes", Value = "OISILLON (4 - 7 ANS)", Label = "Oisillon (4 - 7 ans) - Colonie" },
+        new { Group = "Membres jeunes", Value = "LOUVETEAU (8 - 11 ANS)", Label = "Louveteau (8 - 11 ans) - Meute" },
+        new { Group = "Membres jeunes", Value = "ECLAIREUR (12 - 14 ANS)", Label = "Eclaireur (12 - 14 ans) - Troupe" },
+        new { Group = "Membres jeunes", Value = "CHEMINOT (15 - 17 ANS)", Label = "Cheminot (15 - 17 ans) - Generation" },
+        new { Group = "Membres jeunes", Value = "ROUTIER (18 - 21 ANS)", Label = "Routier (18 - 21 ans) - Communaute" },
+        new { Group = "Responsabilites jeunes", Value = "CHEF DE SIZAINE", Label = "Chef de sizaine" },
+        new { Group = "Responsabilites jeunes", Value = "SECOND DE SIZAINE", Label = "Second de sizaine" },
+        new { Group = "Responsabilites jeunes", Value = "CHEF DE PATROUILLE", Label = "Chef de patrouille" },
+        new { Group = "Responsabilites jeunes", Value = "SECOND DE PATROUILLE", Label = "Second de patrouille" },
+        new { Group = "Responsabilites jeunes", Value = "CHEF D'EQUIPE", Label = "Chef d'equipe" },
+        new { Group = "Maitrise d'unite", Value = "CHEF D'UNITE (CU)", Label = "Chef d'unite (CU)" },
+        new { Group = "Maitrise d'unite", Value = "CHEF D'UNITE ADJOINT (CUA)", Label = "Chef d'unite adjoint (CUA)" },
+        new { Group = "Maitrise d'unite", Value = "ASSISTANT CHEF D'UNITE (ACU)", Label = "Assistant chef d'unite (ACU)" },
+        new { Group = "Groupe", Value = "CHEF DE GROUPE (CG)", Label = "Chef de groupe (CG)" },
+        new { Group = "Groupe", Value = "CHEF DE GROUPE ADJOINT (CGA)", Label = "Chef de groupe adjoint (CGA)" },
+        new { Group = "Groupe", Value = "ASSISTANT CHEF DE GROUPE (ACG)", Label = "Assistant chef de groupe (ACG)" },
+        new { Group = "Groupe", Value = "SECRETAIRE DE GROUPE", Label = "Secretaire de groupe" },
+        new { Group = "Groupe", Value = "TRESORIER DE GROUPE", Label = "Tresorier de groupe" },
+        new { Group = "District", Value = "COMMISSAIRE DE DISTRICT (CD)", Label = "Commissaire de district (CD)" },
+        new { Group = "District", Value = "COMMISSAIRE DE DISTRICT ADJOINT (CDA)", Label = "Commissaire de district adjoint (CDA)" },
+        new { Group = "District", Value = "ASSISTANT COMMISSAIRE DE DISTRICT (ACD)", Label = "Assistant commissaire de district (ACD)" },
+        new { Group = "Adultes et support", Value = "BENEVOLES (+ de 21 ANS)", Label = "Benevole / adulte dans le scoutisme (+ de 21 ans)" },
+        new { Group = "Adultes et support", Value = "FORMATEUR", Label = "Formateur" },
+        new { Group = "Adultes et support", Value = "PARRAIN", Label = "Parrain" },
+        new { Group = "Adultes et support", Value = "INVITE", Label = "Invite" }
     };
     var currentScoutFunction = Model?.Fonction?.Trim();
     var hasCurrentScoutFunction = !string.IsNullOrWhiteSpace(currentScoutFunction)
-        && scoutFunctionOptions.Contains(currentScoutFunction, StringComparer.OrdinalIgnoreCase);
+        && scoutFunctionOptions.Any(option => string.Equals(option.Value, currentScoutFunction, StringComparison.OrdinalIgnoreCase));
     var scoutTrainingLevelOptions = new[]
     {
-        "SAPF",
-        "AÎTCHWE",
-        "KLADIGNON",
-        "KAFO",
-        "NANDJELET",
-        "STATPRO",
-        "NANDJELET (2 Bûchettes)",
-        "3 BÛCHETTES",
-        "4 BÛCHETTES",
-        "AUTRES"
+        new { Value = "AUCUN", Label = "Aucun niveau de formation renseigne" },
+        new { Value = "SAPF", Label = "SAPF - Formation initiale" },
+        new { Value = "AÎTCHWE", Label = "Aitchwe - Premier niveau de formation" },
+        new { Value = "KLADIGNON", Label = "Kladignon - Niveau intermediaire" },
+        new { Value = "KAFO", Label = "Kafo - Formation d'encadrement" },
+        new { Value = "NANDJELET", Label = "Nandjelet - Badge de bois" },
+        new { Value = "STATPRO", Label = "STATPRO - Stage pratique / professionnalisation" },
+        new { Value = "NANDJELET (2 Bûchettes)", Label = "Nandjelet (2 buchettes)" },
+        new { Value = "3 BÛCHETTES", Label = "3 buchettes" },
+        new { Value = "4 BÛCHETTES", Label = "4 buchettes" },
+        new { Value = "AUTRES", Label = "Autres formations scoutes" }
     };
     var currentScoutTrainingLevel = Model?.NiveauFormationScoute?.Trim();
     var hasCurrentScoutTrainingLevel = !string.IsNullOrWhiteSpace(currentScoutTrainingLevel)
-        && scoutTrainingLevelOptions.Contains(currentScoutTrainingLevel, StringComparer.OrdinalIgnoreCase);
+        && scoutTrainingLevelOptions.Any(option => string.Equals(option.Value, currentScoutTrainingLevel, StringComparison.OrdinalIgnoreCase));
 }
 
 <div class="d-flex align-items-center gap-2 flex-wrap">
@@ -177,9 +192,14 @@
                                 <label asp-for="Fonction" class="form-label">Fonction dans le scoutisme</label>
                                 <select asp-for="Fonction" class="form-select">
                                     <option value="">-- Selectionner une fonction --</option>
-                                    @foreach (var fonction in scoutFunctionOptions)
+                                    @foreach (var group in scoutFunctionOptions.GroupBy(option => option.Group))
                                     {
-                                        <option value="@fonction">@fonction</option>
+                                        <optgroup label="@group.Key">
+                                            @foreach (var fonction in group)
+                                            {
+                                                <option value="@fonction.Value">@fonction.Label</option>
+                                            }
+                                        </optgroup>
                                     }
                                     @if (!string.IsNullOrWhiteSpace(currentScoutFunction) && !hasCurrentScoutFunction)
                                     {
@@ -200,7 +220,7 @@
                                     <option value="">-- Selectionner un niveau --</option>
                                     @foreach (var niveau in scoutTrainingLevelOptions)
                                     {
-                                        <option value="@niveau">@niveau</option>
+                                        <option value="@niveau.Value">@niveau.Label</option>
                                     }
                                     @if (!string.IsNullOrWhiteSpace(currentScoutTrainingLevel) && !hasCurrentScoutTrainingLevel)
                                     {
