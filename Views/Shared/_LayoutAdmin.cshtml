@@ -146,7 +146,14 @@
                         <ul class="sidebar-submenu" id="grp-mon-espace-scout">
                             <li><a class="nav-link" asp-controller="Account" asp-action="MaFiche"><i class="bi bi-person-badge"></i> Ma fiche scout</a></li>
                             <li><a class="nav-link" asp-controller="Account" asp-action="MaFiche" asp-fragment="suivi-activites"><i class="bi bi-calendar-check"></i> Suivi Activites</a></li>
-                            <li><a class="nav-link" asp-controller="Demandes" asp-action="Index"><i class="bi bi-file-earmark-check-fill"></i> Mes demandes</a></li>
+                            @if (activeScopedLeader == "ChefGroupe")
+                            {
+                                <li><a class="nav-link" asp-controller="Demandes" asp-action="BacklogChefGroupe"><i class="bi bi-file-earmark-check-fill"></i> Demandes a valider</a></li>
+                            }
+                            else
+                            {
+                                <li><a class="nav-link" asp-controller="Demandes" asp-action="Index"><i class="bi bi-file-earmark-check-fill"></i> Mes demandes</a></li>
+                            }
                             <li><a class="nav-link" asp-controller="Formations" asp-action="MesFormations"><i class="bi bi-mortarboard"></i> Mes formations</a></li>
                             <li><a class="nav-link" asp-controller="Formations" asp-action="Catalogue"><i class="bi bi-book"></i> Catalogue formations</a></li>
                             <li><a class="nav-link" asp-controller="Certificats" asp-action="MesCertificats"><i class="bi bi-patch-check"></i> Mes certificats</a></li>
@@ -176,7 +183,14 @@
                                 <li><a class="nav-link" asp-controller="Scouts" asp-action="Index"><i class="bi bi-people-fill"></i> Scouts de ma branche</a></li>
                             }
                             <li><a class="nav-link" asp-controller="Activites" asp-action="Index"><i class="bi bi-calendar-event-fill"></i> Activites</a></li>
-                            <li><a class="nav-link" asp-controller="Demandes" asp-action="Index"><i class="bi bi-file-earmark-check-fill"></i> Mes demandes</a></li>
+                            @if (activeScopedLeader == "ChefGroupe")
+                            {
+                                <li><a class="nav-link" asp-controller="Demandes" asp-action="BacklogChefGroupe"><i class="bi bi-file-earmark-check-fill"></i> Demandes a valider</a></li>
+                            }
+                            else
+                            {
+                                <li><a class="nav-link" asp-controller="Demandes" asp-action="Index"><i class="bi bi-file-earmark-check-fill"></i> Mes demandes</a></li>
+                            }
                             <li><a class="nav-link" asp-controller="Formations" asp-action="MesFormations"><i class="bi bi-mortarboard"></i> Mes formations</a></li>
                             <li><a class="nav-link" asp-controller="Portefeuilles" asp-action="MonPortefeuille"><i class="bi bi-wallet2"></i> Mon portefeuille</a></li>
                             <li><a class="nav-link" asp-controller="Tickets" asp-action="MesTickets"><i class="bi bi-headset"></i> Mes tickets</a></li>

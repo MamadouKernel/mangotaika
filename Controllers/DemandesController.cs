@@ -734,31 +734,35 @@ public class DemandesController(
     private async Task<Guid?> GetChefGroupeValidationScopeAsync()
     {
         var scout = await GetCurrentScoutAsync();
-        if (scout is not null && IsChefGroupeFunction(scout.Fonction))
+        if ((scout is not null && IsChefGroupeFunction(scout.Fonction)) || User.IsInRole(RoleNames.ChefGroupe))
         {
-            return scout.GroupeId;
+            if (scout?.GroupeId is Guid scoutGroupeId)
+            {
+                return scoutGroupeId;
+            }
+
+            var currentUserId = userManager.GetUserId(User);
+            if (!Guid.TryParse(currentUserId, out var parsedUserId))
+            {
+                return null;
+            }
+
+            var userGroupeId = await db.Users
+                .Where(u => u.Id == parsedUserId && u.IsActive && !u.EstSupprime)
+                .Select(u => u.GroupeId)
+                .FirstOrDefaultAsync();
+            if (userGroupeId.HasValue)
+            {
+                return userGroupeId.Value;
+            }
+
+            return await db.Groupes
+                .Where(g => g.ResponsableId == parsedUserId && g.IsActive)
+                .Select(g => (Guid?)g.Id)
+                .FirstOrDefaultAsync();
         }
 
-        if (!User.IsInRole(RoleNames.ChefGroupe))
-        {
-            return null;
-        }
-
-        if (scout?.GroupeId is Guid scoutGroupeId)
-        {
-            return scoutGroupeId;
-        }
-
-        var currentUserId = userManager.GetUserId(User);
-        if (!Guid.TryParse(currentUserId, out var parsedUserId))
-        {
-            return null;
-        }
-
-        return await db.Users
-            .Where(u => u.Id == parsedUserId && u.IsActive)
-            .Select(u => u.GroupeId)
-            .FirstOrDefaultAsync();
+        return null;
     }
 
     private async Task<bool> CanChefGroupeValidateAsync(DemandeAutorisation demande)
