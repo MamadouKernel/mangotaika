@@ -415,6 +415,25 @@ public class AccountController(
             codeInvitation.DateUtilisation = DateTime.UtcNow;
             codeInvitation.UtilisePaId = user.Id;
         }
+        if (requiresManualActivation)
+        {
+            db.DemandesRapprochementComptes.Add(new DemandeRapprochementCompte
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                ScoutId = scoutLie?.Id,
+                RoleDemande = model.Role,
+                Motif = model.Role switch
+                {
+                    "Gestionnaire" => "Inscription gestionnaire a verifier",
+                    "Scout" => "Inscription scout a verifier",
+                    "Parent" => "Lien parent/tuteur a verifier",
+                    _ => "Compte a verifier"
+                },
+                Details = manualActivationMessage,
+                Statut = StatutDemandeRapprochement.EnAttente
+            });
+        }
 
         await db.SaveChangesAsync();
         await transaction.CommitAsync();
@@ -764,6 +783,8 @@ public class AccountController(
         }
         ViewBag.UserRoles = userRoles;
         ViewBag.Recherche = recherche;
+        ViewBag.RapprochementsEnAttente = await db.DemandesRapprochementComptes
+            .CountAsync(r => r.Statut == StatutDemandeRapprochement.EnAttente);
         ListPagination.SetViewData(ViewData, HttpContext, p, pageSize, total, totalPages);
         return View(users);
     }
@@ -1038,6 +1059,107 @@ public class AccountController(
         if (EstGestionnaireSansAdmin())
             return ["Gestionnaire", "AgentSupport", "Superviseur", "Consultant", "EquipeDistrict", "ChefGroupe", "ChefUnite", "Scout", "Parent"];
         return ["Administrateur", "CommissaireDistrict", "Gestionnaire", "AgentSupport", "Superviseur", "Consultant", "EquipeDistrict", "ChefGroupe", "ChefUnite", "Scout", "Parent"];
+    }
+
+    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    public async Task<IActionResult> RapprochementsComptes(StatutDemandeRapprochement? statut)
+    {
+        var query = db.DemandesRapprochementComptes
+            .Include(r => r.User)
+            .Include("Scout.Groupe")
+            .Include("Scout.Branche")
+            .Include(r => r.TraitePar)
+            .AsQueryable();
+
+        if (statut.HasValue)
+        {
+            query = query.Where(r => r.Statut == statut.Value);
+        }
+
+        ViewBag.Statut = statut;
+        return View(await query
+            .OrderBy(r => r.Statut == StatutDemandeRapprochement.EnAttente ? 0 : 1)
+            .ThenByDescending(r => r.DateCreation)
+            .ToListAsync());
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ApprouverRapprochement(Guid id)
+    {
+        var demande = await db.DemandesRapprochementComptes
+            .Include(r => r.User)
+            .Include(r => r.Scout)
+            .FirstOrDefaultAsync(r => r.Id == id);
+        if (demande is null)
+        {
+            TempData["Error"] = "Demande de rapprochement introuvable.";
+            return RedirectToAction(nameof(RapprochementsComptes));
+        }
+
+        if (demande.Statut != StatutDemandeRapprochement.EnAttente)
+        {
+            TempData["Error"] = "Cette demande a deja ete traitee.";
+            return RedirectToAction(nameof(RapprochementsComptes));
+        }
+
+        if (demande.Scout is not null)
+        {
+            if (demande.Scout.UserId.HasValue && demande.Scout.UserId.Value != demande.UserId)
+            {
+                TempData["Error"] = "La fiche scout cible est deja rattachee a un autre compte.";
+                return RedirectToAction(nameof(RapprochementsComptes));
+            }
+
+            demande.Scout.UserId = demande.UserId;
+            demande.User.Matricule = demande.Scout.Matricule;
+            demande.User.GroupeId = demande.Scout.GroupeId;
+            demande.User.BrancheId = demande.Scout.BrancheId;
+        }
+
+        demande.User.IsActive = true;
+        demande.Statut = StatutDemandeRapprochement.Approuvee;
+        demande.DateTraitement = DateTime.UtcNow;
+        demande.TraiteParId = Guid.Parse(userManager.GetUserId(User)!);
+        await db.SaveChangesAsync();
+
+        TempData["Success"] = $"Compte de {demande.User.Prenom} {demande.User.Nom} rapproche et active.";
+        return RedirectToAction(nameof(RapprochementsComptes));
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RejeterRapprochement(Guid id, string? motif)
+    {
+        var demande = await db.DemandesRapprochementComptes
+            .Include(r => r.User)
+            .FirstOrDefaultAsync(r => r.Id == id);
+        if (demande is null)
+        {
+            TempData["Error"] = "Demande de rapprochement introuvable.";
+            return RedirectToAction(nameof(RapprochementsComptes));
+        }
+
+        if (demande.Statut != StatutDemandeRapprochement.EnAttente)
+        {
+            TempData["Error"] = "Cette demande a deja ete traitee.";
+            return RedirectToAction(nameof(RapprochementsComptes));
+        }
+
+        demande.Statut = StatutDemandeRapprochement.Rejetee;
+        demande.DateTraitement = DateTime.UtcNow;
+        demande.TraiteParId = Guid.Parse(userManager.GetUserId(User)!);
+        demande.Details = string.IsNullOrWhiteSpace(motif)
+            ? demande.Details
+            : $"{demande.Details}\nMotif de rejet : {motif.Trim()}";
+        demande.User.IsActive = false;
+        await userManager.UpdateSecurityStampAsync(demande.User);
+        await db.SaveChangesAsync();
+
+        TempData["Success"] = $"Demande de rapprochement rejetee pour {demande.User.Prenom} {demande.User.Nom}.";
+        return RedirectToAction(nameof(RapprochementsComptes));
     }
 
     [HttpPost]

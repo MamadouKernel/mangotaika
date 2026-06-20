@@ -74,6 +74,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<SecurityAuditLog> SecurityAuditLogs => Set<SecurityAuditLog>();
+    public DbSet<DemandeRapprochementCompte> DemandesRapprochementComptes => Set<DemandeRapprochementCompte>();
 
     // LMS
     public DbSet<Formation> Formations => Set<Formation>();
@@ -145,6 +146,18 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasIndex(a => new { a.UtilisateurCibleId, a.DateCreation });
             e.HasOne(a => a.Auteur).WithMany().HasForeignKey(a => a.AuteurId).OnDelete(DeleteBehavior.SetNull);
             e.HasOne(a => a.UtilisateurCible).WithMany().HasForeignKey(a => a.UtilisateurCibleId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<DemandeRapprochementCompte>(e =>
+        {
+            e.Property(r => r.RoleDemande).HasMaxLength(80);
+            e.Property(r => r.Motif).HasMaxLength(320);
+            e.Property(r => r.Details).HasMaxLength(1600);
+            e.HasIndex(r => new { r.Statut, r.DateCreation });
+            e.HasIndex(r => r.UserId);
+            e.HasOne(r => r.User).WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(r => r.Scout).WithMany().HasForeignKey(r => r.ScoutId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(r => r.TraitePar).WithMany().HasForeignKey(r => r.TraiteParId).OnDelete(DeleteBehavior.SetNull);
         });
 
         builder.Entity<Parent>(e =>

@@ -4,6 +4,7 @@
     Layout = "_LayoutAdmin";
     var userRoles = ViewBag.UserRoles as Dictionary<Guid, List<string>> ?? new();
     var recherche = ViewBag.Recherche as string ?? string.Empty;
+    var rapprochementsEnAttente = ViewBag.RapprochementsEnAttente as int? ?? 0;
     string RoleLabel(string r) => r switch {
         "Parent"               => "Parent / Tuteur",
         "CommissaireDistrict"  => "Commissaire de District",
@@ -17,7 +18,19 @@
         user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow;
 }
 
-<h2 class="section-title mb-1"><i class="bi bi-people-fill text-or"></i> Gestion des <span class="accent">utilisateurs</span></h2>
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+    <div>
+        <h2 class="section-title mb-1"><i class="bi bi-people-fill text-or"></i> Gestion des <span class="accent">utilisateurs</span></h2>
+        <p class="text-muted-custom mb-0">Activation, roles, verrouillage et comptes en attente de rapprochement.</p>
+    </div>
+    <a asp-action="RapprochementsComptes" asp-route-statut="EnAttente" class="btn btn-outline-or">
+        <i class="bi bi-person-check-fill"></i> Rapprochements
+        @if (rapprochementsEnAttente > 0)
+        {
+            <span class="badge-3d badge-soumise ms-1">@rapprochementsEnAttente</span>
+        }
+    </a>
+</div>
 <div class="section-divider"></div>
 
 <form asp-action="Utilisateurs" method="get" class="card-3d p-3 mb-4">
