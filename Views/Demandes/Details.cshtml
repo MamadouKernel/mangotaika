@@ -27,6 +27,10 @@
         StatutDemande.Rejetee => "Rejetee",
         _ => Model.Statut.ToString()
     };
+    var isCampRequest = Model.TypeActivite == TypeActiviteDemande.Camp;
+    var isSubmitted = Model.Statut != StatutDemande.Initialisee;
+    var isWorkflowClosed = Model.Statut == StatutDemande.Validee || Model.Statut == StatutDemande.Rejetee;
+    var districtStepLabel = isCampRequest ? "District requis" : "Non requis";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -54,6 +58,39 @@
                     </form>
                 </div>
             }
+
+            <div class="mb-4 p-3" style="border:1px solid var(--gris-border);border-radius:16px;background:rgba(248,250,252,0.72);">
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <strong style="color:var(--bleu-gris);"><i class="bi bi-diagram-3"></i> Circuit de validation</strong>
+                    <span class="text-muted-custom small">Les camps passent au district apres le chef de groupe.</span>
+                </div>
+                <div class="row g-2">
+                    <div class="col-md-3 col-6">
+                        <div class="p-3 h-100" style="border-radius:14px;background:rgba(89,117,55,0.12);border:1px solid rgba(89,117,55,0.22);">
+                            <div class="small text-muted-custom">Etape 1</div>
+                            <strong><i class="bi bi-check-circle-fill text-or"></i> Creation</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="p-3 h-100" style="border-radius:14px;background:@(isSubmitted ? "rgba(89,117,55,0.12)" : "rgba(148,163,184,0.08)");border:1px solid @(isSubmitted ? "rgba(89,117,55,0.22)" : "rgba(148,163,184,0.22)");">
+                            <div class="small text-muted-custom">Etape 2</div>
+                            <strong><i class="bi @(isSubmitted ? "bi-check-circle-fill text-or" : "bi-circle text-muted-custom")"></i> Soumission</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="p-3 h-100" style="border-radius:14px;background:@(Model.ChefGroupeValidee ? "rgba(89,117,55,0.12)" : Model.Statut == StatutDemande.Soumise && !Model.ChefGroupeValidee ? "rgba(234,179,8,0.14)" : "rgba(148,163,184,0.08)");border:1px solid @(Model.ChefGroupeValidee ? "rgba(89,117,55,0.22)" : Model.Statut == StatutDemande.Soumise && !Model.ChefGroupeValidee ? "rgba(234,179,8,0.35)" : "rgba(148,163,184,0.22)");">
+                            <div class="small text-muted-custom">Etape 3</div>
+                            <strong><i class="bi @(Model.ChefGroupeValidee ? "bi-check-circle-fill text-or" : "bi-hourglass-split text-muted-custom")"></i> Chef de groupe</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="p-3 h-100" style="border-radius:14px;background:@(isCampRequest && Model.ChefGroupeValidee && Model.Statut == StatutDemande.Soumise ? "rgba(234,179,8,0.14)" : isWorkflowClosed ? "rgba(89,117,55,0.12)" : "rgba(148,163,184,0.08)");border:1px solid @(isCampRequest && Model.ChefGroupeValidee && Model.Statut == StatutDemande.Soumise ? "rgba(234,179,8,0.35)" : isWorkflowClosed ? "rgba(89,117,55,0.22)" : "rgba(148,163,184,0.22)");">
+                            <div class="small text-muted-custom">Etape 4</div>
+                            <strong><i class="bi @(isWorkflowClosed ? "bi-check-circle-fill text-or" : isCampRequest ? "bi-building-check text-muted-custom" : "bi-dash-circle text-muted-custom")"></i> @districtStepLabel</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <div class="row mb-3">
                 <div class="col-md-6"><p><span class="text-muted-custom">Type :</span> @Model.TypeActivite</p></div>

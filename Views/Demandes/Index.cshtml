@@ -3,6 +3,12 @@
 @{
     var pageTitle = ViewBag.PageTitle as string ?? "Demandes d'autorisation";
     var pageSubtitle = ViewBag.PageSubtitle as string;
+    var isBacklogChefGroupe = ViewBag.BacklogChefGroupe as bool? == true;
+    var now = DateTime.UtcNow;
+    var demandesSoumises = Model.Count(d => d.Statut == StatutDemande.Soumise);
+    var demandesUrgentes = Model.Count(d => d.Statut == StatutDemande.Soumise && (now - d.DateCreation).TotalDays >= 3);
+    var demandesAttenteChefGroupe = Model.Count(d => d.Statut == StatutDemande.Soumise && !d.ChefGroupeValidee);
+    var demandesAttenteDistrict = Model.Count(d => d.Statut == StatutDemande.Soumise && d.ChefGroupeValidee && d.TypeActivite == TypeActiviteDemande.Camp);
     ViewData["Title"] = pageTitle;
     Layout = "_LayoutAdmin";
 }
@@ -18,9 +24,56 @@
     <a asp-action="Create" class="btn btn-mango" style="@(ViewBag.PeutCreer == true ? string.Empty : "display:none;")"><i class="bi bi-plus-lg"></i> Nouvelle demande</a>
 </div>
 
+@if (isBacklogChefGroupe)
+{
+    <div class="row g-3 mb-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="card-3d p-3 h-100" style="border-left:4px solid #597537;">
+                <div class="text-muted-custom small">File chef de groupe</div>
+                <div class="d-flex align-items-end gap-2">
+                    <strong style="font-size:2rem;color:var(--bleu-gris);">@demandesAttenteChefGroupe</strong>
+                    <span class="pb-2 text-muted-custom">a traiter</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card-3d p-3 h-100" style="border-left:4px solid #ef4444;">
+                <div class="text-muted-custom small">Priorite</div>
+                <div class="d-flex align-items-end gap-2">
+                    <strong style="font-size:2rem;color:#b91c1c;">@demandesUrgentes</strong>
+                    <span class="pb-2 text-muted-custom">urgente(s)</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card-3d p-3 h-100" style="border-left:4px solid #eab308;">
+                <div class="text-muted-custom small">Soumises</div>
+                <div class="d-flex align-items-end gap-2">
+                    <strong style="font-size:2rem;color:var(--bleu-gris);">@demandesSoumises</strong>
+                    <span class="pb-2 text-muted-custom">en cours</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card-3d p-3 h-100" style="border-left:4px solid #0ea5e9;">
+                <div class="text-muted-custom small">Camp</div>
+                <div class="d-flex align-items-end gap-2">
+                    <strong style="font-size:2rem;color:var(--bleu-gris);">@demandesAttenteDistrict</strong>
+                    <span class="pb-2 text-muted-custom">vers district</span>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 <div class="row g-4">
     @foreach (var demande in Model)
     {
+        var ageDays = Math.Max(0, (now - demande.DateCreation).Days);
+        var isUrgent = demande.Statut == StatutDemande.Soumise && ageDays >= 3;
+        var cardStyle = isUrgent
+            ? "border:1px solid rgba(239,68,68,0.35);box-shadow:0 16px 36px rgba(239,68,68,0.08);"
+            : string.Empty;
         var badgeClass = demande.Statut switch
         {
             StatutDemande.Initialisee => "badge-brouillon",
@@ -45,13 +98,21 @@
         };
 
         <div class="col-lg-4 col-md-6">
-            <div class="card-3d p-4 h-100 d-flex flex-column">
+            <div class="card-3d p-4 h-100 d-flex flex-column" style="@cardStyle">
                 <h5 class="text-or mb-2">@demande.Titre</h5>
                 <p class="text-muted-custom small mb-2">
                     <span class="badge-3d @badgeClass">@statutLabel</span>
                     @if (!string.IsNullOrWhiteSpace(validationLabel))
                     {
                         <span class="badge-3d badge-soumise ms-1">@validationLabel</span>
+                    }
+                    @if (demande.Statut == StatutDemande.Soumise)
+                    {
+                        <span class="badge-3d badge-brouillon ms-1">Depuis @ageDays j</span>
+                    }
+                    @if (isUrgent)
+                    {
+                        <span class="badge-3d badge-rejetee ms-1"><i class="bi bi-exclamation-triangle"></i> Urgent</span>
                     }
                 </p>
                 <div class="d-flex flex-column gap-1 mb-3 flex-grow-1" style="font-size:0.85rem;">
