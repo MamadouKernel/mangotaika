@@ -332,6 +332,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         builder.Entity<CodeInvitation>(e =>
         {
             e.Property(c => c.Code).HasColumnType("citext");
+            e.Property(c => c.RoleCible).HasMaxLength(80).HasDefaultValue("Gestionnaire");
+            e.Property(c => c.EstActif).HasDefaultValue(true);
             e.HasIndex(c => c.Code).IsUnique();
             e.HasOne(c => c.Createur).WithMany().HasForeignKey(c => c.CreateurId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(c => c.UtilisePar).WithMany().HasForeignKey(c => c.UtilisePaId).OnDelete(DeleteBehavior.Restrict);

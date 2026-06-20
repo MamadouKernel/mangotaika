@@ -206,16 +206,40 @@ public class AccountController(
         CodeInvitation? codeInvitation = null;
         if (model.Role == "Gestionnaire")
         {
-            codeInvitation = await ResolveInvitationAsync(model.CodeInvitation);
+            codeInvitation = await ResolveInvitationAsync(model.CodeInvitation, model.Role);
             if (codeInvitation is null)
             {
-                ModelState.AddModelError("CodeInvitation", "Code d'invitation invalide ou deja utilise. Demandez un nouveau code a l'administration du district.");
+                ModelState.AddModelError("CodeInvitation", "Code d'invitation invalide, expire, inactif, deja utilise ou non autorise pour ce profil. Demandez un nouveau code a l'administration du district.");
                 return View(model);
             }
         }
 
         var scouts = new List<Scout>();
         var requiresManualActivation = false;
+        string? manualActivationMessage = null;
+        Scout? scoutLie = null;
+        if (model.Role == "Gestionnaire" && !string.IsNullOrWhiteSpace(model.MatriculeGestionnaire))
+        {
+            var matriculeGestionnaire = ScoutMatriculeFormat.Normalize(model.MatriculeGestionnaire);
+            scoutLie = await db.Scouts.FirstOrDefaultAsync(s => s.Matricule == matriculeGestionnaire && s.IsActive);
+            if (scoutLie is null)
+            {
+                ModelState.AddModelError(
+                    "MatriculeGestionnaire",
+                    "Matricule scout introuvable ou inactif. Laissez ce champ vide si vous n'avez pas de matricule, ou demandez au chef de groupe de mettre la fiche scout a jour.");
+                return View(model);
+            }
+            if (scoutLie.UserId.HasValue)
+            {
+                ModelState.AddModelError("MatriculeGestionnaire", "Ce matricule est deja lie a un compte. Connectez-vous avec ce compte ou utilisez le mot de passe oublie.");
+                return View(model);
+            }
+            if (!ScoutMatchesRegistration(scoutLie, model))
+            {
+                requiresManualActivation = true;
+                manualActivationMessage = $"{BuildScoutRegistrationMismatchMessage(scoutLie, model)} Le compte gestionnaire est cree en attente d'activation par un administrateur.";
+            }
+        }
         if (model.Role == "Parent")
         {
             if (string.IsNullOrWhiteSpace(model.Matricules))
@@ -274,6 +298,7 @@ public class AccountController(
                     Scouts = scouts
                 });
                 requiresManualActivation = true;
+                manualActivationMessage = "Inscription enregistree. Le lien parent/tuteur doit etre verifie par un gestionnaire ou administrateur avant activation du compte.";
             }
             if (parentsLies.Any(p => p.UserId.HasValue))
             {
@@ -312,9 +337,9 @@ public class AccountController(
                     Scouts = missingScouts
                 });
                 requiresManualActivation = true;
+                manualActivationMessage = "Inscription enregistree. Un ou plusieurs liens parent/tuteur doivent etre verifies par un gestionnaire ou administrateur avant activation du compte.";
             }
         }
-        Scout? scoutLie = null;
         if (model.Role == "Scout")
         {
             if (string.IsNullOrWhiteSpace(model.MatriculeScout))
@@ -337,6 +362,7 @@ public class AccountController(
             if (!ScoutMatchesRegistration(scoutLie, model))
             {
                 requiresManualActivation = true;
+                manualActivationMessage = $"{BuildScoutRegistrationMismatchMessage(scoutLie, model)} Le compte scout est cree en attente d'activation par un gestionnaire ou administrateur.";
             }
         }
         var user = new ApplicationUser
@@ -393,20 +419,29 @@ public class AccountController(
         await db.SaveChangesAsync();
         await transaction.CommitAsync();
         TempData["Success"] = requiresManualActivation
-            ? "Inscription enregistree. Votre matricule est reconnu, mais le telephone ou l'email ne correspond pas a la fiche scout. Un gestionnaire ou administrateur doit activer votre compte apres verification."
+            ? (manualActivationMessage ?? "Inscription enregistree. Votre compte doit etre verifie par un gestionnaire ou administrateur avant activation.")
             : "Inscription réussie. Votre compte est maintenant activé.";
         return RedirectToAction(nameof(Login));
     }
-    private async Task<CodeInvitation?> ResolveInvitationAsync(string? rawCode)
+    private async Task<CodeInvitation?> ResolveInvitationAsync(string? rawCode, string role)
     {
         if (string.IsNullOrWhiteSpace(rawCode))
             return null;
         var invitationCode = rawCode.Trim();
-        return db.Database.IsNpgsql()
+        var code = db.Database.IsNpgsql()
             ? await db.CodesInvitation.FirstOrDefaultAsync(c => c.Code == invitationCode && !c.EstUtilise)
             : await db.CodesInvitation.FirstOrDefaultAsync(c =>
                 c.Code.ToUpper() == DatabaseText.NormalizeCaseInsensitiveKey(invitationCode) &&
                 !c.EstUtilise);
+        if (code is null)
+            return null;
+        if (!code.EstActif)
+            return null;
+        if (code.DateExpiration.HasValue && code.DateExpiration.Value < DateTime.UtcNow)
+            return null;
+        if (!string.Equals(code.RoleCible, role, StringComparison.OrdinalIgnoreCase))
+            return null;
+        return code;
     }
 
     private async Task<List<string>> GetScoutsAboveParentLimitAsync(IReadOnlyCollection<Scout> scouts)
@@ -1132,7 +1167,10 @@ public class AccountController(
         {
             Id = Guid.NewGuid(),
             Code = $"MT-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..6].ToUpper()}",
-            CreateurId = userId
+            CreateurId = userId,
+            RoleCible = "Gestionnaire",
+            EstActif = true,
+            DateExpiration = DateTime.UtcNow.AddDays(30)
         };
         db.CodesInvitation.Add(code);
         await db.SaveChangesAsync();

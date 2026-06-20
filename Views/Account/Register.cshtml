@@ -68,7 +68,16 @@
                         </label>
                         <input asp-for="CodeInvitation" class="form-control" placeholder="Ex: MT-20260321-A1B2C3" />
                         <span asp-validation-for="CodeInvitation" class="text-danger small"></span>
-                        <small class="text-muted-custom">Ce code vous a ete transmis par le district pour valider votre inscription.</small>
+                        <small class="text-muted-custom">Ce code est obligatoire pour les gestionnaires. Il est personnel, limite dans le temps et fourni par l'administration du district.</small>
+                    </div>
+
+                    <div class="mb-3" id="gestionnaireMatriculeSection" style="@(selectedRole == "Gestionnaire" ? string.Empty : "display:none;")">
+                        <label asp-for="MatriculeGestionnaire" class="form-label">
+                            Matricule scout <span class="text-muted-custom small">(optionnel)</span>
+                        </label>
+                        <input asp-for="MatriculeGestionnaire" class="form-control" placeholder="Ex: 0583753X" />
+                        <span asp-validation-for="MatriculeGestionnaire" class="text-danger small"></span>
+                        <small class="text-muted-custom">Renseignez ce champ seulement si vous avez deja une fiche scout. Sinon, le compte gestionnaire sera cree avec le code d'invitation.</small>
                     </div>
 
                     <div class="mb-3" id="scoutSection" style="display:none;">
@@ -113,12 +122,14 @@
             const roleSelect = document.getElementById('roleSelect');
             const matriculesSection = document.getElementById('matriculesSection');
             const codeSection = document.getElementById('codeSection');
+            const gestionnaireMatriculeSection = document.getElementById('gestionnaireMatriculeSection');
             const scoutSection = document.getElementById('scoutSection');
 
             function toggleSections() {
                 const role = roleSelect.value;
                 matriculesSection.style.display = role === 'Parent' ? 'block' : 'none';
                 codeSection.style.display = role === 'Gestionnaire' ? 'block' : 'none';
+                gestionnaireMatriculeSection.style.display = role === 'Gestionnaire' ? 'block' : 'none';
                 scoutSection.style.display = role === 'Scout' ? 'block' : 'none';
             }
 

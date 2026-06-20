@@ -4,8 +4,11 @@ public class CodeInvitation
 {
     public Guid Id { get; set; }
     public string Code { get; set; } = string.Empty;
+    public string RoleCible { get; set; } = "Gestionnaire";
+    public bool EstActif { get; set; } = true;
     public bool EstUtilise { get; set; } = false;
     public DateTime DateCreation { get; set; } = DateTime.UtcNow;
+    public DateTime? DateExpiration { get; set; }
     public DateTime? DateUtilisation { get; set; }
 
     // Qui a créé le code (admin)
