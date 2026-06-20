@@ -41,6 +41,22 @@
     var currentScoutFunction = Model?.Fonction?.Trim();
     var hasCurrentScoutFunction = !string.IsNullOrWhiteSpace(currentScoutFunction)
         && scoutFunctionOptions.Contains(currentScoutFunction, StringComparer.OrdinalIgnoreCase);
+    var scoutTrainingLevelOptions = new[]
+    {
+        "SAPF",
+        "AÎTCHWE",
+        "KLADIGNON",
+        "KAFO",
+        "NANDJELET",
+        "STATPRO",
+        "NANDJELET (2 Bûchettes)",
+        "3 BÛCHETTES",
+        "4 BÛCHETTES",
+        "AUTRES"
+    };
+    var currentScoutTrainingLevel = Model?.NiveauFormationScoute?.Trim();
+    var hasCurrentScoutTrainingLevel = !string.IsNullOrWhiteSpace(currentScoutTrainingLevel)
+        && scoutTrainingLevelOptions.Contains(currentScoutTrainingLevel, StringComparer.OrdinalIgnoreCase);
 }
 
 <div class="d-flex align-items-center gap-2 flex-wrap">
@@ -180,7 +196,17 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label asp-for="NiveauFormationScoute" class="form-label">Niveau de formation dans le scoutisme</label>
-                                <input asp-for="NiveauFormationScoute" class="form-control" placeholder="Ex: Base, Intermediaire, Avance" />
+                                <select asp-for="NiveauFormationScoute" class="form-select">
+                                    <option value="">-- Selectionner un niveau --</option>
+                                    @foreach (var niveau in scoutTrainingLevelOptions)
+                                    {
+                                        <option value="@niveau">@niveau</option>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(currentScoutTrainingLevel) && !hasCurrentScoutTrainingLevel)
+                                    {
+                                        <option value="@currentScoutTrainingLevel">@currentScoutTrainingLevel</option>
+                                    }
+                                </select>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label asp-for="AdresseGeographique" class="form-label">Adresse geographique</label>
