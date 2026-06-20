@@ -25,6 +25,23 @@
             groupeNom = groupesById.TryGetValue(b.GroupeId, out var nomGroupe) ? nomGroupe : "Groupe inconnu"
         })
         .ToList();
+    var scoutFunctionOptions = new[]
+    {
+        "OISILLON (4 - 7 ANS)",
+        "LOUVETEAU (8 - 11 ANS)",
+        "ECLAIREUR (12 - 14 ANS)",
+        "CHEMINOT (15 - 17 ANS)",
+        "ROUTIER (18 - 21 ANS)",
+        "BENEVOLES (+ de 21 ANS)",
+        "CHEF D'UNITE (CU)",
+        "CHEF D'UNITE ADJOINT (CUA)",
+        "CHEF DE GROUPE (CG)",
+        "COMMISSAIRE DE DISTRICT (CD)",
+        "ASSISTANT COMMISSAIRE DE DISTRICT (ACD)"
+    };
+    var currentScoutFunction = Model?.Fonction?.Trim();
+    var hasCurrentScoutFunction = !string.IsNullOrWhiteSpace(currentScoutFunction)
+        && scoutFunctionOptions.Contains(currentScoutFunction, StringComparer.OrdinalIgnoreCase);
 }
 
 <h2 class="section-title mb-1"><i class="bi bi-pencil-fill text-or"></i> Modifier le <span class="accent">scout</span></h2>
@@ -140,7 +157,17 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label asp-for="Fonction" class="form-label">Fonction dans le scoutisme</label>
-                                <input asp-for="Fonction" class="form-control" placeholder="Ex: LOUVETEAU (8 - 11 ANS)" />
+                                <select asp-for="Fonction" class="form-select">
+                                    <option value="">-- Selectionner une fonction --</option>
+                                    @foreach (var fonction in scoutFunctionOptions)
+                                    {
+                                        <option value="@fonction">@fonction</option>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(currentScoutFunction) && !hasCurrentScoutFunction)
+                                    {
+                                        <option value="@currentScoutFunction">@currentScoutFunction</option>
+                                    }
+                                </select>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label asp-for="FonctionVieActive" class="form-label">Fonction dans la vie active</label>
