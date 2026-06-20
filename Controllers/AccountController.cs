@@ -545,6 +545,9 @@ public class AccountController(
 
     private static string? NormalizeEmailKey(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim().ToUpperInvariant();
+
+    private sealed record RegistrationMatchResult(bool IdentityMatches, bool ContactMatches, bool IsReliable);
+
     private static bool ContactMatches(string? recordPhone, string? recordEmail, RegisterViewModel model)
     {
         var phoneMatches = NormalizePhoneKey(recordPhone) == NormalizePhoneKey(model.Telephone)
@@ -553,17 +556,60 @@ public class AccountController(
         var emailMatches = emailKey is not null && NormalizeEmailKey(recordEmail) == emailKey;
         return phoneMatches || emailMatches;
     }
+
+    private static bool NameMatches(string? recordNom, string? recordPrenom, RegisterViewModel model)
+    {
+        var recordNomKey = DatabaseText.NormalizeSearchKey(recordNom);
+        var recordPrenomKey = DatabaseText.NormalizeSearchKey(recordPrenom);
+        var modelNomKey = DatabaseText.NormalizeSearchKey(model.Nom);
+        var modelPrenomKey = DatabaseText.NormalizeSearchKey(model.Prenom);
+        if (string.IsNullOrWhiteSpace(recordNomKey) || string.IsNullOrWhiteSpace(recordPrenomKey))
+        {
+            return false;
+        }
+
+        var direct = recordNomKey == modelNomKey && recordPrenomKey == modelPrenomKey;
+        var inverted = recordNomKey == modelPrenomKey && recordPrenomKey == modelNomKey;
+        var fullRecord = $"{recordPrenomKey}{recordNomKey}";
+        var fullModel = $"{modelPrenomKey}{modelNomKey}";
+        var fullModelInverted = $"{modelNomKey}{modelPrenomKey}";
+        return direct || inverted || fullRecord == fullModel || fullRecord == fullModelInverted;
+    }
+
+    private static RegistrationMatchResult EvaluateScoutRegistrationMatch(Scout scout, RegisterViewModel model)
+    {
+        var identityMatches = NameMatches(scout.Nom, scout.Prenom, model);
+        var contactMatches = ContactMatches(scout.Telephone, scout.Email, model);
+        return new RegistrationMatchResult(identityMatches, contactMatches, identityMatches && contactMatches);
+    }
+
     private static bool ScoutMatchesRegistration(Scout scout, RegisterViewModel model)
-        => ContactMatches(scout.Telephone, scout.Email, model);
+        => EvaluateScoutRegistrationMatch(scout, model).IsReliable;
 
     private static string BuildScoutRegistrationMismatchMessage(Scout scout, RegisterViewModel model)
     {
+        var match = EvaluateScoutRegistrationMatch(scout, model);
         var ficheHasPhone = !string.IsNullOrWhiteSpace(scout.Telephone);
         var ficheHasEmail = !string.IsNullOrWhiteSpace(scout.Email);
         var phoneProvided = !string.IsNullOrWhiteSpace(model.Telephone);
         var emailProvided = !string.IsNullOrWhiteSpace(model.Email);
         var phoneMatches = ficheHasPhone && phoneProvided && NormalizePhoneKey(scout.Telephone) == NormalizePhoneKey(model.Telephone);
         var emailMatches = ficheHasEmail && emailProvided && NormalizeEmailKey(scout.Email) == NormalizeEmailKey(model.Email);
+
+        if (!match.IdentityMatches && !match.ContactMatches)
+        {
+            return "Le nom, le prenom, le telephone et l'email saisis ne correspondent pas suffisamment a la fiche scout trouvee. Le compte est cree en attente de rapprochement par un administrateur ou gestionnaire.";
+        }
+
+        if (!match.IdentityMatches && match.ContactMatches)
+        {
+            return "Le telephone ou l'email correspond a la fiche scout, mais le nom/prenom saisi est different. Le compte est cree en attente de rapprochement pour verifier l'identite.";
+        }
+
+        if (match.IdentityMatches && !match.ContactMatches)
+        {
+            return "Le nom/prenom correspond a la fiche scout, mais le telephone ou l'email ne correspond pas aux coordonnees enregistrees. Le compte est cree en attente de rapprochement.";
+        }
 
         if (!ficheHasPhone && !ficheHasEmail)
         {
