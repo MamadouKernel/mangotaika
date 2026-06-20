@@ -61,6 +61,42 @@ public class DemandesController(
         return View(demandes.Select(ToDto).ToList());
     }
 
+    public async Task<IActionResult> BacklogChefGroupe()
+    {
+        var chefGroupeScope = await GetChefGroupeValidationScopeAsync();
+        if (!chefGroupeScope.HasValue)
+        {
+            return Forbid();
+        }
+
+        var chefUniteUserIds = await GetChefUniteUserIdsAsync();
+        var query = db.DemandesAutorisation
+            .Include(d => d.Demandeur)
+            .Include(d => d.ValideurChefGroupe)
+            .Include(d => d.Groupe)
+            .Include(d => d.Branche)
+            .Where(d => d.GroupeId == chefGroupeScope.Value
+                && d.Statut == StatutDemande.Soumise
+                && !d.ChefGroupeValidee
+                && chefUniteUserIds.Contains(d.DemandeurId));
+
+        var (page, ps) = ListPagination.Read(Request);
+        var total = await query.CountAsync();
+        var (p, pageSize, skip, totalPages) = ListPagination.Normalize(page, ps, total);
+        var demandes = await query
+            .OrderBy(d => d.DateCreation)
+            .Skip(skip)
+            .Take(pageSize)
+            .ToListAsync();
+
+        ViewBag.PeutCreer = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire") || await EstScoutChefAsync();
+        ViewBag.PageTitle = "Demandes a valider";
+        ViewBag.PageSubtitle = "File de traitement du chef de groupe : demandes soumises par les chefs d'unite de votre groupe.";
+        ViewBag.BacklogChefGroupe = true;
+        ListPagination.SetViewData(ViewData, HttpContext, p, pageSize, total, totalPages);
+        return View("Index", demandes.Select(ToDto).ToList());
+    }
+
     public async Task<IActionResult> Create()
     {
         var isAdmin = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
@@ -788,6 +824,28 @@ public class DemandesController(
         return await db.UserRoles
             .Join(db.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
             .AnyAsync(x => x.UserId == demande.DemandeurId && x.Name == RoleNames.ChefUnite);
+    }
+
+    private async Task<List<Guid>> GetChefUniteUserIdsAsync()
+    {
+        var chefUniteRoleUserIds = await db.UserRoles
+            .Join(db.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
+            .Where(x => x.Name == RoleNames.ChefUnite)
+            .Select(x => x.UserId)
+            .ToListAsync();
+
+        var leadershipScouts = await db.Scouts
+            .AsNoTracking()
+            .Where(s => s.IsActive && s.UserId.HasValue)
+            .Select(s => new { UserId = s.UserId!.Value, s.Fonction })
+            .ToListAsync();
+
+        return leadershipScouts
+            .Where(s => IsChefUniteFunction(s.Fonction))
+            .Select(s => s.UserId)
+            .Concat(chefUniteRoleUserIds)
+            .Distinct()
+            .ToList();
     }
 
     private static bool RequiresDistrictValidation(DemandeAutorisation demande)

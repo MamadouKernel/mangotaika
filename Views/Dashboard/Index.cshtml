@@ -502,11 +502,11 @@ else if (isScout)
             </div>
         </div>
         <div class="col-md-3 col-6">
-            <a asp-controller="Demandes" asp-action="Index" class="text-decoration-none">
+            <a asp-controller="Demandes" asp-action="@(User.IsInRole("ChefGroupe") ? "BacklogChefGroupe" : "Index")" class="text-decoration-none">
                 <div class="stat-card-3d bg-groupes">
                     <div class="stat-icon"><i class="bi bi-file-earmark-check-fill"></i></div>
                     <h2>@Model.MesDemandes</h2>
-                    <p>Mes demandes actives</p>
+                    <p>@(User.IsInRole("ChefGroupe") ? "Demandes a valider" : "Mes demandes actives")</p>
                 </div>
             </a>
         </div>

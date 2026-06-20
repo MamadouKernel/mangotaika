@@ -228,6 +228,22 @@
     <div class="col-lg-4">
         <div class="card-3d p-4">
             <h5 class="text-or mb-3"><i class="bi bi-clock-history"></i> Suivi de la demande</h5>
+            <div class="mb-4 p-3" style="border-radius:16px;background:rgba(89,117,55,0.08);border:1px solid rgba(89,117,55,0.16);">
+                <div class="small text-muted-custom mb-1">Prochaine action</div>
+                <strong style="color:var(--bleu-gris);">
+                    @(Model.Statut == StatutDemande.Initialisee || Model.Statut == StatutDemande.EnRevision
+                        ? "Soumettre la demande"
+                        : Model.Statut == StatutDemande.Soumise && !Model.ChefGroupeValidee
+                            ? "Validation du chef de groupe"
+                            : Model.Statut == StatutDemande.Soumise && Model.ChefGroupeValidee
+                                ? "Validation du district"
+                                : Model.Statut == StatutDemande.Validee
+                                    ? "Activite creee ou validable"
+                                    : Model.Statut == StatutDemande.Rejetee
+                                        ? "Workflow termine"
+                                        : "Suivi en cours")
+                </strong>
+            </div>
             @if (Model.Suivis.Any())
             {
                 <div style="position:relative;padding-left:20px;">
@@ -247,6 +263,14 @@
                             StatutDemande.EnRevision => "Modification demandee",
                             _ => suivi.NouveauStatut.ToString()
                         };
+                        var suiviIcon = suivi.NouveauStatut switch
+                        {
+                            StatutDemande.Validee => "bi-check-circle-fill",
+                            StatutDemande.Rejetee => "bi-x-octagon-fill",
+                            StatutDemande.Soumise => "bi-send-fill",
+                            StatutDemande.EnRevision => "bi-arrow-counterclockwise",
+                            _ => "bi-circle-fill"
+                        };
                         var commentaire = suivi.Commentaire;
                         if (validationTarget == "Chef de groupe" && commentaire == "Demande soumise pour validation district")
                         {
@@ -254,7 +278,7 @@
                         }
                         <div class="mb-3" style="position:relative;">
                             <div style="position:absolute;left:-16px;top:4px;width:12px;height:12px;border-radius:50%;background:@dotColor;border:2px solid #fff;box-shadow:0 0 0 2px @dotColor;"></div>
-                            <p class="mb-0" style="font-size:0.8rem;font-weight:600;color:var(--texte);">@suiviLabel</p>
+                            <p class="mb-0" style="font-size:0.8rem;font-weight:700;color:var(--texte);"><i class="bi @suiviIcon" style="color:@dotColor;"></i> @suiviLabel</p>
                             <p class="mb-0 text-muted-custom" style="font-size:0.75rem;">@commentaire</p>
                             <p class="mb-0" style="font-size:0.7rem;color:var(--gris-clair);">@suivi.Auteur - @suivi.Date.ToString("dd/MM/yyyy HH:mm")</p>
                         </div>
