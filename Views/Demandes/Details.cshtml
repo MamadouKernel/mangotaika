@@ -95,6 +95,21 @@
                     <i class="bi bi-exclamation-triangle-fill"></i> Motif de rejet : @Model.MotifRejet
                 </div>
             }
+            @if (Model.ChefGroupeValidee)
+            {
+                <div class="alert" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.28);border-radius:12px;color:#166534;">
+                    <i class="bi bi-check2-circle"></i>
+                    Validation chef de groupe effectuee
+                    @if (!string.IsNullOrWhiteSpace(Model.NomValideurChefGroupe))
+                    {
+                        <span>par <strong>@Model.NomValideurChefGroupe</strong></span>
+                    }
+                    @if (Model.DateValidationChefGroupe.HasValue)
+                    {
+                        <span>le @Model.DateValidationChefGroupe.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                    }
+                </div>
+            }
 
             <hr style="border-color:var(--gris-border);" />
             <p class="text-muted-custom small mb-1">Demandeur : @(Model.NomDemandeur ?? "-")</p>

@@ -437,15 +437,13 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
             return 0;
         }
 
-        var demandes = await db.DemandesAutorisation
+        return await db.DemandesAutorisation
             .AsNoTracking()
-            .Include(d => d.Suivis)
             .Where(d => d.GroupeId == groupeId.Value
                 && d.Statut == StatutDemande.Soumise
+                && !d.ChefGroupeValidee
                 && chefUniteUserIds.Contains(d.DemandeurId))
-            .ToListAsync();
-
-        return demandes.Count(d => !d.Suivis.Any(s => IsChefGroupeApprovalComment(s.Commentaire)));
+            .CountAsync();
     }
 
     private static bool IsChefGroupeFunction(string? fonction)
@@ -470,13 +468,6 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
             || normalizedFunction.StartsWith("CT ", StringComparison.Ordinal)
             || normalizedFunction.EndsWith(" CT", StringComparison.Ordinal)
             || normalizedFunction.Contains(" CT ", StringComparison.Ordinal);
-    }
-
-    private static bool IsChefGroupeApprovalComment(string? commentaire)
-    {
-        var normalized = DatabaseText.NormalizeSearchKey(commentaire);
-        return normalized.Contains("VALIDEE PAR LE CHEF DE GROUPE", StringComparison.Ordinal)
-            || normalized.Contains("VALIDE PAR LE CHEF DE GROUPE", StringComparison.Ordinal);
     }
 
     private async Task FillParentDashboardAsync(DashboardDto dto, Guid? userId)

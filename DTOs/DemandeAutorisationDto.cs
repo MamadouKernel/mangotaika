@@ -21,6 +21,9 @@ public class DemandeAutorisationDto
     public string? Observations { get; set; }
     public string? TdrContenu { get; set; }
     public StatutDemande Statut { get; set; }
+    public bool ChefGroupeValidee { get; set; }
+    public DateTime? DateValidationChefGroupe { get; set; }
+    public string? NomValideurChefGroupe { get; set; }
     public string? MotifRejet { get; set; }
     public DateTime DateCreation { get; set; }
     public DateTime? DateValidation { get; set; }

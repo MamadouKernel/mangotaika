@@ -32,6 +32,7 @@ public class DemandesController(
 
         var query = db.DemandesAutorisation
             .Include(d => d.Demandeur)
+            .Include(d => d.ValideurChefGroupe)
             .Include(d => d.Groupe)
             .Include(d => d.Branche)
             .AsQueryable();
@@ -147,6 +148,7 @@ public class DemandesController(
         var demande = await db.DemandesAutorisation
             .Include(d => d.Demandeur)
             .Include(d => d.Valideur)
+            .Include(d => d.ValideurChefGroupe)
             .Include(d => d.Groupe)
             .Include(d => d.Branche)
             .Include(d => d.Documents)
@@ -161,7 +163,7 @@ public class DemandesController(
         var isSupervision = User.IsInRole("Superviseur") || User.IsInRole("Consultant");
         var isDistrictReviewer = await EstValidateurDistrictAsync();
         var chefUniteWorkflow = await IsChefUniteRequestAsync(demande);
-        var chefGroupeApproved = await HasChefGroupeApprovalAsync(demande);
+        var chefGroupeApproved = HasChefGroupeApproval(demande);
         var canValidateRequests = chefUniteWorkflow
             ? chefGroupeApproved
                 ? User.IsInRole("Administrateur") || isDistrictReviewer
@@ -287,7 +289,7 @@ public class DemandesController(
         demande.Statut = StatutDemande.Soumise;
         demande.MotifRejet = null;
         var chefUniteWorkflow = await IsChefUniteRequestAsync(demande);
-        var chefGroupeApproved = await HasChefGroupeApprovalAsync(demande);
+        var chefGroupeApproved = HasChefGroupeApproval(demande);
         AjouterSuivi(demande, ancien, StatutDemande.Soumise, chefUniteWorkflow && !chefGroupeApproved ? "Demande soumise pour validation du chef de groupe" : "Demande soumise pour validation du commissaire de district", BuildAuteurLabel(user));
         await db.SaveChangesAsync();
 
@@ -320,12 +322,15 @@ public class DemandesController(
         var user = await userManager.GetUserAsync(User);
         var ancien = demande.Statut;
         var chefUniteWorkflow = await IsChefUniteRequestAsync(demande);
-        var chefGroupeApproved = await HasChefGroupeApprovalAsync(demande);
+        var chefGroupeApproved = HasChefGroupeApproval(demande);
         var isChefGroupeStep = chefUniteWorkflow && !chefGroupeApproved && await CanChefGroupeValidateAsync(demande);
         if (isChefGroupeStep)
         {
             if (!RequiresDistrictValidation(demande))
             {
+                demande.ChefGroupeValidee = true;
+                demande.ValideurChefGroupeId = user?.Id;
+                demande.DateValidationChefGroupe = DateTime.UtcNow;
                 demande.Statut = StatutDemande.Validee;
                 demande.ValideurId = user?.Id;
                 demande.DateValidation = DateTime.UtcNow;
@@ -352,6 +357,9 @@ public class DemandesController(
             var commentaireGroupe = string.IsNullOrWhiteSpace(commentaire)
                 ? "Demande validee par le chef de groupe et transmise au commissaire de district"
                 : $"Demande validee par le chef de groupe : {commentaire.Trim()}";
+            demande.ChefGroupeValidee = true;
+            demande.ValideurChefGroupeId = user?.Id;
+            demande.DateValidationChefGroupe = DateTime.UtcNow;
             AjouterSuivi(demande, ancien, StatutDemande.Soumise, commentaireGroupe, BuildAuteurLabel(user));
             await db.SaveChangesAsync();
             await NotifyValidationRecipientsAsync(demande, chefUniteWorkflow: false);
@@ -729,7 +737,7 @@ public class DemandesController(
     {
         if (await IsChefUniteRequestAsync(demande))
         {
-            if (!await HasChefGroupeApprovalAsync(demande))
+            if (!HasChefGroupeApproval(demande))
             {
                 return await CanChefGroupeValidateAsync(demande);
             }
@@ -740,6 +748,8 @@ public class DemandesController(
 
         return User.IsInRole("Administrateur") || await EstValidateurDistrictAsync();
     }
+
+    private static bool HasChefGroupeApproval(DemandeAutorisation demande) => demande.ChefGroupeValidee;
 
     private async Task<bool> HasChefGroupeApprovalAsync(DemandeAutorisation demande)
     {
@@ -1048,10 +1058,13 @@ public class DemandesController(
         Observations = d.Observations,
         TdrContenu = d.TdrContenu,
         Statut = d.Statut,
+        ChefGroupeValidee = d.ChefGroupeValidee,
+        DateValidationChefGroupe = d.DateValidationChefGroupe,
         MotifRejet = d.MotifRejet,
         DateCreation = d.DateCreation,
         DateValidation = d.DateValidation,
         NomDemandeur = d.Demandeur != null ? $"{d.Demandeur.Prenom} {d.Demandeur.Nom}" : null,
+        NomValideurChefGroupe = d.ValideurChefGroupe != null ? $"{d.ValideurChefGroupe.Prenom} {d.ValideurChefGroupe.Nom}" : null,
         NomValideur = d.Valideur != null ? $"{d.Valideur.Prenom} {d.Valideur.Nom}" : null,
         NomGroupe = d.Groupe?.Nom,
         GroupeId = d.GroupeId,

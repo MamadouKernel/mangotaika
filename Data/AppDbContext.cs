@@ -288,6 +288,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         {
             e.HasOne(d => d.Demandeur).WithMany().HasForeignKey(d => d.DemandeurId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(d => d.Valideur).WithMany().HasForeignKey(d => d.ValideurId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(d => d.ValideurChefGroupe).WithMany().HasForeignKey(d => d.ValideurChefGroupeId).OnDelete(DeleteBehavior.SetNull);
             e.HasOne(d => d.Groupe).WithMany().HasForeignKey(d => d.GroupeId);
             e.HasOne(d => d.Branche).WithMany().HasForeignKey(d => d.BrancheId).OnDelete(DeleteBehavior.SetNull);
             e.HasMany(d => d.Suivis).WithOne(s => s.Demande).HasForeignKey(s => s.DemandeId).OnDelete(DeleteBehavior.Cascade);

@@ -19,6 +19,10 @@ public class DemandeAutorisation
     public string? TdrContenu { get; set; }
 
     public StatutDemande Statut { get; set; } = StatutDemande.Initialisee;
+    public bool ChefGroupeValidee { get; set; }
+    public DateTime? DateValidationChefGroupe { get; set; }
+    public Guid? ValideurChefGroupeId { get; set; }
+    public ApplicationUser? ValideurChefGroupe { get; set; }
     public string? MotifRejet { get; set; }
     public DateTime DateCreation { get; set; } = DateTime.UtcNow;
     public DateTime? DateValidation { get; set; }
