@@ -12,6 +12,7 @@
     var permissionCount = Model.Count;
     var selectedCount = selectedPermissions.Count;
     var selectedRatio = permissionCount == 0 ? 0 : (int)Math.Round(selectedCount * 100m / permissionCount);
+    var selectedModules = grouped.Count(module => module.Any(p => selectedPermissions.Contains(p.Id)));
     var moduleIcons = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         ["Administration"] = "bi-shield-lock",
@@ -30,9 +31,9 @@
 <section class="container-fluid permissions-page py-4" data-permissions-root>
     <div class="permissions-hero">
         <div class="permissions-hero__title">
-            <span class="permissions-kicker"><i class="bi bi-person-lock"></i> Administration</span>
+            <span class="permissions-kicker"><i class="bi bi-shield-lock"></i> Controle d'acces</span>
             <h1>Permissions par role</h1>
-            <p>Configurez les vues et les actions autorisees pour chaque profil de la plateforme.</p>
+            <p>Attribuez les vues et les actions autorisees par role. Ces droits pilotent les menus, les pages protegees et les actions sensibles.</p>
         </div>
 
         <div class="permissions-hero__stats">
@@ -46,7 +47,7 @@
             </div>
             <div>
                 <strong data-selected-total>@selectedCount</strong>
-                <span>permissions actives</span>
+                <span>droits actifs</span>
             </div>
         </div>
     </div>
@@ -67,6 +68,10 @@
                 <i class="bi bi-arrow-left"></i> Roles
             </a>
         </form>
+        <div class="permissions-role-panel__hint">
+            <i class="bi bi-info-circle"></i>
+            Les changements sont appliques apres enregistrement. Un utilisateur deja connecte peut devoir se reconnecter pour voir le menu mis a jour.
+        </div>
     </div>
 
     @if (selectedRoleId.HasValue)
@@ -79,6 +84,17 @@
                 <span class="badge-soft">Role selectionne</span>
                 <h2>@selectedRoleName</h2>
                 <p>Les permissions cochees pilotent a la fois l'affichage des menus et l'acces direct aux pages protegees.</p>
+
+                <div class="permissions-summary-grid">
+                    <div>
+                        <strong data-selected-total-inline>@selectedCount</strong>
+                        <span>droits attribues</span>
+                    </div>
+                    <div>
+                        <strong>@selectedModules</strong>
+                        <span>modules couverts</span>
+                    </div>
+                </div>
 
                 <div class="permissions-score">
                     <div class="permissions-score__head">
@@ -94,6 +110,11 @@
                 <button type="submit" class="btn btn-or w-100">
                     <i class="bi bi-check2-circle"></i> Enregistrer
                 </button>
+
+                <div class="permissions-alert">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <span>Retirer une permission peut masquer une vue et bloquer son acces direct.</span>
+                </div>
             </aside>
 
             <div class="permissions-board">
@@ -144,6 +165,8 @@
                                 {
                                     var inputId = $"perm_{permission.Id:N}";
                                     var isChecked = selectedPermissions.Contains(permission.Id);
+                                    var codeParts = permission.Code.Split('.', StringSplitOptions.RemoveEmptyEntries);
+                                    var actionLabel = codeParts.Length > 0 ? codeParts[^1] : permission.Code;
 
                                     <label class="permission-item @(isChecked ? "is-selected" : null)" for="@inputId">
                                         <input id="@inputId"
@@ -153,7 +176,10 @@
                                                value="@permission.Id"
                                                checked="@isChecked" />
                                         <span class="permission-item__content">
-                                            <strong>@permission.Libelle</strong>
+                                            <span class="permission-item__topline">
+                                                <strong>@permission.Libelle</strong>
+                                                <em>@actionLabel</em>
+                                            </span>
                                             <small>@permission.Description</small>
                                             <code>@permission.Code</code>
                                         </span>
