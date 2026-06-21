@@ -108,6 +108,8 @@ builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>(
 builder.Services.AddScoped<INotificationDispatchService, NotificationDispatchService>();
 builder.Services.AddScoped<IMobilePaymentGateway, ManualMobilePaymentGateway>();
 builder.Services.AddScoped<OperationalAccessService>();
+builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddScoped<PermissionSeeder>();
 builder.Services.AddScoped<IClaimsTransformation, CommissaireDistrictClaimsTransformation>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ActiveRoleService>();
@@ -133,6 +135,7 @@ builder.Services.AddSignalR();
 builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute());
+    options.Filters.Add<GlobalPermissionFilter>();
 });
 
 builder.WebHost.ConfigureKestrel(options =>
@@ -222,6 +225,9 @@ using (var scope = app.Services.CreateScope())
             });
         }
     }
+
+    var permissionSeeder = scope.ServiceProvider.GetRequiredService<PermissionSeeder>();
+    await permissionSeeder.SeedAsync();
 
     var adminEmail = builder.Configuration["AdminSeed:Email"] ?? "admin@mangotaika.com";
     var adminPhone = builder.Configuration["AdminSeed:Phone"] ?? "0000000000";

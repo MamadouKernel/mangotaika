@@ -7,21 +7,26 @@
     <div class="row justify-content-center">
         <div class="col-md-5">
             <div class="auth-card text-center">
-                <img src="~/images/logo.png" alt="Logo MANGO TAÏKA" class="auth-logo" />
+                <img src="~/images/logo.png" alt="Logo MANGO TAIKA" class="auth-logo" />
                 <h3 class="mb-1">Connexion</h3>
-                <p class="text-muted-custom small mb-4">District Scout MANGO TAÏKA</p>
+                <p class="text-muted-custom small mb-4">District Scout MANGO TAIKA</p>
 
                 <form asp-action="Login" method="post" class="form-modern text-start">
                     <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
                     <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
                     <div class="mb-3">
-                        <label asp-for="Telephone" class="form-label">Téléphone</label>
+                        <label asp-for="Telephone" class="form-label">Telephone</label>
                         <input asp-for="Telephone" class="form-control" placeholder="Ex: 0701020304" autofocus />
                         <span asp-validation-for="Telephone" class="text-danger small"></span>
                     </div>
                     <div class="mb-3">
                         <label asp-for="Password" class="form-label">Mot de passe</label>
-                        <input asp-for="Password" class="form-control" placeholder="••••••••" />
+                        <div class="input-group">
+                            <input asp-for="Password" class="form-control" placeholder="********" id="loginPasswordInput" />
+                            <button type="button" class="btn btn-outline-secondary" id="toggleLoginPassword" aria-label="Afficher le mot de passe" aria-pressed="false">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
                         <span asp-validation-for="Password" class="text-danger small"></span>
                     </div>
                     <div class="mb-4 d-flex align-items-center justify-content-between gap-3">
@@ -42,3 +47,23 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const input = document.getElementById('loginPasswordInput');
+            const button = document.getElementById('toggleLoginPassword');
+            const icon = button?.querySelector('i');
+            if (!input || !button || !icon) return;
+
+            button.addEventListener('click', () => {
+                const shouldShow = input.type === 'password';
+                input.type = shouldShow ? 'text' : 'password';
+                button.setAttribute('aria-label', shouldShow ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+                button.setAttribute('aria-pressed', shouldShow ? 'true' : 'false');
+                icon.className = shouldShow ? 'bi bi-eye-slash' : 'bi bi-eye';
+            });
+        })();
+    </script>
+}

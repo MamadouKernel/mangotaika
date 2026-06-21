@@ -37,6 +37,10 @@ public class RegisterViewModel
     [Display(Name = "Code d'invitation gestionnaire")]
     public string? CodeInvitation { get; set; }
 
+    [Display(Name = "Matricule scout associe")]
+    [RegularExpression(ScoutMatriculeFormat.Pattern, ErrorMessage = ScoutMatriculeFormat.ErrorMessage)]
+    public string? MatriculeGestionnaire { get; set; }
+
     [Display(Name = "Mon matricule scout")]
     [RegularExpression(ScoutMatriculeFormat.Pattern, ErrorMessage = ScoutMatriculeFormat.ErrorMessage)]
     public string? MatriculeScout { get; set; }

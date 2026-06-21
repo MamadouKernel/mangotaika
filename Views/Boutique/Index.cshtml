@@ -1,4 +1,6 @@
 @model List<MangoTaika.Data.Entities.ArticleBoutique>
+@using MangoTaika.Services
+@inject IPermissionService PermissionService
 @{
     ViewData["Title"] = "Boutique";
     var categories = ViewBag.Categories as List<string> ?? new();
@@ -12,9 +14,20 @@
     var articleCount = ViewBag.ArticleCount as int? ?? Model.Count;
     var totalArticles = ViewBag.TotalArticles as int? ?? Model.Count;
     var panierCount = ViewBag.PanierCount as int? ?? 0;
+    var canManageBoutique = User.Identity?.IsAuthenticated == true
+        && await PermissionService.HasPermissionAsync(User, PermissionCodes.BoutiqueArticlesVoir);
+    var canCreateArticle = User.Identity?.IsAuthenticated == true
+        && await PermissionService.HasPermissionAsync(User, PermissionCodes.BoutiqueArticlesCreer);
 }
 
 <section class="container py-5 scout-marketplace">
+    <div class="marketplace-service-strip mb-3">
+        <span><i class="bi bi-shield-check"></i> Articles verifies district</span>
+        <span><i class="bi bi-cart-check"></i> Panier multi-articles</span>
+        <span><i class="bi bi-wallet2"></i> Portefeuille interne</span>
+        <span><i class="bi bi-phone"></i> Mobile Money ou livraison</span>
+    </div>
+
     <div class="marketplace-hero mb-4">
         <div class="marketplace-hero__content">
             <span class="boutique-eyebrow"><i class="bi bi-shop"></i> Marketplace scout</span>
@@ -37,6 +50,7 @@
             <div class="marketplace-hero__badges">
                 <span><i class="bi bi-phone"></i> Paiement Mobile Money</span>
                 <span><i class="bi bi-truck"></i> Paiement a la livraison</span>
+                <span><i class="bi bi-wallet2"></i> Paiement portefeuille</span>
                 <span><i class="bi bi-receipt"></i> Recu apres validation</span>
                 <span><i class="bi bi-box-seam"></i> Stock suivi</span>
             </div>
@@ -51,7 +65,7 @@
                 <strong>@categories.Count</strong>
                 <span>categories</span>
             </div>
-            @if (User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire") || User.IsInRole("CommissaireDistrict"))
+            @if (canManageBoutique)
             {
                 <a asp-action="Admin" class="btn btn-light w-100"><i class="bi bi-gear"></i> Gerer la boutique</a>
             }
@@ -133,7 +147,7 @@
                 <div class="marketplace-toolbar__actions">
                     <a asp-action="Panier" class="btn btn-or btn-sm"><i class="bi bi-cart3"></i> Panier (@panierCount)</a>
                     <a asp-controller="Home" asp-action="FaireUnDon" class="btn btn-outline-or btn-sm"><i class="bi bi-heart"></i> Faire un don</a>
-                    @if (User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire") || User.IsInRole("CommissaireDistrict"))
+                    @if (canCreateArticle)
                     {
                         <a asp-action="Create" class="btn btn-or btn-sm"><i class="bi bi-plus-lg"></i> Nouvel article</a>
                     }
@@ -167,7 +181,11 @@
                                 <p>@(article.Description ?? "Article scout disponible a la commande.")</p>
                                 <div class="marketplace-card__meta">
                                     <span><i class="bi bi-box-seam"></i> Stock @article.StockDisponible</span>
-                                    <span><i class="bi bi-shield-check"></i> District</span>
+                                    <span><i class="bi bi-arrow-repeat"></i> Traitement suivi</span>
+                                </div>
+                                <div class="marketplace-card__delivery">
+                                    <span><i class="bi bi-truck"></i> Livraison ou retrait selon organisation</span>
+                                    <span><i class="bi bi-credit-card-2-front"></i> Paiement flexible</span>
                                 </div>
                                 <div class="marketplace-card__price">
                                     <strong>@article.Prix.ToString("N0")</strong>

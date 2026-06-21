@@ -19,6 +19,10 @@ public class DemandeAutorisation
     public string? TdrContenu { get; set; }
 
     public StatutDemande Statut { get; set; } = StatutDemande.Initialisee;
+    public bool ChefGroupeValidee { get; set; }
+    public DateTime? DateValidationChefGroupe { get; set; }
+    public Guid? ValideurChefGroupeId { get; set; }
+    public ApplicationUser? ValideurChefGroupe { get; set; }
     public string? MotifRejet { get; set; }
     public DateTime DateCreation { get; set; } = DateTime.UtcNow;
     public DateTime? DateValidation { get; set; }
@@ -33,6 +37,7 @@ public class DemandeAutorisation
     public Branche? Branche { get; set; }
 
     public ICollection<SuiviDemande> Suivis { get; set; } = [];
+    public ICollection<DocumentDemandeAutorisation> Documents { get; set; } = [];
 }
 
 public class SuiviDemande
@@ -45,6 +50,18 @@ public class SuiviDemande
     public string? Commentaire { get; set; }
     public string? Auteur { get; set; }
     public DateTime Date { get; set; } = DateTime.UtcNow;
+}
+
+public class DocumentDemandeAutorisation
+{
+    public Guid Id { get; set; }
+    public string NomFichier { get; set; } = string.Empty;
+    public string CheminFichier { get; set; } = string.Empty;
+    public string? TypeDocument { get; set; }
+    public DateTime DateUpload { get; set; } = DateTime.UtcNow;
+    public Guid DemandeId { get; set; }
+    public DemandeAutorisation Demande { get; set; } = null!;
+    public bool EstSupprime { get; set; }
 }
 
 public enum StatutDemande

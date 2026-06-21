@@ -41,6 +41,9 @@ public class AdminUtilisateurEditViewModel
     [Display(Name = "Rôles")]
     public List<string> Roles { get; set; } = [];
 
+    [Display(Name = "Je confirme l'action critique")]
+    public bool ConfirmerActionCritique { get; set; }
+
     [Display(Name = "Compte actif")]
     public bool IsActive { get; set; } = true;
 

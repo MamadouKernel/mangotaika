@@ -206,16 +206,40 @@ public class AccountController(
         CodeInvitation? codeInvitation = null;
         if (model.Role == "Gestionnaire")
         {
-            codeInvitation = await ResolveInvitationAsync(model.CodeInvitation);
+            codeInvitation = await ResolveInvitationAsync(model.CodeInvitation, model.Role);
             if (codeInvitation is null)
             {
-                ModelState.AddModelError("CodeInvitation", "Code d'invitation invalide ou deja utilise. Demandez un nouveau code a l'administration du district.");
+                ModelState.AddModelError("CodeInvitation", "Code d'invitation invalide, expire, inactif, deja utilise ou non autorise pour ce profil. Demandez un nouveau code a l'administration du district.");
                 return View(model);
             }
         }
 
         var scouts = new List<Scout>();
         var requiresManualActivation = false;
+        string? manualActivationMessage = null;
+        Scout? scoutLie = null;
+        if (model.Role == "Gestionnaire" && !string.IsNullOrWhiteSpace(model.MatriculeGestionnaire))
+        {
+            var matriculeGestionnaire = ScoutMatriculeFormat.Normalize(model.MatriculeGestionnaire);
+            scoutLie = await db.Scouts.FirstOrDefaultAsync(s => s.Matricule == matriculeGestionnaire && s.IsActive);
+            if (scoutLie is null)
+            {
+                ModelState.AddModelError(
+                    "MatriculeGestionnaire",
+                    "Matricule scout introuvable ou inactif. Laissez ce champ vide si vous n'avez pas de matricule, ou demandez au chef de groupe de mettre la fiche scout a jour.");
+                return View(model);
+            }
+            if (scoutLie.UserId.HasValue)
+            {
+                ModelState.AddModelError("MatriculeGestionnaire", "Ce matricule est deja lie a un compte. Connectez-vous avec ce compte ou utilisez le mot de passe oublie.");
+                return View(model);
+            }
+            if (!ScoutMatchesRegistration(scoutLie, model))
+            {
+                requiresManualActivation = true;
+                manualActivationMessage = $"{BuildScoutRegistrationMismatchMessage(scoutLie, model)} Le compte gestionnaire est cree en attente d'activation par un administrateur.";
+            }
+        }
         if (model.Role == "Parent")
         {
             if (string.IsNullOrWhiteSpace(model.Matricules))
@@ -274,6 +298,7 @@ public class AccountController(
                     Scouts = scouts
                 });
                 requiresManualActivation = true;
+                manualActivationMessage = "Inscription enregistree. Le lien parent/tuteur doit etre verifie par un gestionnaire ou administrateur avant activation du compte.";
             }
             if (parentsLies.Any(p => p.UserId.HasValue))
             {
@@ -312,9 +337,9 @@ public class AccountController(
                     Scouts = missingScouts
                 });
                 requiresManualActivation = true;
+                manualActivationMessage = "Inscription enregistree. Un ou plusieurs liens parent/tuteur doivent etre verifies par un gestionnaire ou administrateur avant activation du compte.";
             }
         }
-        Scout? scoutLie = null;
         if (model.Role == "Scout")
         {
             if (string.IsNullOrWhiteSpace(model.MatriculeScout))
@@ -337,6 +362,7 @@ public class AccountController(
             if (!ScoutMatchesRegistration(scoutLie, model))
             {
                 requiresManualActivation = true;
+                manualActivationMessage = $"{BuildScoutRegistrationMismatchMessage(scoutLie, model)} Le compte scout est cree en attente d'activation par un gestionnaire ou administrateur.";
             }
         }
         var user = new ApplicationUser
@@ -389,24 +415,52 @@ public class AccountController(
             codeInvitation.DateUtilisation = DateTime.UtcNow;
             codeInvitation.UtilisePaId = user.Id;
         }
+        if (requiresManualActivation)
+        {
+            db.DemandesRapprochementComptes.Add(new DemandeRapprochementCompte
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                ScoutId = scoutLie?.Id,
+                RoleDemande = model.Role,
+                Motif = model.Role switch
+                {
+                    "Gestionnaire" => "Inscription gestionnaire a verifier",
+                    "Scout" => "Inscription scout a verifier",
+                    "Parent" => "Lien parent/tuteur a verifier",
+                    _ => "Compte a verifier"
+                },
+                Details = manualActivationMessage,
+                Statut = StatutDemandeRapprochement.EnAttente
+            });
+        }
 
         await db.SaveChangesAsync();
         await transaction.CommitAsync();
         TempData["Success"] = requiresManualActivation
-            ? "Inscription enregistree. Votre matricule est reconnu, mais le telephone ou l'email ne correspond pas a la fiche scout. Un gestionnaire ou administrateur doit activer votre compte apres verification."
+            ? (manualActivationMessage ?? "Inscription enregistree. Votre compte doit etre verifie par un gestionnaire ou administrateur avant activation.")
             : "Inscription réussie. Votre compte est maintenant activé.";
         return RedirectToAction(nameof(Login));
     }
-    private async Task<CodeInvitation?> ResolveInvitationAsync(string? rawCode)
+    private async Task<CodeInvitation?> ResolveInvitationAsync(string? rawCode, string role)
     {
         if (string.IsNullOrWhiteSpace(rawCode))
             return null;
         var invitationCode = rawCode.Trim();
-        return db.Database.IsNpgsql()
+        var code = db.Database.IsNpgsql()
             ? await db.CodesInvitation.FirstOrDefaultAsync(c => c.Code == invitationCode && !c.EstUtilise)
             : await db.CodesInvitation.FirstOrDefaultAsync(c =>
                 c.Code.ToUpper() == DatabaseText.NormalizeCaseInsensitiveKey(invitationCode) &&
                 !c.EstUtilise);
+        if (code is null)
+            return null;
+        if (!code.EstActif)
+            return null;
+        if (code.DateExpiration.HasValue && code.DateExpiration.Value < DateTime.UtcNow)
+            return null;
+        if (!string.Equals(code.RoleCible, role, StringComparison.OrdinalIgnoreCase))
+            return null;
+        return code;
     }
 
     private async Task<List<string>> GetScoutsAboveParentLimitAsync(IReadOnlyCollection<Scout> scouts)
@@ -491,6 +545,9 @@ public class AccountController(
 
     private static string? NormalizeEmailKey(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim().ToUpperInvariant();
+
+    private sealed record RegistrationMatchResult(bool IdentityMatches, bool ContactMatches, bool IsReliable);
+
     private static bool ContactMatches(string? recordPhone, string? recordEmail, RegisterViewModel model)
     {
         var phoneMatches = NormalizePhoneKey(recordPhone) == NormalizePhoneKey(model.Telephone)
@@ -499,17 +556,60 @@ public class AccountController(
         var emailMatches = emailKey is not null && NormalizeEmailKey(recordEmail) == emailKey;
         return phoneMatches || emailMatches;
     }
+
+    private static bool NameMatches(string? recordNom, string? recordPrenom, RegisterViewModel model)
+    {
+        var recordNomKey = DatabaseText.NormalizeSearchKey(recordNom);
+        var recordPrenomKey = DatabaseText.NormalizeSearchKey(recordPrenom);
+        var modelNomKey = DatabaseText.NormalizeSearchKey(model.Nom);
+        var modelPrenomKey = DatabaseText.NormalizeSearchKey(model.Prenom);
+        if (string.IsNullOrWhiteSpace(recordNomKey) || string.IsNullOrWhiteSpace(recordPrenomKey))
+        {
+            return false;
+        }
+
+        var direct = recordNomKey == modelNomKey && recordPrenomKey == modelPrenomKey;
+        var inverted = recordNomKey == modelPrenomKey && recordPrenomKey == modelNomKey;
+        var fullRecord = $"{recordPrenomKey}{recordNomKey}";
+        var fullModel = $"{modelPrenomKey}{modelNomKey}";
+        var fullModelInverted = $"{modelNomKey}{modelPrenomKey}";
+        return direct || inverted || fullRecord == fullModel || fullRecord == fullModelInverted;
+    }
+
+    private static RegistrationMatchResult EvaluateScoutRegistrationMatch(Scout scout, RegisterViewModel model)
+    {
+        var identityMatches = NameMatches(scout.Nom, scout.Prenom, model);
+        var contactMatches = ContactMatches(scout.Telephone, scout.Email, model);
+        return new RegistrationMatchResult(identityMatches, contactMatches, identityMatches && contactMatches);
+    }
+
     private static bool ScoutMatchesRegistration(Scout scout, RegisterViewModel model)
-        => ContactMatches(scout.Telephone, scout.Email, model);
+        => EvaluateScoutRegistrationMatch(scout, model).IsReliable;
 
     private static string BuildScoutRegistrationMismatchMessage(Scout scout, RegisterViewModel model)
     {
+        var match = EvaluateScoutRegistrationMatch(scout, model);
         var ficheHasPhone = !string.IsNullOrWhiteSpace(scout.Telephone);
         var ficheHasEmail = !string.IsNullOrWhiteSpace(scout.Email);
         var phoneProvided = !string.IsNullOrWhiteSpace(model.Telephone);
         var emailProvided = !string.IsNullOrWhiteSpace(model.Email);
         var phoneMatches = ficheHasPhone && phoneProvided && NormalizePhoneKey(scout.Telephone) == NormalizePhoneKey(model.Telephone);
         var emailMatches = ficheHasEmail && emailProvided && NormalizeEmailKey(scout.Email) == NormalizeEmailKey(model.Email);
+
+        if (!match.IdentityMatches && !match.ContactMatches)
+        {
+            return "Le nom, le prenom, le telephone et l'email saisis ne correspondent pas suffisamment a la fiche scout trouvee. Le compte est cree en attente de rapprochement par un administrateur ou gestionnaire.";
+        }
+
+        if (!match.IdentityMatches && match.ContactMatches)
+        {
+            return "Le telephone ou l'email correspond a la fiche scout, mais le nom/prenom saisi est different. Le compte est cree en attente de rapprochement pour verifier l'identite.";
+        }
+
+        if (match.IdentityMatches && !match.ContactMatches)
+        {
+            return "Le nom/prenom correspond a la fiche scout, mais le telephone ou l'email ne correspond pas aux coordonnees enregistrees. Le compte est cree en attente de rapprochement.";
+        }
 
         if (!ficheHasPhone && !ficheHasEmail)
         {
@@ -729,6 +829,8 @@ public class AccountController(
         }
         ViewBag.UserRoles = userRoles;
         ViewBag.Recherche = recherche;
+        ViewBag.RapprochementsEnAttente = await db.DemandesRapprochementComptes
+            .CountAsync(r => r.Statut == StatutDemandeRapprochement.EnAttente);
         ListPagination.SetViewData(ViewData, HttpContext, p, pageSize, total, totalPages);
         return View(users);
     }
@@ -810,12 +912,34 @@ public class AccountController(
 
         if (EstGestionnaireSansAdmin() && model.Roles.Any(RoleNames.IsAdminRole))
         {
-            ModelState.AddModelError(nameof(model.Roles), "Vous ne pouvez pas attribuer un rÃ´le administrateur.");
+            ModelState.AddModelError(nameof(model.Roles), "Vous ne pouvez pas attribuer un role d'administration district.");
         }
 
         var currentUserId = Guid.Parse(userManager.GetUserId(User)!);
         if (id == currentUserId && !model.IsActive)
             ModelState.AddModelError(nameof(model.IsActive), "Vous ne pouvez pas dÃ©sactiver votre propre compte.");
+
+        var anciensRoles = (await userManager.GetRolesAsync(user)).ToList();
+        var rolesDemandes = model.Roles.Where(r => !string.IsNullOrWhiteSpace(r)).Distinct().ToList();
+        var nouveauxRoles = NormaliserRolesUtilisateur(rolesDemandes);
+        var adminAvant = anciensRoles.Contains(RoleNames.Administrateur);
+        var adminApres = nouveauxRoles.Contains(RoleNames.Administrateur);
+        var actionAdminCritique = adminAvant != adminApres || adminApres;
+
+        if (nouveauxRoles.Count == 0)
+        {
+            ModelState.AddModelError(nameof(model.Roles), "Veuillez selectionner au moins un role.");
+        }
+
+        if (actionAdminCritique && !model.ConfirmerActionCritique)
+        {
+            ModelState.AddModelError(nameof(model.ConfirmerActionCritique), "Confirmez explicitement cette action critique avant d'enregistrer.");
+        }
+
+        if (adminAvant && (!adminApres || !model.IsActive) && await EstDernierAdministrateurActifAsync(user.Id))
+        {
+            ModelState.AddModelError(nameof(model.Roles), "Impossible de retirer ou desactiver le dernier administrateur actif de la plateforme.");
+        }
 
         if (!string.IsNullOrWhiteSpace(model.NouveauMotDePasse))
         {
@@ -852,14 +976,11 @@ public class AccountController(
 
         await SyncLinkedParentRecordsAsync(user);
 
-        var nouveauxRoles = model.Roles.Where(r => !string.IsNullOrWhiteSpace(r)).Distinct().ToList();
-        if (nouveauxRoles.Count == 0)
+        if (rolesDemandes.Count != nouveauxRoles.Count && nouveauxRoles.Contains(RoleNames.Administrateur))
         {
-            ModelState.AddModelError(nameof(model.Roles), "Veuillez selectionner au moins un role.");
-            return View(model);
+            TempData["Info"] = "Le role Administrateur est exclusif : les autres roles ont ete retires automatiquement.";
         }
 
-        var anciensRoles = await userManager.GetRolesAsync(user);
         var aRetirer = anciensRoles.Except(nouveauxRoles).ToList();
         var aAjouter = nouveauxRoles.Except(anciensRoles).ToList();
 
@@ -893,8 +1014,90 @@ public class AccountController(
         if (!model.IsActive)
             await userManager.UpdateSecurityStampAsync(user);
 
-        TempData["Success"] = "Utilisateur mis Ã  jour.";
+        if (!anciensRoles.OrderBy(r => r).SequenceEqual(nouveauxRoles.OrderBy(r => r)))
+        {
+            await JournaliserChangementRolesAsync(user, anciensRoles, nouveauxRoles);
+            await NotifierChangementRolesAsync(user, anciensRoles, nouveauxRoles);
+        }
+
+        TempData["Success"] = nouveauxRoles.Contains(RoleNames.Administrateur)
+            ? "Utilisateur mis a jour avec le role Administrateur exclusif."
+            : "Utilisateur mis a jour.";
         return RedirectToAction(nameof(UtilisateurDetails), new { id });
+    }
+
+    private async Task<bool> EstDernierAdministrateurActifAsync(Guid userId)
+    {
+        var adminRole = await db.Roles.FirstOrDefaultAsync(r => r.Name == RoleNames.Administrateur);
+        if (adminRole is null)
+        {
+            return false;
+        }
+
+        var activeAdminCount = await db.UserRoles
+            .Join(db.Users, ur => ur.UserId, u => u.Id, (ur, u) => new { ur.RoleId, User = u })
+            .CountAsync(x => x.RoleId == adminRole.Id && x.User.IsActive && !x.User.EstSupprime);
+
+        return activeAdminCount <= 1
+            && await db.UserRoles.AnyAsync(ur => ur.UserId == userId && ur.RoleId == adminRole.Id);
+    }
+
+    private async Task JournaliserChangementRolesAsync(ApplicationUser user, IReadOnlyCollection<string> anciensRoles, IReadOnlyCollection<string> nouveauxRoles)
+    {
+        var auteurId = Guid.TryParse(userManager.GetUserId(User), out var parsedAuteurId) ? parsedAuteurId : (Guid?)null;
+        db.SecurityAuditLogs.Add(new SecurityAuditLog
+        {
+            Id = Guid.NewGuid(),
+            AuteurId = auteurId,
+            UtilisateurCibleId = user.Id,
+            Action = "ModificationRolesUtilisateur",
+            AncienneValeur = string.Join(", ", anciensRoles.OrderBy(r => r)),
+            NouvelleValeur = string.Join(", ", nouveauxRoles.OrderBy(r => r)),
+            Commentaire = "Modification des roles depuis l'administration des utilisateurs.",
+            AdresseIp = HttpContext.Connection.RemoteIpAddress?.ToString()
+        });
+
+        await db.SaveChangesAsync();
+    }
+
+    private async Task NotifierChangementRolesAsync(ApplicationUser user, IReadOnlyCollection<string> anciensRoles, IReadOnlyCollection<string> nouveauxRoles)
+    {
+        if (string.IsNullOrWhiteSpace(user.Email))
+        {
+            return;
+        }
+
+        var recipientName = $"{user.Prenom} {user.Nom}".Trim();
+        var body = $"""
+        Vos droits d'acces MANGO TAIKA ont ete mis a jour.
+
+        Anciens roles : {FormatRoles(anciensRoles)}
+        Nouveaux roles : {FormatRoles(nouveauxRoles)}
+
+        Si vous n'etes pas a l'origine de cette demande ou si ce changement vous semble anormal, contactez l'administration du district.
+        """;
+
+        await emailService.SendAsync(
+            user.Email,
+            "Mise a jour de vos droits d'acces",
+            body,
+            string.IsNullOrWhiteSpace(recipientName) ? null : recipientName,
+            "Compte");
+    }
+
+    private static string FormatRoles(IEnumerable<string> roles)
+        => string.Join(", ", roles.OrderBy(r => r).Select(r => RoleNames.GetDefinition(r).Label));
+
+    private static List<string> NormaliserRolesUtilisateur(IEnumerable<string> roles)
+    {
+        var selection = roles
+            .Where(r => RoleNames.All.Contains(r))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return selection.Contains(RoleNames.Administrateur, StringComparer.OrdinalIgnoreCase)
+            ? [RoleNames.Administrateur]
+            : selection;
     }
 
     private IReadOnlyList<string> RolesPourEdition()
@@ -902,6 +1105,107 @@ public class AccountController(
         if (EstGestionnaireSansAdmin())
             return ["Gestionnaire", "AgentSupport", "Superviseur", "Consultant", "EquipeDistrict", "ChefGroupe", "ChefUnite", "Scout", "Parent"];
         return ["Administrateur", "CommissaireDistrict", "Gestionnaire", "AgentSupport", "Superviseur", "Consultant", "EquipeDistrict", "ChefGroupe", "ChefUnite", "Scout", "Parent"];
+    }
+
+    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    public async Task<IActionResult> RapprochementsComptes(StatutDemandeRapprochement? statut)
+    {
+        var query = db.DemandesRapprochementComptes
+            .Include(r => r.User)
+            .Include("Scout.Groupe")
+            .Include("Scout.Branche")
+            .Include(r => r.TraitePar)
+            .AsQueryable();
+
+        if (statut.HasValue)
+        {
+            query = query.Where(r => r.Statut == statut.Value);
+        }
+
+        ViewBag.Statut = statut;
+        return View(await query
+            .OrderBy(r => r.Statut == StatutDemandeRapprochement.EnAttente ? 0 : 1)
+            .ThenByDescending(r => r.DateCreation)
+            .ToListAsync());
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ApprouverRapprochement(Guid id)
+    {
+        var demande = await db.DemandesRapprochementComptes
+            .Include(r => r.User)
+            .Include(r => r.Scout)
+            .FirstOrDefaultAsync(r => r.Id == id);
+        if (demande is null)
+        {
+            TempData["Error"] = "Demande de rapprochement introuvable.";
+            return RedirectToAction(nameof(RapprochementsComptes));
+        }
+
+        if (demande.Statut != StatutDemandeRapprochement.EnAttente)
+        {
+            TempData["Error"] = "Cette demande a deja ete traitee.";
+            return RedirectToAction(nameof(RapprochementsComptes));
+        }
+
+        if (demande.Scout is not null)
+        {
+            if (demande.Scout.UserId.HasValue && demande.Scout.UserId.Value != demande.UserId)
+            {
+                TempData["Error"] = "La fiche scout cible est deja rattachee a un autre compte.";
+                return RedirectToAction(nameof(RapprochementsComptes));
+            }
+
+            demande.Scout.UserId = demande.UserId;
+            demande.User.Matricule = demande.Scout.Matricule;
+            demande.User.GroupeId = demande.Scout.GroupeId;
+            demande.User.BrancheId = demande.Scout.BrancheId;
+        }
+
+        demande.User.IsActive = true;
+        demande.Statut = StatutDemandeRapprochement.Approuvee;
+        demande.DateTraitement = DateTime.UtcNow;
+        demande.TraiteParId = Guid.Parse(userManager.GetUserId(User)!);
+        await db.SaveChangesAsync();
+
+        TempData["Success"] = $"Compte de {demande.User.Prenom} {demande.User.Nom} rapproche et active.";
+        return RedirectToAction(nameof(RapprochementsComptes));
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "Administrateur,Gestionnaire")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RejeterRapprochement(Guid id, string? motif)
+    {
+        var demande = await db.DemandesRapprochementComptes
+            .Include(r => r.User)
+            .FirstOrDefaultAsync(r => r.Id == id);
+        if (demande is null)
+        {
+            TempData["Error"] = "Demande de rapprochement introuvable.";
+            return RedirectToAction(nameof(RapprochementsComptes));
+        }
+
+        if (demande.Statut != StatutDemandeRapprochement.EnAttente)
+        {
+            TempData["Error"] = "Cette demande a deja ete traitee.";
+            return RedirectToAction(nameof(RapprochementsComptes));
+        }
+
+        demande.Statut = StatutDemandeRapprochement.Rejetee;
+        demande.DateTraitement = DateTime.UtcNow;
+        demande.TraiteParId = Guid.Parse(userManager.GetUserId(User)!);
+        demande.Details = string.IsNullOrWhiteSpace(motif)
+            ? demande.Details
+            : $"{demande.Details}\nMotif de rejet : {motif.Trim()}";
+        demande.User.IsActive = false;
+        await userManager.UpdateSecurityStampAsync(demande.User);
+        await db.SaveChangesAsync();
+
+        TempData["Success"] = $"Demande de rapprochement rejetee pour {demande.User.Prenom} {demande.User.Nom}.";
+        return RedirectToAction(nameof(RapprochementsComptes));
     }
 
     [HttpPost]
@@ -1031,7 +1335,10 @@ public class AccountController(
         {
             Id = Guid.NewGuid(),
             Code = $"MT-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..6].ToUpper()}",
-            CreateurId = userId
+            CreateurId = userId,
+            RoleCible = "Gestionnaire",
+            EstActif = true,
+            DateExpiration = DateTime.UtcNow.AddDays(30)
         };
         db.CodesInvitation.Add(code);
         await db.SaveChangesAsync();

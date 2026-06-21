@@ -1,0 +1,115 @@
+@model List<MangoTaika.Data.Entities.DemandeRapprochementCompte>
+@using MangoTaika.Data.Entities
+@{
+    ViewData["Title"] = "Rapprochements de comptes";
+    Layout = "_LayoutAdmin";
+    var statut = ViewBag.Statut as StatutDemandeRapprochement?;
+    string BadgeClass(StatutDemandeRapprochement s) => s switch
+    {
+        StatutDemandeRapprochement.EnAttente => "badge-soumise",
+        StatutDemandeRapprochement.Approuvee => "badge-validee",
+        StatutDemandeRapprochement.Rejetee => "badge-rejetee",
+        _ => "badge-brouillon"
+    };
+    string StatutLabel(StatutDemandeRapprochement s) => s switch
+    {
+        StatutDemandeRapprochement.EnAttente => "En attente",
+        StatutDemandeRapprochement.Approuvee => "Approuvee",
+        StatutDemandeRapprochement.Rejetee => "Rejetee",
+        _ => s.ToString()
+    };
+}
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div>
+        <h2 class="section-title mb-1"><i class="bi bi-person-check-fill text-or"></i> Rapprochements de <span class="accent">comptes</span></h2>
+        <p class="text-muted-custom mb-0">Validez les comptes crees avec des informations incompletes ou differentes de la fiche existante.</p>
+    </div>
+    <a asp-action="Utilisateurs" class="btn btn-outline-or"><i class="bi bi-people"></i> Utilisateurs</a>
+</div>
+
+<div class="d-flex flex-wrap gap-2 mb-4">
+    <a asp-action="RapprochementsComptes" class="btn @(statut is null ? "btn-mango" : "btn-outline-or")">Tous</a>
+    <a asp-action="RapprochementsComptes" asp-route-statut="@StatutDemandeRapprochement.EnAttente" class="btn @(statut == StatutDemandeRapprochement.EnAttente ? "btn-mango" : "btn-outline-or")">En attente</a>
+    <a asp-action="RapprochementsComptes" asp-route-statut="@StatutDemandeRapprochement.Approuvee" class="btn @(statut == StatutDemandeRapprochement.Approuvee ? "btn-mango" : "btn-outline-or")">Approuvees</a>
+    <a asp-action="RapprochementsComptes" asp-route-statut="@StatutDemandeRapprochement.Rejetee" class="btn @(statut == StatutDemandeRapprochement.Rejetee ? "btn-mango" : "btn-outline-or")">Rejetees</a>
+</div>
+
+<div class="row g-4">
+    @foreach (var item in Model)
+    {
+        <div class="col-lg-6">
+            <div class="card-3d p-4 h-100">
+                <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                    <div>
+                        <h5 class="text-or mb-1">@item.User.Prenom @item.User.Nom</h5>
+                        <div class="d-flex flex-wrap gap-1">
+                            <span class="badge-3d @BadgeClass(item.Statut)">@StatutLabel(item.Statut)</span>
+                            <span class="badge-3d badge-brouillon">@item.RoleDemande</span>
+                        </div>
+                    </div>
+                    <small class="text-muted-custom">@item.DateCreation.ToString("dd/MM/yyyy HH:mm")</small>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <div class="small text-muted-custom">Compte demandeur</div>
+                        <div><i class="bi bi-telephone text-bleu"></i> @item.User.PhoneNumber</div>
+                        <div><i class="bi bi-envelope text-or"></i> @(item.User.Email ?? "-")</div>
+                        <div><i class="bi bi-hash text-or"></i> @(item.User.Matricule ?? "Sans matricule")</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="small text-muted-custom">Fiche cible</div>
+                        @if (item.Scout is null)
+                        {
+                            <div>Pas de fiche scout cible.</div>
+                        }
+                        else
+                        {
+                            <div><strong>@item.Scout.Prenom @item.Scout.Nom</strong></div>
+                            <div><i class="bi bi-hash text-or"></i> @(item.Scout.Matricule ?? "-")</div>
+                            <div><i class="bi bi-building text-bleu"></i> @(item.Scout.Groupe?.Nom ?? "-")</div>
+                            <div><i class="bi bi-diagram-3 text-bleu"></i> @(item.Scout.Branche?.Nom ?? "-")</div>
+                        }
+                    </div>
+                </div>
+
+                <div class="p-3 mb-3" style="border-radius:14px;background:rgba(89,117,55,0.08);border:1px solid rgba(89,117,55,0.18);">
+                    <strong>@item.Motif</strong>
+                    @if (!string.IsNullOrWhiteSpace(item.Details))
+                    {
+                        <p class="text-muted-custom mb-0 mt-1" style="white-space:pre-line;">@item.Details</p>
+                    }
+                </div>
+
+                @if (item.TraitePar is not null && item.DateTraitement.HasValue)
+                {
+                    <p class="text-muted-custom small mb-3">Traitee par @item.TraitePar.Prenom @item.TraitePar.Nom le @item.DateTraitement.Value.ToString("dd/MM/yyyy HH:mm")</p>
+                }
+
+                @if (item.Statut == StatutDemandeRapprochement.EnAttente)
+                {
+                    <div class="d-flex flex-wrap gap-2">
+                        <form asp-action="ApprouverRapprochement" asp-route-id="@item.Id" method="post">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-mango" onclick="return confirm('Approuver ce rapprochement et activer le compte ?');">
+                                <i class="bi bi-check2-circle"></i> Approuver
+                            </button>
+                        </form>
+                        <form asp-action="RejeterRapprochement" asp-route-id="@item.Id" method="post" onsubmit="const motif = prompt('Motif de rejet :'); if (!motif) return false; this.querySelector('[name=motif]').value = motif;">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="motif" />
+                            <button type="submit" class="btn btn-outline-danger">
+                                <i class="bi bi-x-circle"></i> Rejeter
+                            </button>
+                        </form>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    @if (!Model.Any())
+    {
+        <div class="col-12 text-center text-muted-custom py-5">Aucune demande de rapprochement.</div>
+    }
+</div>

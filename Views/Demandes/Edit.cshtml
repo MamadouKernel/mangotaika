@@ -1,22 +1,25 @@
 @model DemandeAutorisationCreateDto
 @using MangoTaika.Data.Entities
 @{
-    ViewData["Title"] = "Nouvelle demande d'autorisation";
+    ViewData["Title"] = "Modifier la demande";
     Layout = "_LayoutAdmin";
     var groupes = ViewBag.Groupes as List<Groupe> ?? new();
     var branches = ViewBag.Branches as List<Branche> ?? new();
-    var groupeVerrouille = ViewBag.GroupeVerrouille as bool? == true;
+    var demandeId = ViewBag.DemandeId as Guid? ?? Guid.Empty;
+    var documents = ViewBag.ExistingDocuments as List<DocumentDemandeAutorisation> ?? new();
 }
 
-<h2 class="section-title mb-1"><i class="bi bi-file-earmark-plus-fill text-or"></i> Nouvelle <span class="accent">demande d'autorisation d'activite</span></h2>
+<h2 class="section-title mb-1"><i class="bi bi-pencil-square text-or"></i> Modifier <span class="accent">la demande d'autorisation</span></h2>
 <div class="section-divider"></div>
 
 <div class="card-3d p-4 mt-3">
     <div class="mb-4">
-        <p class="text-muted-custom mb-1">Cette demande est soumise au validateur competent : chef de groupe pour une demande de chef d'unite, commissaire de district pour les autres demandes.</p>
+        <p class="text-muted-custom mb-1">
+            Mettez a jour la demande, ajoutez les pieces justificatives utiles, puis soumettez-la a nouveau depuis la page detail.
+        </p>
     </div>
 
-    <form asp-action="Create" method="post" class="form-modern" enctype="multipart/form-data" novalidate>
+    <form asp-action="Edit" asp-route-id="@demandeId" method="post" class="form-modern" enctype="multipart/form-data" novalidate>
         <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
 
         <div class="row">
@@ -118,19 +121,35 @@
         </div>
 
         <div class="mb-3 p-3" style="border:1px solid var(--gris-border);border-radius:14px;background:rgba(89,117,55,0.05);">
-            <label asp-for="Documents" class="form-label mb-1">Pieces jointes (optionnel)</label>
+            <label asp-for="Documents" class="form-label mb-1">Ajouter des pieces jointes</label>
             <input asp-for="Documents" class="form-control" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt" />
             <span asp-validation-for="Documents" class="text-danger small"></span>
             <div class="form-text text-muted-custom">
-                Ajoutez les documents utiles a la validation : TDR, budget, autorisations, listes ou tout justificatif. Formats acceptes : PDF, Word, Excel, CSV ou TXT. Taille maximale : 15 Mo par fichier.
+                Les nouvelles pieces seront rattachees a la demande et seront reprises automatiquement dans l'activite si la demande est validee.
             </div>
         </div>
+
+        @if (documents.Any())
+        {
+            <div class="mb-3 p-3" style="border:1px solid var(--gris-border);border-radius:14px;background:rgba(248,250,252,0.72);">
+                <div class="fw-semibold mb-2"><i class="bi bi-paperclip"></i> Pieces deja jointes</div>
+                <div class="d-grid gap-2">
+                    @foreach (var document in documents)
+                    {
+                        <a href="@document.CheminFichier" target="_blank" rel="noopener" class="text-decoration-none" style="color:var(--texte);">
+                            <i class="bi bi-file-earmark-text text-or"></i> @document.NomFichier
+                            <span class="text-muted-custom small">(@document.DateUpload.ToString("dd/MM/yyyy HH:mm"))</span>
+                        </a>
+                    }
+                </div>
+            </div>
+        }
 
         <partial name="_ConsentementARTCI" />
 
         <div class="d-flex gap-2 flex-wrap mt-3">
-            <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Creer la demande</button>
-            <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
+            <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Enregistrer les modifications</button>
+            <a asp-action="Details" asp-route-id="@demandeId" class="btn btn-outline-or">Retour au detail</a>
         </div>
     </form>
 </div>
@@ -167,4 +186,3 @@
         })();
     </script>
 }
-

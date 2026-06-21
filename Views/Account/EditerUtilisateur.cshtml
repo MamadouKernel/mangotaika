@@ -10,73 +10,109 @@
     <a asp-action="UtilisateurDetails" asp-route-id="@Model.Id" class="btn btn-outline-or btn-sm" title="Fiche"><i class="bi bi-eye"></i></a>
 </div>
 
-<div class="card-3d p-4" style="max-width:640px;">
+<div class="card-3d p-4 user-edit-card">
     <form asp-action="EditerUtilisateur" asp-route-id="@Model.Id" method="post">
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="Id" />
         <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
 
-        <div class="mb-3">
-            <label asp-for="Prenom" class="form-label small"></label>
-            <input asp-for="Prenom" class="form-control" />
-            <span asp-validation-for="Prenom" class="text-danger small"></span>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="Prenom" class="form-label small"></label>
+                <input asp-for="Prenom" class="form-control" />
+                <span asp-validation-for="Prenom" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Nom" class="form-label small"></label>
+                <input asp-for="Nom" class="form-control" />
+                <span asp-validation-for="Nom" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Email" class="form-label small"></label>
+                <input asp-for="Email" class="form-control" />
+                <span asp-validation-for="Email" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Telephone" class="form-label small"></label>
+                <input asp-for="Telephone" class="form-control" />
+                <span asp-validation-for="Telephone" class="text-danger small"></span>
+            </div>
         </div>
-        <div class="mb-3">
-            <label asp-for="Nom" class="form-label small"></label>
-            <input asp-for="Nom" class="form-control" />
-            <span asp-validation-for="Nom" class="text-danger small"></span>
-        </div>
-        <div class="mb-3">
-            <label asp-for="Email" class="form-label small"></label>
-            <input asp-for="Email" class="form-control" />
-            <span asp-validation-for="Email" class="text-danger small"></span>
-        </div>
-        <div class="mb-3">
-            <label asp-for="Telephone" class="form-label small"></label>
-            <input asp-for="Telephone" class="form-control" />
-            <span asp-validation-for="Telephone" class="text-danger small"></span>
-        </div>
-        <div class="mb-3">
-            <label class="form-label small fw-semibold">Rôles</label>
-            <div class="roles-checkbox-grid">
+
+        <div class="mt-4">
+            <label class="form-label small fw-semibold">Roles</label>
+            <div class="role-assignment-hint mb-2" data-role-admin-hint>
+                <i class="bi bi-info-circle"></i>
+                <span>Un utilisateur peut cumuler plusieurs roles. Le role Administrateur est exclusif et donne deja tous les acces.</span>
+            </div>
+
+            <div class="roles-checkbox-grid role-assignment-grid" data-role-assignment>
                 @foreach (var r in roles)
                 {
-                    var label = r switch {
-                        "Parent"               => "Parent / Tuteur",
-                        "CommissaireDistrict"  => "Commissaire de District",
-                        "EquipeDistrict"       => "Equipe de District",
-                        "ChefGroupe"           => "Chef de Groupe",
-                        "ChefUnite"            => "Chef d'Unite",
-                        _                      => r
+                    var label = r switch
+                    {
+                        "Parent" => "Parent / Tuteur",
+                        "CommissaireDistrict" => "Commissaire de District",
+                        "CommissaireDistrictAdjoint" => "Commissaire de District Adjoint",
+                        "AssistantCommissaireDistrict" => "Assistant Commissaire de District",
+                        "EquipeDistrict" => "Equipe de District",
+                        "ChefGroupe" => "Chef de Groupe",
+                        "ChefUnite" => "Chef d'Unite",
+                        _ => r
                     };
-                    <div class="form-check">
+                    var isAdminRole = r == "Administrateur";
+
+                    <div class="form-check role-choice @(isAdminRole ? "role-choice--admin" : null)">
                         <input class="form-check-input" type="checkbox" name="Roles" value="@r"
-                               id="role_@r" @(Model.Roles.Contains(r) ? "checked" : "") />
-                        <label class="form-check-label" for="role_@r">@label</label>
+                               id="role_@r"
+                               data-admin-role="@isAdminRole.ToString().ToLowerInvariant()"
+                               @(Model.Roles.Contains(r) ? "checked" : "") />
+                        <label class="form-check-label" for="role_@r">
+                            <strong>@label</strong>
+                            @if (isAdminRole)
+                            {
+                                <small>Acces total, non cumulable</small>
+                            }
+                        </label>
                     </div>
                 }
             </div>
             <span class="text-danger small">@ViewData.ModelState["Roles"]?.Errors.FirstOrDefault()?.ErrorMessage</span>
         </div>
-        <div class="mb-3 form-check">
+
+        <div class="role-critical-confirm mt-3" data-role-critical-confirm>
+            <div class="form-check">
+                <input asp-for="ConfirmerActionCritique" class="form-check-input" />
+                <label asp-for="ConfirmerActionCritique" class="form-check-label">
+                    Je confirme cette action critique sur les droits d'administration.
+                </label>
+            </div>
+            <small>Cette confirmation est requise pour attribuer, conserver ou retirer le role Administrateur.</small>
+            <span asp-validation-for="ConfirmerActionCritique" class="text-danger small d-block"></span>
+        </div>
+
+        <div class="mt-3 form-check">
             <input asp-for="IsActive" class="form-check-input" />
             <label asp-for="IsActive" class="form-check-label"></label>
             <span asp-validation-for="IsActive" class="text-danger small d-block"></span>
         </div>
+
         <hr class="my-4" style="border-color:var(--gris-border);" />
-        <p class="text-muted-custom small mb-2">Réinitialisation du mot de passe (laisser vide pour ne pas changer)</p>
-        <div class="mb-3">
-            <label asp-for="NouveauMotDePasse" class="form-label small"></label>
-            <input asp-for="NouveauMotDePasse" class="form-control" autocomplete="new-password" />
-            <span asp-validation-for="NouveauMotDePasse" class="text-danger small"></span>
-        </div>
-        <div class="mb-4">
-            <label asp-for="ConfirmationMotDePasse" class="form-label small"></label>
-            <input asp-for="ConfirmationMotDePasse" class="form-control" autocomplete="new-password" />
-            <span asp-validation-for="ConfirmationMotDePasse" class="text-danger small"></span>
+        <p class="text-muted-custom small mb-2">Reinitialisation du mot de passe (laisser vide pour ne pas changer)</p>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="NouveauMotDePasse" class="form-label small"></label>
+                <input asp-for="NouveauMotDePasse" class="form-control" autocomplete="new-password" />
+                <span asp-validation-for="NouveauMotDePasse" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="ConfirmationMotDePasse" class="form-label small"></label>
+                <input asp-for="ConfirmationMotDePasse" class="form-control" autocomplete="new-password" />
+                <span asp-validation-for="ConfirmationMotDePasse" class="text-danger small"></span>
+            </div>
         </div>
 
-        <div class="d-flex flex-wrap gap-2">
+        <div class="d-flex flex-wrap gap-2 mt-4">
             <button type="submit" class="btn btn-mango" title="Enregistrer"><i class="bi bi-check-lg"></i></button>
             <a asp-action="UtilisateurDetails" asp-route-id="@Model.Id" class="btn btn-outline-secondary" title="Annuler"><i class="bi bi-x-lg"></i></a>
         </div>
@@ -85,4 +121,34 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const root = document.querySelector('[data-role-assignment]');
+            if (!root) return;
+
+            const admin = root.querySelector('[data-admin-role="true"]');
+            const others = [...root.querySelectorAll('input[type="checkbox"]:not([data-admin-role="true"])')];
+            const hint = document.querySelector('[data-role-admin-hint]');
+            const criticalConfirm = document.querySelector('[data-role-critical-confirm]');
+
+            const sync = () => {
+                const adminChecked = admin?.checked === true;
+                others.forEach(input => {
+                    input.disabled = adminChecked;
+                    input.closest('.role-choice')?.classList.toggle('is-disabled-by-admin', adminChecked);
+                    if (adminChecked) input.checked = false;
+                });
+                hint?.classList.toggle('is-admin-exclusive', adminChecked);
+                criticalConfirm?.classList.toggle('is-visible', adminChecked);
+            };
+
+            admin?.addEventListener('change', sync);
+            others.forEach(input => input.addEventListener('change', () => {
+                if (input.checked && admin) admin.checked = false;
+                sync();
+            }));
+
+            sync();
+        })();
+    </script>
 }

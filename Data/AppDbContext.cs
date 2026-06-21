@@ -29,6 +29,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<Galerie> Galeries => Set<Galerie>();
     public DbSet<MotCommissaire> MotsCommissaire => Set<MotCommissaire>();
     public DbSet<DemandeAutorisation> DemandesAutorisation => Set<DemandeAutorisation>();
+    public DbSet<DocumentDemandeAutorisation> DocumentsDemandesAutorisation => Set<DocumentDemandeAutorisation>();
     public DbSet<SuiviDemande> SuivisDemande => Set<SuiviDemande>();
     public DbSet<DemandeGroupe> DemandesGroupe => Set<DemandeGroupe>();
     public DbSet<MembreHistorique> MembresHistoriques => Set<MembreHistorique>();
@@ -70,6 +71,10 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<UniteScoute> UnitesScoutes => Set<UniteScoute>();
     public DbSet<RoleUniteScoute> RolesUnitesScoutes => Set<RoleUniteScoute>();
     public DbSet<AffectationUniteScoute> AffectationsUnitesScoutes => Set<AffectationUniteScoute>();
+    public DbSet<Permission> Permissions => Set<Permission>();
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<SecurityAuditLog> SecurityAuditLogs => Set<SecurityAuditLog>();
+    public DbSet<DemandeRapprochementCompte> DemandesRapprochementComptes => Set<DemandeRapprochementCompte>();
 
     // LMS
     public DbSet<Formation> Formations => Set<Formation>();
@@ -114,6 +119,45 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasOne(s => s.Branche).WithMany(b => b.Scouts).HasForeignKey(s => s.BrancheId);
             e.HasMany(s => s.Parents).WithMany(p => p.Scouts);
             e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        builder.Entity<Permission>(e =>
+        {
+            e.Property(p => p.Code).HasMaxLength(160);
+            e.Property(p => p.Libelle).HasMaxLength(180);
+            e.Property(p => p.Module).HasMaxLength(80);
+            e.HasIndex(p => p.Code).IsUnique();
+        });
+
+        builder.Entity<RolePermission>(e =>
+        {
+            e.HasIndex(rp => new { rp.RoleId, rp.PermissionId }).IsUnique();
+            e.HasOne(rp => rp.Role).WithMany().HasForeignKey(rp => rp.RoleId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(rp => rp.Permission).WithMany(p => p.RolePermissions).HasForeignKey(rp => rp.PermissionId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<SecurityAuditLog>(e =>
+        {
+            e.Property(a => a.Action).HasMaxLength(120);
+            e.Property(a => a.AncienneValeur).HasMaxLength(1200);
+            e.Property(a => a.NouvelleValeur).HasMaxLength(1200);
+            e.Property(a => a.Commentaire).HasMaxLength(1200);
+            e.Property(a => a.AdresseIp).HasMaxLength(80);
+            e.HasIndex(a => new { a.UtilisateurCibleId, a.DateCreation });
+            e.HasOne(a => a.Auteur).WithMany().HasForeignKey(a => a.AuteurId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(a => a.UtilisateurCible).WithMany().HasForeignKey(a => a.UtilisateurCibleId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<DemandeRapprochementCompte>(e =>
+        {
+            e.Property(r => r.RoleDemande).HasMaxLength(80);
+            e.Property(r => r.Motif).HasMaxLength(320);
+            e.Property(r => r.Details).HasMaxLength(1600);
+            e.HasIndex(r => new { r.Statut, r.DateCreation });
+            e.HasIndex(r => r.UserId);
+            e.HasOne(r => r.User).WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(r => r.Scout).WithMany().HasForeignKey(r => r.ScoutId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(r => r.TraitePar).WithMany().HasForeignKey(r => r.TraiteParId).OnDelete(DeleteBehavior.SetNull);
         });
 
         builder.Entity<Parent>(e =>
@@ -257,6 +301,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         {
             e.HasOne(d => d.Demandeur).WithMany().HasForeignKey(d => d.DemandeurId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(d => d.Valideur).WithMany().HasForeignKey(d => d.ValideurId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(d => d.ValideurChefGroupe).WithMany().HasForeignKey(d => d.ValideurChefGroupeId).OnDelete(DeleteBehavior.SetNull);
             e.HasOne(d => d.Groupe).WithMany().HasForeignKey(d => d.GroupeId);
             e.HasOne(d => d.Branche).WithMany().HasForeignKey(d => d.BrancheId).OnDelete(DeleteBehavior.SetNull);
             e.HasMany(d => d.Suivis).WithOne(s => s.Demande).HasForeignKey(s => s.DemandeId).OnDelete(DeleteBehavior.Cascade);
@@ -301,6 +346,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         builder.Entity<CodeInvitation>(e =>
         {
             e.Property(c => c.Code).HasColumnType("citext");
+            e.Property(c => c.RoleCible).HasMaxLength(80).HasDefaultValue("Gestionnaire");
+            e.Property(c => c.EstActif).HasDefaultValue(true);
             e.HasIndex(c => c.Code).IsUnique();
             e.HasOne(c => c.Createur).WithMany().HasForeignKey(c => c.CreateurId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(c => c.UtilisePar).WithMany().HasForeignKey(c => c.UtilisePaId).OnDelete(DeleteBehavior.Restrict);
@@ -503,6 +550,14 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasOne(d => d.RegionScoute).WithMany(r => r.Districts).HasForeignKey(d => d.RegionScouteId).OnDelete(DeleteBehavior.SetNull);
         });
 
+        builder.Entity<DemandeAutorisation>(e =>
+        {
+            e.HasMany(d => d.Documents)
+                .WithOne(doc => doc.Demande)
+                .HasForeignKey(doc => doc.DemandeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         // === LMS ===
 
         // Formation
@@ -631,6 +686,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         builder.Entity<Competence>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<ContactMessage>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<DocumentActivite>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<DocumentDemandeAutorisation>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<EtapeParcoursScout>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<Formation>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<Galerie>().HasQueryFilter(e => !e.EstSupprime);

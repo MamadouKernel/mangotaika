@@ -5,6 +5,8 @@
     Layout = "_LayoutAdmin";
     var canValidateDistrict = ViewBag.CanValidateDistrict as bool? == true;
     var canSubmit = ViewBag.CanSubmit as bool? == true;
+    var canEdit = ViewBag.CanEdit as bool? == true;
+    var canManageDocuments = ViewBag.CanManageDocuments as bool? == true;
     var validationTarget = ViewBag.ValidationTarget as string ?? "Commissaire de district";
 
     var badgeClass = Model.Statut switch
@@ -26,6 +28,10 @@
         StatutDemande.Rejetee => "Rejetee",
         _ => Model.Statut.ToString()
     };
+    var isCampRequest = Model.TypeActivite == TypeActiviteDemande.Camp;
+    var isSubmitted = Model.Statut != StatutDemande.Initialisee;
+    var isWorkflowClosed = Model.Statut == StatutDemande.Validee || Model.Statut == StatutDemande.Rejetee;
+    var districtStepLabel = isCampRequest ? "District requis" : "Non requis";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -45,14 +51,53 @@
                 <div class="alert d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4" style="background:rgba(89,117,55,0.08);border:1px solid rgba(89,117,55,0.22);border-radius:14px;color:var(--texte);">
                     <div>
                         <strong>Transmission en attente</strong>
-                        <div class="small text-muted-custom">Cette demande doit etre soumise au @validationTarget pour entrer dans le circuit de validation.</div>
+                        <div class="small text-muted-custom">Cette demande doit etre corrigee si necessaire, puis soumise au @validationTarget pour entrer dans le circuit de validation.</div>
                     </div>
-                    <form asp-action="Soumettre" asp-route-id="@Model.Id" method="post" class="mb-0">
-                        @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-mango"><i class="bi bi-send"></i> Soumettre</button>
-                    </form>
+                    <div class="d-flex gap-2 flex-wrap">
+                        @if (canEdit)
+                        {
+                            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-or"><i class="bi bi-pencil-square"></i> Modifier</a>
+                        }
+                        <form asp-action="Soumettre" asp-route-id="@Model.Id" method="post" class="mb-0">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-mango"><i class="bi bi-send"></i> Soumettre</button>
+                        </form>
+                    </div>
                 </div>
             }
+
+            <div class="mb-4 p-3" style="border:1px solid var(--gris-border);border-radius:16px;background:rgba(248,250,252,0.72);">
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <strong style="color:var(--bleu-gris);"><i class="bi bi-diagram-3"></i> Circuit de validation</strong>
+                    <span class="text-muted-custom small">Les camps passent au district apres le chef de groupe.</span>
+                </div>
+                <div class="row g-2">
+                    <div class="col-md-3 col-6">
+                        <div class="p-3 h-100" style="border-radius:14px;background:rgba(89,117,55,0.12);border:1px solid rgba(89,117,55,0.22);">
+                            <div class="small text-muted-custom">Etape 1</div>
+                            <strong><i class="bi bi-check-circle-fill text-or"></i> Creation</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="p-3 h-100" style="border-radius:14px;background:@(isSubmitted ? "rgba(89,117,55,0.12)" : "rgba(148,163,184,0.08)");border:1px solid @(isSubmitted ? "rgba(89,117,55,0.22)" : "rgba(148,163,184,0.22)");">
+                            <div class="small text-muted-custom">Etape 2</div>
+                            <strong><i class="bi @(isSubmitted ? "bi-check-circle-fill text-or" : "bi-circle text-muted-custom")"></i> Soumission</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="p-3 h-100" style="border-radius:14px;background:@(Model.ChefGroupeValidee ? "rgba(89,117,55,0.12)" : Model.Statut == StatutDemande.Soumise && !Model.ChefGroupeValidee ? "rgba(234,179,8,0.14)" : "rgba(148,163,184,0.08)");border:1px solid @(Model.ChefGroupeValidee ? "rgba(89,117,55,0.22)" : Model.Statut == StatutDemande.Soumise && !Model.ChefGroupeValidee ? "rgba(234,179,8,0.35)" : "rgba(148,163,184,0.22)");">
+                            <div class="small text-muted-custom">Etape 3</div>
+                            <strong><i class="bi @(Model.ChefGroupeValidee ? "bi-check-circle-fill text-or" : "bi-hourglass-split text-muted-custom")"></i> Chef de groupe</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="p-3 h-100" style="border-radius:14px;background:@(isCampRequest && Model.ChefGroupeValidee && Model.Statut == StatutDemande.Soumise ? "rgba(234,179,8,0.14)" : isWorkflowClosed ? "rgba(89,117,55,0.12)" : "rgba(148,163,184,0.08)");border:1px solid @(isCampRequest && Model.ChefGroupeValidee && Model.Statut == StatutDemande.Soumise ? "rgba(234,179,8,0.35)" : isWorkflowClosed ? "rgba(89,117,55,0.22)" : "rgba(148,163,184,0.22)");">
+                            <div class="small text-muted-custom">Etape 4</div>
+                            <strong><i class="bi @(isWorkflowClosed ? "bi-check-circle-fill text-or" : isCampRequest ? "bi-building-check text-muted-custom" : "bi-dash-circle text-muted-custom")"></i> @districtStepLabel</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <div class="row mb-3">
                 <div class="col-md-6"><p><span class="text-muted-custom">Type :</span> @Model.TypeActivite</p></div>
@@ -94,6 +139,21 @@
                     <i class="bi bi-exclamation-triangle-fill"></i> Motif de rejet : @Model.MotifRejet
                 </div>
             }
+            @if (Model.ChefGroupeValidee)
+            {
+                <div class="alert" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.28);border-radius:12px;color:#166534;">
+                    <i class="bi bi-check2-circle"></i>
+                    Validation chef de groupe effectuee
+                    @if (!string.IsNullOrWhiteSpace(Model.NomValideurChefGroupe))
+                    {
+                        <span>par <strong>@Model.NomValideurChefGroupe</strong></span>
+                    }
+                    @if (Model.DateValidationChefGroupe.HasValue)
+                    {
+                        <span>le @Model.DateValidationChefGroupe.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                    }
+                </div>
+            }
 
             <hr style="border-color:var(--gris-border);" />
             <p class="text-muted-custom small mb-1">Demandeur : @(Model.NomDemandeur ?? "-")</p>
@@ -105,6 +165,10 @@
             <div class="d-flex gap-2 mt-3 flex-wrap">
                 @if (canSubmit && (Model.Statut == StatutDemande.Initialisee || Model.Statut == StatutDemande.EnRevision))
                 {
+                    @if (canEdit)
+                    {
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-or"><i class="bi bi-pencil-square"></i> Modifier la demande</a>
+                    }
                     <form asp-action="Soumettre" asp-route-id="@Model.Id" method="post">
                         @Html.AntiForgeryToken()
                         <button type="submit" class="btn btn-mango"><i class="bi bi-send"></i> Soumettre</button>
@@ -137,15 +201,110 @@
         @if (!string.IsNullOrWhiteSpace(Model.TdrContenu))
         {
             <div class="card-3d p-4 mt-4">
-                <h5 class="text-or mb-3"><i class="bi bi-file-text"></i> Termes de reference (TDR)</h5>
+                <div class="d-flex align-items-start justify-content-between gap-3 mb-3 flex-wrap">
+                    <div>
+                        <h5 class="text-or mb-1"><i class="bi bi-file-text"></i> Termes de reference (TDR)</h5>
+                        <p class="text-muted-custom small mb-0">Document genere automatiquement a partir de la demande.</p>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a asp-action="ExportTdrWord" asp-route-id="@Model.Id" class="btn btn-outline-or btn-sm">
+                            <i class="bi bi-file-earmark-word"></i> Word
+                        </a>
+                        <a asp-action="ExportTdrPdf" asp-route-id="@Model.Id" class="btn btn-outline-or btn-sm">
+                            <i class="bi bi-file-earmark-pdf"></i> PDF
+                        </a>
+                    </div>
+                </div>
                 <pre style="white-space:pre-wrap;font-family:'Poppins',sans-serif;font-size:0.85rem;color:var(--texte-secondaire);background:var(--gris-bg);padding:1.5rem;border-radius:12px;">@Model.TdrContenu</pre>
             </div>
         }
+
+        <div class="card-3d p-4 mt-4">
+            <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+                <div>
+                    <h5 class="text-or mb-1"><i class="bi bi-paperclip"></i> Pieces jointes</h5>
+                    <p class="text-muted-custom small mb-0">Documents rattaches a la demande et repris dans l'activite apres validation.</p>
+                </div>
+                <span class="badge-3d badge-brouillon">@Model.Documents.Count</span>
+            </div>
+
+            @if (Model.Documents.Any())
+            {
+                <div class="d-grid gap-2 mb-3">
+                    @foreach (var document in Model.Documents)
+                    {
+                        <div class="d-flex align-items-center justify-content-between gap-3 p-3" style="border:1px solid var(--gris-border);border-radius:14px;background:rgba(255,255,255,0.78);">
+                            <div class="d-flex align-items-center gap-3 min-w-0">
+                                <span class="d-inline-flex align-items-center justify-content-center" style="width:42px;height:42px;border-radius:12px;background:rgba(89,117,55,0.1);color:#597537;">
+                                    <i class="bi bi-file-earmark-text"></i>
+                                </span>
+                                <div class="min-w-0">
+                                    <a href="@document.CheminFichier" target="_blank" rel="noopener" class="fw-semibold text-decoration-none" style="color:var(--texte);">@document.NomFichier</a>
+                                    <div class="text-muted-custom small">@(!string.IsNullOrWhiteSpace(document.TypeDocument) ? document.TypeDocument : "Piece jointe") - @document.DateUpload.ToString("dd/MM/yyyy HH:mm")</div>
+                                </div>
+                            </div>
+                            @if (canManageDocuments)
+                            {
+                                <form asp-action="SupprimerDocument" asp-route-id="@Model.Id" asp-route-documentId="@document.Id" method="post" class="mb-0" onsubmit="return confirm('Retirer cette piece jointe de la demande ?');">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm" title="Retirer" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.25);border-radius:12px;">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="alert mb-3" style="background:rgba(148,163,184,0.08);border:1px solid rgba(148,163,184,0.22);border-radius:14px;color:var(--texte-secondaire);">
+                    Aucun document joint a cette demande.
+                </div>
+            }
+
+            @if (canManageDocuments)
+            {
+                <form asp-action="AjouterDocument" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data" class="row g-2 align-items-end">
+                    @Html.AntiForgeryToken()
+                    <div class="col-md-5">
+                        <label class="form-label small">Type de document</label>
+                        <input name="typeDocument" class="form-control" placeholder="Ex: TDR, Budget, Autorisation" />
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label small">Document</label>
+                        <input name="fichier" class="form-control" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt" required />
+                    </div>
+                    <div class="col-md-2 d-grid">
+                        <button type="submit" class="btn btn-mango"><i class="bi bi-upload"></i> Ajouter</button>
+                    </div>
+                    <div class="col-12">
+                        <p class="text-muted-custom small mb-0">Possible uniquement tant que la demande est initialisee ou en revision.</p>
+                    </div>
+                </form>
+            }
+        </div>
     </div>
 
     <div class="col-lg-4">
         <div class="card-3d p-4">
             <h5 class="text-or mb-3"><i class="bi bi-clock-history"></i> Suivi de la demande</h5>
+            <div class="mb-4 p-3" style="border-radius:16px;background:rgba(89,117,55,0.08);border:1px solid rgba(89,117,55,0.16);">
+                <div class="small text-muted-custom mb-1">Prochaine action</div>
+                <strong style="color:var(--bleu-gris);">
+                    @(Model.Statut == StatutDemande.Initialisee || Model.Statut == StatutDemande.EnRevision
+                        ? "Soumettre la demande"
+                        : Model.Statut == StatutDemande.Soumise && !Model.ChefGroupeValidee
+                            ? "Validation du chef de groupe"
+                            : Model.Statut == StatutDemande.Soumise && Model.ChefGroupeValidee
+                                ? "Validation du district"
+                                : Model.Statut == StatutDemande.Validee
+                                    ? "Activite creee ou validable"
+                                    : Model.Statut == StatutDemande.Rejetee
+                                        ? "Workflow termine"
+                                        : "Suivi en cours")
+                </strong>
+            </div>
             @if (Model.Suivis.Any())
             {
                 <div style="position:relative;padding-left:20px;">
@@ -165,6 +324,14 @@
                             StatutDemande.EnRevision => "Modification demandee",
                             _ => suivi.NouveauStatut.ToString()
                         };
+                        var suiviIcon = suivi.NouveauStatut switch
+                        {
+                            StatutDemande.Validee => "bi-check-circle-fill",
+                            StatutDemande.Rejetee => "bi-x-octagon-fill",
+                            StatutDemande.Soumise => "bi-send-fill",
+                            StatutDemande.EnRevision => "bi-arrow-counterclockwise",
+                            _ => "bi-circle-fill"
+                        };
                         var commentaire = suivi.Commentaire;
                         if (validationTarget == "Chef de groupe" && commentaire == "Demande soumise pour validation district")
                         {
@@ -172,7 +339,7 @@
                         }
                         <div class="mb-3" style="position:relative;">
                             <div style="position:absolute;left:-16px;top:4px;width:12px;height:12px;border-radius:50%;background:@dotColor;border:2px solid #fff;box-shadow:0 0 0 2px @dotColor;"></div>
-                            <p class="mb-0" style="font-size:0.8rem;font-weight:600;color:var(--texte);">@suiviLabel</p>
+                            <p class="mb-0" style="font-size:0.8rem;font-weight:700;color:var(--texte);"><i class="bi @suiviIcon" style="color:@dotColor;"></i> @suiviLabel</p>
                             <p class="mb-0 text-muted-custom" style="font-size:0.75rem;">@commentaire</p>
                             <p class="mb-0" style="font-size:0.7rem;color:var(--gris-clair);">@suivi.Auteur - @suivi.Date.ToString("dd/MM/yyyy HH:mm")</p>
                         </div>

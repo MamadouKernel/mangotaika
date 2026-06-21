@@ -298,6 +298,15 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
         var scout = await db.Scouts.FirstOrDefaultAsync(s => s.UserId == userId && s.IsActive);
         if (scout is null)
         {
+            if (activeRole == RoleNames.ChefGroupe)
+            {
+                dto.MesDemandes = await CountChefGroupeDemandesBacklogAsync(userId.Value, null);
+                dto.MessageInfo = dto.MesDemandes > 0
+                    ? "Votre file chef de groupe contient des demandes a valider."
+                    : "Aucune fiche scout active n'est liee a votre compte. Le backlog chef de groupe reste verifie par rattachement utilisateur et responsabilite de groupe.";
+                return;
+            }
+
             dto.MessageInfo = "Aucune fiche scout active n'est liee a votre compte.";
             return;
         }
@@ -399,16 +408,33 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
             .ToListAsync();
     }
 
-    private async Task<int> CountChefGroupeDemandesBacklogAsync(Guid userId, Scout scout)
+    private async Task<int> CountChefGroupeDemandesBacklogAsync(Guid userId, Scout? scout)
     {
-        var groupeId = scout.GroupeId
-            ?? await db.Users
-                .AsNoTracking()
-                .Where(u => u.Id == userId && u.IsActive && !u.EstSupprime)
-                .Select(u => u.GroupeId)
-                .FirstOrDefaultAsync();
+        var groupeIds = new List<Guid>();
+        if (scout?.GroupeId is Guid scoutGroupeId)
+        {
+            groupeIds.Add(scoutGroupeId);
+        }
 
-        if (!groupeId.HasValue)
+        var userGroupeId = await db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == userId && u.IsActive && !u.EstSupprime)
+            .Select(u => u.GroupeId)
+            .FirstOrDefaultAsync();
+        if (userGroupeId.HasValue)
+        {
+            groupeIds.Add(userGroupeId.Value);
+        }
+
+        var groupesResponsable = await db.Groupes
+            .AsNoTracking()
+            .Where(g => g.ResponsableId == userId && g.IsActive)
+            .Select(g => g.Id)
+            .ToListAsync();
+        groupeIds.AddRange(groupesResponsable);
+        groupeIds = groupeIds.Distinct().ToList();
+
+        if (groupeIds.Count == 0)
         {
             return 0;
         }
@@ -437,15 +463,14 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
             return 0;
         }
 
-        var demandes = await db.DemandesAutorisation
+        return await db.DemandesAutorisation
             .AsNoTracking()
-            .Include(d => d.Suivis)
-            .Where(d => d.GroupeId == groupeId.Value
+            .Where(d => d.GroupeId.HasValue
+                && groupeIds.Contains(d.GroupeId.Value)
                 && d.Statut == StatutDemande.Soumise
+                && !d.ChefGroupeValidee
                 && chefUniteUserIds.Contains(d.DemandeurId))
-            .ToListAsync();
-
-        return demandes.Count(d => !d.Suivis.Any(s => IsChefGroupeApprovalComment(s.Commentaire)));
+            .CountAsync();
     }
 
     private static bool IsChefGroupeFunction(string? fonction)
@@ -470,13 +495,6 @@ public class DashboardService(AppDbContext db, IFormationService formationServic
             || normalizedFunction.StartsWith("CT ", StringComparison.Ordinal)
             || normalizedFunction.EndsWith(" CT", StringComparison.Ordinal)
             || normalizedFunction.Contains(" CT ", StringComparison.Ordinal);
-    }
-
-    private static bool IsChefGroupeApprovalComment(string? commentaire)
-    {
-        var normalized = DatabaseText.NormalizeSearchKey(commentaire);
-        return normalized.Contains("VALIDEE PAR LE CHEF DE GROUPE", StringComparison.Ordinal)
-            || normalized.Contains("VALIDE PAR LE CHEF DE GROUPE", StringComparison.Ordinal);
     }
 
     private async Task FillParentDashboardAsync(DashboardDto dto, Guid? userId)

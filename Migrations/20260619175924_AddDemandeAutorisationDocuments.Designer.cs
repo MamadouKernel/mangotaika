@@ -3,6 +3,7 @@ using System;
 using MangoTaika.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MangoTaika.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260619175924_AddDemandeAutorisationDocuments")]
+    partial class AddDemandeAutorisationDocuments
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -510,26 +513,11 @@ namespace MangoTaika.Migrations
                     b.Property<DateTime>("DateCreation")
                         .HasColumnType("timestamp without time zone");
 
-                    b.Property<DateTime?>("DateExpiration")
-                        .HasColumnType("timestamp without time zone");
-
                     b.Property<DateTime?>("DateUtilisation")
                         .HasColumnType("timestamp without time zone");
 
-                    b.Property<bool>("EstActif")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
-
                     b.Property<bool>("EstUtilise")
                         .HasColumnType("boolean");
-
-                    b.Property<string>("RoleCible")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(80)
-                        .HasColumnType("character varying(80)")
-                        .HasDefaultValue("Gestionnaire");
 
                     b.Property<Guid?>("UtilisePaId")
                         .HasColumnType("uuid");
@@ -860,9 +848,6 @@ namespace MangoTaika.Migrations
                     b.Property<string>("Budget")
                         .HasColumnType("text");
 
-                    b.Property<bool>("ChefGroupeValidee")
-                        .HasColumnType("boolean");
-
                     b.Property<DateTime>("DateActivite")
                         .HasColumnType("timestamp without time zone");
 
@@ -873,9 +858,6 @@ namespace MangoTaika.Migrations
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime?>("DateValidation")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime?>("DateValidationChefGroupe")
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid>("DemandeurId")
@@ -921,9 +903,6 @@ namespace MangoTaika.Migrations
                     b.Property<int>("TypeActivite")
                         .HasColumnType("integer");
 
-                    b.Property<Guid?>("ValideurChefGroupeId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid?>("ValideurId")
                         .HasColumnType("uuid");
 
@@ -934,8 +913,6 @@ namespace MangoTaika.Migrations
                     b.HasIndex("DemandeurId");
 
                     b.HasIndex("GroupeId");
-
-                    b.HasIndex("ValideurChefGroupeId");
 
                     b.HasIndex("ValideurId");
 
@@ -997,57 +974,6 @@ namespace MangoTaika.Migrations
                     b.HasIndex("TraiteParId");
 
                     b.ToTable("DemandesGroupe");
-                });
-
-            modelBuilder.Entity("MangoTaika.Data.Entities.DemandeRapprochementCompte", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("DateCreation")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime?>("DateTraitement")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("Details")
-                        .HasMaxLength(1600)
-                        .HasColumnType("character varying(1600)");
-
-                    b.Property<string>("Motif")
-                        .IsRequired()
-                        .HasMaxLength(320)
-                        .HasColumnType("character varying(320)");
-
-                    b.Property<string>("RoleDemande")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("character varying(80)");
-
-                    b.Property<Guid?>("ScoutId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Statut")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid?>("TraiteParId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ScoutId");
-
-                    b.HasIndex("TraiteParId");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("Statut", "DateCreation");
-
-                    b.ToTable("DemandesRapprochementComptes");
                 });
 
             modelBuilder.Entity("MangoTaika.Data.Entities.DiscussionFormation", b =>
@@ -4266,11 +4192,6 @@ namespace MangoTaika.Migrations
                         .WithMany()
                         .HasForeignKey("GroupeId");
 
-                    b.HasOne("MangoTaika.Data.Entities.ApplicationUser", "ValideurChefGroupe")
-                        .WithMany()
-                        .HasForeignKey("ValideurChefGroupeId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("MangoTaika.Data.Entities.ApplicationUser", "Valideur")
                         .WithMany()
                         .HasForeignKey("ValideurId")
@@ -4283,8 +4204,6 @@ namespace MangoTaika.Migrations
                     b.Navigation("Groupe");
 
                     b.Navigation("Valideur");
-
-                    b.Navigation("ValideurChefGroupe");
                 });
 
             modelBuilder.Entity("MangoTaika.Data.Entities.DemandeGroupe", b =>
@@ -4295,31 +4214,6 @@ namespace MangoTaika.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("TraitePar");
-                });
-
-            modelBuilder.Entity("MangoTaika.Data.Entities.DemandeRapprochementCompte", b =>
-                {
-                    b.HasOne("MangoTaika.Data.Entities.Scout", "Scout")
-                        .WithMany()
-                        .HasForeignKey("ScoutId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("MangoTaika.Data.Entities.ApplicationUser", "TraitePar")
-                        .WithMany()
-                        .HasForeignKey("TraiteParId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("MangoTaika.Data.Entities.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Scout");
-
-                    b.Navigation("TraitePar");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("MangoTaika.Data.Entities.DiscussionFormation", b =>
