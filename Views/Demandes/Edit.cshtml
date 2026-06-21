@@ -1,0 +1,188 @@
+@model DemandeAutorisationCreateDto
+@using MangoTaika.Data.Entities
+@{
+    ViewData["Title"] = "Modifier la demande";
+    Layout = "_LayoutAdmin";
+    var groupes = ViewBag.Groupes as List<Groupe> ?? new();
+    var branches = ViewBag.Branches as List<Branche> ?? new();
+    var demandeId = ViewBag.DemandeId as Guid? ?? Guid.Empty;
+    var documents = ViewBag.ExistingDocuments as List<DocumentDemandeAutorisation> ?? new();
+}
+
+<h2 class="section-title mb-1"><i class="bi bi-pencil-square text-or"></i> Modifier <span class="accent">la demande d'autorisation</span></h2>
+<div class="section-divider"></div>
+
+<div class="card-3d p-4 mt-3">
+    <div class="mb-4">
+        <p class="text-muted-custom mb-1">
+            Mettez a jour la demande, ajoutez les pieces justificatives utiles, puis soumettez-la a nouveau depuis la page detail.
+        </p>
+    </div>
+
+    <form asp-action="Edit" asp-route-id="@demandeId" method="post" class="form-modern" enctype="multipart/form-data" novalidate>
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+        <div class="row">
+            <div class="col-md-8 mb-3">
+                <label asp-for="Titre" class="form-label"></label>
+                <input asp-for="Titre" class="form-control" placeholder="Ex: Camp de formation Eclaireurs" />
+                <span asp-validation-for="Titre" class="text-danger small"></span>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label asp-for="TypeActivite" class="form-label"></label>
+                <select asp-for="TypeActivite" asp-items="Html.GetEnumSelectList<TypeActiviteDemande>()" class="form-select"></select>
+                <span asp-validation-for="TypeActivite" class="text-danger small"></span>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="GroupeId" class="form-label"></label>
+                <select asp-for="GroupeId" id="demande-groupe" class="form-select">
+                    <option value="">-- Selectionner un groupe --</option>
+                    @foreach (var groupe in groupes)
+                    {
+                        <option value="@groupe.Id">@groupe.Nom</option>
+                    }
+                </select>
+                <span asp-validation-for="GroupeId" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label asp-for="BrancheId" class="form-label"></label>
+                <select asp-for="BrancheId" id="demande-branche" class="form-select">
+                    <option value="">-- Tout le groupe --</option>
+                    @foreach (var branche in branches)
+                    {
+                        <option value="@branche.Id" data-groupe-id="@branche.GroupeId">@branche.Nom</option>
+                    }
+                </select>
+                <span asp-validation-for="BrancheId" class="text-danger small"></span>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label asp-for="DateActivite" class="form-label"></label>
+                <input asp-for="DateActivite" class="form-control" type="date" />
+                <span asp-validation-for="DateActivite" class="text-danger small"></span>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label asp-for="DateFin" class="form-label"></label>
+                <input asp-for="DateFin" class="form-control" type="date" />
+                <span asp-validation-for="DateFin" class="text-danger small"></span>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label asp-for="Lieu" class="form-label"></label>
+                <input asp-for="Lieu" class="form-control" placeholder="Lieu de l'activite" />
+                <span asp-validation-for="Lieu" class="text-danger small"></span>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label asp-for="NombreParticipants" class="form-label"></label>
+                <input asp-for="NombreParticipants" class="form-control" type="number" min="1" />
+                <span asp-validation-for="NombreParticipants" class="text-danger small"></span>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Responsables" class="form-label"></label>
+            <textarea asp-for="Responsables" class="form-control" rows="2" placeholder="Ex: Jean Dupont (Chef de groupe), Marie Yao (CU Eclaireurs)"></textarea>
+            <span asp-validation-for="Responsables" class="text-danger small"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Objectifs" class="form-label">Objectif</label>
+            <textarea asp-for="Objectifs" class="form-control" rows="2" placeholder="Objectif principal et resultats attendus"></textarea>
+            <span asp-validation-for="Objectifs" class="text-danger small"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Description" class="form-label"></label>
+            <textarea asp-for="Description" class="form-control" rows="4" placeholder="Contexte, justification et deroulement de l'activite"></textarea>
+            <span asp-validation-for="Description" class="text-danger small"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="MoyensLogistiques" class="form-label"></label>
+            <textarea asp-for="MoyensLogistiques" class="form-control" rows="2" placeholder="Transport, materiel, hebergement, restauration..."></textarea>
+            <span asp-validation-for="MoyensLogistiques" class="text-danger small"></span>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="Budget" class="form-label"></label>
+                <input asp-for="Budget" class="form-control" placeholder="Ex: 150 000 FCFA" />
+                <span asp-validation-for="Budget" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label asp-for="Observations" class="form-label"></label>
+                <input asp-for="Observations" class="form-control" placeholder="Informations complementaires" />
+                <span asp-validation-for="Observations" class="text-danger small"></span>
+            </div>
+        </div>
+
+        <div class="mb-3 p-3" style="border:1px solid var(--gris-border);border-radius:14px;background:rgba(89,117,55,0.05);">
+            <label asp-for="Documents" class="form-label mb-1">Ajouter des pieces jointes</label>
+            <input asp-for="Documents" class="form-control" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt" />
+            <span asp-validation-for="Documents" class="text-danger small"></span>
+            <div class="form-text text-muted-custom">
+                Les nouvelles pieces seront rattachees a la demande et seront reprises automatiquement dans l'activite si la demande est validee.
+            </div>
+        </div>
+
+        @if (documents.Any())
+        {
+            <div class="mb-3 p-3" style="border:1px solid var(--gris-border);border-radius:14px;background:rgba(248,250,252,0.72);">
+                <div class="fw-semibold mb-2"><i class="bi bi-paperclip"></i> Pieces deja jointes</div>
+                <div class="d-grid gap-2">
+                    @foreach (var document in documents)
+                    {
+                        <a href="@document.CheminFichier" target="_blank" rel="noopener" class="text-decoration-none" style="color:var(--texte);">
+                            <i class="bi bi-file-earmark-text text-or"></i> @document.NomFichier
+                            <span class="text-muted-custom small">(@document.DateUpload.ToString("dd/MM/yyyy HH:mm"))</span>
+                        </a>
+                    }
+                </div>
+            </div>
+        }
+
+        <partial name="_ConsentementARTCI" />
+
+        <div class="d-flex gap-2 flex-wrap mt-3">
+            <button type="submit" class="btn btn-mango"><i class="bi bi-check-lg"></i> Enregistrer les modifications</button>
+            <a asp-action="Details" asp-route-id="@demandeId" class="btn btn-outline-or">Retour au detail</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const groupeSelect = document.getElementById('demande-groupe');
+            const brancheSelect = document.getElementById('demande-branche');
+            if (!groupeSelect || !brancheSelect) return;
+
+            const applyBranchFilter = () => {
+                const selectedGroupId = groupeSelect.value;
+                Array.from(brancheSelect.options).forEach((option, index) => {
+                    if (index === 0) {
+                        option.hidden = false;
+                        option.disabled = false;
+                        return;
+                    }
+
+                    const matches = !selectedGroupId || option.dataset.groupeId === selectedGroupId;
+                    option.hidden = !matches;
+                    option.disabled = !matches;
+                    if (option.selected && !matches) {
+                        brancheSelect.value = '';
+                    }
+                });
+                brancheSelect.disabled = false;
+            };
+
+            groupeSelect.addEventListener('change', applyBranchFilter);
+            applyBranchFilter();
+        })();
+    </script>
+}

@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
+using System.Net;
+using System.Text;
 
 namespace MangoTaika.Controllers;
 
@@ -179,6 +181,124 @@ public class DemandesController(
         return RedirectToAction(nameof(Details), new { id = demande.Id });
     }
 
+    public async Task<IActionResult> Edit(Guid id)
+    {
+        var demande = await db.DemandesAutorisation
+            .Include(d => d.Demandeur)
+            .Include(d => d.Groupe)
+            .Include(d => d.Branche)
+            .Include(d => d.Documents)
+            .FirstOrDefaultAsync(d => d.Id == id);
+        if (demande is null)
+        {
+            return NotFound();
+        }
+
+        if (!CanEditDemande(demande))
+        {
+            return Forbid();
+        }
+
+        var currentScout = await GetCurrentScoutAsync();
+        await LoadFormDataAsync(currentScout, demande.GroupeId);
+        ViewBag.DemandeId = demande.Id;
+        ViewBag.ExistingDocuments = demande.Documents
+            .Where(d => !d.EstSupprime)
+            .OrderByDescending(d => d.DateUpload)
+            .ToList();
+
+        return View(new DemandeAutorisationCreateDto
+        {
+            Titre = demande.Titre,
+            Description = demande.Description,
+            TypeActivite = demande.TypeActivite,
+            DateActivite = demande.DateActivite,
+            DateFin = demande.DateFin,
+            Lieu = demande.Lieu,
+            NombreParticipants = demande.NombreParticipants,
+            Objectifs = demande.Objectifs,
+            Responsables = demande.Responsables,
+            MoyensLogistiques = demande.MoyensLogistiques,
+            Budget = demande.Budget,
+            Observations = demande.Observations,
+            GroupeId = demande.GroupeId,
+            BrancheId = demande.BrancheId
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(Guid id, DemandeAutorisationCreateDto dto)
+    {
+        var demande = await db.DemandesAutorisation
+            .Include(d => d.Demandeur)
+            .Include(d => d.Groupe)
+            .Include(d => d.Branche)
+            .Include(d => d.Documents)
+            .Include(d => d.Suivis)
+            .FirstOrDefaultAsync(d => d.Id == id);
+        if (demande is null)
+        {
+            return NotFound();
+        }
+
+        if (!CanEditDemande(demande))
+        {
+            return Forbid();
+        }
+
+        var isAdmin = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+        var currentScout = await GetCurrentScoutAsync();
+        await ValiderCreationAsync(dto, isAdmin, currentScout);
+        ValiderDocuments(dto.Documents);
+        if (!ModelState.IsValid)
+        {
+            await LoadFormDataAsync(currentScout, dto.GroupeId);
+            ViewBag.DemandeId = demande.Id;
+            ViewBag.ExistingDocuments = demande.Documents
+                .Where(d => !d.EstSupprime)
+                .OrderByDescending(d => d.DateUpload)
+                .ToList();
+            return View(dto);
+        }
+
+        var ancienStatut = demande.Statut;
+        var user = await userManager.GetUserAsync(User);
+        var groupe = dto.GroupeId.HasValue
+            ? await db.Groupes.FirstOrDefaultAsync(g => g.Id == dto.GroupeId.Value)
+            : null;
+        var branche = dto.BrancheId.HasValue
+            ? await db.Branches.FirstOrDefaultAsync(b => b.Id == dto.BrancheId.Value)
+            : null;
+
+        demande.Titre = dto.Titre.Trim();
+        demande.Description = NormalizeMultiline(dto.Description);
+        demande.TypeActivite = dto.TypeActivite;
+        demande.DateActivite = DateTime.SpecifyKind(dto.DateActivite.Date, DateTimeKind.Utc);
+        demande.DateFin = dto.DateFin.HasValue ? DateTime.SpecifyKind(dto.DateFin.Value.Date, DateTimeKind.Utc) : null;
+        demande.Lieu = NormalizeValue(dto.Lieu);
+        demande.NombreParticipants = dto.NombreParticipants;
+        demande.Objectifs = NormalizeMultiline(dto.Objectifs);
+        demande.Responsables = NormalizeMultiline(dto.Responsables);
+        demande.MoyensLogistiques = NormalizeMultiline(dto.MoyensLogistiques);
+        demande.Budget = NormalizeValue(dto.Budget);
+        demande.Observations = NormalizeMultiline(dto.Observations);
+        demande.GroupeId = dto.GroupeId;
+        demande.BrancheId = dto.BrancheId;
+        demande.Groupe = groupe;
+        demande.Branche = branche;
+        demande.MotifRejet = null;
+        demande.TdrContenu = GenererTdr(demande, demande.Demandeur);
+
+        var auteurLabel = BuildAuteurLabel(user);
+        AjouterSuivi(demande, ancienStatut, demande.Statut, "Demande modifiee par le demandeur", auteurLabel);
+        await AjouterDocumentsDemandeAsync(demande, dto.Documents, "Piece jointe", auteurLabel);
+        await db.SaveChangesAsync();
+
+        TempData["Success"] = "Demande modifiee. Vous pouvez la soumettre a nouveau.";
+        return RedirectToAction(nameof(Details), new { id = demande.Id });
+    }
+
     public async Task<IActionResult> Details(Guid id)
     {
         var demande = await db.DemandesAutorisation
@@ -217,8 +337,44 @@ public class DemandesController(
         ViewBag.CanValidateDistrict = canValidateRequests;
         ViewBag.ValidationTarget = chefUniteWorkflow && !chefGroupeApproved ? "Chef de groupe" : "Commissaire de district";
         ViewBag.CanSubmit = isAdmin || demande.DemandeurId == Guid.Parse(userManager.GetUserId(User)!);
+        ViewBag.CanEdit = CanEditDemande(demande);
         ViewBag.CanManageDocuments = CanManageDocuments(demande);
         return View(ToDto(demande));
+    }
+
+    public async Task<IActionResult> ExportTdrPdf(Guid id)
+    {
+        var demande = await LoadDemandeForTdrAsync(id);
+        if (demande is null)
+        {
+            return NotFound();
+        }
+
+        if (!await CanViewDemandeAsync(demande))
+        {
+            return Forbid();
+        }
+
+        var lines = BuildTdrLines(demande);
+        var bytes = SimplePdfBuilder.BuildTextPdf($"TDR - {demande.Titre}", lines);
+        return File(bytes, "application/pdf", $"{BuildSafeFileName(demande.Titre)}-tdr.pdf");
+    }
+
+    public async Task<IActionResult> ExportTdrWord(Guid id)
+    {
+        var demande = await LoadDemandeForTdrAsync(id);
+        if (demande is null)
+        {
+            return NotFound();
+        }
+
+        if (!await CanViewDemandeAsync(demande))
+        {
+            return Forbid();
+        }
+
+        var html = BuildTdrWordHtml(demande);
+        return File(Encoding.UTF8.GetBytes(html), "application/msword", $"{BuildSafeFileName(demande.Titre)}-tdr.doc");
     }
 
     [HttpPost]
@@ -905,6 +1061,62 @@ public class DemandesController(
     private static bool IsChefUniteScout(Scout? scout, System.Security.Claims.ClaimsPrincipal user)
         => user.IsInRole(RoleNames.ChefUnite) || IsChefUniteFunction(scout?.Fonction);
 
+    private bool CanEditDemande(DemandeAutorisation demande)
+    {
+        if (demande.Statut != StatutDemande.Initialisee && demande.Statut != StatutDemande.EnRevision)
+        {
+            return false;
+        }
+
+        if (User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire"))
+        {
+            return true;
+        }
+
+        return Guid.TryParse(userManager.GetUserId(User), out var currentUserId)
+            && demande.DemandeurId == currentUserId;
+    }
+
+    private async Task<bool> CanViewDemandeAsync(DemandeAutorisation demande)
+    {
+        var isAdmin = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
+        var isSupervision = User.IsInRole("Superviseur") || User.IsInRole("Consultant");
+        if (isAdmin || isSupervision)
+        {
+            return true;
+        }
+
+        if (Guid.TryParse(userManager.GetUserId(User), out var currentUserId) && demande.DemandeurId == currentUserId)
+        {
+            return true;
+        }
+
+        var isDistrictReviewer = await EstValidateurDistrictAsync();
+        if (isDistrictReviewer)
+        {
+            return true;
+        }
+
+        var chefGroupeScope = await GetChefGroupeValidationScopeAsync();
+        return chefGroupeScope.HasValue && demande.GroupeId == chefGroupeScope.Value;
+    }
+
+    private async Task<DemandeAutorisation?> LoadDemandeForTdrAsync(Guid id)
+    {
+        var demande = await db.DemandesAutorisation
+            .Include(d => d.Demandeur)
+            .Include(d => d.Groupe)
+            .Include(d => d.Branche)
+            .FirstOrDefaultAsync(d => d.Id == id);
+
+        if (demande is not null && string.IsNullOrWhiteSpace(demande.TdrContenu))
+        {
+            demande.TdrContenu = GenererTdr(demande, demande.Demandeur);
+        }
+
+        return demande;
+    }
+
     private bool CanManageDocuments(DemandeAutorisation demande)
     {
         if (demande.Statut != StatutDemande.Initialisee && demande.Statut != StatutDemande.EnRevision)
@@ -952,6 +1164,58 @@ public class DemandesController(
     private static string BuildAuteurLabel(ApplicationUser? user)
     {
         return user is null ? "Systeme" : $"{user.Prenom} {user.Nom}".Trim();
+    }
+
+    private static string BuildSafeFileName(string value)
+    {
+        var normalized = DatabaseText.NormalizeSearchKey(value).ToLowerInvariant();
+        var chars = normalized.Select(c => char.IsLetterOrDigit(c) ? c : '-').ToArray();
+        var compact = string.Join('-', new string(chars).Split('-', StringSplitOptions.RemoveEmptyEntries));
+        return string.IsNullOrWhiteSpace(compact) ? "demande" : compact;
+    }
+
+    private static List<string> BuildTdrLines(DemandeAutorisation demande)
+    {
+        var content = string.IsNullOrWhiteSpace(demande.TdrContenu)
+            ? GenererTdr(demande, demande.Demandeur)
+            : demande.TdrContenu;
+
+        return content
+            .Replace("\r\n", "\n")
+            .Split('\n')
+            .Select(line => line.TrimEnd())
+            .ToList();
+    }
+
+    private static string BuildTdrWordHtml(DemandeAutorisation demande)
+    {
+        var encodedTitle = WebUtility.HtmlEncode(demande.Titre);
+        var encodedContent = WebUtility.HtmlEncode(string.Join("\n", BuildTdrLines(demande)));
+        return $$"""
+        <!doctype html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>TDR - {{encodedTitle}}</title>
+            <style>
+                body { font-family: Arial, sans-serif; color: #1f2933; line-height: 1.45; }
+                .header { border-bottom: 3px solid #597537; padding-bottom: 14px; margin-bottom: 24px; }
+                .brand { color: #597537; font-size: 18px; font-weight: 700; letter-spacing: 1px; }
+                h1 { color: #293a42; font-size: 24px; margin: 8px 0 0; }
+                pre { white-space: pre-wrap; font-family: Arial, sans-serif; font-size: 12px; }
+                .footer { margin-top: 28px; padding-top: 12px; border-top: 1px solid #d9e2d0; color: #667085; font-size: 11px; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div class="brand">MANGO TAIKA - DISTRICT SCOUT</div>
+                <h1>Termes de reference</h1>
+            </div>
+            <pre>{{encodedContent}}</pre>
+            <div class="footer">Document genere automatiquement depuis la demande d'autorisation.</div>
+        </body>
+        </html>
+        """;
     }
 
     private static string GenererTdr(DemandeAutorisation d, ApplicationUser? user)
@@ -1132,7 +1396,7 @@ public class DemandesController(
         GroupeId = d.GroupeId,
         NomBranche = d.Branche?.Nom,
         BrancheId = d.BrancheId,
-        Documents = d.Documents.OrderByDescending(doc => doc.DateUpload).Select(doc => new DocumentDemandeDto
+        Documents = d.Documents.Where(doc => !doc.EstSupprime).OrderByDescending(doc => doc.DateUpload).Select(doc => new DocumentDemandeDto
         {
             Id = doc.Id,
             NomFichier = doc.NomFichier,
