@@ -5410,6 +5410,569 @@ main { animation: fadeInUp 0.35s ease-out; }
     color: var(--market-green);
 }
 
+/* ═══════════════════════════════════════════
+   PERMISSIONS PAGE  (.perm-*)
+   Remplace l'ancien bloc .permissions-*
+═══════════════════════════════════════════ */
+
+/* ── Bouton primaire vert (manquait) ── */
+.btn-or {
+    background: var(--vert-logo);
+    color: var(--blanc);
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    padding: 0.6rem 1.5rem;
+    box-shadow: 0 1px 3px rgba(89,117,55,0.2);
+    transition: background 0.2s, box-shadow 0.2s;
+}
+.btn-or:hover {
+    background: var(--vert-clair);
+    color: var(--blanc);
+    box-shadow: 0 2px 6px rgba(89,117,55,0.28);
+}
+
+/* ── Taille extra-small ── */
+.btn-xs {
+    padding: 0.2rem 0.6rem;
+    font-size: 0.76rem;
+    border-radius: 7px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+/* ── Badge soft (manquait) ── */
+.badge-soft {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.28rem 0.7rem;
+    border-radius: 999px;
+    background: var(--vert-pale);
+    color: var(--vert-logo);
+    font-size: 0.7rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* ── Wrapper page ── */
+.perm-page {
+    display: grid;
+    gap: 1rem;
+    padding-bottom: 2.5rem;
+}
+
+/* ── En-tête ── */
+.perm-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1.5rem;
+    align-items: center;
+    padding: 1.4rem 1.5rem;
+    background: var(--blanc);
+    border: 1px solid var(--gris-border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-sm);
+}
+
+.perm-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.28rem 0.7rem;
+    border-radius: 999px;
+    background: var(--vert-pale);
+    color: var(--vert-logo);
+    font-size: 0.76rem;
+    font-weight: 900;
+    margin-bottom: 0.6rem;
+}
+
+.perm-title {
+    margin: 0 0 0.35rem;
+    color: var(--bleu-logo);
+    font-size: clamp(1.5rem, 2.8vw, 2rem);
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.perm-subtitle {
+    margin: 0;
+    color: var(--texte-secondaire);
+    font-size: 0.9rem;
+    max-width: 680px;
+    line-height: 1.55;
+}
+
+.perm-stats {
+    display: flex;
+    gap: 0.65rem;
+    flex-shrink: 0;
+}
+
+.perm-stat {
+    display: grid;
+    place-items: center;
+    min-width: 84px;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid var(--gris-border);
+    border-radius: 12px;
+    text-align: center;
+    background: var(--gris-bg);
+}
+
+.perm-stat strong {
+    display: block;
+    color: var(--vert-logo);
+    font-size: 1.55rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.perm-stat span {
+    display: block;
+    color: var(--texte-secondaire);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 0.2rem;
+}
+
+/* ── Carte sélecteur de rôle ── */
+.perm-role-card {
+    padding: 1rem 1.25rem;
+    background: var(--blanc);
+    border: 1px solid var(--gris-border);
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+}
+
+.perm-role-form {
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) auto;
+    gap: 1rem;
+    align-items: end;
+}
+
+.perm-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: var(--texte);
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.perm-select {
+    min-height: 42px;
+    border-radius: 10px;
+    border-color: var(--gris-border);
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.perm-role-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.perm-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin: 0.85rem 0 0;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--gris-border);
+    color: var(--texte-secondaire);
+    font-size: 0.84rem;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+.perm-hint i {
+    color: var(--vert-logo);
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+}
+
+/* ── Bande récap sticky (remplace sidebar) ── */
+.perm-strip {
+    position: sticky;
+    top: 64px;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) auto minmax(180px, 1fr) auto;
+    gap: 1rem 1.5rem;
+    align-items: center;
+    padding: 0.85rem 1.2rem;
+    background: var(--blanc);
+    border: 1px solid var(--gris-border);
+    border-radius: 14px;
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+}
+
+.perm-strip__role {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.perm-strip__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    background: var(--vert-pale);
+    color: var(--vert-logo);
+    font-size: 0.65rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.3rem;
+}
+
+.perm-strip__name {
+    display: block;
+    color: var(--bleu-logo);
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.perm-strip__kpis {
+    display: flex;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+.perm-strip__kpi {
+    display: grid;
+    place-items: center;
+    padding: 0.4rem 0.7rem;
+    border: 1px solid var(--gris-border);
+    border-radius: 9px;
+    background: var(--gris-bg);
+    text-align: center;
+    min-width: 60px;
+}
+
+.perm-strip__kpi strong {
+    display: block;
+    color: var(--vert-logo);
+    font-size: 1.1rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.perm-strip__kpi span {
+    display: block;
+    color: var(--texte-secondaire);
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 0.12rem;
+}
+
+.perm-strip__meter-wrap {
+    display: grid;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
+.perm-strip__meter-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--texte);
+}
+
+.perm-strip__meter-head strong {
+    color: var(--vert-logo);
+    font-weight: 800;
+}
+
+.perm-strip__cta {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-shrink: 0;
+}
+
+.perm-strip__btn {
+    font-size: 0.88rem;
+    padding: 0.55rem 1.1rem;
+    border-radius: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.perm-strip__warn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(254, 243, 199, 0.8);
+    color: #b45309;
+    font-size: 0.95rem;
+    cursor: help;
+    flex-shrink: 0;
+}
+
+/* ── Barre de progression ── */
+.perm-bar {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--gris-border);
+    overflow: hidden;
+}
+
+.perm-bar span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--vert-logo);
+    transition: width 0.25s ease;
+}
+
+/* Rôle badge (sidebar legacy → conservé pour compatibilité) */
+.perm-role-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    background: var(--vert-pale);
+    color: var(--vert-logo);
+    font-size: 0.68rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.5rem;
+}
+
+/* ── Board ── */
+.perm-board {
+    display: grid;
+    gap: 0.85rem;
+}
+
+/* ── Barre d'outils ── */
+.perm-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.85rem;
+    align-items: center;
+    padding: 0.85rem;
+    background: var(--blanc);
+    border: 1px solid var(--gris-border);
+    border-radius: 13px;
+    box-shadow: var(--shadow-sm);
+}
+
+.perm-search-wrap {
+    position: relative;
+}
+
+.perm-search-icon {
+    position: absolute;
+    left: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--vert-logo);
+    font-size: 0.88rem;
+    pointer-events: none;
+}
+
+.perm-search {
+    padding-left: 2.4rem;
+    min-height: 40px;
+    border-radius: 9px;
+    border-color: var(--gris-border);
+    font-size: 0.88rem;
+}
+
+.perm-toolbar-actions {
+    display: flex;
+    gap: 0.45rem;
+}
+
+/* ── Grille des modules ── */
+.perm-modules {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.85rem;
+    align-items: start; /* chaque carte = hauteur de son propre contenu */
+}
+
+/* ── Carte module ── */
+.perm-module {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--blanc);
+    border: 1px solid var(--gris-border);
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.perm-module:hover {
+    border-color: rgba(89, 117, 55, 0.22);
+    box-shadow: var(--shadow-md);
+}
+
+.perm-module__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.perm-module__id {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 0;
+}
+
+.perm-module__icon {
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    background: var(--vert-pale);
+    color: var(--vert-logo);
+    font-size: 1rem;
+}
+
+.perm-module__id strong {
+    display: block;
+    color: var(--bleu-logo);
+    font-size: 0.9rem;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.perm-module__id small {
+    display: block;
+    color: var(--texte-secondaire);
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-top: 0.05rem;
+}
+
+.perm-module__btns {
+    display: flex;
+    gap: 0.3rem;
+    flex-shrink: 0;
+}
+
+/* ── Liste des permissions ── */
+.perm-items {
+    display: grid;
+    gap: 0.4rem;
+}
+
+.perm-item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.6rem;
+    align-items: start;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid var(--gris-border);
+    border-radius: 9px;
+    background: var(--gris-bg);
+    cursor: pointer;
+    transition: border-color 0.14s, background-color 0.14s, box-shadow 0.14s;
+}
+
+.perm-item:hover {
+    border-color: rgba(89, 117, 55, 0.28);
+    background: #f3f8ed;
+}
+
+.perm-item--on {
+    border-color: rgba(89, 117, 55, 0.32);
+    background: #eef7e4;
+    box-shadow: inset 3px 0 0 var(--vert-logo);
+}
+
+.perm-check {
+    width: 15px;
+    height: 15px;
+    margin-top: 0.26rem;
+    accent-color: var(--vert-logo);
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.perm-item__body {
+    display: grid;
+    gap: 0.12rem;
+    min-width: 0;
+}
+
+.perm-item__row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.perm-item__body strong {
+    display: block;
+    color: var(--bleu-logo);
+    font-size: 0.83rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.perm-action {
+    flex-shrink: 0;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    background: rgba(89, 117, 55, 0.1);
+    color: var(--vert-logo);
+    font-size: 0.62rem;
+    font-style: normal;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    margin-top: 0.05rem;
+}
+
+.perm-item__body small {
+    display: block;
+    color: var(--texte-secondaire);
+    font-size: 0.76rem;
+    line-height: 1.38;
+}
+
+.perm-item__body code {
+    display: block;
+    color: var(--vert-logo);
+    font-size: 0.7rem;
+    word-break: break-all;
+    margin-top: 0.08rem;
+}
+
+/* ────────────────────────────────────────
+   Ancien bloc .permissions-* — désormais
+   remplacé par .perm-* ci-dessus.
+   Les règles ci-dessous sont conservées
+   à titre de fallback temporaire.
+──────────────────────────────────────── */
 .permissions-page {
     color: var(--bleu-logo);
 }
@@ -5421,10 +5984,10 @@ main { animation: fadeInUp 0.35s ease-out; }
     align-items: center;
     margin-bottom: 1rem;
     padding: 1.25rem;
-    border: 1px solid rgba(95, 127, 67, 0.14);
+    border: 1px solid var(--gris-border);
     border-radius: 16px;
-    background: linear-gradient(135deg, #ffffff 0%, #f8fbf5 100%);
-    box-shadow: 0 12px 32px rgba(40, 53, 63, 0.06);
+    background: var(--blanc);
+    box-shadow: var(--shadow-sm);
 }
 
 .permissions-kicker {
@@ -6194,6 +6757,33 @@ main { animation: fadeInUp 0.35s ease-out; }
 
     .permissions-toolbar__actions .btn {
         flex: 1;
+    }
+
+    /* ── .perm-* responsive ── */
+    .perm-header {
+        grid-template-columns: 1fr;
+    }
+    .perm-stats {
+        flex-wrap: wrap;
+    }
+    .perm-role-form {
+        grid-template-columns: 1fr;
+    }
+    .perm-strip {
+        grid-template-columns: 1fr 1fr;
+        position: static;
+    }
+    .perm-strip__meter-wrap {
+        grid-column: 1 / -1;
+    }
+    .perm-toolbar {
+        grid-template-columns: 1fr;
+    }
+    .perm-toolbar-actions {
+        flex-wrap: wrap;
+    }
+    .perm-modules {
+        grid-template-columns: 1fr;
     }
 
     .marketplace-search {
