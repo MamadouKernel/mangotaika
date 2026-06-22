@@ -300,6 +300,7 @@
                                 <th>Matricule</th>
                                 <th>Nom</th>
                                 <th>Profil</th>
+                                <th>Fonction</th>
                                 <th>Presence</th>
                                 <th></th>
                             </tr>
@@ -311,6 +312,7 @@
                                     <td><code>@(string.IsNullOrWhiteSpace(p.Matricule) ? "-" : p.Matricule)</code></td>
                                     <td>@p.NomComplet</td>
                                     <td>@(p.EstRessource ? p.TypeParticipant : (p.NomBranche ?? "Scout"))</td>
+                                    <td>@(string.IsNullOrWhiteSpace(p.Fonction) ? "-" : p.Fonction)</td>
                                     <td>
                                         @if (canManage && pointageDisponible && !pointageCloture)
                                         {

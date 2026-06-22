@@ -60,6 +60,7 @@ public class ParticipantActiviteDto
     public string NomComplet { get; set; } = string.Empty;
     public string Matricule { get; set; } = string.Empty;
     public string? NomBranche { get; set; }
+    public string? Fonction { get; set; }
     public string? Telephone { get; set; }
     public string? Email { get; set; }
     public StatutPresence Presence { get; set; }

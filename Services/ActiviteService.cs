@@ -89,6 +89,7 @@ public class ActiviteService(AppDbContext db) : IActiviteService
                 NomComplet = p.Scout != null ? $"{p.Scout.Prenom} {p.Scout.Nom}" : $"{p.Ressource!.Prenom} {p.Ressource.Nom}".Trim(),
                 Matricule = p.Scout?.Matricule ?? string.Empty,
                 NomBranche = p.Scout?.Branche?.Nom,
+                Fonction = p.Scout?.Fonction,
                 Telephone = p.Scout?.Telephone ?? p.Ressource?.Telephone,
                 Email = p.Scout?.Email ?? p.Ressource?.Email,
                 Presence = p.Presence
