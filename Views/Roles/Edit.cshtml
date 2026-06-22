@@ -1,0 +1,64 @@
+@model MangoTaika.DTOs.RoleEditDto
+@{
+    ViewData["Title"] = "Modifier un role";
+    Layout = "_LayoutAdmin";
+    var estSysteme = ViewBag.EstSysteme as bool? == true;
+    var roleId = ViewBag.RoleId as Guid? ?? Guid.Empty;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="section-title mb-0"><i class="bi bi-pencil-square text-or"></i> Modifier @Model.Libelle</h2>
+    <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i> Retour</a>
+</div>
+
+@if (estSysteme)
+{
+    <div class="alert" style="background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.3);border-radius:12px;color:var(--texte);">
+        <i class="bi bi-shield-lock"></i> Ce role est <strong>systeme</strong> : seuls le libelle, la description, le perimetre et le niveau hierarchique peuvent etre modifies. Le nom technique reste verrouille.
+    </div>
+}
+
+<div class="card-3d p-4">
+    <form asp-action="Edit" asp-route-id="@roleId" method="post">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="Name" class="form-label fw-semibold">Nom technique</label>
+                <input asp-for="Name" class="form-control" readonly="@estSysteme" />
+                <span asp-validation-for="Name" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Libelle" class="form-label fw-semibold">Libelle affiche</label>
+                <input asp-for="Libelle" class="form-control" />
+                <span asp-validation-for="Libelle" class="text-danger small"></span>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="Hierarchie" class="form-label fw-semibold">Niveau hierarchique</label>
+                <input asp-for="Hierarchie" type="number" min="0" max="99" class="form-control" />
+                <span asp-validation-for="Hierarchie" class="text-danger small"></span>
+            </div>
+            <div class="col-md-9">
+                <label asp-for="Visibilite" class="form-label fw-semibold">Perimetre / visibilite</label>
+                <input asp-for="Visibilite" class="form-control" />
+                <span asp-validation-for="Visibilite" class="text-danger small"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="Description" class="form-label fw-semibold">Description</label>
+                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                <span asp-validation-for="Description" class="text-danger small"></span>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-mango"><i class="bi bi-check2-circle"></i> Enregistrer</button>
+            <a asp-controller="Permissions" asp-action="Index" asp-route-roleId="@roleId" class="btn btn-outline-or"><i class="bi bi-shield-check"></i> Configurer les permissions</a>
+            <a asp-action="Index" class="btn btn-outline-or">Annuler</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
