@@ -685,6 +685,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         builder.Entity<ArticleBoutique>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<Competence>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<ContactMessage>().HasQueryFilter(e => !e.EstSupprime);
+        builder.Entity<DemandeAutorisation>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<DocumentActivite>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<DocumentDemandeAutorisation>().HasQueryFilter(e => !e.EstSupprime);
         builder.Entity<EtapeParcoursScout>().HasQueryFilter(e => !e.EstSupprime);

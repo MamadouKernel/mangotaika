@@ -59,6 +59,8 @@ public class DemandesController(
 
         ViewBag.PeutCreer = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire") || await EstScoutChefAsync();
         ViewBag.PeutValiderDistrict = canValidateRequests;
+        ViewBag.CurrentUserId = userId;
+        ViewBag.PeutSupprimerToutes = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
         ListPagination.SetViewData(ViewData, HttpContext, p, pageSize, total, totalPages);
         return View(demandes.Select(ToDto).ToList());
     }
@@ -95,6 +97,8 @@ public class DemandesController(
         ViewBag.PageTitle = "Demandes a valider";
         ViewBag.PageSubtitle = "File de traitement du chef de groupe : demandes soumises par les chefs d'unite de votre groupe.";
         ViewBag.BacklogChefGroupe = true;
+        ViewBag.CurrentUserId = Guid.TryParse(userManager.GetUserId(User), out var currentUserId) ? currentUserId : Guid.Empty;
+        ViewBag.PeutSupprimerToutes = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
         ListPagination.SetViewData(ViewData, HttpContext, p, pageSize, total, totalPages);
         return View("Index", demandes.Select(ToDto).ToList());
     }
@@ -338,6 +342,7 @@ public class DemandesController(
         ViewBag.ValidationTarget = chefUniteWorkflow && !chefGroupeApproved ? "Chef de groupe" : "Commissaire de district";
         ViewBag.CanSubmit = isAdmin || demande.DemandeurId == Guid.Parse(userManager.GetUserId(User)!);
         ViewBag.CanEdit = CanEditDemande(demande);
+        ViewBag.CanDelete = CanDeleteDemande(demande);
         ViewBag.CanManageDocuments = CanManageDocuments(demande);
         return View(ToDto(demande));
     }
@@ -627,6 +632,33 @@ public class DemandesController(
 
         TempData["Success"] = "Demande rejetee.";
         return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Supprimer(Guid id)
+    {
+        var demande = await db.DemandesAutorisation
+            .Include(d => d.Suivis)
+            .FirstOrDefaultAsync(d => d.Id == id);
+        if (demande is null)
+        {
+            return NotFound();
+        }
+
+        if (!CanDeleteDemande(demande))
+        {
+            return Forbid();
+        }
+
+        var user = await userManager.GetUserAsync(User);
+        demande.EstSupprime = true;
+        demande.DateSuppression = DateTime.UtcNow;
+        AjouterSuivi(demande, demande.Statut, demande.Statut, "Demande supprimee", BuildAuteurLabel(user));
+        await db.SaveChangesAsync();
+
+        TempData["Success"] = "Demande supprimee.";
+        return RedirectToAction(nameof(Index));
     }
 
     [HttpPost]
@@ -1077,6 +1109,22 @@ public class DemandesController(
             && demande.DemandeurId == currentUserId;
     }
 
+    private bool CanDeleteDemande(DemandeAutorisation demande)
+    {
+        if (User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire"))
+        {
+            return true;
+        }
+
+        if (demande.Statut == StatutDemande.Validee)
+        {
+            return false;
+        }
+
+        return Guid.TryParse(userManager.GetUserId(User), out var currentUserId)
+            && demande.DemandeurId == currentUserId;
+    }
+
     private async Task<bool> CanViewDemandeAsync(DemandeAutorisation demande)
     {
         var isAdmin = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
@@ -1390,6 +1438,7 @@ public class DemandesController(
         DateCreation = d.DateCreation,
         DateValidation = d.DateValidation,
         NomDemandeur = d.Demandeur != null ? $"{d.Demandeur.Prenom} {d.Demandeur.Nom}" : null,
+        DemandeurId = d.DemandeurId,
         NomValideurChefGroupe = d.ValideurChefGroupe != null ? $"{d.ValideurChefGroupe.Prenom} {d.ValideurChefGroupe.Nom}" : null,
         NomValideur = d.Valideur != null ? $"{d.Valideur.Prenom} {d.Valideur.Nom}" : null,
         NomGroupe = d.Groupe?.Nom,

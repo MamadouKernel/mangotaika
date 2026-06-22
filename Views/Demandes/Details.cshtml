@@ -6,6 +6,7 @@
     var canValidateDistrict = ViewBag.CanValidateDistrict as bool? == true;
     var canSubmit = ViewBag.CanSubmit as bool? == true;
     var canEdit = ViewBag.CanEdit as bool? == true;
+    var canDelete = ViewBag.CanDelete as bool? == true;
     var canManageDocuments = ViewBag.CanManageDocuments as bool? == true;
     var validationTarget = ViewBag.ValidationTarget as string ?? "Commissaire de district";
 
@@ -172,6 +173,13 @@
                     <form asp-action="Soumettre" asp-route-id="@Model.Id" method="post">
                         @Html.AntiForgeryToken()
                         <button type="submit" class="btn btn-mango"><i class="bi bi-send"></i> Soumettre</button>
+                    </form>
+                }
+                @if (canDelete)
+                {
+                    <form asp-action="Supprimer" asp-route-id="@Model.Id" method="post" onsubmit="return confirm('Supprimer cette demande ?');">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash"></i> Supprimer</button>
                     </form>
                 }
                 @if (canValidateDistrict && Model.Statut == StatutDemande.Soumise)

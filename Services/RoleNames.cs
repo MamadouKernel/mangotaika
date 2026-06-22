@@ -5,6 +5,8 @@ namespace MangoTaika.Services;
 public static class RoleNames
 {
     public const string Administrateur = "Administrateur";
+    public const string CommissaireRegional = "CommissaireRegional";
+    public const string EquipeRegionale = "EquipeRegionale";
     public const string CommissaireDistrict = "CommissaireDistrict";
     public const string CommissaireDistrictAdjoint = "CommissaireDistrictAdjoint";
     public const string AssistantCommissaireDistrict = "AssistantCommissaireDistrict";
@@ -14,27 +16,41 @@ public static class RoleNames
     public const string Consultant = "Consultant";
     public const string EquipeDistrict = "EquipeDistrict";
     public const string ChefGroupe = "ChefGroupe";
+    public const string ChefGroupeAdjoint = "ChefGroupeAdjoint";
+    public const string AssistantChefGroupe = "AssistantChefGroupe";
     public const string ChefUnite = "ChefUnite";
+    public const string ChefUniteAdjoint = "ChefUniteAdjoint";
+    public const string AssistantChefUnite = "AssistantChefUnite";
     public const string Scout = "Scout";
     public const string Parent = "Parent";
 
     public static readonly string[] All =
     [
-        Administrateur, CommissaireDistrict, CommissaireDistrictAdjoint, AssistantCommissaireDistrict,
+        Administrateur,
+        CommissaireRegional, EquipeRegionale,
+        CommissaireDistrict, CommissaireDistrictAdjoint, AssistantCommissaireDistrict,
         Gestionnaire, AgentSupport,
         Superviseur, Consultant,
-        EquipeDistrict, ChefGroupe, ChefUnite,
+        EquipeDistrict,
+        ChefGroupe, ChefGroupeAdjoint, AssistantChefGroupe,
+        ChefUnite, ChefUniteAdjoint, AssistantChefUnite,
         Scout, Parent
     ];
 
     public static readonly IReadOnlyList<RoleDefinition> Definitions =
     [
         new(Administrateur, "Administrateur", 0, "All", "Acces complet a la plateforme."),
+        new(CommissaireRegional, "Commissaire Regional", 1, "Donnees de la region", "Pilotage et validation regionale."),
+        new(EquipeRegionale, "Equipe Regionale", 2, "Donnees de la region selon fonction", "Appui aux activites regionales."),
         new(CommissaireDistrict, "Commissaire de District", 1, "Donnees du district", "Pilotage et validation district."),
         new(CommissaireDistrictAdjoint, "Commissaire de District Adjoint", 2, "Donnees du district", "Appui au commissaire de district."),
         new(AssistantCommissaireDistrict, "Assistant Commissaire de District", 3, "Donnees du district", "Suivi operationnel district."),
         new(ChefGroupe, "Chef de Groupe", 4, "Uniquement les donnees de son groupe", "Gestion operationnelle de son groupe."),
+        new(ChefGroupeAdjoint, "Chef de groupe Adjoint", 4, "Uniquement les donnees de son groupe", "Appui au chef de groupe."),
+        new(AssistantChefGroupe, "Assistant Chef de Groupe", 5, "Uniquement les donnees de son groupe", "Assistance operationnelle au chef de groupe."),
         new(ChefUnite, "Chef d'Unite", 5, "Uniquement les donnees de sa branche dans son groupe", "Gestion de sa branche."),
+        new(ChefUniteAdjoint, "Chef d'unite Adjoint", 5, "Uniquement les donnees de sa branche dans son groupe", "Appui au chef d'unite."),
+        new(AssistantChefUnite, "Assistant chef d'unite", 6, "Uniquement les donnees de sa branche dans son groupe", "Assistance operationnelle au chef d'unite."),
         new(Scout, "Scout", 6, "Uniquement ses donnees", "Consultation et suivi individuel."),
         new(Parent, "Parent / Tuteur", 7, "Uniquement les donnees de son enfant", "Suivi des enfants rattaches."),
         new(EquipeDistrict, "Equipe de District", 3, "Donnees du district selon fonction", "Appui aux activites district."),

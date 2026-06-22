@@ -26,6 +26,8 @@ public class DemandeAutorisation
     public string? MotifRejet { get; set; }
     public DateTime DateCreation { get; set; } = DateTime.UtcNow;
     public DateTime? DateValidation { get; set; }
+    public bool EstSupprime { get; set; } = false;
+    public DateTime? DateSuppression { get; set; }
 
     public Guid DemandeurId { get; set; }
     public ApplicationUser Demandeur { get; set; } = null!;
