@@ -460,23 +460,33 @@ public class ActivitesController(
             .Distinct()
             .ToList();
 
-        if (allScoutIds.Count == 0)
+        var selectedRessourceIds = ressourceIds?
+            .Where(ressourceId => ressourceId != Guid.Empty)
+            .Distinct()
+            .ToList()
+            ?? [];
+
+        if (allScoutIds.Count == 0 && selectedRessourceIds.Count == 0)
         {
-            TempData["Error"] = "Selectionnez au moins un scout ou renseignez une liste de matricules.";
+            TempData["Error"] = "Selectionnez au moins un scout, une ressource ou renseignez une liste de matricules.";
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        var existingScoutIds = await db.ParticipantsActivite
-            .Where(p => p.ActiviteId == id && !p.EstSupprime && p.ScoutId.HasValue && allScoutIds.Contains(p.ScoutId.Value))
-            .Select(p => p.ScoutId!.Value)
-            .ToListAsync();
+        var existingScoutIds = allScoutIds.Count == 0
+            ? []
+            : await db.ParticipantsActivite
+                .Where(p => p.ActiviteId == id && !p.EstSupprime && p.ScoutId.HasValue && allScoutIds.Contains(p.ScoutId.Value))
+                .Select(p => p.ScoutId!.Value)
+                .ToListAsync();
         var existingScoutSet = existingScoutIds.ToHashSet();
 
-        var scoutsToAdd = await db.Scouts
-            .Where(s => s.IsActive && allScoutIds.Contains(s.Id) && !existingScoutSet.Contains(s.Id))
-            .OrderBy(s => s.Nom)
-            .ThenBy(s => s.Prenom)
-            .ToListAsync();
+        var scoutsToAdd = allScoutIds.Count == 0
+            ? []
+            : await db.Scouts
+                .Where(s => s.IsActive && allScoutIds.Contains(s.Id) && !existingScoutSet.Contains(s.Id))
+                .OrderBy(s => s.Nom)
+                .ThenBy(s => s.Prenom)
+                .ToListAsync();
 
         if (scoutsToAdd.Count > 0)
         {
@@ -498,12 +508,6 @@ public class ActivitesController(
 
             await db.SaveChangesAsync();
         }
-
-        var selectedRessourceIds = ressourceIds?
-            .Where(ressourceId => ressourceId != Guid.Empty)
-            .Distinct()
-            .ToList()
-            ?? [];
 
         var existingRessourceIds = selectedRessourceIds.Count == 0
             ? []
