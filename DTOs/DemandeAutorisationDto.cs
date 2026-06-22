@@ -28,6 +28,7 @@ public class DemandeAutorisationDto
     public DateTime DateCreation { get; set; }
     public DateTime? DateValidation { get; set; }
     public string? NomDemandeur { get; set; }
+    public Guid DemandeurId { get; set; }
     public string? NomValideur { get; set; }
     public string? NomGroupe { get; set; }
     public Guid? GroupeId { get; set; }

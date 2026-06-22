@@ -4,6 +4,8 @@
     var pageTitle = ViewBag.PageTitle as string ?? "Demandes d'autorisation";
     var pageSubtitle = ViewBag.PageSubtitle as string;
     var isBacklogChefGroupe = ViewBag.BacklogChefGroupe as bool? == true;
+    var currentUserId = ViewBag.CurrentUserId as Guid? ?? Guid.Empty;
+    var peutSupprimerToutes = ViewBag.PeutSupprimerToutes as bool? == true;
     var now = DateTime.UtcNow;
     var demandesSoumises = Model.Count(d => d.Statut == StatutDemande.Soumise);
     var demandesUrgentes = Model.Count(d => d.Statut == StatutDemande.Soumise && (now - d.DateCreation).TotalDays >= 3);
@@ -123,8 +125,19 @@
                     <span><i class="bi bi-people text-bleu"></i> @demande.NombreParticipants participant(s)</span>
                     <span><i class="bi bi-person text-bleu"></i> @(demande.NomDemandeur ?? "-")</span>
                 </div>
-                <div class="mt-auto">
+                @{
+                    var peutSupprimer = peutSupprimerToutes
+                        || (demande.DemandeurId == currentUserId && demande.Statut != StatutDemande.Validee);
+                }
+                <div class="mt-auto d-flex flex-wrap gap-2">
                     <a asp-action="Details" asp-route-id="@demande.Id" class="btn btn-sm btn-outline-or" title="Details"><i class="bi bi-eye"></i> Voir</a>
+                    @if (peutSupprimer)
+                    {
+                        <form asp-action="Supprimer" asp-route-id="@demande.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer cette demande ?');">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer"><i class="bi bi-trash"></i> Supprimer</button>
+                        </form>
+                    }
                 </div>
             </div>
         </div>
