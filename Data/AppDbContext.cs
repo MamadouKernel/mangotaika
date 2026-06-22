@@ -73,6 +73,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<AffectationUniteScoute> AffectationsUnitesScoutes => Set<AffectationUniteScoute>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<RoleMetadonnee> RolesMetadonnees => Set<RoleMetadonnee>();
     public DbSet<SecurityAuditLog> SecurityAuditLogs => Set<SecurityAuditLog>();
     public DbSet<DemandeRapprochementCompte> DemandesRapprochementComptes => Set<DemandeRapprochementCompte>();
 
@@ -134,6 +135,14 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.HasIndex(rp => new { rp.RoleId, rp.PermissionId }).IsUnique();
             e.HasOne(rp => rp.Role).WithMany().HasForeignKey(rp => rp.RoleId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(rp => rp.Permission).WithMany(p => p.RolePermissions).HasForeignKey(rp => rp.PermissionId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<RoleMetadonnee>(e =>
+        {
+            e.HasIndex(m => m.RoleId).IsUnique();
+            e.Property(m => m.Libelle).HasMaxLength(120);
+            e.Property(m => m.Description).HasMaxLength(500);
+            e.Property(m => m.Visibilite).HasMaxLength(200);
         });
 
         builder.Entity<SecurityAuditLog>(e =>
