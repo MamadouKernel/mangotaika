@@ -1,3 +1,5 @@
+using System.Net;
+using System.Text;
 using MangoTaika.Data;
 using MangoTaika.Data.Entities;
 using MangoTaika.Helpers;
@@ -274,6 +276,254 @@ public class RapportsActiviteController(
         await db.SaveChangesAsync();
         TempData["Success"] = "Rapport d'activite valide.";
         return RedirectToAction(nameof(Details), new { id });
+    }
+
+    public async Task<IActionResult> ExportPdf(Guid id)
+    {
+        var rapport = await LoadRapportForExportAsync(id);
+        if (rapport is null) return NotFound();
+        if (!await CanAccessReportAsync(rapport.Activite.GroupeId)) return Forbid();
+
+        var lines = BuildRapportLines(rapport);
+        var titre = $"Rapport - {rapport.Activite.Titre}";
+        var bytes = SimplePdfBuilder.BuildTextPdf(titre, lines);
+        return File(bytes, "application/pdf", $"{BuildSafeFileName(rapport.Activite.Titre)}-rapport.pdf");
+    }
+
+    public async Task<IActionResult> ExportWord(Guid id)
+    {
+        var rapport = await LoadRapportForExportAsync(id);
+        if (rapport is null) return NotFound();
+        if (!await CanAccessReportAsync(rapport.Activite.GroupeId)) return Forbid();
+
+        var html = BuildRapportWordHtml(rapport);
+        return File(Encoding.UTF8.GetBytes(html), "application/msword", $"{BuildSafeFileName(rapport.Activite.Titre)}-rapport.doc");
+    }
+
+    private async Task<RapportActivite?> LoadRapportForExportAsync(Guid id)
+    {
+        return await db.RapportsActivite.AsNoTracking()
+            .Include(r => r.Activite).ThenInclude(a => a.Groupe)
+            .Include(r => r.Activite).ThenInclude(a => a.Participants.Where(p => !p.EstSupprime))
+                .ThenInclude(p => p.Scout)
+            .Include(r => r.Activite).ThenInclude(a => a.Participants.Where(p => !p.EstSupprime))
+                .ThenInclude(p => p.Ressource)
+            .Include(r => r.Createur)
+            .Include(r => r.Valideur)
+            .Include(r => r.PiecesJointes.Where(p => !p.EstSupprime))
+            .FirstOrDefaultAsync(r => r.Id == id);
+    }
+
+    private static List<string> BuildRapportLines(RapportActivite r)
+    {
+        var lines = new List<string>
+        {
+            "RAPPORT D'ACTIVITE",
+            "==================",
+            string.Empty,
+            $"Activite : {r.Activite.Titre}",
+            $"Groupe : {r.Activite.Groupe?.Nom ?? "District"}",
+            $"Date debut : {r.Activite.DateDebut:dd/MM/yyyy}" + (r.Activite.DateFin.HasValue ? $" au {r.Activite.DateFin:dd/MM/yyyy}" : string.Empty),
+            $"Lieu : {r.Activite.Lieu ?? "Non precise"}",
+            $"Date de realisation : {r.DateRealisation:dd/MM/yyyy}",
+            $"Nombre de participants : {r.NombreParticipants}",
+            $"Statut : {r.Statut}",
+            $"Cree par : {BuildPersonLabel(r.Createur)} le {r.DateCreation:dd/MM/yyyy}",
+        };
+
+        if (r.Valideur is not null && r.DateValidation.HasValue)
+        {
+            lines.Add($"Valide par : {BuildPersonLabel(r.Valideur)} le {r.DateValidation:dd/MM/yyyy}");
+        }
+
+        lines.Add(string.Empty);
+        lines.Add("1. RESUME EXECUTIF");
+        AppendBlock(lines, r.ResumeExecutif);
+        lines.Add(string.Empty);
+        lines.Add("2. RESULTATS OBTENUS");
+        AppendBlock(lines, r.ResultatsObtenus);
+        lines.Add(string.Empty);
+        lines.Add("3. DIFFICULTES RENCONTREES");
+        AppendBlock(lines, r.DifficultesRencontrees);
+        lines.Add(string.Empty);
+        lines.Add("4. RECOMMANDATIONS");
+        AppendBlock(lines, r.Recommandations);
+
+        if (!string.IsNullOrWhiteSpace(r.ObservationsComplementaires))
+        {
+            lines.Add(string.Empty);
+            lines.Add("5. OBSERVATIONS COMPLEMENTAIRES");
+            AppendBlock(lines, r.ObservationsComplementaires);
+        }
+
+        lines.Add(string.Empty);
+        lines.Add($"LISTE DES PARTICIPANTS ({r.Activite.Participants.Count})");
+        lines.Add("--------------------");
+
+        var participants = r.Activite.Participants
+            .OrderBy(p => p.Scout?.Nom ?? p.Ressource?.Nom ?? string.Empty)
+            .ThenBy(p => p.Scout?.Prenom ?? p.Ressource?.Prenom ?? string.Empty)
+            .ToList();
+
+        if (participants.Count == 0)
+        {
+            lines.Add("Aucun participant enregistre.");
+        }
+        else
+        {
+            int idx = 1;
+            foreach (var p in participants)
+            {
+                var label = p.Scout is not null
+                    ? $"{p.Scout.Nom} {p.Scout.Prenom}".Trim() + (string.IsNullOrWhiteSpace(p.Scout.Matricule) ? string.Empty : $" ({p.Scout.Matricule})")
+                    : p.Ressource is not null
+                        ? $"{p.Ressource.Nom} {p.Ressource.Prenom}".Trim() + $" - {p.Ressource.Type}"
+                        : "Participant inconnu";
+                lines.Add($"{idx,3}. {label} - {p.Presence}");
+                idx++;
+            }
+        }
+
+        if (r.PiecesJointes.Any())
+        {
+            lines.Add(string.Empty);
+            lines.Add("PIECES JOINTES");
+            lines.Add("--------------");
+            foreach (var piece in r.PiecesJointes)
+            {
+                lines.Add($"- {piece.NomFichier}");
+            }
+        }
+
+        return lines;
+    }
+
+    private static void AppendBlock(List<string> lines, string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            lines.Add("(Non renseigne)");
+            return;
+        }
+
+        foreach (var line in text.Replace("\r\n", "\n").Split('\n'))
+        {
+            lines.Add(line.TrimEnd());
+        }
+    }
+
+    private static string BuildPersonLabel(ApplicationUser? user)
+        => user is null ? "Inconnu" : $"{user.Prenom} {user.Nom}".Trim();
+
+    private static string BuildSafeFileName(string value)
+    {
+        var normalized = DatabaseText.NormalizeSearchKey(value).ToLowerInvariant();
+        var chars = normalized.Select(c => char.IsLetterOrDigit(c) ? c : '-').ToArray();
+        var compact = string.Join('-', new string(chars).Split('-', StringSplitOptions.RemoveEmptyEntries));
+        return string.IsNullOrWhiteSpace(compact) ? "rapport" : compact;
+    }
+
+    private static string BuildRapportWordHtml(RapportActivite r)
+    {
+        var titre = WebUtility.HtmlEncode(r.Activite.Titre);
+        var groupe = WebUtility.HtmlEncode(r.Activite.Groupe?.Nom ?? "District");
+        var lieu = WebUtility.HtmlEncode(r.Activite.Lieu ?? "Non precise");
+        var dates = WebUtility.HtmlEncode($"{r.Activite.DateDebut:dd/MM/yyyy}" + (r.Activite.DateFin.HasValue ? $" au {r.Activite.DateFin:dd/MM/yyyy}" : string.Empty));
+        var realisation = r.DateRealisation.ToString("dd/MM/yyyy");
+        var statut = WebUtility.HtmlEncode(r.Statut.ToString());
+        var createur = WebUtility.HtmlEncode(BuildPersonLabel(r.Createur));
+        var dateCreation = r.DateCreation.ToString("dd/MM/yyyy");
+
+        var sb = new StringBuilder();
+        sb.Append("<!doctype html><html><head><meta charset=\"utf-8\"><title>Rapport - ").Append(titre).Append("</title>");
+        sb.Append("<style>body{font-family:Arial,sans-serif;color:#1f2933;line-height:1.45;}.header{border-bottom:3px solid #597537;padding-bottom:14px;margin-bottom:24px;}.brand{color:#597537;font-size:18px;font-weight:700;letter-spacing:1px;}h1{color:#293a42;font-size:22px;margin:8px 0 0;}h2{color:#597537;font-size:14px;margin-top:18px;border-bottom:1px solid #d9e2d0;padding-bottom:4px;}p,div{font-size:12px;}table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;}th,td{border:1px solid #cdd5dd;padding:6px 8px;text-align:left;}th{background:#eef3e6;color:#293a42;}.meta{margin:6px 0;}.meta strong{display:inline-block;min-width:160px;color:#293a42;}.footer{margin-top:28px;padding-top:12px;border-top:1px solid #d9e2d0;color:#667085;font-size:11px;}</style>");
+        sb.Append("</head><body>");
+        sb.Append("<div class=\"header\"><div class=\"brand\">MANGO TAIKA - DISTRICT SCOUT</div><h1>Rapport d'activite</h1></div>");
+
+        sb.Append("<div class=\"meta\"><strong>Activite :</strong> ").Append(titre).Append("</div>");
+        sb.Append("<div class=\"meta\"><strong>Groupe :</strong> ").Append(groupe).Append("</div>");
+        sb.Append("<div class=\"meta\"><strong>Lieu :</strong> ").Append(lieu).Append("</div>");
+        sb.Append("<div class=\"meta\"><strong>Dates :</strong> ").Append(dates).Append("</div>");
+        sb.Append("<div class=\"meta\"><strong>Date de realisation :</strong> ").Append(realisation).Append("</div>");
+        sb.Append("<div class=\"meta\"><strong>Participants :</strong> ").Append(r.NombreParticipants).Append("</div>");
+        sb.Append("<div class=\"meta\"><strong>Statut :</strong> ").Append(statut).Append("</div>");
+        sb.Append("<div class=\"meta\"><strong>Cree par :</strong> ").Append(createur).Append(" le ").Append(dateCreation).Append("</div>");
+        if (r.Valideur is not null && r.DateValidation.HasValue)
+        {
+            sb.Append("<div class=\"meta\"><strong>Valide par :</strong> ").Append(WebUtility.HtmlEncode(BuildPersonLabel(r.Valideur))).Append(" le ").Append(r.DateValidation.Value.ToString("dd/MM/yyyy")).Append("</div>");
+        }
+
+        AppendWordSection(sb, "1. Resume executif", r.ResumeExecutif);
+        AppendWordSection(sb, "2. Resultats obtenus", r.ResultatsObtenus);
+        AppendWordSection(sb, "3. Difficultes rencontrees", r.DifficultesRencontrees);
+        AppendWordSection(sb, "4. Recommandations", r.Recommandations);
+        if (!string.IsNullOrWhiteSpace(r.ObservationsComplementaires))
+        {
+            AppendWordSection(sb, "5. Observations complementaires", r.ObservationsComplementaires);
+        }
+
+        sb.Append("<h2>Liste des participants (").Append(r.Activite.Participants.Count).Append(")</h2>");
+        var participants = r.Activite.Participants
+            .OrderBy(p => p.Scout?.Nom ?? p.Ressource?.Nom ?? string.Empty)
+            .ThenBy(p => p.Scout?.Prenom ?? p.Ressource?.Prenom ?? string.Empty)
+            .ToList();
+        if (participants.Count == 0)
+        {
+            sb.Append("<p>Aucun participant enregistre.</p>");
+        }
+        else
+        {
+            sb.Append("<table><thead><tr><th>#</th><th>Nom et prenom</th><th>Matricule / Type</th><th>Categorie</th><th>Presence</th></tr></thead><tbody>");
+            int idx = 1;
+            foreach (var p in participants)
+            {
+                string nom; string complement; string categorie;
+                if (p.Scout is not null)
+                {
+                    nom = WebUtility.HtmlEncode($"{p.Scout.Nom} {p.Scout.Prenom}".Trim());
+                    complement = WebUtility.HtmlEncode(p.Scout.Matricule ?? "-");
+                    categorie = "Scout";
+                }
+                else if (p.Ressource is not null)
+                {
+                    nom = WebUtility.HtmlEncode($"{p.Ressource.Nom} {p.Ressource.Prenom}".Trim());
+                    complement = WebUtility.HtmlEncode(p.Ressource.Type.ToString());
+                    categorie = "Ressource";
+                }
+                else
+                {
+                    nom = "Participant inconnu";
+                    complement = "-";
+                    categorie = "-";
+                }
+
+                sb.Append("<tr><td>").Append(idx).Append("</td><td>").Append(nom).Append("</td><td>").Append(complement).Append("</td><td>").Append(categorie).Append("</td><td>").Append(p.Presence).Append("</td></tr>");
+                idx++;
+            }
+            sb.Append("</tbody></table>");
+        }
+
+        if (r.PiecesJointes.Any())
+        {
+            sb.Append("<h2>Pieces jointes</h2><ul>");
+            foreach (var piece in r.PiecesJointes)
+            {
+                sb.Append("<li>").Append(WebUtility.HtmlEncode(piece.NomFichier)).Append("</li>");
+            }
+            sb.Append("</ul>");
+        }
+
+        sb.Append("<div class=\"footer\">Document genere automatiquement depuis le rapport d'activite.</div>");
+        sb.Append("</body></html>");
+        return sb.ToString();
+    }
+
+    private static void AppendWordSection(StringBuilder sb, string title, string? content)
+    {
+        sb.Append("<h2>").Append(WebUtility.HtmlEncode(title)).Append("</h2>");
+        var text = string.IsNullOrWhiteSpace(content) ? "(Non renseigne)" : content;
+        var encoded = WebUtility.HtmlEncode(text).Replace("\r\n", "\n").Replace("\n", "<br />");
+        sb.Append("<div>").Append(encoded).Append("</div>");
     }
 
     private async Task ValidateModelAsync(RapportActivite model, Scout? currentScout, Guid? currentId = null)

@@ -48,6 +48,8 @@
                     <form asp-action="Valider" asp-route-id="@Model.Id" method="post" class="d-inline">@Html.AntiForgeryToken()<button type="submit" class="btn btn-mango"><i class="bi bi-check2-circle"></i> Valider</button></form>
                     <form asp-action="DemanderRevision" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="const commentaire = prompt('Commentaires du commissaire de district :'); if (!commentaire) return false; this.querySelector('[name=commentaire]').value = commentaire;">@Html.AntiForgeryToken()<input type="hidden" name="commentaire" /><button type="submit" class="btn btn-outline-or"><i class="bi bi-arrow-counterclockwise"></i> Demander correction</button></form>
                 }
+                <a asp-action="ExportPdf" asp-route-id="@Model.Id" class="btn btn-outline-or"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+                <a asp-action="ExportWord" asp-route-id="@Model.Id" class="btn btn-outline-or"><i class="bi bi-file-earmark-word"></i> Word</a>
                 <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-arrow-left"></i> Retour</a>
             </div>
         </div>
