@@ -225,18 +225,13 @@ public class RolesController(
             return NotFound();
         }
 
-        if (RoleNames.Definitions.Any(d => d.Name == role.Name))
+        if (string.Equals(role.Name, RoleNames.Administrateur, StringComparison.Ordinal))
         {
-            TempData["Error"] = "Les roles systeme ne peuvent pas etre supprimes.";
+            TempData["Error"] = "Le role Administrateur ne peut pas etre supprime.";
             return RedirectToAction(nameof(Index));
         }
 
-        var hasUsers = await db.UserRoles.AnyAsync(ur => ur.RoleId == id);
-        if (hasUsers)
-        {
-            TempData["Error"] = "Ce role est attribue a des utilisateurs. Retirez-le ou desactivez-le avant de le supprimer.";
-            return RedirectToAction(nameof(Index));
-        }
+        var nbUsers = await db.UserRoles.CountAsync(ur => ur.RoleId == id);
 
         var meta = await EnsureMetadonneeAsync(role);
         meta.EstSupprime = true;
@@ -244,7 +239,10 @@ public class RolesController(
         meta.DateSuppression = DateTime.UtcNow;
         await db.SaveChangesAsync();
 
-        TempData["Success"] = $"Role \"{meta.Libelle}\" supprime (suppression logique).";
+        var suffix = nbUsers > 0
+            ? $" {nbUsers} utilisateur(s) affecte(s) ont perdu les permissions associees (restaurable)."
+            : string.Empty;
+        TempData["Success"] = $"Role \"{meta.Libelle}\" supprime (suppression logique).{suffix}";
         return RedirectToAction(nameof(Index));
     }
 
