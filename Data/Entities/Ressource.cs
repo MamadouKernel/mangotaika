@@ -30,7 +30,9 @@ public enum TypeRessource
     Invite,
     Formateur,
     Parrain,
-    NonPrecise
+    NonPrecise,
+    Aine,
+    Administrateur
 }
 
 public class ParticipationFormationRessource
