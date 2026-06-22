@@ -11,6 +11,9 @@ public class RoleViewModel
     public string? Visibilite { get; set; }
     public int Hierarchie { get; set; }
     public bool EstSysteme { get; set; }
+    public bool EstActif { get; set; } = true;
+    public bool EstSupprime { get; set; }
+    public DateTime? DateSuppression { get; set; }
 }
 
 public class RoleEditDto
