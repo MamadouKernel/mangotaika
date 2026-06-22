@@ -2,6 +2,7 @@
 @{
     ViewData["Title"] = "Roles et visibilite";
     Layout = "_LayoutAdmin";
+    var inclureSupprimes = ViewBag.InclureSupprimes as bool? == true;
 }
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
@@ -9,7 +10,17 @@
         <h2 class="section-title mb-1"><i class="bi bi-person-lock text-or"></i> Roles et visibilite</h2>
         <p class="text-muted-custom mb-0">Matrice officielle des profils, hierarchies et perimetres d'acces.</p>
     </div>
-    <a asp-action="Create" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Nouveau role</a>
+    <div class="d-flex gap-2">
+        @if (inclureSupprimes)
+        {
+            <a asp-action="Index" class="btn btn-outline-or"><i class="bi bi-eye-slash"></i> Masquer les supprimes</a>
+        }
+        else
+        {
+            <a asp-action="Index" asp-route-inclureSupprimes="true" class="btn btn-outline-or"><i class="bi bi-archive"></i> Voir les supprimes</a>
+        }
+        <a asp-action="Create" class="btn btn-mango"><i class="bi bi-plus-lg"></i> Nouveau role</a>
+    </div>
 </div>
 
 @if (TempData["Success"] is string okMsg)
@@ -28,6 +39,7 @@
                 <tr>
                     <th>Hierarchie</th>
                     <th>Role</th>
+                    <th>Statut</th>
                     <th>Visibilite</th>
                     <th>Description</th>
                     <th class="text-end">Actions</th>
@@ -36,24 +48,68 @@
             <tbody>
                 @foreach (var role in Model)
                 {
-                    <tr>
+                    var rowStyle = role.EstSupprime
+                        ? "opacity:0.55;"
+                        : !role.EstActif ? "opacity:0.75;" : string.Empty;
+                    <tr style="@rowStyle">
                         <td><span class="badge-3d badge-soumise">@role.Hierarchie</span></td>
                         <td>
                             <div class="fw-semibold">@role.Libelle</div>
                             <div class="small text-muted-custom"><code>@role.Name</code> @(role.EstSysteme ? "(systeme)" : string.Empty)</div>
                         </td>
+                        <td>
+                            @if (role.EstSupprime)
+                            {
+                                <span class="badge-3d badge-rejetee" title="Supprime le @role.DateSuppression?.ToString("dd/MM/yyyy")">Supprime</span>
+                            }
+                            else if (role.EstActif)
+                            {
+                                <span class="badge-3d badge-validee">Actif</span>
+                            }
+                            else
+                            {
+                                <span class="badge-3d badge-archivee">Desactive</span>
+                            }
+                        </td>
                         <td>@role.Visibilite</td>
                         <td class="text-muted-custom">@role.Description</td>
                         <td class="text-end">
-                            <div class="d-inline-flex gap-2">
-                                <a asp-action="Edit" asp-route-id="@role.Id" class="btn btn-sm btn-outline-or" title="Modifier"><i class="bi bi-pencil-square"></i></a>
-                                <a asp-controller="Permissions" asp-action="Index" asp-route-roleId="@role.Id" class="btn btn-sm btn-outline-or" title="Permissions"><i class="bi bi-shield-check"></i></a>
-                                @if (!role.EstSysteme)
+                            <div class="d-inline-flex gap-2 flex-wrap justify-content-end">
+                                @if (role.EstSupprime)
                                 {
-                                    <form asp-action="Delete" asp-route-id="@role.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer le role @role.Libelle ?');">
+                                    <form asp-action="Restaurer" asp-route-id="@role.Id" method="post" class="d-inline" onsubmit="return confirm('Restaurer le role @role.Libelle ?');">
                                         @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer"><i class="bi bi-trash"></i></button>
+                                        <button type="submit" class="btn btn-sm btn-outline-or" title="Restaurer"><i class="bi bi-arrow-counterclockwise"></i> Restaurer</button>
                                     </form>
+                                }
+                                else
+                                {
+                                    <a asp-action="Edit" asp-route-id="@role.Id" class="btn btn-sm btn-outline-or" title="Modifier"><i class="bi bi-pencil-square"></i></a>
+                                    <a asp-controller="Permissions" asp-action="Index" asp-route-roleId="@role.Id" class="btn btn-sm btn-outline-or" title="Permissions"><i class="bi bi-shield-check"></i></a>
+                                    @if (role.EstActif)
+                                    {
+                                        @if (role.Name != "Administrateur")
+                                        {
+                                            <form asp-action="Desactiver" asp-route-id="@role.Id" method="post" class="d-inline" onsubmit="return confirm('Desactiver le role @role.Libelle ?');">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-outline-or" title="Desactiver"><i class="bi bi-pause-circle"></i></button>
+                                            </form>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <form asp-action="Reactiver" asp-route-id="@role.Id" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-or" title="Reactiver"><i class="bi bi-play-circle"></i></button>
+                                        </form>
+                                    }
+                                    @if (!role.EstSysteme)
+                                    {
+                                        <form asp-action="Delete" asp-route-id="@role.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer le role @role.Libelle ? (suppression logique, restaurable)');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                    }
                                 }
                             </div>
                         </td>
@@ -65,5 +121,8 @@
 </div>
 
 <div class="alert mt-3" style="background:rgba(89,117,55,0.08);border:1px solid rgba(89,117,55,0.22);border-radius:14px;color:var(--texte);">
-    <i class="bi bi-info-circle"></i> Les <strong>roles systeme</strong> sont integres au code (workflows de validation, autorisations en dur). Ils peuvent etre renommes a l'affichage mais pas supprimes. Les roles personnalises crees ici fonctionnent via le systeme de Permissions.
+    <i class="bi bi-info-circle"></i>
+    <strong>Roles systeme</strong> integres au code : modifiables mais pas supprimables (peuvent etre desactives sauf Administrateur).
+    <strong>Desactiver</strong> retire les permissions sans toucher aux affectations utilisateurs.
+    <strong>Supprimer</strong> = suppression logique : le role disparait des listes mais reste restaurable depuis "Voir les supprimes".
 </div>

@@ -9,5 +9,8 @@ public class RoleMetadonnee
     public string? Visibilite { get; set; }
     public int Hierarchie { get; set; } = 50;
     public bool EstSysteme { get; set; } = false;
+    public bool EstActif { get; set; } = true;
+    public bool EstSupprime { get; set; } = false;
+    public DateTime? DateSuppression { get; set; }
     public DateTime DateCreation { get; set; } = DateTime.UtcNow;
 }

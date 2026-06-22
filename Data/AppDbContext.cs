@@ -143,6 +143,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             e.Property(m => m.Libelle).HasMaxLength(120);
             e.Property(m => m.Description).HasMaxLength(500);
             e.Property(m => m.Visibilite).HasMaxLength(200);
+            e.Property(m => m.EstActif).HasDefaultValue(true);
         });
 
         builder.Entity<SecurityAuditLog>(e =>

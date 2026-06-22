@@ -35,9 +35,18 @@ public sealed class PermissionService(
             return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
 
+        var inactiveRoleIds = await db.RolesMetadonnees
+            .AsNoTracking()
+            .Where(m => m.EstSupprime || !m.EstActif)
+            .Select(m => m.RoleId)
+            .ToListAsync();
+        var inactiveSet = inactiveRoleIds.ToHashSet();
+
         var permissions = await db.RolePermissions
             .AsNoTracking()
-            .Where(rp => rp.Permission.IsActive && roleNames.Contains(rp.Role.Name!))
+            .Where(rp => rp.Permission.IsActive
+                && roleNames.Contains(rp.Role.Name!)
+                && !inactiveSet.Contains(rp.RoleId))
             .Select(rp => rp.Permission.Code)
             .Distinct()
             .ToListAsync();

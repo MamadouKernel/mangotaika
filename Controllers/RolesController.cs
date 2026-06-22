@@ -14,7 +14,7 @@ public class RolesController(
     AppDbContext db,
     RoleManager<IdentityRole<Guid>> roleManager) : Controller
 {
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(bool inclureSupprimes = false)
     {
         var roles = await roleManager.Roles.AsNoTracking().ToListAsync();
         var metadonnees = await db.RolesMetadonnees.AsNoTracking().ToListAsync();
@@ -31,6 +31,13 @@ public class RolesController(
             var definition = RoleNames.Definitions.FirstOrDefault(d => d.Name == role.Name);
             var meta = metadonnees.FirstOrDefault(m => m.RoleId == role.Id);
             var estSysteme = systemeNames.Contains(role.Name);
+            var estSupprime = meta?.EstSupprime ?? false;
+            var estActif = meta?.EstActif ?? true;
+
+            if (estSupprime && !inclureSupprimes)
+            {
+                continue;
+            }
 
             lignes.Add(new RoleViewModel
             {
@@ -40,10 +47,14 @@ public class RolesController(
                 Description = meta?.Description ?? definition?.Description,
                 Visibilite = meta?.Visibilite ?? definition?.Visibility,
                 Hierarchie = meta?.Hierarchie ?? definition?.Hierarchy ?? 50,
-                EstSysteme = estSysteme
+                EstSysteme = estSysteme,
+                EstActif = estActif,
+                EstSupprime = estSupprime,
+                DateSuppression = meta?.DateSuppression
             });
         }
 
+        ViewBag.InclureSupprimes = inclureSupprimes;
         return View(lignes.OrderBy(l => l.Hierarchie).ThenBy(l => l.Libelle).ToList());
     }
 
@@ -223,32 +234,125 @@ public class RolesController(
         var hasUsers = await db.UserRoles.AnyAsync(ur => ur.RoleId == id);
         if (hasUsers)
         {
-            TempData["Error"] = "Ce role est attribue a des utilisateurs. Retirez-le avant de le supprimer.";
+            TempData["Error"] = "Ce role est attribue a des utilisateurs. Retirez-le ou desactivez-le avant de le supprimer.";
             return RedirectToAction(nameof(Index));
         }
 
-        var rolePermissions = await db.RolePermissions.Where(rp => rp.RoleId == id).ToListAsync();
-        if (rolePermissions.Count > 0)
+        var meta = await EnsureMetadonneeAsync(role);
+        meta.EstSupprime = true;
+        meta.EstActif = false;
+        meta.DateSuppression = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        TempData["Success"] = $"Role \"{meta.Libelle}\" supprime (suppression logique).";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Restaurer(Guid id)
+    {
+        var role = await roleManager.FindByIdAsync(id.ToString());
+        if (role is null || role.Name is null)
         {
-            db.RolePermissions.RemoveRange(rolePermissions);
+            return NotFound();
         }
 
         var meta = await db.RolesMetadonnees.FirstOrDefaultAsync(m => m.RoleId == id);
-        if (meta is not null)
+        if (meta is null || !meta.EstSupprime)
         {
-            db.RolesMetadonnees.Remove(meta);
+            TempData["Error"] = "Ce role n'est pas supprime.";
+            return RedirectToAction(nameof(Index), new { inclureSupprimes = true });
         }
 
+        meta.EstSupprime = false;
+        meta.EstActif = true;
+        meta.DateSuppression = null;
         await db.SaveChangesAsync();
-        var deleteResult = await roleManager.DeleteAsync(role);
-        if (!deleteResult.Succeeded)
+
+        TempData["Success"] = $"Role \"{meta.Libelle}\" restaure.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Desactiver(Guid id)
+    {
+        var role = await roleManager.FindByIdAsync(id.ToString());
+        if (role is null || role.Name is null)
         {
-            TempData["Error"] = string.Join(" ", deleteResult.Errors.Select(e => e.Description));
+            return NotFound();
+        }
+
+        if (string.Equals(role.Name, RoleNames.Administrateur, StringComparison.Ordinal))
+        {
+            TempData["Error"] = "Le role Administrateur ne peut pas etre desactive.";
             return RedirectToAction(nameof(Index));
         }
 
-        TempData["Success"] = $"Role \"{role.Name}\" supprime.";
+        var meta = await EnsureMetadonneeAsync(role);
+        if (meta.EstSupprime)
+        {
+            TempData["Error"] = "Ce role est supprime. Restaurez-le d'abord.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        meta.EstActif = false;
+        await db.SaveChangesAsync();
+
+        TempData["Success"] = $"Role \"{meta.Libelle}\" desactive. Les utilisateurs n'auront plus les permissions associees.";
         return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Reactiver(Guid id)
+    {
+        var role = await roleManager.FindByIdAsync(id.ToString());
+        if (role is null || role.Name is null)
+        {
+            return NotFound();
+        }
+
+        var meta = await EnsureMetadonneeAsync(role);
+        if (meta.EstSupprime)
+        {
+            TempData["Error"] = "Ce role est supprime. Restaurez-le d'abord.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        meta.EstActif = true;
+        await db.SaveChangesAsync();
+
+        TempData["Success"] = $"Role \"{meta.Libelle}\" reactive.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    private async Task<RoleMetadonnee> EnsureMetadonneeAsync(IdentityRole<Guid> role)
+    {
+        var meta = await db.RolesMetadonnees.FirstOrDefaultAsync(m => m.RoleId == role.Id);
+        if (meta is not null)
+        {
+            return meta;
+        }
+
+        var definition = RoleNames.Definitions.FirstOrDefault(d => d.Name == role.Name);
+        var estSysteme = definition is not null;
+
+        meta = new RoleMetadonnee
+        {
+            Id = Guid.NewGuid(),
+            RoleId = role.Id,
+            Libelle = definition?.Label ?? role.Name!,
+            Description = definition?.Description,
+            Visibilite = definition?.Visibility,
+            Hierarchie = definition?.Hierarchy ?? 50,
+            EstSysteme = estSysteme,
+            EstActif = true,
+            EstSupprime = false
+        };
+        db.RolesMetadonnees.Add(meta);
+        return meta;
     }
 
     private static string NormaliserNomTechnique(string? value)
