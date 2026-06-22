@@ -19,6 +19,14 @@ public static class PermissionCodes
     public const string FormationsVoir = "Formations.Voir";
     public const string FormationsStatistiquesVoir = "Formations.Statistiques.Voir";
     public const string DemandesVoir = "Demandes.Voir";
+    public const string DemandesCreer = "Demandes.Creer";
+    public const string DemandesModifier = "Demandes.Modifier";
+    public const string DemandesSoumettre = "Demandes.Soumettre";
+    public const string DemandesValiderChefGroupe = "Demandes.ValiderChefGroupe";
+    public const string DemandesValiderDistrict = "Demandes.ValiderDistrict";
+    public const string DemandesRejeter = "Demandes.Rejeter";
+    public const string DemandesReviser = "Demandes.Reviser";
+    public const string DemandesSupprimer = "Demandes.Supprimer";
     public const string DemandesGroupeVoir = "DemandesGroupe.Voir";
     public const string FinancesVoir = "Finances.Voir";
     public const string DonsAdminVoir = "Finances.Dons.Voir";
@@ -77,6 +85,14 @@ public static class PermissionCodes
         new(FormationsVoir, "Voir les formations", "Formations", "Acceder aux formations selon le role."),
         new(FormationsStatistiquesVoir, "Voir les statistiques formations", "Formations", "Consulter les statistiques des formations."),
         new(DemandesVoir, "Voir les demandes administratives", "Demandes & validations", "Consulter et traiter les demandes administratives."),
+        new(DemandesCreer, "Creer une demande", "Demandes & validations", "Initier une nouvelle demande d'autorisation."),
+        new(DemandesModifier, "Modifier une demande", "Demandes & validations", "Modifier le contenu d'une demande avant validation."),
+        new(DemandesSoumettre, "Soumettre une demande", "Demandes & validations", "Envoyer une demande pour validation."),
+        new(DemandesValiderChefGroupe, "Valider en tant que chef de groupe", "Demandes & validations", "Valider une demande au niveau chef de groupe."),
+        new(DemandesValiderDistrict, "Valider au niveau district", "Demandes & validations", "Valider une demande au niveau commissariat de district."),
+        new(DemandesRejeter, "Rejeter une demande", "Demandes & validations", "Refuser une demande avec motif."),
+        new(DemandesReviser, "Renvoyer pour revision", "Demandes & validations", "Demander une modification du demandeur."),
+        new(DemandesSupprimer, "Supprimer une demande", "Demandes & validations", "Supprimer logiquement une demande."),
         new(DemandesGroupeVoir, "Voir les demandes de groupe", "Demandes & validations", "Consulter et traiter les demandes de groupe."),
         new(FinancesVoir, "Voir les finances", "Finances & AGR", "Consulter les mouvements financiers."),
         new(DonsAdminVoir, "Voir les dons", "Finances & AGR", "Consulter les dons declares."),

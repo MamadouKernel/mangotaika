@@ -141,7 +141,34 @@ public sealed class PermissionSeeder(
             new[]
             {
                 PermissionCodes.DemandesVoir,
+                PermissionCodes.DemandesCreer,
+                PermissionCodes.DemandesModifier,
+                PermissionCodes.DemandesSoumettre,
+                PermissionCodes.DemandesValiderChefGroupe,
+                PermissionCodes.DemandesValiderDistrict,
+                PermissionCodes.DemandesRejeter,
+                PermissionCodes.DemandesReviser,
+                PermissionCodes.DemandesSupprimer,
                 PermissionCodes.DemandesGroupeVoir
+            };
+
+        var demandesScopedLeader =
+            new[]
+            {
+                PermissionCodes.DemandesVoir,
+                PermissionCodes.DemandesCreer,
+                PermissionCodes.DemandesModifier,
+                PermissionCodes.DemandesSoumettre,
+                PermissionCodes.DemandesValiderChefGroupe
+            };
+
+        var demandesUnitLeader =
+            new[]
+            {
+                PermissionCodes.DemandesVoir,
+                PermissionCodes.DemandesCreer,
+                PermissionCodes.DemandesModifier,
+                PermissionCodes.DemandesSoumettre
             };
 
         var finances =
@@ -244,7 +271,7 @@ public sealed class PermissionSeeder(
                 .Distinct()
                 .ToArray();
 
-        var scopedLeader =
+        var scopedLeaderBase =
             publicCustomer
                 .Concat([
                     PermissionCodes.TerritoireScoutsVoir,
@@ -256,9 +283,19 @@ public sealed class PermissionSeeder(
                     PermissionCodes.RapportsActiviteVoir,
                     PermissionCodes.PropositionsMaitriseVoir,
                     PermissionCodes.FormationsVoir
-                ])
-                .Distinct()
-                .ToArray();
+                ]);
+
+        var chefGroupePermissions = scopedLeaderBase
+            .Concat(demandesScopedLeader)
+            .Distinct()
+            .ToArray();
+
+        var chefUnitePermissions = scopedLeaderBase
+            .Concat(demandesUnitLeader)
+            .Distinct()
+            .ToArray();
+
+        var scopedLeader = scopedLeaderBase.Distinct().ToArray();
 
         var supportAgent =
             publicCustomer
@@ -280,11 +317,11 @@ public sealed class PermissionSeeder(
             [RoleNames.CommissaireDistrictAdjoint] = districtLeadership,
             [RoleNames.AssistantCommissaireDistrict] = districtLeadership,
             [RoleNames.EquipeDistrict] = scopedLeader,
-            [RoleNames.ChefGroupe] = scopedLeader,
-            [RoleNames.ChefGroupeAdjoint] = scopedLeader,
+            [RoleNames.ChefGroupe] = chefGroupePermissions,
+            [RoleNames.ChefGroupeAdjoint] = chefGroupePermissions,
             [RoleNames.AssistantChefGroupe] = scopedLeader,
-            [RoleNames.ChefUnite] = scopedLeader,
-            [RoleNames.ChefUniteAdjoint] = scopedLeader,
+            [RoleNames.ChefUnite] = chefUnitePermissions,
+            [RoleNames.ChefUniteAdjoint] = chefUnitePermissions,
             [RoleNames.AssistantChefUnite] = scopedLeader,
             [RoleNames.Scout] = publicCustomer,
             [RoleNames.Parent] = publicCustomer,
