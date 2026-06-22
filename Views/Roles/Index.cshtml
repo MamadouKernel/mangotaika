@@ -103,9 +103,12 @@
                                             <button type="submit" class="btn btn-sm btn-outline-or" title="Reactiver"><i class="bi bi-play-circle"></i></button>
                                         </form>
                                     }
-                                    @if (!role.EstSysteme)
+                                    @if (role.Name != "Administrateur")
                                     {
-                                        <form asp-action="Delete" asp-route-id="@role.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer le role @role.Libelle ? (suppression logique, restaurable)');">
+                                        var confirmMsg = role.EstSysteme
+                                            ? $"ATTENTION : {role.Libelle} est un role SYSTEME. La suppression logique fait perdre les permissions aux utilisateurs affectes. Restaurable depuis 'Voir les supprimes'. Continuer ?"
+                                            : $"Supprimer le role {role.Libelle} ? (suppression logique, restaurable)";
+                                        <form asp-action="Delete" asp-route-id="@role.Id" method="post" class="d-inline" onsubmit="return confirm('@confirmMsg');">
                                             @Html.AntiForgeryToken()
                                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer"><i class="bi bi-trash"></i></button>
                                         </form>
@@ -122,7 +125,7 @@
 
 <div class="alert mt-3" style="background:rgba(89,117,55,0.08);border:1px solid rgba(89,117,55,0.22);border-radius:14px;color:var(--texte);">
     <i class="bi bi-info-circle"></i>
-    <strong>Roles systeme</strong> integres au code : modifiables mais pas supprimables (peuvent etre desactives sauf Administrateur).
-    <strong>Desactiver</strong> retire les permissions sans toucher aux affectations utilisateurs.
-    <strong>Supprimer</strong> = suppression logique : le role disparait des listes mais reste restaurable depuis "Voir les supprimes".
+    <strong>Roles systeme</strong> integres au code : nom technique verrouille, mais libelle et metadonnees modifiables.
+    <strong>Desactiver</strong> retire les permissions sans toucher aux affectations Identity.
+    <strong>Supprimer</strong> = suppression logique restaurable depuis "Voir les supprimes". Le role <strong>Administrateur</strong> ne peut etre ni desactive ni supprime.
 </div>
