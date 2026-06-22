@@ -374,12 +374,24 @@ public class RapportsActiviteController(
             int idx = 1;
             foreach (var p in participants)
             {
-                var label = p.Scout is not null
-                    ? $"{p.Scout.Nom} {p.Scout.Prenom}".Trim() + (string.IsNullOrWhiteSpace(p.Scout.Matricule) ? string.Empty : $" ({p.Scout.Matricule})")
-                    : p.Ressource is not null
-                        ? $"{p.Ressource.Nom} {p.Ressource.Prenom}".Trim() + $" - {p.Ressource.Type}"
-                        : "Participant inconnu";
-                lines.Add($"{idx,3}. {label} - {p.Presence}");
+                string label;
+                string fonction;
+                if (p.Scout is not null)
+                {
+                    label = $"{p.Scout.Nom} {p.Scout.Prenom}".Trim() + (string.IsNullOrWhiteSpace(p.Scout.Matricule) ? string.Empty : $" ({p.Scout.Matricule})");
+                    fonction = string.IsNullOrWhiteSpace(p.Scout.Fonction) ? "Scout" : p.Scout.Fonction!;
+                }
+                else if (p.Ressource is not null)
+                {
+                    label = $"{p.Ressource.Nom} {p.Ressource.Prenom}".Trim();
+                    fonction = p.Ressource.Type.ToString();
+                }
+                else
+                {
+                    label = "Participant inconnu";
+                    fonction = "-";
+                }
+                lines.Add($"{idx,3}. {label} - {fonction} - {p.Presence}");
                 idx++;
             }
         }
@@ -473,31 +485,34 @@ public class RapportsActiviteController(
         }
         else
         {
-            sb.Append("<table><thead><tr><th>#</th><th>Nom et prenom</th><th>Matricule / Type</th><th>Categorie</th><th>Presence</th></tr></thead><tbody>");
+            sb.Append("<table><thead><tr><th>#</th><th>Nom et prenom</th><th>Matricule / Type</th><th>Categorie</th><th>Fonction</th><th>Presence</th></tr></thead><tbody>");
             int idx = 1;
             foreach (var p in participants)
             {
-                string nom; string complement; string categorie;
+                string nom; string complement; string categorie; string fonction;
                 if (p.Scout is not null)
                 {
                     nom = WebUtility.HtmlEncode($"{p.Scout.Nom} {p.Scout.Prenom}".Trim());
                     complement = WebUtility.HtmlEncode(p.Scout.Matricule ?? "-");
                     categorie = "Scout";
+                    fonction = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(p.Scout.Fonction) ? "-" : p.Scout.Fonction);
                 }
                 else if (p.Ressource is not null)
                 {
                     nom = WebUtility.HtmlEncode($"{p.Ressource.Nom} {p.Ressource.Prenom}".Trim());
                     complement = WebUtility.HtmlEncode(p.Ressource.Type.ToString());
                     categorie = "Ressource";
+                    fonction = WebUtility.HtmlEncode(p.Ressource.Type.ToString());
                 }
                 else
                 {
                     nom = "Participant inconnu";
                     complement = "-";
                     categorie = "-";
+                    fonction = "-";
                 }
 
-                sb.Append("<tr><td>").Append(idx).Append("</td><td>").Append(nom).Append("</td><td>").Append(complement).Append("</td><td>").Append(categorie).Append("</td><td>").Append(p.Presence).Append("</td></tr>");
+                sb.Append("<tr><td>").Append(idx).Append("</td><td>").Append(nom).Append("</td><td>").Append(complement).Append("</td><td>").Append(categorie).Append("</td><td>").Append(fonction).Append("</td><td>").Append(p.Presence).Append("</td></tr>");
                 idx++;
             }
             sb.Append("</tbody></table>");
