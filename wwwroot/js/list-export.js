@@ -95,7 +95,7 @@
     }
 
     function extractCardData(root) {
-        var selectors = ['.support-ticket-card', '.support-resource-card', '.campus-discussion-card', '.card-3d'];
+        var selectors = ['.support-ticket-card', '.support-resource-card', '.campus-discussion-card', '.tracking-card', '.card-3d'];
         var cards = [];
 
         selectors.forEach(function (selector) {
