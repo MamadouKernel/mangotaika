@@ -706,3 +706,148 @@
         align-items: stretch;
     }
 }
+
+/* ===== Activites (Index) : rafraichissement KPIs + cartes evenement ===== */
+.tracking-module--activities-index .tracking-hero__focus {
+    border-left: 3px solid rgba(199, 217, 135, 0.7);
+}
+
+.tracking-module--activities-index .tracking-kpi {
+    border-top: 3px solid transparent;
+}
+
+.tracking-module--activities-index .tracking-kpi--olive { border-top-color: #5f7f43; }
+.tracking-module--activities-index .tracking-kpi--blue { border-top-color: #41598c; }
+.tracking-module--activities-index .tracking-kpi--gold { border-top-color: #e0a416; }
+.tracking-module--activities-index .tracking-kpi--rose { border-top-color: #e2756f; }
+
+.tracking-module--activities-index .tracking-kpi__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    margin-bottom: 0.85rem;
+    font-size: 1.25rem;
+}
+
+.tracking-module--activities-index .tracking-kpi--olive .tracking-kpi__badge { background: rgba(95, 127, 67, 0.14); color: #4f6a38; }
+.tracking-module--activities-index .tracking-kpi--blue .tracking-kpi__badge { background: rgba(65, 89, 140, 0.14); color: #3a4f7d; }
+.tracking-module--activities-index .tracking-kpi--gold .tracking-kpi__badge { background: rgba(224, 164, 22, 0.16); color: #946c0c; }
+.tracking-module--activities-index .tracking-kpi--rose .tracking-kpi__badge { background: rgba(226, 117, 111, 0.16); color: #b5504a; }
+
+.activite-card {
+    display: flex;
+    overflow: hidden;
+    min-height: 100%;
+    border-radius: 22px;
+    border: 1px solid rgba(209, 219, 232, 0.8);
+    background: #ffffff;
+    box-shadow: 0 14px 32px rgba(148, 163, 184, 0.12);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    --accent: #94a3b8;
+    --accent-soft: #f1f3f5;
+    --accent-text: #475569;
+}
+
+.activite-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 22px 44px rgba(95, 127, 67, 0.16);
+    border-color: rgba(95, 127, 67, 0.28);
+}
+
+.activite-card[data-statut="Soumise"] { --accent: #e0a416; --accent-soft: #fdf6e3; --accent-text: #854f0b; }
+.activite-card[data-statut="Validee"],
+.activite-card[data-statut="EnCours"],
+.activite-card[data-statut="Terminee"] { --accent: #0f9f6e; --accent-soft: #e7f6f0; --accent-text: #0f805d; }
+.activite-card[data-statut="Rejetee"] { --accent: #dc5e5e; --accent-soft: #fdeaea; --accent-text: #b13b3b; }
+.activite-card[data-statut="Archivee"] { --accent: #3366cc; --accent-soft: #eaf0fb; --accent-text: #2c5aa8; }
+
+.activite-card__accent { flex: 0 0 6px; background: var(--accent); }
+
+.activite-card__body {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 1.15rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.activite-card__top { display: flex; gap: 0.9rem; align-items: flex-start; }
+
+.activite-card__date {
+    flex: 0 0 auto;
+    width: 62px;
+    text-align: center;
+    padding: 0.55rem 0.3rem;
+    border-radius: 14px;
+    background: var(--accent-soft);
+}
+
+.activite-card__day { display: block; font-size: 1.5rem; font-weight: 800; line-height: 1; color: var(--accent-text); }
+.activite-card__month { display: block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent-text); }
+.activite-card__time { display: block; margin-top: 0.25rem; font-size: 0.72rem; color: #94a3b8; }
+
+.activite-card__heading { flex: 1 1 auto; min-width: 0; }
+.activite-card__title-row { display: flex; justify-content: space-between; gap: 0.6rem; align-items: flex-start; }
+.activite-card__title { margin: 0; font-size: 1.05rem; font-weight: 800; line-height: 1.3; }
+.activite-card__title a { color: var(--bleu-logo); text-decoration: none; }
+.activite-card__title a:hover { color: var(--vert-logo); }
+.activite-card__group { margin-top: 0.3rem; font-size: 0.85rem; color: #7a8a7d; display: inline-flex; align-items: center; gap: 0.35rem; }
+.activite-card__group i { color: var(--vert-logo); }
+
+.activite-card__summary {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #64748b;
+    line-height: 1.55;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.activite-card__chips { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+
+.activite-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.32rem 0.6rem;
+    border-radius: 9px;
+    background: rgba(95, 127, 67, 0.09);
+    color: #54703c;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.activite-chip i { font-size: 0.85rem; }
+.activite-chip--muted { background: rgba(148, 163, 184, 0.14); color: #8a97a6; }
+
+.activite-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: auto;
+    padding-top: 0.85rem;
+    border-top: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.tracking-module--activities-index .activite-card__actions .btn { min-height: 38px; width: auto; }
+
+.activite-card__delete {
+    background: rgba(239, 68, 68, 0.12);
+    color: #d9534f;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.activite-card__delete:hover { background: rgba(239, 68, 68, 0.18); color: #c0392b; }
+
+@media (max-width: 575.98px) {
+    .activite-card__top { flex-wrap: wrap; }
+    .tracking-module--activities-index .activite-card__actions .btn { flex: 1 1 auto; justify-content: center; }
+    .activite-card__delete { flex: 0 0 auto; }
+}
