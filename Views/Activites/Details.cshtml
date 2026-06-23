@@ -292,9 +292,23 @@
 
         @if (Model.Participants.Any())
         {
-            <div class="card-3d">
+            <div class="card-3d" id="participantsPanel" data-total="@Model.Participants.Count()">
+                <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
+                    <input type="text" id="participantsSearch" class="form-control form-control-sm"
+                           style="flex:1 1 260px; max-width:380px; border-radius:12px;"
+                           placeholder="Rechercher (matricule, nom, profil, fonction)" autocomplete="off" />
+                    <div class="d-flex align-items-center gap-2">
+                        <label for="participantsPageSize" class="small text-muted-custom mb-0">Par page</label>
+                        <select id="participantsPageSize" class="form-select form-select-sm" style="width:auto; border-radius:12px;">
+                            <option value="10">10</option>
+                            <option value="20" selected>20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="table-responsive">
-                    <table class="table-modern">
+                    <table class="table-modern" id="participantsTable">
                         <thead>
                             <tr>
                                 <th>Matricule</th>
@@ -308,10 +322,11 @@
                         <tbody>
                             @foreach (var p in Model.Participants)
                             {
-                                <tr>
+                                var profilParticipant = p.EstRessource ? p.TypeParticipant : (p.NomBranche ?? "Scout");
+                                <tr class="participant-row" data-search="@($"{p.Matricule} {p.NomComplet} {profilParticipant} {p.Fonction}")">
                                     <td><code>@(string.IsNullOrWhiteSpace(p.Matricule) ? "-" : p.Matricule)</code></td>
                                     <td>@p.NomComplet</td>
-                                    <td>@(p.EstRessource ? p.TypeParticipant : (p.NomBranche ?? "Scout"))</td>
+                                    <td>@profilParticipant</td>
                                     <td>@(string.IsNullOrWhiteSpace(p.Fonction) ? "-" : p.Fonction)</td>
                                     <td>
                                         @if (canManage && pointageDisponible && !pointageCloture)
@@ -346,6 +361,14 @@
                             }
                         </tbody>
                     </table>
+                </div>
+                <div id="participantsNoResults" class="text-center py-4 text-muted-custom" style="display:none;">
+                    <i class="bi bi-search" style="font-size: 1.6rem; opacity: 0.35;"></i>
+                    <p class="mt-2 mb-0">Aucun participant ne correspond a la recherche.</p>
+                </div>
+                <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mt-3">
+                    <span class="small text-muted-custom" id="participantsCount"></span>
+                    <div class="d-flex flex-wrap align-items-center gap-1" id="participantsPager"></div>
                 </div>
             </div>
         }
@@ -743,6 +766,138 @@
 
             activateCurrentHashTab();
             window.addEventListener('hashchange', activateCurrentHashTab);
+        })();
+    </script>
+    <script>
+        (function () {
+            var panel = document.getElementById('participantsPanel');
+            if (!panel) {
+                return;
+            }
+
+            var rows = Array.prototype.slice.call(panel.querySelectorAll('.participant-row'));
+            var searchInput = document.getElementById('participantsSearch');
+            var pageSizeSelect = document.getElementById('participantsPageSize');
+            var pager = document.getElementById('participantsPager');
+            var countLabel = document.getElementById('participantsCount');
+            var noResults = document.getElementById('participantsNoResults');
+            var tableWrap = panel.querySelector('.table-responsive');
+
+            var pageSize = parseInt(pageSizeSelect.value, 10) || 20;
+            var currentPage = 1;
+            var term = '';
+
+            function filtered() {
+                if (!term) {
+                    return rows;
+                }
+                return rows.filter(function (row) {
+                    return (row.getAttribute('data-search') || '').toLowerCase().indexOf(term) !== -1;
+                });
+            }
+
+            function makeBtn(label, page, opts) {
+                opts = opts || {};
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-sm ' + (opts.active ? 'btn-mango' : 'btn-outline-or');
+                btn.innerHTML = label;
+                btn.style.minWidth = '38px';
+                if (opts.disabled) {
+                    btn.disabled = true;
+                    btn.style.opacity = '0.5';
+                } else {
+                    btn.addEventListener('click', function () {
+                        currentPage = page;
+                        render();
+                    });
+                }
+                return btn;
+            }
+
+            function buildPager(totalPages) {
+                pager.innerHTML = '';
+                if (totalPages <= 1) {
+                    return;
+                }
+
+                pager.appendChild(makeBtn('<i class="bi bi-chevron-left"></i>', currentPage - 1, { disabled: currentPage <= 1 }));
+
+                var start = Math.max(1, currentPage - 2);
+                var end = Math.min(totalPages, currentPage + 2);
+                if (end - start < 4) {
+                    if (start === 1) { end = Math.min(totalPages, start + 4); }
+                    else if (end === totalPages) { start = Math.max(1, end - 4); }
+                }
+                if (start > 1) {
+                    pager.appendChild(makeBtn('1', 1, {}));
+                    if (start > 2) {
+                        var dots = document.createElement('span');
+                        dots.className = 'small text-muted-custom px-1';
+                        dots.textContent = '...';
+                        pager.appendChild(dots);
+                    }
+                }
+                for (var i = start; i <= end; i++) {
+                    pager.appendChild(makeBtn(String(i), i, { active: i === currentPage }));
+                }
+                if (end < totalPages) {
+                    if (end < totalPages - 1) {
+                        var dots2 = document.createElement('span');
+                        dots2.className = 'small text-muted-custom px-1';
+                        dots2.textContent = '...';
+                        pager.appendChild(dots2);
+                    }
+                    pager.appendChild(makeBtn(String(totalPages), totalPages, {}));
+                }
+
+                pager.appendChild(makeBtn('<i class="bi bi-chevron-right"></i>', currentPage + 1, { disabled: currentPage >= totalPages }));
+            }
+
+            function render() {
+                var list = filtered();
+                var total = list.length;
+                var totalPages = Math.max(1, Math.ceil(total / pageSize));
+                if (currentPage > totalPages) {
+                    currentPage = totalPages;
+                }
+
+                rows.forEach(function (row) { row.style.display = 'none'; });
+
+                var startIndex = (currentPage - 1) * pageSize;
+                var pageRows = list.slice(startIndex, startIndex + pageSize);
+                pageRows.forEach(function (row) { row.style.display = ''; });
+
+                if (noResults) { noResults.style.display = total === 0 ? '' : 'none'; }
+                if (tableWrap) { tableWrap.style.display = total === 0 ? 'none' : ''; }
+
+                if (countLabel) {
+                    if (total === 0) {
+                        countLabel.textContent = '0 participant';
+                    } else {
+                        countLabel.textContent = (startIndex + 1) + '-' + (startIndex + pageRows.length) + ' sur ' + total + ' participant(s)';
+                    }
+                }
+
+                buildPager(totalPages);
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('input', function () {
+                    term = this.value.trim().toLowerCase();
+                    currentPage = 1;
+                    render();
+                });
+            }
+            if (pageSizeSelect) {
+                pageSizeSelect.addEventListener('change', function () {
+                    pageSize = parseInt(this.value, 10) || 20;
+                    currentPage = 1;
+                    render();
+                });
+            }
+
+            render();
         })();
     </script>
 }
