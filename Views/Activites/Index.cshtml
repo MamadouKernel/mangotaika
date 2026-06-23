@@ -29,6 +29,7 @@
         StatutActivite.Archivee => "tracking-status-pill--archived",
         _ => "tracking-status-pill--draft"
     };
+    string[] moisAbbr = { "Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Aoû", "Sep", "Oct", "Nov", "Déc" };
 }
 
 <div class="tracking-module tracking-module--activities-index">
@@ -60,25 +61,25 @@
 
     <div class="tracking-kpi-grid">
         <article class="tracking-kpi tracking-kpi--olive">
-            <i class="bi bi-journal-plus tracking-kpi__icon"></i>
+            <span class="tracking-kpi__badge"><i class="bi bi-journal-plus"></i></span>
             <span class="tracking-kpi__label">Brouillons</span>
             <strong class="tracking-kpi__value">@brouillons</strong>
             <span class="tracking-kpi__meta">activite(s) encore a consolider</span>
         </article>
         <article class="tracking-kpi tracking-kpi--blue">
-            <i class="bi bi-patch-check tracking-kpi__icon"></i>
+            <span class="tracking-kpi__badge"><i class="bi bi-patch-check"></i></span>
             <span class="tracking-kpi__label">Validation</span>
             <strong class="tracking-kpi__value">@aValider</strong>
             <span class="tracking-kpi__meta">soumissions et activites pretes a demarrer</span>
         </article>
         <article class="tracking-kpi tracking-kpi--gold">
-            <i class="bi bi-broadcast tracking-kpi__icon"></i>
+            <span class="tracking-kpi__badge"><i class="bi bi-broadcast"></i></span>
             <span class="tracking-kpi__label">En cours</span>
             <strong class="tracking-kpi__value">@enCours</strong>
             <span class="tracking-kpi__meta">operations actuellement sur le terrain</span>
         </article>
         <article class="tracking-kpi tracking-kpi--rose">
-            <i class="bi bi-archive tracking-kpi__icon"></i>
+            <span class="tracking-kpi__badge"><i class="bi bi-archive"></i></span>
             <span class="tracking-kpi__label">Cloturees</span>
             <strong class="tracking-kpi__value">@cloturees</strong>
             <span class="tracking-kpi__meta">activites terminees ou archivees</span>
@@ -110,41 +111,60 @@
         <section class="tracking-card-grid">
             @foreach (var a in Model)
             {
-                <article class="tracking-card activite-card-item" data-statut="@a.Statut">
-                    <div class="tracking-card__header">
-                        <div>
-                            <h3 class="tracking-card__title"><a asp-action="Details" asp-route-id="@a.Id" class="text-decoration-none" style="color:inherit;">@a.Titre</a></h3>
-                            <div class="tracking-card__subtitle">@(a.NomGroupe ?? "Tout le district")</div>
+                <article class="activite-card activite-card-item" data-statut="@a.Statut">
+                    <span class="activite-card__accent" aria-hidden="true"></span>
+                    <div class="activite-card__body">
+                        <div class="activite-card__top">
+                            <div class="activite-card__date" aria-hidden="true">
+                                <span class="activite-card__day">@a.DateDebut.Day</span>
+                                <span class="activite-card__month">@moisAbbr[a.DateDebut.Month - 1]</span>
+                                <span class="activite-card__time">@a.DateDebut.ToString("HH:mm")</span>
+                            </div>
+                            <div class="activite-card__heading">
+                                <div class="activite-card__title-row">
+                                    <h3 class="activite-card__title"><a asp-action="Details" asp-route-id="@a.Id">@a.Titre</a></h3>
+                                    <span class="tracking-status-pill @GetStatusClass(a.Statut)">@a.Statut</span>
+                                </div>
+                                <div class="activite-card__group"><i class="bi bi-diagram-3"></i> @(a.NomGroupe ?? "Tout le district")</div>
+                            </div>
                         </div>
-                        <span class="tracking-status-pill @GetStatusClass(a.Statut)">@a.Statut</span>
-                    </div>
 
-                    <p class="tracking-card__summary">@(string.IsNullOrWhiteSpace(a.Description) ? "Aucune description renseignee pour cette activite." : a.Description)</p>
+                        @if (!string.IsNullOrWhiteSpace(a.Description))
+                        {
+                            <p class="activite-card__summary">@a.Description</p>
+                        }
 
-                    <div class="tracking-meta-list">
-                        <div class="tracking-meta-list__item"><i class="bi bi-bookmark-star"></i><span>@a.Type</span></div>
-                        <div class="tracking-meta-list__item"><i class="bi bi-calendar3"></i><span>@a.DateDebut.ToString("dd/MM/yyyy") a @a.DateDebut.ToString("HH:mm")</span></div>
-                        <div class="tracking-meta-list__item"><i class="bi bi-geo-alt"></i><span>@(a.Lieu ?? "Lieu non renseigne")</span></div>
-                        <div class="tracking-meta-list__item"><i class="bi bi-people-fill"></i><span>@a.NbParticipants participant(s)</span></div>
-                    </div>
+                        <div class="activite-card__chips">
+                            <span class="activite-chip"><i class="bi bi-bookmark-star"></i> @a.Type</span>
+                            @if (!string.IsNullOrWhiteSpace(a.Lieu))
+                            {
+                                <span class="activite-chip"><i class="bi bi-geo-alt"></i> @a.Lieu</span>
+                            }
+                            else
+                            {
+                                <span class="activite-chip activite-chip--muted"><i class="bi bi-geo-alt"></i> Lieu non defini</span>
+                            }
+                            <span class="activite-chip"><i class="bi bi-people-fill"></i> @a.NbParticipants part.</span>
+                        </div>
 
-                    <div class="tracking-card__actions">
-                        <a asp-action="Details" asp-route-id="@a.Id" class="btn btn-outline-or"><i class="bi bi-eye"></i> Voir</a>
-                        @if (canManage && (a.Statut == StatutActivite.EnCours || a.Statut == StatutActivite.Terminee))
-                        {
-                            <a asp-action="Presence" asp-route-id="@a.Id" class="btn btn-outline-or"><i class="bi bi-qr-code-scan"></i> Presence</a>
-                        }
-                        @if (canManage)
-                        {
-                            <a asp-action="Edit" asp-route-id="@a.Id" class="btn btn-bleu"><i class="bi bi-pencil"></i> Modifier</a>
-                        }
-                        @if (canDelete)
-                        {
-                            <form asp-action="Delete" asp-route-id="@a.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer cette activite ?')">
-                                @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-sm" style="background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3);"><i class="bi bi-trash"></i></button>
-                            </form>
-                        }
+                        <div class="activite-card__actions">
+                            <a asp-action="Details" asp-route-id="@a.Id" class="btn btn-outline-or btn-sm"><i class="bi bi-eye"></i> Voir</a>
+                            @if (canManage && (a.Statut == StatutActivite.EnCours || a.Statut == StatutActivite.Terminee))
+                            {
+                                <a asp-action="Presence" asp-route-id="@a.Id" class="btn btn-outline-or btn-sm"><i class="bi bi-qr-code-scan"></i> Presence</a>
+                            }
+                            @if (canManage)
+                            {
+                                <a asp-action="Edit" asp-route-id="@a.Id" class="btn btn-bleu btn-sm"><i class="bi bi-pencil"></i> Modifier</a>
+                            }
+                            @if (canDelete)
+                            {
+                                <form asp-action="Delete" asp-route-id="@a.Id" method="post" class="d-inline ms-auto" onsubmit="return confirm('Supprimer cette activite ?')">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm activite-card__delete" title="Supprimer"><i class="bi bi-trash"></i></button>
+                                </form>
+                            }
+                        </div>
                     </div>
                 </article>
             }
