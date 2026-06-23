@@ -198,7 +198,7 @@ public class AccountController(
             ModelState.AddModelError("Role", "Profil d'inscription non reconnu. Selectionnez Parent / Tuteur, Scout ou Gestionnaire dans la liste.");
             return View(model);
         }
-        if (await db.Users.AnyAsync(u => u.PhoneNumber == model.Telephone))
+        if (await db.Users.AnyAsync(u => u.PhoneNumber == model.Telephone && !u.EstSupprime))
         {
             ModelState.AddModelError("Telephone", "Ce numero de telephone est deja rattache a un compte. Connectez-vous avec ce numero ou utilisez le lien de mot de passe oublie.");
             return View(model);
@@ -798,7 +798,7 @@ public class AccountController(
     // === GESTION DES COMPTES (Admin/Gestionnaire) ===
 
     [Authorize(Roles = "Administrateur,Gestionnaire")]
-    public async Task<IActionResult> Utilisateurs(string? recherche)
+    public async Task<IActionResult> Utilisateurs(string? recherche, string? role)
     {
         var (page, ps) = ListPagination.Read(Request);
         var query = db.Users.Where(u => !u.EstSupprime).AsQueryable();
@@ -816,6 +816,15 @@ public class AccountController(
                 (u.UserName != null && u.UserName.Contains(search)));
         }
 
+        if (!string.IsNullOrWhiteSpace(role) && RoleNames.All.Contains(role))
+        {
+            var roleId = await db.Roles.Where(r => r.Name == role).Select(r => r.Id).FirstOrDefaultAsync();
+            if (roleId != Guid.Empty)
+            {
+                query = query.Where(u => db.UserRoles.Any(ur => ur.UserId == u.Id && ur.RoleId == roleId));
+            }
+        }
+
         var ordered = query.OrderByDescending(u => u.DateCreation);
         var total = await ordered.CountAsync();
         var (p, pageSize, skip, totalPages) = ListPagination.Normalize(page, ps, total);
@@ -829,6 +838,11 @@ public class AccountController(
         }
         ViewBag.UserRoles = userRoles;
         ViewBag.Recherche = recherche;
+        ViewBag.SelectedRole = role;
+        ViewBag.RolesDisponibles = RoleNames.Definitions
+            .OrderBy(d => d.Hierarchy).ThenBy(d => d.Label)
+            .Select(d => new KeyValuePair<string, string>(d.Name, d.Label))
+            .ToList();
         ViewBag.RapprochementsEnAttente = await db.DemandesRapprochementComptes
             .CountAsync(r => r.Statut == StatutDemandeRapprochement.EnAttente);
         ListPagination.SetViewData(ViewData, HttpContext, p, pageSize, total, totalPages);
@@ -1291,6 +1305,8 @@ public class AccountController(
 
         user.EstSupprime = true;
         user.IsActive = false;
+        // Libere le numero/identifiant et les liens scout/parent pour permettre une nouvelle inscription.
+        await UserAccountCleanup.ReleaseIdentifiersAsync(db, user);
         await userManager.UpdateSecurityStampAsync(user);
         await db.SaveChangesAsync();
         TempData["Success"] = $"Compte de {user.Prenom} {user.Nom} retire de la liste.";

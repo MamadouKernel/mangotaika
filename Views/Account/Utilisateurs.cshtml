@@ -4,15 +4,20 @@
     Layout = "_LayoutAdmin";
     var userRoles = ViewBag.UserRoles as Dictionary<Guid, List<string>> ?? new();
     var recherche = ViewBag.Recherche as string ?? string.Empty;
+    var selectedRole = ViewBag.SelectedRole as string ?? string.Empty;
+    var rolesDisponibles = ViewBag.RolesDisponibles as List<KeyValuePair<string, string>> ?? new();
     var rapprochementsEnAttente = ViewBag.RapprochementsEnAttente as int? ?? 0;
-    string RoleLabel(string r) => r switch {
-        "Parent"               => "Parent / Tuteur",
-        "CommissaireDistrict"  => "Commissaire de District",
-        "EquipeDistrict"       => "Equipe de District",
-        "ChefGroupe"           => "Chef de Groupe",
-        "ChefUnite"            => "Chef d'Unite",
-        _                      => r
-    };
+    var aDesFiltres = !string.IsNullOrWhiteSpace(recherche) || !string.IsNullOrWhiteSpace(selectedRole);
+    string RoleLabel(string r) =>
+        rolesDisponibles.FirstOrDefault(x => x.Key == r).Value
+            ?? r switch {
+                "Parent"               => "Parent / Tuteur",
+                "CommissaireDistrict"  => "Commissaire de District",
+                "EquipeDistrict"       => "Equipe de District",
+                "ChefGroupe"           => "Chef de Groupe",
+                "ChefUnite"            => "Chef d'Unite",
+                _                      => r
+            };
     bool PeutSupprimerLogiquement(List<string> roles) => !roles.Contains("Administrateur");
     bool EstVerrouille(MangoTaika.Data.Entities.ApplicationUser user) =>
         user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow;
@@ -35,7 +40,7 @@
 
 <form asp-action="Utilisateurs" method="get" class="card-3d p-3 mb-4">
     <div class="row g-2 align-items-end">
-        <div class="col-lg-9">
+        <div class="col-lg-6">
             <label for="recherche" class="form-label small">Recherche</label>
             <input id="recherche"
                    name="recherche"
@@ -43,11 +48,28 @@
                    class="form-control"
                    placeholder="Matricule, nom, prenom, telephone ou email" />
         </div>
+        <div class="col-lg-3">
+            <label for="role" class="form-label small">Type de compte</label>
+            <select id="role" name="role" class="form-select">
+                <option value="">Tous les types</option>
+                @foreach (var r in rolesDisponibles)
+                {
+                    if (r.Key == selectedRole)
+                    {
+                        <option value="@r.Key" selected>@r.Value</option>
+                    }
+                    else
+                    {
+                        <option value="@r.Key">@r.Value</option>
+                    }
+                }
+            </select>
+        </div>
         <div class="col-lg-3 d-flex gap-2">
             <button type="submit" class="btn btn-mango flex-fill">
-                <i class="bi bi-search"></i> Rechercher
+                <i class="bi bi-funnel"></i> Filtrer
             </button>
-            @if (!string.IsNullOrWhiteSpace(recherche))
+            @if (aDesFiltres)
             {
                 <a asp-action="Utilisateurs" class="btn btn-outline-or" title="Reinitialiser">
                     <i class="bi bi-x-lg"></i>
@@ -57,103 +79,132 @@
     </div>
 </form>
 
-<div class="row g-4 mt-2">
-    @foreach (var user in Model)
-    {
-        var userRoleList = userRoles.GetValueOrDefault(user.Id, []);
-        var estVerrouille = EstVerrouille(user);
-        <div class="col-lg-4 col-md-6">
-            <div class="card-3d p-4 h-100 d-flex flex-column">
-                <h5 class="text-or mb-2">@user.Prenom @user.Nom</h5>
-                <p class="text-muted-custom small mb-2 d-flex flex-wrap gap-1">
-                    @if (userRoleList.Count == 0)
-                    {
-                        <span class="badge-3d badge-soumise">—</span>
-                    }
-                    else
-                    {
-                        foreach (var r in userRoleList)
-                        {
-                            <span class="badge-3d badge-soumise">@RoleLabel(r)</span>
-                        }
-                    }
-                </p>
-                <div class="d-flex flex-column gap-1 mb-3 flex-grow-1" style="font-size:0.85rem;">
-                    @if (!string.IsNullOrWhiteSpace(user.Matricule))
-                    {
-                        <span><i class="bi bi-hash text-or"></i> @user.Matricule</span>
-                    }
-                    <span><i class="bi bi-telephone text-bleu"></i> @user.PhoneNumber</span>
-                    <span><i class="bi bi-envelope text-or"></i> @(user.Email ?? "—")</span>
-                    <span><i class="bi bi-calendar3 text-bleu"></i> Inscrit le @user.DateCreation.ToString("dd/MM/yyyy")</span>
-                    <span>
-                        @if (estVerrouille)
-                        {
-                            <span class="badge-3d badge-rejetee">Verrouille</span>
-                            <span class="text-muted-custom small d-block mt-1">Jusqu'au @user.LockoutEnd!.Value.LocalDateTime.ToString("dd/MM/yyyy HH:mm")</span>
-                        }
-                        else if (user.IsActive)
-                        {
-                            <span class="badge-3d badge-validee">Actif</span>
-                        }
-                        else
-                        {
-                            <span class="badge-3d badge-rejetee">Inactif</span>
-                        }
-                    </span>
-                </div>
-                <div class="d-flex flex-wrap gap-2 mt-auto">
-                    <a asp-action="UtilisateurDetails" asp-route-id="@user.Id" class="btn btn-sm btn-outline-or" title="Détails">
-                        <i class="bi bi-eye"></i>
-                    </a>
-                    <a asp-action="EditerUtilisateur" asp-route-id="@user.Id" class="btn btn-sm btn-bleu" title="Modifier">
-                        <i class="bi bi-pencil"></i>
-                    </a>
-                    @if (estVerrouille)
-                    {
-                        <form asp-action="UnlockUser" asp-route-id="@user.Id" method="post" class="d-inline">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-sm btn-mango" title="Deverrouiller">
-                                <i class="bi bi-unlock"></i>
-                            </button>
-                        </form>
-                    }
-                    @if (!user.IsActive)
-                    {
-                        <form asp-action="ActivateUser" asp-route-id="@user.Id" method="post" class="d-inline">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-sm btn-mango" title="Activer">
-                                <i class="bi bi-check-circle"></i>
-                            </button>
-                        </form>
-                    }
-                    else
-                    {
-                        <form asp-action="DeactivateUser" asp-route-id="@user.Id" method="post" class="d-inline">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-sm btn-outline-or" title="Désactiver">
-                                <i class="bi bi-x-circle"></i>
-                            </button>
-                        </form>
-                    }
-                    @if (PeutSupprimerLogiquement(userRoleList))
-                    {
-                        <form asp-action="SoftDeleteUser" asp-route-id="@user.Id" method="post" class="d-inline"
-                              onsubmit="return confirm('Retirer cet utilisateur de la liste ? Le compte restera conserve en base mais sera desactive.');">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Retirer de la liste">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </form>
-                    }
-                </div>
-            </div>
-        </div>
-    }
-    @if (!Model.Any())
-    {
-        <div class="col-12 text-center text-muted-custom py-5">Aucun utilisateur</div>
-    }
+<div class="card-3d p-0 mt-2">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Utilisateur</th>
+                    <th>Type de compte</th>
+                    <th>Matricule</th>
+                    <th>Contact</th>
+                    <th>Inscrit le</th>
+                    <th>Statut</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in Model)
+                {
+                    var userRoleList = userRoles.GetValueOrDefault(user.Id, []);
+                    var estVerrouille = EstVerrouille(user);
+                    <tr>
+                        <td>
+                            <div class="fw-semibold text-or">@user.Prenom @user.Nom</div>
+                            <div class="text-muted-custom small"><i class="bi bi-envelope text-or"></i> @(user.Email ?? "—")</div>
+                        </td>
+                        <td>
+                            <div class="d-flex flex-wrap gap-1">
+                                @if (userRoleList.Count == 0)
+                                {
+                                    <span class="badge-3d badge-soumise">—</span>
+                                }
+                                else
+                                {
+                                    foreach (var r in userRoleList)
+                                    {
+                                        <span class="badge-3d badge-soumise">@RoleLabel(r)</span>
+                                    }
+                                }
+                            </div>
+                        </td>
+                        <td>
+                            @if (!string.IsNullOrWhiteSpace(user.Matricule))
+                            {
+                                <span><i class="bi bi-hash text-or"></i> @user.Matricule</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted-custom">—</span>
+                            }
+                        </td>
+                        <td>
+                            <div class="small"><i class="bi bi-telephone text-bleu"></i> @(user.PhoneNumber ?? "—")</div>
+                        </td>
+                        <td class="small">@user.DateCreation.ToString("dd/MM/yyyy")</td>
+                        <td>
+                            @if (estVerrouille)
+                            {
+                                <span class="badge-3d badge-rejetee">Verrouille</span>
+                                <span class="text-muted-custom small d-block mt-1">Jusqu'au @user.LockoutEnd!.Value.LocalDateTime.ToString("dd/MM/yyyy HH:mm")</span>
+                            }
+                            else if (user.IsActive)
+                            {
+                                <span class="badge-3d badge-validee">Actif</span>
+                            }
+                            else
+                            {
+                                <span class="badge-3d badge-rejetee">Inactif</span>
+                            }
+                        </td>
+                        <td>
+                            <div class="d-flex flex-wrap gap-1 justify-content-end">
+                                <a asp-action="UtilisateurDetails" asp-route-id="@user.Id" class="btn btn-sm btn-outline-or" title="Détails">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a asp-action="EditerUtilisateur" asp-route-id="@user.Id" class="btn btn-sm btn-bleu" title="Modifier">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                @if (estVerrouille)
+                                {
+                                    <form asp-action="UnlockUser" asp-route-id="@user.Id" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-mango" title="Deverrouiller">
+                                            <i class="bi bi-unlock"></i>
+                                        </button>
+                                    </form>
+                                }
+                                @if (!user.IsActive)
+                                {
+                                    <form asp-action="ActivateUser" asp-route-id="@user.Id" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-mango" title="Activer">
+                                            <i class="bi bi-check-circle"></i>
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <form asp-action="DeactivateUser" asp-route-id="@user.Id" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-or" title="Désactiver">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    </form>
+                                }
+                                @if (PeutSupprimerLogiquement(userRoleList))
+                                {
+                                    <form asp-action="SoftDeleteUser" asp-route-id="@user.Id" method="post" class="d-inline"
+                                          onsubmit="return confirm('Retirer cet utilisateur de la liste ? Le compte restera conserve en base mais sera desactive.');">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Retirer de la liste">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="7" class="text-center text-muted-custom py-5">Aucun utilisateur</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <partial name="_ListPagination" />

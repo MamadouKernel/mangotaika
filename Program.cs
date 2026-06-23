@@ -11,6 +11,8 @@ using Microsoft.EntityFrameworkCore;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
 var builder = WebApplication.CreateBuilder(args);
 
 if (builder.Environment.IsEnvironment("Testing"))
@@ -211,6 +213,23 @@ using (var scope = app.Services.CreateScope())
             formation.DelivreAttestation = true;
             formation.DelivreCertificat = false;
             formation.DelivranceConfiguree = true;
+        }
+
+        await db.SaveChangesAsync();
+    }
+
+    // Libere les identifiants des comptes deja retires de la liste (avant l'ajout du soft delete
+    // liberateur) pour que les personnes concernees puissent a nouveau s'inscrire.
+    var comptesSupprimesARelacher = await db.Users
+        .Where(u => u.EstSupprime
+            && u.UserName != null
+            && !u.UserName.StartsWith(UserAccountCleanup.DeletedUserNamePrefix))
+        .ToListAsync();
+    if (comptesSupprimesARelacher.Count != 0)
+    {
+        foreach (var compteSupprime in comptesSupprimesARelacher)
+        {
+            await UserAccountCleanup.ReleaseIdentifiersAsync(db, compteSupprime);
         }
 
         await db.SaveChangesAsync();

@@ -10,6 +10,11 @@ RUN dotnet publish "MangoTaika.csproj" -c Release -o /app/publish /p:UseAppHost=
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
 
+# Dependances natives requises par QuestPDF/SkiaSharp pour le rendu PDF (export des rapports).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libfontconfig1 libfreetype6 \
+    && rm -rf /var/lib/apt/lists/*
+
 ENV ASPNETCORE_URLS=http://+:8080 \
     ASPNETCORE_HTTP_PORTS=8080 \
     DOTNET_RUNNING_IN_CONTAINER=true

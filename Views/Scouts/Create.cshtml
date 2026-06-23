@@ -24,20 +24,7 @@
             groupeNom = groupesById.TryGetValue(b.GroupeId, out var nomGroupe) ? nomGroupe : "Groupe inconnu"
         })
         .ToList();
-    var scoutFunctionOptions = new[]
-    {
-        "OISILLON (4 - 7 ANS)",
-        "LOUVETEAU (8 - 11 ANS)",
-        "ECLAIREUR (12 - 14 ANS)",
-        "CHEMINOT (15 - 17 ANS)",
-        "ROUTIER (18 - 21 ANS)",
-        "BENEVOLES (+ de 21 ANS)",
-        "CHEF D'UNITE (CU)",
-        "CHEF D'UNITE ADJOINT (CUA)",
-        "CHEF DE GROUPE (CG)",
-        "COMMISSAIRE DE DISTRICT (CD)",
-        "ASSISTANT COMMISSAIRE DE DISTRICT (ACD)"
-    };
+    var scoutFunctionOptions = MangoTaika.Helpers.ScoutFunctions.All;
     var currentScoutFunction = Model?.Fonction?.Trim();
     var hasCurrentScoutFunction = !string.IsNullOrWhiteSpace(currentScoutFunction)
         && scoutFunctionOptions.Contains(currentScoutFunction, StringComparer.OrdinalIgnoreCase);
