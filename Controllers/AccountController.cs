@@ -906,7 +906,7 @@ public class AccountController(
             Roles = roles.ToList(),
             IsActive = user.IsActive
         };
-        ViewBag.RolesDisponibles = RolesPourEdition();
+        ViewBag.RolesDisponibles = await RolesPourEditionAsync();
         return View(model);
     }
 
@@ -922,7 +922,9 @@ public class AccountController(
         if (EstGestionnaireSansAdmin() && await EstUtilisateurAdminAsync(user))
             return Forbid();
 
-        ViewBag.RolesDisponibles = RolesPourEdition();
+        var rolesAssignables = await RolesPourEditionAsync();
+        ViewBag.RolesDisponibles = rolesAssignables;
+        var rolesAutorises = rolesAssignables.Select(r => r.Key).ToHashSet(StringComparer.Ordinal);
 
         if (EstGestionnaireSansAdmin() && model.Roles.Any(RoleNames.IsAdminRole))
         {
@@ -935,7 +937,7 @@ public class AccountController(
 
         var anciensRoles = (await userManager.GetRolesAsync(user)).ToList();
         var rolesDemandes = model.Roles.Where(r => !string.IsNullOrWhiteSpace(r)).Distinct().ToList();
-        var nouveauxRoles = NormaliserRolesUtilisateur(rolesDemandes);
+        var nouveauxRoles = NormaliserRolesUtilisateur(rolesDemandes, rolesAutorises);
         var adminAvant = anciensRoles.Contains(RoleNames.Administrateur);
         var adminApres = nouveauxRoles.Contains(RoleNames.Administrateur);
         var actionAdminCritique = adminAvant != adminApres || adminApres;
@@ -1102,10 +1104,10 @@ public class AccountController(
     private static string FormatRoles(IEnumerable<string> roles)
         => string.Join(", ", roles.OrderBy(r => r).Select(r => RoleNames.GetDefinition(r).Label));
 
-    private static List<string> NormaliserRolesUtilisateur(IEnumerable<string> roles)
+    private static List<string> NormaliserRolesUtilisateur(IEnumerable<string> roles, ISet<string> rolesAutorises)
     {
         var selection = roles
-            .Where(r => RoleNames.All.Contains(r))
+            .Where(rolesAutorises.Contains)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
@@ -1114,11 +1116,42 @@ public class AccountController(
             : selection;
     }
 
-    private IReadOnlyList<string> RolesPourEdition()
+    /// <summary>
+    /// Roles attribuables dans l'edition d'un utilisateur : la base de roles systeme exposes,
+    /// completee par les roles personnalises crees depuis la page Roles (actifs, non supprimes).
+    /// Retourne des paires (nom technique, libelle) pour l'affichage des cases.
+    /// </summary>
+    private async Task<List<KeyValuePair<string, string>>> RolesPourEditionAsync()
     {
-        if (EstGestionnaireSansAdmin())
-            return ["Gestionnaire", "AgentSupport", "Superviseur", "Consultant", "EquipeDistrict", "ChefGroupe", "ChefUnite", "Scout", "Parent"];
-        return ["Administrateur", "CommissaireDistrict", "Gestionnaire", "AgentSupport", "Superviseur", "Consultant", "EquipeDistrict", "ChefGroupe", "ChefUnite", "Scout", "Parent"];
+        var baseSysteme = EstGestionnaireSansAdmin()
+            ? new[] { "Gestionnaire", "AgentSupport", "Superviseur", "Consultant", "EquipeDistrict", "ChefGroupe", "ChefUnite", "Scout", "Parent" }
+            : new[] { "Administrateur", "CommissaireDistrict", "Gestionnaire", "AgentSupport", "Superviseur", "Consultant", "EquipeDistrict", "ChefGroupe", "ChefUnite", "Scout", "Parent" };
+
+        var roles = baseSysteme
+            .Select(n => new KeyValuePair<string, string>(n, RoleNames.GetDefinition(n).Label))
+            .ToList();
+
+        // Roles personnalises (non systeme), actifs et non supprimes.
+        var systemeNames = RoleNames.Definitions.Select(d => d.Name).ToHashSet(StringComparer.Ordinal);
+        var rolesDb = await db.Roles
+            .Where(r => r.Name != null)
+            .Select(r => new { r.Id, r.Name })
+            .ToListAsync();
+        var metas = await db.RolesMetadonnees.AsNoTracking().ToListAsync();
+        var indisponibles = metas
+            .Where(m => m.EstSupprime || !m.EstActif)
+            .Select(m => m.RoleId)
+            .ToHashSet();
+
+        foreach (var r in rolesDb
+            .Where(r => !systemeNames.Contains(r.Name!) && !indisponibles.Contains(r.Id))
+            .OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            var libelle = metas.FirstOrDefault(m => m.RoleId == r.Id)?.Libelle ?? r.Name!;
+            roles.Add(new KeyValuePair<string, string>(r.Name!, libelle));
+        }
+
+        return roles;
     }
 
     [Authorize(Roles = "Administrateur,Gestionnaire")]

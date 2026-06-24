@@ -2,7 +2,7 @@
 @{
     ViewData["Title"] = "Modifier l'utilisateur";
     Layout = "_LayoutAdmin";
-    var roles = ViewBag.RolesDisponibles as IReadOnlyList<string> ?? Array.Empty<string>();
+    var roles = ViewBag.RolesDisponibles as List<KeyValuePair<string, string>> ?? new List<KeyValuePair<string, string>>();
 }
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
@@ -49,25 +49,16 @@
             <div class="roles-checkbox-grid role-assignment-grid" data-role-assignment>
                 @foreach (var r in roles)
                 {
-                    var label = r switch
-                    {
-                        "Parent" => "Parent / Tuteur",
-                        "CommissaireDistrict" => "Commissaire de District",
-                        "CommissaireDistrictAdjoint" => "Commissaire de District Adjoint",
-                        "AssistantCommissaireDistrict" => "Assistant Commissaire de District",
-                        "EquipeDistrict" => "Equipe de District",
-                        "ChefGroupe" => "Chef de Groupe",
-                        "ChefUnite" => "Chef d'Unite",
-                        _ => r
-                    };
-                    var isAdminRole = r == "Administrateur";
+                    var roleName = r.Key;
+                    var label = r.Value;
+                    var isAdminRole = roleName == "Administrateur";
 
                     <div class="form-check role-choice @(isAdminRole ? "role-choice--admin" : null)">
-                        <input class="form-check-input" type="checkbox" name="Roles" value="@r"
-                               id="role_@r"
+                        <input class="form-check-input" type="checkbox" name="Roles" value="@roleName"
+                               id="role_@roleName"
                                data-admin-role="@isAdminRole.ToString().ToLowerInvariant()"
-                               @(Model.Roles.Contains(r) ? "checked" : "") />
-                        <label class="form-check-label" for="role_@r">
+                               @(Model.Roles.Contains(roleName) ? "checked" : "") />
+                        <label class="form-check-label" for="role_@roleName">
                             <strong>@label</strong>
                             @if (isAdminRole)
                             {

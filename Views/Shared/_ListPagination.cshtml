@@ -20,7 +20,10 @@
     var path = Context.Request.PathBase + Context.Request.Path;
 }
 
-<partial name="_ListExportActions" />
+@if (!(ViewData["DisableGenericExport"] is true))
+{
+    <partial name="_ListExportActions" />
+}
 
 @if (hasPaging)
 {
