@@ -54,7 +54,7 @@ public class ActivitesController(
         ViewBag.GroupeSelectionne = scopedGroupId;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? statut)
     {
         var (page, ps) = ListPagination.Read(Request);
         var all = await activiteService.GetAllAsync();
@@ -63,13 +63,53 @@ public class ActivitesController(
         {
             all = all.Where(a => a.GroupeId == scopedGroupId.Value).ToList();
         }
-        var total = all.Count;
-        ViewBag.TotalActivites = total;
+
+        // KPIs et compteurs de filtres : toujours calcules sur l'ensemble complet.
+        ViewBag.TotalActivites = all.Count;
         ViewBag.CountsByStatut = all.GroupBy(a => a.Statut).ToDictionary(g => g.Key, g => g.Count());
+
+        // Le filtre de statut est applique cote serveur : pagination et export restent coherents.
+        var statutFiltre = Enum.TryParse<StatutActivite>(statut, out var st) ? st : (StatutActivite?)null;
+        ViewBag.StatutFiltre = statutFiltre;
+        var filtres = statutFiltre.HasValue
+            ? all.Where(a => a.Statut == statutFiltre.Value).ToList()
+            : all;
+
+        var total = filtres.Count;
+        ViewBag.FilteredTotal = total;
         var (p, pageSize, skip, totalPages) = ListPagination.Normalize(page, ps, total);
-        var pageItems = all.Skip(skip).Take(pageSize).ToList();
+        var pageItems = filtres.Skip(skip).Take(pageSize).ToList();
         ListPagination.SetViewData(ViewData, HttpContext, p, pageSize, total, totalPages);
         return View(pageItems);
+    }
+
+    public async Task<IActionResult> Export(string? statut, string format = "pdf")
+    {
+        var all = await activiteService.GetAllAsync();
+        var scopedGroupId = await GetChefGroupeScopeAsync();
+        if (scopedGroupId.HasValue)
+        {
+            all = all.Where(a => a.GroupeId == scopedGroupId.Value).ToList();
+        }
+
+        var statutFiltre = Enum.TryParse<StatutActivite>(statut, out var st) ? st : (StatutActivite?)null;
+        var items = (statutFiltre.HasValue ? all.Where(a => a.Statut == statutFiltre.Value) : all)
+            .OrderByDescending(a => a.DateDebut)
+            .ToList();
+
+        var libelleStatut = statutFiltre?.ToString() ?? "Toutes";
+        var nomFichier = $"activites-{libelleStatut.ToLowerInvariant()}-{DateTime.Now:yyyyMMdd}";
+
+        if (string.Equals(format, "excel", StringComparison.OrdinalIgnoreCase))
+        {
+            var excel = ActiviteListExport.BuildExcel(items, libelleStatut);
+            return File(excel,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"{nomFichier}.xlsx");
+        }
+
+        var pdf = ActiviteListExport.BuildPdf(items, libelleStatut);
+        return File(pdf, "application/pdf", $"{nomFichier}.pdf");
     }
 
     [Authorize(Roles = "Administrateur,Gestionnaire,ChefGroupe,ChefUnite")]
