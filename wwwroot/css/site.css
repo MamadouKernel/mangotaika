@@ -6840,3 +6840,125 @@ main { animation: fadeInUp 0.35s ease-out; }
         grid-template-columns: 1fr 1fr;
     }
 }
+
+/* ===== list-view.js : bascule generique Cartes / Liste ===== */
+.lv-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.lv-search {
+    position: relative;
+    flex: 1 1 240px;
+    max-width: 360px;
+}
+
+.lv-search .bi-search {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9aa7b6;
+    font-size: 0.9rem;
+    pointer-events: none;
+}
+
+.lv-search input {
+    padding-left: 34px;
+    border-radius: 12px;
+}
+
+.lv-toggle .btn {
+    border: 1px solid rgba(95, 127, 67, 0.35);
+    color: var(--vert-logo);
+    background: #fff;
+    padding: 4px 10px;
+}
+
+.lv-toggle .btn.is-active {
+    background: var(--vert-logo);
+    border-color: var(--vert-logo);
+    color: #fff;
+}
+
+.lv-container[data-view="list"] .lv-cards {
+    display: none;
+}
+
+.lv-container[data-view="cards"] .lv-table-wrap {
+    position: absolute;
+    left: -100000px;
+    top: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.lv-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+}
+
+.lv-card {
+    border: 1px solid rgba(95, 127, 67, 0.18);
+    border-left: 5px solid var(--vert-logo);
+    border-radius: 14px;
+    padding: 14px;
+    background: #fff;
+    box-shadow: 0 10px 22px rgba(18, 24, 33, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.lv-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 30px rgba(18, 24, 33, 0.1);
+}
+
+.lv-card__title {
+    font-weight: 700;
+    color: #213547;
+    line-height: 1.25;
+}
+
+.lv-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.lv-card__line {
+    display: flex;
+    gap: 8px;
+    font-size: 0.84rem;
+    align-items: baseline;
+}
+
+.lv-card__label {
+    color: #7b8a9b;
+    min-width: 92px;
+    flex: 0 0 auto;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.03em;
+}
+
+.lv-card__value {
+    color: #34465a;
+    word-break: break-word;
+}
+
+.lv-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 1px dashed #e2e8f0;
+}
