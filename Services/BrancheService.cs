@@ -149,6 +149,7 @@ public class BrancheService(AppDbContext db, DistrictBranchInheritanceService di
         dto.Adultes = BuildRepartition(scouts.Where(s => !IsScoutJeune(s)));
 
         dto.TotauxParGroupes = relatedBranches
+            .Where(b => !IsDistrictEquipe(b.Groupe?.Nom))
             .GroupBy(b => b.GroupeId)
             .Select(group =>
             {
