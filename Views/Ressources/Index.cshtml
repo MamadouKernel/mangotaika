@@ -45,45 +45,103 @@
     </div>
 </form>
 
-<div class="row g-3">
-@foreach (var ressource in Model)
+@if (!Model.Any())
 {
-    <div class="col-md-4">
-        <div class="card-3d p-3 h-100">
-            <div class="d-flex justify-content-between gap-2">
-                <div>
-                    <span class="badge-3d badge-soumise">@ressource.Type</span>
-                    <h5 class="mt-2 mb-1">@($"{ressource.Prenom} {ressource.Nom}".Trim())</h5>
-                    <p class="text-muted-custom mb-1">@((ressource.Groupe?.Nom) ?? "District")</p>
-                </div>
-                <span class="badge-3d @(ressource.IsActive ? "badge-validee" : "badge-rejetee")">@(ressource.IsActive ? "Actif" : "Inactif")</span>
+    <div class="card-3d p-4 text-center text-muted-custom py-5">Aucune ressource trouvee.</div>
+}
+else
+{
+    <div class="js-view-switch" id="ressources-view" data-default-view="cards">
+        <div class="d-flex justify-content-end mb-3">
+            <div class="btn-group lv-toggle" role="group" aria-label="Changer de vue">
+                <button type="button" class="btn btn-sm" data-view-set="cards" title="Vue en cartes"><i class="bi bi-grid-3x3-gap"></i></button>
+                <button type="button" class="btn btn-sm" data-view-set="list" title="Vue en liste"><i class="bi bi-list-ul"></i></button>
             </div>
-            <div class="small text-muted-custom mt-2">
-                @if (!string.IsNullOrWhiteSpace(ressource.Telephone))
+        </div>
+
+        <div data-view-pane="cards">
+            <div class="row g-3">
+                @foreach (var ressource in Model)
                 {
-                    <div><i class="bi bi-telephone"></i> @ressource.Telephone</div>
-                }
-                @if (!string.IsNullOrWhiteSpace(ressource.Email))
-                {
-                    <div><i class="bi bi-envelope"></i> @ressource.Email</div>
-                }
-            </div>
-            <div class="d-flex gap-2 mt-3">
-                <a asp-action="Edit" asp-route-id="@ressource.Id" class="btn btn-sm btn-outline-or"><i class="bi bi-pencil"></i></a>
-                @if (ressource.IsActive)
-                {
-                    <form asp-action="Delete" asp-route-id="@ressource.Id" method="post" onsubmit="return confirm('Desactiver cette ressource ?')">
-                        @Html.AntiForgeryToken()
-                        <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-x-circle"></i></button>
-                    </form>
+                    <div class="col-md-4">
+                        <div class="card-3d p-3 h-100">
+                            <div class="d-flex justify-content-between gap-2">
+                                <div>
+                                    <span class="badge-3d badge-soumise">@ressource.Type</span>
+                                    <h5 class="mt-2 mb-1">@($"{ressource.Prenom} {ressource.Nom}".Trim())</h5>
+                                    <p class="text-muted-custom mb-1">@((ressource.Groupe?.Nom) ?? "District")</p>
+                                </div>
+                                <span class="badge-3d @(ressource.IsActive ? "badge-validee" : "badge-rejetee")">@(ressource.IsActive ? "Actif" : "Inactif")</span>
+                            </div>
+                            <div class="small text-muted-custom mt-2">
+                                @if (!string.IsNullOrWhiteSpace(ressource.Telephone))
+                                {
+                                    <div><i class="bi bi-telephone"></i> @ressource.Telephone</div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(ressource.Email))
+                                {
+                                    <div><i class="bi bi-envelope"></i> @ressource.Email</div>
+                                }
+                            </div>
+                            <div class="d-flex gap-2 mt-3">
+                                <a asp-action="Edit" asp-route-id="@ressource.Id" class="btn btn-sm btn-outline-or"><i class="bi bi-pencil"></i></a>
+                                @if (ressource.IsActive)
+                                {
+                                    <form asp-action="Delete" asp-route-id="@ressource.Id" method="post" onsubmit="return confirm('Desactiver cette ressource ?')">
+                                        @Html.AntiForgeryToken()
+                                        <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-x-circle"></i></button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+                    </div>
                 }
             </div>
         </div>
-    </div>
-}
-</div>
 
-@if (!Model.Any())
-{
-    <div class="text-center text-muted-custom py-5">Aucune ressource trouvee.</div>
+        <div data-view-pane="list">
+            <div class="card-3d p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Nom</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Groupe</th>
+                                <th scope="col">Statut</th>
+                                <th scope="col">Telephone</th>
+                                <th scope="col">Email</th>
+                                <th scope="col" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var ressource in Model)
+                            {
+                                <tr>
+                                    <td>@($"{ressource.Prenom} {ressource.Nom}".Trim())</td>
+                                    <td>@ressource.Type</td>
+                                    <td>@((ressource.Groupe?.Nom) ?? "District")</td>
+                                    <td><span class="badge-3d @(ressource.IsActive ? "badge-validee" : "badge-rejetee")">@(ressource.IsActive ? "Actif" : "Inactif")</span></td>
+                                    <td>@(string.IsNullOrWhiteSpace(ressource.Telephone) ? "-" : ressource.Telephone)</td>
+                                    <td>@(string.IsNullOrWhiteSpace(ressource.Email) ? "-" : ressource.Email)</td>
+                                    <td class="text-end">
+                                        <div class="d-inline-flex flex-wrap gap-1 justify-content-end">
+                                            <a asp-action="Edit" asp-route-id="@ressource.Id" class="btn btn-sm btn-outline-or" title="Modifier"><i class="bi bi-pencil"></i></a>
+                                            @if (ressource.IsActive)
+                                            {
+                                                <form asp-action="Delete" asp-route-id="@ressource.Id" method="post" class="d-inline" onsubmit="return confirm('Desactiver cette ressource ?')">
+                                                    @Html.AntiForgeryToken()
+                                                    <button class="btn btn-sm btn-outline-danger" type="submit" title="Desactiver"><i class="bi bi-x-circle"></i></button>
+                                                </form>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 }

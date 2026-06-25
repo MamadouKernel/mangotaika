@@ -38,39 +38,99 @@
     </div>
 }
 
-<div class="row g-3">
-    @foreach (var p in Model)
-    {
-        var siteWeb = SafeLinkHelper.NormalizeAllowedLink(p.SiteWeb);
-        <div class="col-md-3 col-6">
-            <div class="card-3d p-3 text-center h-100">
-                <div class="mb-2">
-                    @if (!string.IsNullOrWhiteSpace(p.LogoUrl))
-                    {
-                        <img src="@p.LogoUrl" alt="Logo @p.Nom" style="height:56px;max-width:100%;object-fit:contain;border-radius:8px;" />
-                    }
-                    else
-                    {
-                        <i class="bi bi-building" style="font-size:2rem;color:var(--bleu-gris-pale);"></i>
-                    }
-                </div>
-                <h6 style="color:var(--bleu-logo);font-size:0.85rem;">@p.Nom</h6>
-                <small class="text-muted-custom">@(p.TypePartenariat ?? "-")</small>
-                <div class="mt-2 d-flex flex-wrap gap-1 justify-content-center">
-                    <a asp-action="DetailsPartenaire" asp-route-id="@p.Id" class="btn btn-sm btn-outline-or" style="font-size:0.7rem;" title="Details"><i class="bi bi-eye"></i></a>
-                    @if (canManage)
-                    {
-                        <a asp-action="EditPartenaire" asp-route-id="@p.Id" class="btn btn-sm btn-bleu" style="font-size:0.7rem;" title="Modifier"><i class="bi bi-pencil"></i></a>
-                        <form asp-action="DeletePartenaire" asp-route-id="@p.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer ?')"><button type="submit" class="btn btn-sm p-0 px-1" style="color:#f87171;font-size:0.7rem;" title="Supprimer"><i class="bi bi-trash"></i></button></form>
-                    }
-                    @if (!string.IsNullOrEmpty(siteWeb))
-                    {
-                        <a href="@siteWeb" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-or" style="font-size:0.7rem;"><i class="bi bi-globe"></i></a>
-                    }
+@if (!Model.Any())
+{
+    <div class="card-3d p-4 text-center text-muted-custom py-5">Aucun partenaire enregistre</div>
+}
+else
+{
+    <div class="js-view-switch" id="partenaires-view" data-default-view="cards">
+        <div class="d-flex justify-content-end mb-3">
+            <div class="btn-group lv-toggle" role="group" aria-label="Changer de vue">
+                <button type="button" class="btn btn-sm" data-view-set="cards" title="Vue en cartes"><i class="bi bi-grid-3x3-gap"></i></button>
+                <button type="button" class="btn btn-sm" data-view-set="list" title="Vue en liste"><i class="bi bi-list-ul"></i></button>
+            </div>
+        </div>
+
+        <div data-view-pane="cards">
+            <div class="row g-3">
+                @foreach (var p in Model)
+                {
+                    var siteWeb = SafeLinkHelper.NormalizeAllowedLink(p.SiteWeb);
+                    <div class="col-md-3 col-6">
+                        <div class="card-3d p-3 text-center h-100">
+                            <div class="mb-2">
+                                @if (!string.IsNullOrWhiteSpace(p.LogoUrl))
+                                {
+                                    <img src="@p.LogoUrl" alt="Logo @p.Nom" style="height:56px;max-width:100%;object-fit:contain;border-radius:8px;" />
+                                }
+                                else
+                                {
+                                    <i class="bi bi-building" style="font-size:2rem;color:var(--bleu-gris-pale);"></i>
+                                }
+                            </div>
+                            <h6 style="color:var(--bleu-logo);font-size:0.85rem;">@p.Nom</h6>
+                            <small class="text-muted-custom">@(p.TypePartenariat ?? "-")</small>
+                            <div class="mt-2 d-flex flex-wrap gap-1 justify-content-center">
+                                <a asp-action="DetailsPartenaire" asp-route-id="@p.Id" class="btn btn-sm btn-outline-or" style="font-size:0.7rem;" title="Details"><i class="bi bi-eye"></i></a>
+                                @if (canManage)
+                                {
+                                    <a asp-action="EditPartenaire" asp-route-id="@p.Id" class="btn btn-sm btn-bleu" style="font-size:0.7rem;" title="Modifier"><i class="bi bi-pencil"></i></a>
+                                    <form asp-action="DeletePartenaire" asp-route-id="@p.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer ?')"><button type="submit" class="btn btn-sm p-0 px-1" style="color:#f87171;font-size:0.7rem;" title="Supprimer"><i class="bi bi-trash"></i></button></form>
+                                }
+                                @if (!string.IsNullOrEmpty(siteWeb))
+                                {
+                                    <a href="@siteWeb" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-or" style="font-size:0.7rem;"><i class="bi bi-globe"></i></a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div data-view-pane="list">
+            <div class="card-3d p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Partenaire</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Site web</th>
+                                <th scope="col" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in Model)
+                            {
+                                var siteWeb = SafeLinkHelper.NormalizeAllowedLink(p.SiteWeb);
+                                <tr>
+                                    <td>@p.Nom</td>
+                                    <td>@(p.TypePartenariat ?? "-")</td>
+                                    <td>@(string.IsNullOrEmpty(siteWeb) ? "-" : siteWeb)</td>
+                                    <td class="text-end">
+                                        <div class="d-inline-flex flex-wrap gap-1 justify-content-end">
+                                            <a asp-action="DetailsPartenaire" asp-route-id="@p.Id" class="btn btn-sm btn-outline-or" title="Details"><i class="bi bi-eye"></i></a>
+                                            @if (canManage)
+                                            {
+                                                <a asp-action="EditPartenaire" asp-route-id="@p.Id" class="btn btn-sm btn-bleu" title="Modifier"><i class="bi bi-pencil"></i></a>
+                                                <form asp-action="DeletePartenaire" asp-route-id="@p.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer ?')"><button type="submit" class="btn btn-sm p-0 px-1" style="color:#f87171;" title="Supprimer"><i class="bi bi-trash"></i></button></form>
+                                            }
+                                            @if (!string.IsNullOrEmpty(siteWeb))
+                                            {
+                                                <a href="@siteWeb" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-or" title="Site web"><i class="bi bi-globe"></i></a>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-    }
-</div>
+    </div>
+}
 
 <partial name="_ListExportActions" />

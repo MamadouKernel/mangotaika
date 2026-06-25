@@ -45,59 +45,114 @@
         </form>
     </div>
 
-    <section class="support-ticket-grid">
-        @foreach (var article in Model)
-        {
-            <article class="support-resource-card">
-                <div class="support-resource-card__head">
-                    <div>
-                        <span class="support-resource-card__code"><i class="bi bi-journal-bookmark"></i> @article.Categorie</span>
-                        <h5 class="support-resource-card__title">@article.Titre</h5>
-                    </div>
-                    @if (canManage)
-                    {
-                        <span class="badge-3d @(article.EstPublie ? "badge-validee" : "badge-brouillon")">@(article.EstPublie ? "Publie" : "Brouillon")</span>
-                    }
+    @{ var articles = Model.ToList(); }
+    @if (!articles.Any())
+    {
+        <div class="support-empty">
+            <i class="bi bi-journal-x" style="font-size:2rem;opacity:0.3;"></i>
+            <div class="mt-2">Aucun article ne correspond aux filtres.</div>
+        </div>
+    }
+    else
+    {
+        <div class="js-view-switch" id="knowledgebase-view" data-default-view="cards">
+            <div class="d-flex justify-content-end mb-3">
+                <div class="btn-group lv-toggle" role="group" aria-label="Changer de vue">
+                    <button type="button" class="btn btn-sm" data-view-set="cards" title="Vue en cartes"><i class="bi bi-grid-3x3-gap"></i></button>
+                    <button type="button" class="btn btn-sm" data-view-set="list" title="Vue en liste"><i class="bi bi-list-ul"></i></button>
                 </div>
-                <div class="support-resource-card__body">@article.Resume</div>
-                <div class="support-resource-card__stats">
-                    <div class="support-resource-card__stat">
-                        <span class="support-resource-card__stat-label">Maj</span>
-                        <span class="support-resource-card__stat-value">@((article.DateMiseAJour ?? article.DateCreation).ToString("dd/MM/yy"))</span>
-                    </div>
-                    <div class="support-resource-card__stat">
-                        <span class="support-resource-card__stat-label">Etat</span>
-                        <span class="support-resource-card__stat-value">@(article.EstPublie ? "Public" : "Interne")</span>
-                    </div>
-                    <div class="support-resource-card__stat">
-                        <span class="support-resource-card__stat-label">Mots-cles</span>
-                        <span class="support-resource-card__stat-value">@(string.IsNullOrWhiteSpace(article.MotsCles) ? "-" : article.MotsCles.Split(',').Length.ToString())</span>
-                    </div>
-                </div>
-                <div class="support-resource-card__footer">
-                    <a asp-action="Details" asp-route-id="@article.Id" class="btn btn-sm btn-outline-or"><i class="bi bi-eye"></i></a>
-                    <span class="badge-3d badge-soumise">@article.Categorie</span>
-                    @if (canManage)
-                    {
-                        <a asp-action="Edit" asp-route-id="@article.Id" class="btn btn-sm btn-bleu"><i class="bi bi-pencil"></i></a>
-                        <form asp-action="Toggle" method="post">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="id" value="@article.Id" />
-                            <button type="submit" class="btn btn-sm @(article.EstPublie ? "btn-outline-or" : "btn-mango")">@(article.EstPublie ? "Brouillon" : "Publier")</button>
-                        </form>
-                    }
-                </div>
-            </article>
-        }
-
-        @if (!Model.Any())
-        {
-            <div class="support-empty" style="grid-column:1 / -1;">
-                <i class="bi bi-journal-x" style="font-size:2rem;opacity:0.3;"></i>
-                <div class="mt-2">Aucun article ne correspond aux filtres.</div>
             </div>
-        }
-    </section>
+            <div data-view-pane="cards">
+                <section class="support-ticket-grid">
+                    @foreach (var article in articles)
+                    {
+                        <article class="support-resource-card">
+                            <div class="support-resource-card__head">
+                                <div>
+                                    <span class="support-resource-card__code"><i class="bi bi-journal-bookmark"></i> @article.Categorie</span>
+                                    <h5 class="support-resource-card__title">@article.Titre</h5>
+                                </div>
+                                @if (canManage)
+                                {
+                                    <span class="badge-3d @(article.EstPublie ? "badge-validee" : "badge-brouillon")">@(article.EstPublie ? "Publie" : "Brouillon")</span>
+                                }
+                            </div>
+                            <div class="support-resource-card__body">@article.Resume</div>
+                            <div class="support-resource-card__stats">
+                                <div class="support-resource-card__stat">
+                                    <span class="support-resource-card__stat-label">Maj</span>
+                                    <span class="support-resource-card__stat-value">@((article.DateMiseAJour ?? article.DateCreation).ToString("dd/MM/yy"))</span>
+                                </div>
+                                <div class="support-resource-card__stat">
+                                    <span class="support-resource-card__stat-label">Etat</span>
+                                    <span class="support-resource-card__stat-value">@(article.EstPublie ? "Public" : "Interne")</span>
+                                </div>
+                                <div class="support-resource-card__stat">
+                                    <span class="support-resource-card__stat-label">Mots-cles</span>
+                                    <span class="support-resource-card__stat-value">@(string.IsNullOrWhiteSpace(article.MotsCles) ? "-" : article.MotsCles.Split(',').Length.ToString())</span>
+                                </div>
+                            </div>
+                            <div class="support-resource-card__footer">
+                                <a asp-action="Details" asp-route-id="@article.Id" class="btn btn-sm btn-outline-or"><i class="bi bi-eye"></i></a>
+                                <span class="badge-3d badge-soumise">@article.Categorie</span>
+                                @if (canManage)
+                                {
+                                    <a asp-action="Edit" asp-route-id="@article.Id" class="btn btn-sm btn-bleu"><i class="bi bi-pencil"></i></a>
+                                    <form asp-action="Toggle" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@article.Id" />
+                                        <button type="submit" class="btn btn-sm @(article.EstPublie ? "btn-outline-or" : "btn-mango")">@(article.EstPublie ? "Brouillon" : "Publier")</button>
+                                    </form>
+                                }
+                            </div>
+                        </article>
+                    }
+                </section>
+            </div>
+            <div data-view-pane="list">
+                <div class="card-3d p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Titre</th>
+                                    <th scope="col">Categorie</th>
+                                    <th scope="col">Etat</th>
+                                    <th scope="col">Mise a jour</th>
+                                    <th scope="col" class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var article in articles)
+                                {
+                                    <tr>
+                                        <td>@article.Titre</td>
+                                        <td>@article.Categorie</td>
+                                        <td><span class="badge-3d @(article.EstPublie ? "badge-validee" : "badge-brouillon")">@(article.EstPublie ? "Publie" : "Brouillon")</span></td>
+                                        <td>@((article.DateMiseAJour ?? article.DateCreation).ToString("dd/MM/yyyy"))</td>
+                                        <td class="text-end">
+                                            <div class="d-inline-flex flex-wrap gap-1 justify-content-end">
+                                                <a asp-action="Details" asp-route-id="@article.Id" class="btn btn-sm btn-outline-or" title="Voir"><i class="bi bi-eye"></i></a>
+                                                @if (canManage)
+                                                {
+                                                    <a asp-action="Edit" asp-route-id="@article.Id" class="btn btn-sm btn-bleu" title="Modifier"><i class="bi bi-pencil"></i></a>
+                                                    <form asp-action="Toggle" method="post" class="d-inline">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="id" value="@article.Id" />
+                                                        <button type="submit" class="btn btn-sm @(article.EstPublie ? "btn-outline-or" : "btn-mango")">@(article.EstPublie ? "Brouillon" : "Publier")</button>
+                                                    </form>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 
     <partial name="_ListExportActions" />
 </div>

@@ -43,37 +43,100 @@
     </div>
 }
 
-<div class="row g-4">
-    @foreach (var c in Model)
-    {
-        var couleurNiveau = c.Niveau switch { "Expert" => "#10b981", "Avance" => "#3b82f6", "Intermediaire" => "#eab308", _ => "#94a3b8" };
-        <div class="col-lg-4 col-md-6">
-            <div class="card-3d p-4 h-100 d-flex flex-column">
-                <h5 class="text-or mb-2">@c.Nom</h5>
-                <p class="text-muted-custom small mb-2">
-                    <a asp-action="Progression" asp-route-id="@c.ScoutId" class="text-or text-decoration-none">@c.Scout.Prenom @c.Scout.Nom</a>
-                </p>
-                <div class="d-flex flex-column gap-1 mb-3 flex-grow-1" style="font-size:0.85rem;">
-                    <span><i class="bi bi-tag text-bleu"></i> <span class="badge" style="background:var(--vert-pale);color:var(--bleu-logo);border-radius:10px;font-size:0.75rem;">@c.Type</span></span>
-                    <span><i class="bi bi-bar-chart-steps text-or"></i> <span class="badge" style="background:@(couleurNiveau)20;color:@couleurNiveau;border:1px solid @(couleurNiveau)40;border-radius:10px;font-size:0.75rem;">@c.Niveau</span></span>
-                    <span><i class="bi bi-calendar-check text-bleu"></i> @c.DateObtention.ToString("dd/MM/yyyy")</span>
-                </div>
-                <div class="d-flex flex-wrap gap-2 mt-auto">
-                    <a asp-action="Details" asp-route-id="@c.Id" class="btn btn-sm btn-outline-or" title="Details"><i class="bi bi-eye"></i></a>
-                    @if (canManage)
-                    {
-                        <a asp-action="Edit" asp-route-id="@c.Id" class="btn btn-sm btn-bleu" title="Modifier"><i class="bi bi-pencil"></i></a>
-                        <form asp-action="Delete" asp-route-id="@c.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer ?')">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Supprimer">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </form>
-                    }
+@if (!Model.Any())
+{
+    <div class="card-3d p-4 text-center text-muted-custom py-5">Aucune competence enregistree</div>
+}
+else
+{
+    <div class="js-view-switch" id="competences-view" data-default-view="cards">
+        <div class="d-flex justify-content-end mb-3">
+            <div class="btn-group lv-toggle" role="group" aria-label="Changer de vue">
+                <button type="button" class="btn btn-sm" data-view-set="cards" title="Vue en cartes"><i class="bi bi-grid-3x3-gap"></i></button>
+                <button type="button" class="btn btn-sm" data-view-set="list" title="Vue en liste"><i class="bi bi-list-ul"></i></button>
+            </div>
+        </div>
+
+        <div data-view-pane="cards">
+            <div class="row g-4">
+                @foreach (var c in Model)
+                {
+                    var couleurNiveau = c.Niveau switch { "Expert" => "#10b981", "Avance" => "#3b82f6", "Intermediaire" => "#eab308", _ => "#94a3b8" };
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card-3d p-4 h-100 d-flex flex-column">
+                            <h5 class="text-or mb-2">@c.Nom</h5>
+                            <p class="text-muted-custom small mb-2">
+                                <a asp-action="Progression" asp-route-id="@c.ScoutId" class="text-or text-decoration-none">@c.Scout.Prenom @c.Scout.Nom</a>
+                            </p>
+                            <div class="d-flex flex-column gap-1 mb-3 flex-grow-1" style="font-size:0.85rem;">
+                                <span><i class="bi bi-tag text-bleu"></i> <span class="badge" style="background:var(--vert-pale);color:var(--bleu-logo);border-radius:10px;font-size:0.75rem;">@c.Type</span></span>
+                                <span><i class="bi bi-bar-chart-steps text-or"></i> <span class="badge" style="background:@(couleurNiveau)20;color:@couleurNiveau;border:1px solid @(couleurNiveau)40;border-radius:10px;font-size:0.75rem;">@c.Niveau</span></span>
+                                <span><i class="bi bi-calendar-check text-bleu"></i> @c.DateObtention.ToString("dd/MM/yyyy")</span>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 mt-auto">
+                                <a asp-action="Details" asp-route-id="@c.Id" class="btn btn-sm btn-outline-or" title="Details"><i class="bi bi-eye"></i></a>
+                                @if (canManage)
+                                {
+                                    <a asp-action="Edit" asp-route-id="@c.Id" class="btn btn-sm btn-bleu" title="Modifier"><i class="bi bi-pencil"></i></a>
+                                    <form asp-action="Delete" asp-route-id="@c.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer ?')">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Supprimer">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div data-view-pane="list">
+            <div class="card-3d p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Competence</th>
+                                <th scope="col">Scout</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Niveau</th>
+                                <th scope="col">Date obtention</th>
+                                <th scope="col" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in Model)
+                            {
+                                var couleurNiveauRow = c.Niveau switch { "Expert" => "#10b981", "Avance" => "#3b82f6", "Intermediaire" => "#eab308", _ => "#94a3b8" };
+                                <tr>
+                                    <td>@c.Nom</td>
+                                    <td><a asp-action="Progression" asp-route-id="@c.ScoutId">@c.Scout.Prenom @c.Scout.Nom</a></td>
+                                    <td>@c.Type</td>
+                                    <td><span class="badge" style="background:@(couleurNiveauRow)20;color:@couleurNiveauRow;border:1px solid @(couleurNiveauRow)40;border-radius:10px;font-size:0.75rem;">@c.Niveau</span></td>
+                                    <td>@c.DateObtention.ToString("dd/MM/yyyy")</td>
+                                    <td class="text-end">
+                                        <div class="d-inline-flex flex-wrap gap-1 justify-content-end">
+                                            <a asp-action="Details" asp-route-id="@c.Id" class="btn btn-sm btn-outline-or" title="Details"><i class="bi bi-eye"></i></a>
+                                            @if (canManage)
+                                            {
+                                                <a asp-action="Edit" asp-route-id="@c.Id" class="btn btn-sm btn-bleu" title="Modifier"><i class="bi bi-pencil"></i></a>
+                                                <form asp-action="Delete" asp-route-id="@c.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer ?')">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Supprimer"><i class="bi bi-trash"></i></button>
+                                                </form>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-    }
-</div>
+    </div>
+}
 
 <partial name="_ListPagination" />
