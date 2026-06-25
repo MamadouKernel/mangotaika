@@ -164,7 +164,56 @@
         setView(saved === 'cards' ? 'cards' : 'list');
     }
 
+    /*
+     * Bascule generique a deux panneaux rendus cote serveur.
+     * Markup attendu :
+     *   <div class="js-view-switch" data-default-view="cards">
+     *     ... boutons [data-view-set="cards"] / [data-view-set="list"] ...
+     *     <div data-view-pane="cards">...</div>
+     *     <div data-view-pane="list">...</div>
+     *   </div>
+     */
+    function initViewSwitch(root) {
+        if (root.dataset.lvSwitchDone) {
+            return;
+        }
+        root.dataset.lvSwitchDone = '1';
+
+        var buttons = Array.prototype.slice.call(root.querySelectorAll('[data-view-set]'));
+        var panes = Array.prototype.slice.call(root.querySelectorAll('[data-view-pane]'));
+        if (!buttons.length || !panes.length) {
+            return;
+        }
+
+        var storageKey = 'lv-switch:' + location.pathname + (root.id ? '#' + root.id : '');
+
+        function apply(view) {
+            panes.forEach(function (pane) {
+                pane.style.display = pane.getAttribute('data-view-pane') === view ? '' : 'none';
+            });
+            buttons.forEach(function (btn) {
+                btn.classList.toggle('is-active', btn.getAttribute('data-view-set') === view);
+            });
+            try { localStorage.setItem(storageKey, view); } catch (e) { /* ignore */ }
+        }
+
+        buttons.forEach(function (btn) {
+            btn.addEventListener('click', function () { apply(btn.getAttribute('data-view-set')); });
+        });
+
+        var available = buttons.map(function (b) { return b.getAttribute('data-view-set'); });
+        var saved = root.getAttribute('data-default-view') || available[0];
+        try {
+            var stored = localStorage.getItem(storageKey);
+            if (stored && available.indexOf(stored) !== -1) {
+                saved = stored;
+            }
+        } catch (e) { /* ignore */ }
+        apply(saved);
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('table.js-list-cards').forEach(enhance);
+        document.querySelectorAll('.js-view-switch').forEach(initViewSwitch);
     });
 })();

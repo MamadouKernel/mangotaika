@@ -166,51 +166,115 @@
     </form>
 </div>
 
-<div class="row g-4">
-    @foreach (var s in Model)
-    {
-        <div class="col-lg-4 col-md-6">
-            <div class="card-3d p-4 h-100 d-flex flex-column">
-                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-                    <h5 class="text-or mb-0">@s.Prenom @s.Nom</h5>
-                    <span class="badge-3d badge-soumise flex-shrink-0">@(string.IsNullOrWhiteSpace(s.Matricule) ? "Sans matricule" : s.Matricule)</span>
-                </div>
-                <p class="text-muted-custom small mb-3">@(s.Fonction ?? "-")</p>
-                <div class="d-flex flex-column gap-1 mb-3 flex-grow-1" style="font-size:0.85rem;">
-                    <span><i class="bi bi-globe-americas text-bleu"></i> @(s.RegionScoute ?? "-")</span>
-                    <span><i class="bi bi-pin-map text-bleu"></i> @(s.District ?? "-")</span>
-                    <span><i class="bi bi-building text-or"></i> @(s.NomGroupe ?? "-")</span>
-                    <span><i class="bi bi-diagram-3-fill text-or"></i> @(s.NomBranche ?? "-")</span>
-                    <span><i class="bi bi-shield-check text-bleu"></i> Cotisation nationale : @(s.AssuranceAnnuelle ? "A jour" : "Non")</span>
-                    <span><i class="bi bi-journal-check text-bleu"></i> Derniere inscription : @(s.DerniereInscriptionAnnuelle ?? "Aucune inscription annuelle")@((s.DerniereCotisationNationaleAjour.HasValue ? $" - {(s.DerniereCotisationNationaleAjour.Value ? "cotisation a jour" : "cotisation non a jour")}" : string.Empty))</span>
-                    <span><i class="bi bi-clock-history text-or"></i> Historique : @s.HistoriqueInscriptionsCount inscription(s)</span>
-                </div>
-                <div class="d-flex flex-wrap gap-2 mt-auto">
-                    <a asp-action="Details" asp-route-id="@s.Id" class="btn btn-sm btn-outline-or" title="Voir">
-                        <i class="bi bi-eye"></i>
-                    </a>
-                    @if (canManage)
-                    {
-                        <a asp-action="Edit" asp-route-id="@s.Id" class="btn btn-sm btn-bleu" title="Modifier">
-                            <i class="bi bi-pencil"></i>
-                        </a>
-                        <form asp-action="Delete" asp-route-id="@s.Id" method="post" class="d-inline"
-                              onsubmit="return confirm('Confirmer la desactivation ?')">
-                            @Html.AntiForgeryToken()
-                            <button class="btn btn-sm" type="submit" style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Desactiver">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </form>
-                    }
+@if (!Model.Any())
+{
+    <div class="card-3d p-4 text-center text-muted-custom py-5">Aucun scout ne correspond aux filtres selectionnes.</div>
+}
+else
+{
+    <div class="js-view-switch" id="scouts-view" data-default-view="cards">
+        <div class="d-flex justify-content-end mb-3">
+            <div class="btn-group lv-toggle" role="group" aria-label="Changer de vue">
+                <button type="button" class="btn btn-sm" data-view-set="cards" title="Vue en cartes"><i class="bi bi-grid-3x3-gap"></i></button>
+                <button type="button" class="btn btn-sm" data-view-set="list" title="Vue en liste"><i class="bi bi-list-ul"></i></button>
+            </div>
+        </div>
+
+        <div data-view-pane="cards">
+            <div class="row g-4">
+                @foreach (var s in Model)
+                {
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card-3d p-4 h-100 d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                <h5 class="text-or mb-0">@s.Prenom @s.Nom</h5>
+                                <span class="badge-3d badge-soumise flex-shrink-0">@(string.IsNullOrWhiteSpace(s.Matricule) ? "Sans matricule" : s.Matricule)</span>
+                            </div>
+                            <p class="text-muted-custom small mb-3">@(s.Fonction ?? "-")</p>
+                            <div class="d-flex flex-column gap-1 mb-3 flex-grow-1" style="font-size:0.85rem;">
+                                <span><i class="bi bi-globe-americas text-bleu"></i> @(s.RegionScoute ?? "-")</span>
+                                <span><i class="bi bi-pin-map text-bleu"></i> @(s.District ?? "-")</span>
+                                <span><i class="bi bi-building text-or"></i> @(s.NomGroupe ?? "-")</span>
+                                <span><i class="bi bi-diagram-3-fill text-or"></i> @(s.NomBranche ?? "-")</span>
+                                <span><i class="bi bi-shield-check text-bleu"></i> Cotisation nationale : @(s.AssuranceAnnuelle ? "A jour" : "Non")</span>
+                                <span><i class="bi bi-journal-check text-bleu"></i> Derniere inscription : @(s.DerniereInscriptionAnnuelle ?? "Aucune inscription annuelle")@((s.DerniereCotisationNationaleAjour.HasValue ? $" - {(s.DerniereCotisationNationaleAjour.Value ? "cotisation a jour" : "cotisation non a jour")}" : string.Empty))</span>
+                                <span><i class="bi bi-clock-history text-or"></i> Historique : @s.HistoriqueInscriptionsCount inscription(s)</span>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 mt-auto">
+                                <a asp-action="Details" asp-route-id="@s.Id" class="btn btn-sm btn-outline-or" title="Voir">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                @if (canManage)
+                                {
+                                    <a asp-action="Edit" asp-route-id="@s.Id" class="btn btn-sm btn-bleu" title="Modifier">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <form asp-action="Delete" asp-route-id="@s.Id" method="post" class="d-inline"
+                                          onsubmit="return confirm('Confirmer la desactivation ?')">
+                                        @Html.AntiForgeryToken()
+                                        <button class="btn btn-sm" type="submit" style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Desactiver">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div data-view-pane="list">
+            <div class="card-3d p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Matricule</th>
+                                <th scope="col">Nom</th>
+                                <th scope="col">Prenom</th>
+                                <th scope="col">Fonction</th>
+                                <th scope="col">Groupe</th>
+                                <th scope="col">Branche</th>
+                                <th scope="col">Cotisation</th>
+                                <th scope="col" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var s in Model)
+                            {
+                                <tr>
+                                    <td>@(string.IsNullOrWhiteSpace(s.Matricule) ? "-" : s.Matricule)</td>
+                                    <td>@s.Nom</td>
+                                    <td>@s.Prenom</td>
+                                    <td>@(s.Fonction ?? "-")</td>
+                                    <td>@(s.NomGroupe ?? "-")</td>
+                                    <td>@(s.NomBranche ?? "-")</td>
+                                    <td>
+                                        <span class="badge-3d @(s.AssuranceAnnuelle ? "badge-validee" : "badge-rejetee")">@(s.AssuranceAnnuelle ? "A jour" : "Non")</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="d-inline-flex flex-wrap gap-1 justify-content-end">
+                                            <a asp-action="Details" asp-route-id="@s.Id" class="btn btn-sm btn-outline-or" title="Voir"><i class="bi bi-eye"></i></a>
+                                            @if (canManage)
+                                            {
+                                                <a asp-action="Edit" asp-route-id="@s.Id" class="btn btn-sm btn-bleu" title="Modifier"><i class="bi bi-pencil"></i></a>
+                                                <form asp-action="Delete" asp-route-id="@s.Id" method="post" class="d-inline" onsubmit="return confirm('Confirmer la desactivation ?')">
+                                                    @Html.AntiForgeryToken()
+                                                    <button class="btn btn-sm" type="submit" style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Desactiver"><i class="bi bi-trash"></i></button>
+                                                </form>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-    }
-    @if (!Model.Any())
-    {
-        <div class="col-12 text-center text-muted-custom py-5">Aucun scout ne correspond aux filtres selectionnes.</div>
-    }
-</div>
+    </div>
+}
 
 @if (canManage)
 {
