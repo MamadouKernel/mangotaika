@@ -177,45 +177,129 @@
     }
 </div>
 
-<div class="card-3d p-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+<div class="card-3d p-4" id="groupe-membres-panel">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
         <div>
             <h4 class="mb-1">Liste de tous les scouts et adultes</h4>
             <p class="text-muted-custom mb-0">Vue detaillee des membres actifs rattaches a cette entite.</p>
         </div>
-        <span class="badge-3d badge-soumise">@Model.Membres.Count membre(s)</span>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <div class="groupe-view-toggle btn-group" role="group" aria-label="Changer de vue">
+                <button type="button" class="btn btn-sm" data-view-btn="cards" title="Vue en cartes"><i class="bi bi-grid-3x3-gap"></i></button>
+                <button type="button" class="btn btn-sm" data-view-btn="list" title="Vue en liste"><i class="bi bi-list-ul"></i></button>
+            </div>
+            @if (Model.Membres.Any())
+            {
+                <div class="js-list-export-toolbar d-flex flex-wrap gap-2"
+                     data-export-title="Membres - @Model.Nom"
+                     data-export-target="#groupe-membres-table"
+                     data-export-mode="table">
+                    <button type="button" class="btn btn-outline-or btn-sm" data-export-format="pdf" title="Exporter en PDF">
+                        <i class="bi bi-file-earmark-pdf"></i> PDF
+                    </button>
+                    <button type="button" class="btn btn-outline-or btn-sm" data-export-format="excel" title="Exporter en Excel">
+                        <i class="bi bi-file-earmark-excel"></i> Excel
+                    </button>
+                </div>
+            }
+        </div>
     </div>
 
     @if (Model.Membres.Any())
     {
-        <div class="table-responsive">
-            <table class="table table-sm align-middle groupe-membres-table mb-0">
-                <thead>
-                    <tr>
-                        <th scope="col">Matricule</th>
-                        <th scope="col">Nom</th>
-                        <th scope="col">Prenoms</th>
-                        <th scope="col">Branche</th>
-                        <th scope="col">Fonction</th>
-                        <th scope="col">Type</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var membre in Model.Membres)
-                    {
-                        <tr>
-                            <td>@membre.Matricule</td>
-                            <td>@membre.Nom</td>
-                            <td>@membre.Prenoms</td>
-                            <td>@(membre.Branche ?? "-")</td>
-                            <td>@membre.Fonction</td>
-                            <td>
-                                <span class="badge-3d @(membre.TypeMembre == "Adulte" ? "badge-approuvee" : "badge-soumise")">@membre.TypeMembre</span>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+        <div class="groupe-membres-filters mb-3">
+            <div class="groupe-membres-search">
+                <i class="bi bi-search"></i>
+                <input type="search" id="groupeMembresSearch" class="form-control form-control-sm"
+                       placeholder="Rechercher (matricule, nom, prenom, fonction)..." autocomplete="off" />
+            </div>
+            <select id="groupeMembresBranche" class="form-select form-select-sm" aria-label="Filtrer par branche">
+                <option value="">Toutes les branches</option>
+                @foreach (var branche in Model.BranchesScouts)
+                {
+                    <option value="@branche.Nom">@BranchDisplay.CanonicalLabel(branche.Nom)</option>
+                }
+            </select>
+            <select id="groupeMembresType" class="form-select form-select-sm" aria-label="Filtrer par type">
+                <option value="">Tous les types</option>
+                <option value="Jeune">Jeunes</option>
+                <option value="Adulte">Adultes</option>
+            </select>
+            <button type="button" id="groupeMembresReset" class="btn btn-outline-or btn-sm" title="Reinitialiser les filtres">
+                <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+        </div>
+
+        <div class="groupe-membres-meta d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+            <span class="small text-muted-custom" id="groupeMembresCount"></span>
+        </div>
+
+        <div class="groupe-members" data-view="cards">
+            <div class="groupe-membres-cards" id="groupeMembresCards">
+                @foreach (var membre in Model.Membres)
+                {
+                    var brancheLabel = BranchDisplay.CanonicalLabel(membre.Branche);
+                    var initiales = $"{(membre.Nom.Length > 0 ? membre.Nom[0].ToString() : "")}{(membre.Prenoms.Length > 0 ? membre.Prenoms[0].ToString() : "")}".ToUpper();
+                    <div class="groupe-membre-card"
+                         style="--branch-accent:@BranchDisplay.Accent(membre.Branche)"
+                         data-search="@($"{membre.Matricule} {membre.Nom} {membre.Prenoms} {membre.Fonction}")"
+                         data-branche="@(membre.Branche ?? "")"
+                         data-type="@membre.TypeMembre">
+                        <div class="groupe-membre-card__head">
+                            <span class="groupe-membre-card__avatar">@(string.IsNullOrWhiteSpace(initiales) ? "?" : initiales)</span>
+                            <span class="groupe-membre-card__identity">
+                                <span class="groupe-membre-card__name">@($"{membre.Nom} {membre.Prenoms}".Trim())</span>
+                                <span class="groupe-membre-card__matricule">@(string.IsNullOrWhiteSpace(membre.Matricule) ? "-" : membre.Matricule)</span>
+                            </span>
+                            <span class="badge-3d @(membre.TypeMembre == "Adulte" ? "badge-approuvee" : "badge-soumise") groupe-membre-card__type">@membre.TypeMembre</span>
+                        </div>
+                        <div class="groupe-membre-card__body">
+                            <span class="groupe-membre-card__branche"><i class="bi bi-diagram-3"></i> @brancheLabel</span>
+                            <span class="groupe-membre-card__fonction"><i class="bi bi-person-badge"></i> @(string.IsNullOrWhiteSpace(membre.Fonction) ? "-" : membre.Fonction)</span>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="groupe-membres-table-wrap">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle groupe-membres-table mb-0" id="groupe-membres-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Matricule</th>
+                                <th scope="col">Nom</th>
+                                <th scope="col">Prenoms</th>
+                                <th scope="col">Branche</th>
+                                <th scope="col">Fonction</th>
+                                <th scope="col">Type</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var membre in Model.Membres)
+                            {
+                                <tr class="groupe-membre-row"
+                                    data-search="@($"{membre.Matricule} {membre.Nom} {membre.Prenoms} {membre.Fonction}")"
+                                    data-branche="@(membre.Branche ?? "")"
+                                    data-type="@membre.TypeMembre">
+                                    <td>@membre.Matricule</td>
+                                    <td>@membre.Nom</td>
+                                    <td>@membre.Prenoms</td>
+                                    <td>@(BranchDisplay.CanonicalLabel(membre.Branche))</td>
+                                    <td>@membre.Fonction</td>
+                                    <td>
+                                        <span class="badge-3d @(membre.TypeMembre == "Adulte" ? "badge-approuvee" : "badge-soumise")">@membre.TypeMembre</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="groupeMembresNoResults" class="text-center py-4 text-muted-custom" style="display:none;">
+            <i class="bi bi-search" style="font-size: 1.6rem; opacity: 0.35;"></i>
+            <p class="mt-2 mb-0">Aucun membre ne correspond aux filtres.</p>
         </div>
     }
     else
@@ -386,4 +470,261 @@
         color: var(--vert-logo);
         display: block;
     }
+
+    /* --- Vue membres : bascule, filtres, cartes --- */
+    .groupe-view-toggle .btn {
+        border: 1px solid rgba(95, 127, 67, 0.35);
+        color: var(--vert-logo);
+        background: #fff;
+        padding: 4px 10px;
+    }
+
+    .groupe-view-toggle .btn.is-active {
+        background: var(--vert-logo);
+        border-color: var(--vert-logo);
+        color: #fff;
+    }
+
+    .groupe-membres-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .groupe-membres-search {
+        position: relative;
+        flex: 1 1 260px;
+        max-width: 380px;
+    }
+
+    .groupe-membres-search .bi-search {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9aa7b6;
+        font-size: 0.9rem;
+        pointer-events: none;
+    }
+
+    .groupe-membres-search input {
+        padding-left: 34px;
+        border-radius: 12px;
+    }
+
+    .groupe-membres-filters .form-select {
+        width: auto;
+        min-width: 150px;
+        border-radius: 12px;
+    }
+
+    /* Bascule de vue : afficher cartes OU liste ; la table sert aussi de source d'export */
+    .groupe-members[data-view="list"] .groupe-membres-cards {
+        display: none;
+    }
+
+    .groupe-members[data-view="cards"] .groupe-membres-table-wrap {
+        position: absolute;
+        left: -100000px;
+        top: 0;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .groupe-membres-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 14px;
+    }
+
+    .groupe-membre-card {
+        border: 1px solid color-mix(in srgb, var(--branch-accent) 24%, #dfe6ee 76%);
+        border-left: 6px solid var(--branch-accent);
+        border-radius: 16px;
+        padding: 14px;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--branch-accent) 6%, #fff 94%), #fff 60%);
+        box-shadow: 0 10px 22px rgba(18, 24, 33, 0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        transition: transform .18s ease, box-shadow .18s ease;
+    }
+
+    .groupe-membre-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 16px 30px rgba(18, 24, 33, 0.1);
+    }
+
+    .groupe-membre-card__head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .groupe-membre-card__avatar {
+        width: 42px;
+        height: 42px;
+        flex: 0 0 auto;
+        border-radius: 12px;
+        background: var(--branch-accent);
+        color: #fff;
+        font-weight: 800;
+        font-size: 0.95rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        letter-spacing: 0.02em;
+    }
+
+    .groupe-membre-card__identity {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .groupe-membre-card__name {
+        display: block;
+        font-weight: 700;
+        color: #213547;
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .groupe-membre-card__matricule {
+        display: block;
+        font-size: 0.78rem;
+        color: #7b8a9b;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .groupe-membre-card__type {
+        flex: 0 0 auto;
+    }
+
+    .groupe-membre-card__body {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 0.84rem;
+        color: #546173;
+    }
+
+    .groupe-membre-card__body i {
+        color: var(--branch-accent);
+        margin-right: 4px;
+    }
+
+    .groupe-membre-card__branche {
+        font-weight: 600;
+        color: #34465a;
+    }
 </style>
+
+@section Scripts {
+    <script>
+        (function () {
+            var panel = document.getElementById('groupe-membres-panel');
+            if (!panel) { return; }
+
+            var container = panel.querySelector('.groupe-members');
+            var cards = Array.prototype.slice.call(panel.querySelectorAll('.groupe-membre-card'));
+            var rows = Array.prototype.slice.call(panel.querySelectorAll('.groupe-membre-row'));
+            if (!container || (!cards.length && !rows.length)) { return; }
+
+            var searchInput = document.getElementById('groupeMembresSearch');
+            var brancheSelect = document.getElementById('groupeMembresBranche');
+            var typeSelect = document.getElementById('groupeMembresType');
+            var resetBtn = document.getElementById('groupeMembresReset');
+            var countLabel = document.getElementById('groupeMembresCount');
+            var noResults = document.getElementById('groupeMembresNoResults');
+            var viewButtons = Array.prototype.slice.call(panel.querySelectorAll('[data-view-btn]'));
+            var exportToolbar = panel.querySelector('.js-list-export-toolbar');
+
+            var STORAGE_KEY = 'groupe-membres-view';
+            var term = '', brancheFilter = '', typeFilter = '';
+
+            function matches(el) {
+                if (term && (el.getAttribute('data-search') || '').toLowerCase().indexOf(term) === -1) { return false; }
+                if (brancheFilter && (el.getAttribute('data-branche') || '') !== brancheFilter) { return false; }
+                if (typeFilter && (el.getAttribute('data-type') || '') !== typeFilter) { return false; }
+                return true;
+            }
+
+            function applyFilters() {
+                var visible = 0;
+                rows.forEach(function (row) {
+                    var ok = matches(row);
+                    row.style.display = ok ? '' : 'none';
+                });
+                cards.forEach(function (card) {
+                    var ok = matches(card);
+                    card.style.display = ok ? '' : 'none';
+                    if (ok) { visible++; }
+                });
+                if (!cards.length) {
+                    visible = rows.filter(function (r) { return r.style.display !== 'none'; }).length;
+                }
+
+                if (noResults) { noResults.style.display = visible === 0 ? '' : 'none'; }
+                if (container) { container.style.display = visible === 0 ? 'none' : ''; }
+
+                if (countLabel) {
+                    var total = cards.length || rows.length;
+                    countLabel.textContent = visible === total
+                        ? total + ' membre(s)'
+                        : visible + ' sur ' + total + ' membre(s)';
+                }
+
+                updateExportTitle();
+            }
+
+            function updateExportTitle() {
+                if (!exportToolbar) { return; }
+                var parts = ['Membres', @Html.Raw(Json.Serialize(Model.Nom))];
+                if (brancheFilter) {
+                    var opt = brancheSelect.options[brancheSelect.selectedIndex];
+                    parts.push('Branche ' + (opt ? opt.textContent.trim() : brancheFilter));
+                }
+                if (typeFilter) { parts.push(typeFilter + 's'); }
+                exportToolbar.setAttribute('data-export-title', parts.join(' - '));
+            }
+
+            function setView(view) {
+                container.setAttribute('data-view', view);
+                viewButtons.forEach(function (btn) {
+                    btn.classList.toggle('is-active', btn.getAttribute('data-view-btn') === view);
+                });
+                try { localStorage.setItem(STORAGE_KEY, view); } catch (e) { /* ignore */ }
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('input', function () { term = this.value.trim().toLowerCase(); applyFilters(); });
+            }
+            if (brancheSelect) {
+                brancheSelect.addEventListener('change', function () { brancheFilter = this.value; applyFilters(); });
+            }
+            if (typeSelect) {
+                typeSelect.addEventListener('change', function () { typeFilter = this.value; applyFilters(); });
+            }
+            if (resetBtn) {
+                resetBtn.addEventListener('click', function () {
+                    term = ''; brancheFilter = ''; typeFilter = '';
+                    if (searchInput) { searchInput.value = ''; }
+                    if (brancheSelect) { brancheSelect.value = ''; }
+                    if (typeSelect) { typeSelect.value = ''; }
+                    applyFilters();
+                });
+            }
+            viewButtons.forEach(function (btn) {
+                btn.addEventListener('click', function () { setView(btn.getAttribute('data-view-btn')); });
+            });
+
+            var savedView = 'cards';
+            try { savedView = localStorage.getItem(STORAGE_KEY) || 'cards'; } catch (e) { /* ignore */ }
+            setView(savedView === 'list' ? 'list' : 'cards');
+            applyFilters();
+        })();
+    </script>
+}
