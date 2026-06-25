@@ -68,84 +68,159 @@
     </div>
 }
 
-<div class="row g-4">
-    @foreach (var demande in Model)
-    {
-        var ageDays = Math.Max(0, (now - demande.DateCreation).Days);
-        var isUrgent = demande.Statut == StatutDemande.Soumise && ageDays >= 3;
-        var cardStyle = isUrgent
-            ? "border:1px solid rgba(239,68,68,0.35);box-shadow:0 16px 36px rgba(239,68,68,0.08);"
-            : string.Empty;
-        var badgeClass = demande.Statut switch
-        {
-            StatutDemande.Initialisee => "badge-brouillon",
-            StatutDemande.Soumise => "badge-soumise",
-            StatutDemande.EnRevision => "badge-archivee",
-            StatutDemande.Validee => "badge-validee",
-            StatutDemande.Rejetee => "badge-rejetee",
-            _ => "badge-brouillon"
-        };
+@if (!Model.Any())
+{
+    <div class="card-3d p-4 text-center text-muted-custom py-5">Aucune demande d'autorisation enregistree.</div>
+}
+else
+{
+    <div class="js-view-switch" id="demandes-view" data-default-view="cards">
+        <div class="d-flex justify-content-end mb-3">
+            <div class="btn-group lv-toggle" role="group" aria-label="Changer de vue">
+                <button type="button" class="btn btn-sm" data-view-set="cards" title="Vue en cartes"><i class="bi bi-grid-3x3-gap"></i></button>
+                <button type="button" class="btn btn-sm" data-view-set="list" title="Vue en liste"><i class="bi bi-list-ul"></i></button>
+            </div>
+        </div>
 
-        var statutLabel = demande.Statut switch
-        {
-            StatutDemande.EnRevision => "Modification demandee",
-            _ => demande.Statut.ToString()
-        };
-        var validationLabel = demande.Statut switch
-        {
-            StatutDemande.Soumise when !demande.ChefGroupeValidee => "Attente chef de groupe",
-            StatutDemande.Soumise when demande.ChefGroupeValidee && demande.TypeActivite == TypeActiviteDemande.Camp => "Attente district",
-            StatutDemande.Validee when demande.ChefGroupeValidee => "Validee par chef de groupe",
-            _ => null
-        };
+        <div data-view-pane="cards">
+            <div class="row g-4">
+                @foreach (var demande in Model)
+                {
+                    var ageDays = Math.Max(0, (now - demande.DateCreation).Days);
+                    var isUrgent = demande.Statut == StatutDemande.Soumise && ageDays >= 3;
+                    var cardStyle = isUrgent
+                        ? "border:1px solid rgba(239,68,68,0.35);box-shadow:0 16px 36px rgba(239,68,68,0.08);"
+                        : string.Empty;
+                    var badgeClass = demande.Statut switch
+                    {
+                        StatutDemande.Initialisee => "badge-brouillon",
+                        StatutDemande.Soumise => "badge-soumise",
+                        StatutDemande.EnRevision => "badge-archivee",
+                        StatutDemande.Validee => "badge-validee",
+                        StatutDemande.Rejetee => "badge-rejetee",
+                        _ => "badge-brouillon"
+                    };
 
-        <div class="col-lg-4 col-md-6">
-            <div class="card-3d p-4 h-100 d-flex flex-column" style="@cardStyle">
-                <h5 class="text-or mb-2">@demande.Titre</h5>
-                <p class="text-muted-custom small mb-2">
-                    <span class="badge-3d @badgeClass">@statutLabel</span>
-                    @if (!string.IsNullOrWhiteSpace(validationLabel))
+                    var statutLabel = demande.Statut switch
                     {
-                        <span class="badge-3d badge-soumise ms-1">@validationLabel</span>
-                    }
-                    @if (demande.Statut == StatutDemande.Soumise)
+                        StatutDemande.EnRevision => "Modification demandee",
+                        _ => demande.Statut.ToString()
+                    };
+                    var validationLabel = demande.Statut switch
                     {
-                        <span class="badge-3d badge-brouillon ms-1">Depuis @ageDays j</span>
-                    }
-                    @if (isUrgent)
-                    {
-                        <span class="badge-3d badge-rejetee ms-1"><i class="bi bi-exclamation-triangle"></i> Urgent</span>
-                    }
-                </p>
-                <div class="d-flex flex-column gap-1 mb-3 flex-grow-1" style="font-size:0.85rem;">
-                    <span><i class="bi bi-tag text-bleu"></i> @demande.TypeActivite</span>
-                    <span><i class="bi bi-diagram-3 text-bleu"></i> @(demande.NomGroupe ?? "-")</span>
-                    <span><i class="bi bi-compass text-or"></i> @(demande.NomBranche ?? "-")</span>
-                    <span><i class="bi bi-calendar3 text-or"></i> @demande.DateActivite.ToString("dd/MM/yyyy")</span>
-                    <span><i class="bi bi-people text-bleu"></i> @demande.NombreParticipants participant(s)</span>
-                    <span><i class="bi bi-person text-bleu"></i> @(demande.NomDemandeur ?? "-")</span>
-                </div>
-                @{
-                    var peutSupprimer = peutSupprimerToutes
-                        || (demande.DemandeurId == currentUserId && demande.Statut != StatutDemande.Validee);
+                        StatutDemande.Soumise when !demande.ChefGroupeValidee => "Attente chef de groupe",
+                        StatutDemande.Soumise when demande.ChefGroupeValidee && demande.TypeActivite == TypeActiviteDemande.Camp => "Attente district",
+                        StatutDemande.Validee when demande.ChefGroupeValidee => "Validee par chef de groupe",
+                        _ => null
+                    };
+
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card-3d p-4 h-100 d-flex flex-column" style="@cardStyle">
+                            <h5 class="text-or mb-2">@demande.Titre</h5>
+                            <p class="text-muted-custom small mb-2">
+                                <span class="badge-3d @badgeClass">@statutLabel</span>
+                                @if (!string.IsNullOrWhiteSpace(validationLabel))
+                                {
+                                    <span class="badge-3d badge-soumise ms-1">@validationLabel</span>
+                                }
+                                @if (demande.Statut == StatutDemande.Soumise)
+                                {
+                                    <span class="badge-3d badge-brouillon ms-1">Depuis @ageDays j</span>
+                                }
+                                @if (isUrgent)
+                                {
+                                    <span class="badge-3d badge-rejetee ms-1"><i class="bi bi-exclamation-triangle"></i> Urgent</span>
+                                }
+                            </p>
+                            <div class="d-flex flex-column gap-1 mb-3 flex-grow-1" style="font-size:0.85rem;">
+                                <span><i class="bi bi-tag text-bleu"></i> @demande.TypeActivite</span>
+                                <span><i class="bi bi-diagram-3 text-bleu"></i> @(demande.NomGroupe ?? "-")</span>
+                                <span><i class="bi bi-compass text-or"></i> @(demande.NomBranche ?? "-")</span>
+                                <span><i class="bi bi-calendar3 text-or"></i> @demande.DateActivite.ToString("dd/MM/yyyy")</span>
+                                <span><i class="bi bi-people text-bleu"></i> @demande.NombreParticipants participant(s)</span>
+                                <span><i class="bi bi-person text-bleu"></i> @(demande.NomDemandeur ?? "-")</span>
+                            </div>
+                            @{
+                                var peutSupprimer = peutSupprimerToutes
+                                    || (demande.DemandeurId == currentUserId && demande.Statut != StatutDemande.Validee);
+                            }
+                            <div class="mt-auto d-flex flex-wrap gap-2">
+                                <a asp-action="Details" asp-route-id="@demande.Id" class="btn btn-sm btn-outline-or" title="Details"><i class="bi bi-eye"></i> Voir</a>
+                                @if (peutSupprimer)
+                                {
+                                    <form asp-action="Supprimer" asp-route-id="@demande.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer cette demande ?');">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer"><i class="bi bi-trash"></i> Supprimer</button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+                    </div>
                 }
-                <div class="mt-auto d-flex flex-wrap gap-2">
-                    <a asp-action="Details" asp-route-id="@demande.Id" class="btn btn-sm btn-outline-or" title="Details"><i class="bi bi-eye"></i> Voir</a>
-                    @if (peutSupprimer)
-                    {
-                        <form asp-action="Supprimer" asp-route-id="@demande.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer cette demande ?');">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer"><i class="bi bi-trash"></i> Supprimer</button>
-                        </form>
-                    }
+            </div>
+        </div>
+
+        <div data-view-pane="list">
+            <div class="card-3d p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Titre</th>
+                                <th scope="col">Statut</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Groupe</th>
+                                <th scope="col">Branche</th>
+                                <th scope="col">Date activite</th>
+                                <th scope="col">Participants</th>
+                                <th scope="col">Demandeur</th>
+                                <th scope="col" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var demande in Model)
+                            {
+                                var rowBadge = demande.Statut switch
+                                {
+                                    StatutDemande.Initialisee => "badge-brouillon",
+                                    StatutDemande.Soumise => "badge-soumise",
+                                    StatutDemande.EnRevision => "badge-archivee",
+                                    StatutDemande.Validee => "badge-validee",
+                                    StatutDemande.Rejetee => "badge-rejetee",
+                                    _ => "badge-brouillon"
+                                };
+                                var rowStatutLabel = demande.Statut == StatutDemande.EnRevision ? "Modification demandee" : demande.Statut.ToString();
+                                var rowPeutSupprimer = peutSupprimerToutes
+                                    || (demande.DemandeurId == currentUserId && demande.Statut != StatutDemande.Validee);
+                                <tr>
+                                    <td>@demande.Titre</td>
+                                    <td><span class="badge-3d @rowBadge">@rowStatutLabel</span></td>
+                                    <td>@demande.TypeActivite</td>
+                                    <td>@(demande.NomGroupe ?? "-")</td>
+                                    <td>@(demande.NomBranche ?? "-")</td>
+                                    <td>@demande.DateActivite.ToString("dd/MM/yyyy")</td>
+                                    <td>@demande.NombreParticipants</td>
+                                    <td>@(demande.NomDemandeur ?? "-")</td>
+                                    <td class="text-end">
+                                        <div class="d-inline-flex flex-wrap gap-1 justify-content-end">
+                                            <a asp-action="Details" asp-route-id="@demande.Id" class="btn btn-sm btn-outline-or" title="Details"><i class="bi bi-eye"></i></a>
+                                            @if (rowPeutSupprimer)
+                                            {
+                                                <form asp-action="Supprimer" asp-route-id="@demande.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer cette demande ?');">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer"><i class="bi bi-trash"></i></button>
+                                                </form>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-    }
-    @if (!Model.Any())
-    {
-        <div class="col-12 text-center text-muted-custom py-5">Aucune demande d'autorisation enregistree.</div>
-    }
-</div>
+    </div>
+}
 
 <partial name="_ListPagination" />
