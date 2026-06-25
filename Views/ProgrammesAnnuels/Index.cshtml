@@ -96,6 +96,14 @@
 
     @if (Model.Any())
     {
+        <div class="js-view-switch" id="programmes-view" data-default-view="cards">
+        <div class="d-flex justify-content-end mb-3">
+            <div class="btn-group lv-toggle" role="group" aria-label="Changer de vue">
+                <button type="button" class="btn btn-sm" data-view-set="cards" title="Vue en cartes"><i class="bi bi-grid-3x3-gap"></i></button>
+                <button type="button" class="btn btn-sm" data-view-set="list" title="Vue en liste"><i class="bi bi-list-ul"></i></button>
+            </div>
+        </div>
+        <div data-view-pane="cards">
         <section class="tracking-card-grid">
         @foreach (var programme in Model)
         {
@@ -124,6 +132,51 @@
             </article>
         }
         </section>
+        </div>
+        <div data-view-pane="list">
+            <div class="card-3d p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Titre</th>
+                                <th scope="col">Entite</th>
+                                <th scope="col">Annee</th>
+                                <th scope="col">Statut</th>
+                                <th scope="col">Activites</th>
+                                <th scope="col">Montant cumule</th>
+                                <th scope="col" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var programme in Model)
+                            {
+                                var montantTotalRow = programme.Activites.Sum(a => a.MontantParticipation ?? 0m);
+                                <tr>
+                                    <td>@programme.Titre</td>
+                                    <td>@(programme.Groupe?.Nom ?? "District")</td>
+                                    <td>@programme.AnneeReference</td>
+                                    <td><span class="tracking-status-pill @GetStatusClass(programme.Statut)">@programme.Statut</span></td>
+                                    <td>@programme.Activites.Count</td>
+                                    <td>@montantTotalRow.ToString("N0") FCFA</td>
+                                    <td class="text-end">
+                                        <div class="d-inline-flex flex-wrap gap-1 justify-content-end">
+                                            <a asp-action="Details" asp-route-id="@programme.Id" class="btn btn-sm btn-outline-or" title="Voir"><i class="bi bi-eye"></i></a>
+                                            <a asp-action="Calendrier" asp-route-annee="@programme.AnneeReference" asp-route-groupeId="@programme.GroupeId" class="btn btn-sm btn-outline-or" title="Calendrier"><i class="bi bi-calendar-week"></i></a>
+                                            @if (canManage)
+                                            {
+                                                <a asp-action="Edit" asp-route-id="@programme.Id" class="btn btn-sm btn-bleu" title="Modifier"><i class="bi bi-pencil"></i></a>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        </div>
     }
     else
     {

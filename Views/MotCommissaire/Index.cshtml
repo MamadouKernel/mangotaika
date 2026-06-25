@@ -13,30 +13,89 @@
     }
 </div>
 
-<div class="row g-4">
-    @foreach (var m in Model)
-    {
-        <div class="col-md-6">
-            <div class="card-3d p-4 h-100">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h5 class="text-or mb-0">Annee @m.Annee</h5>
-                    <span class="badge-3d @(m.EstActif ? "badge-validee" : "badge-rejetee")">@(m.EstActif ? "Actif" : "Inactif")</span>
-                </div>
-                <p class="text-muted-custom small mb-3" style="line-height:1.7;">@(m.Contenu.Length > 200 ? m.Contenu[..200] + "..." : m.Contenu)</p>
-                <div class="d-flex flex-wrap gap-2">
-                    <a asp-action="Details" asp-route-id="@m.Id" class="btn btn-sm btn-outline-or" title="Details"><i class="bi bi-eye"></i></a>
-                    @if (canManage)
-                    {
-                        <a asp-action="Edit" asp-route-id="@m.Id" class="btn btn-sm btn-bleu" title="Modifier"><i class="bi bi-pencil"></i></a>
-                        <form asp-action="Delete" asp-route-id="@m.Id" method="post" onsubmit="return confirm('Supprimer ce mot ?')">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Supprimer"><i class="bi bi-trash"></i></button>
-                        </form>
-                    }
+@if (Model.Any())
+{
+    <div class="js-view-switch" id="motcommissaire-view" data-default-view="cards">
+        <div class="d-flex justify-content-end mb-3">
+            <div class="btn-group lv-toggle" role="group" aria-label="Changer de vue">
+                <button type="button" class="btn btn-sm" data-view-set="cards" title="Vue en cartes"><i class="bi bi-grid-3x3-gap"></i></button>
+                <button type="button" class="btn btn-sm" data-view-set="list" title="Vue en liste"><i class="bi bi-list-ul"></i></button>
+            </div>
+        </div>
+        <div data-view-pane="cards">
+            <div class="row g-4">
+                @foreach (var m in Model)
+                {
+                    <div class="col-md-6">
+                        <div class="card-3d p-4 h-100">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="text-or mb-0">Annee @m.Annee</h5>
+                                <span class="badge-3d @(m.EstActif ? "badge-validee" : "badge-rejetee")">@(m.EstActif ? "Actif" : "Inactif")</span>
+                            </div>
+                            <p class="text-muted-custom small mb-3" style="line-height:1.7;">@(m.Contenu.Length > 200 ? m.Contenu[..200] + "..." : m.Contenu)</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                <a asp-action="Details" asp-route-id="@m.Id" class="btn btn-sm btn-outline-or" title="Details"><i class="bi bi-eye"></i></a>
+                                @if (canManage)
+                                {
+                                    <a asp-action="Edit" asp-route-id="@m.Id" class="btn btn-sm btn-bleu" title="Modifier"><i class="bi bi-pencil"></i></a>
+                                    <form asp-action="Delete" asp-route-id="@m.Id" method="post" onsubmit="return confirm('Supprimer ce mot ?')">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Supprimer"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+        <div data-view-pane="list">
+            <div class="card-3d p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Annee</th>
+                                <th scope="col">Statut</th>
+                                <th scope="col">Contenu</th>
+                                <th scope="col" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var m in Model)
+                            {
+                                <tr>
+                                    <td>@m.Annee</td>
+                                    <td><span class="badge-3d @(m.EstActif ? "badge-validee" : "badge-rejetee")">@(m.EstActif ? "Actif" : "Inactif")</span></td>
+                                    <td>@(m.Contenu.Length > 140 ? m.Contenu[..140] + "..." : m.Contenu)</td>
+                                    <td class="text-end">
+                                        <div class="d-inline-flex flex-wrap gap-1 justify-content-end">
+                                            <a asp-action="Details" asp-route-id="@m.Id" class="btn btn-sm btn-outline-or" title="Details"><i class="bi bi-eye"></i></a>
+                                            @if (canManage)
+                                            {
+                                                <a asp-action="Edit" asp-route-id="@m.Id" class="btn btn-sm btn-bleu" title="Modifier"><i class="bi bi-pencil"></i></a>
+                                                <form asp-action="Delete" asp-route-id="@m.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer ce mot ?')">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Supprimer"><i class="bi bi-trash"></i></button>
+                                                </form>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-    }
-</div>
+    </div>
+}
+else
+{
+    <div class="card-3d p-5 text-center text-muted-custom">
+        <i class="bi bi-megaphone" style="font-size:2rem;opacity:0.35;"></i>
+        <p class="mt-3 mb-0">Aucun mot du commissaire disponible.</p>
+    </div>
+}
 
 <partial name="_ListExportActions" />

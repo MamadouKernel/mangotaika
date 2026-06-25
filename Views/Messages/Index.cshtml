@@ -24,102 +24,225 @@
 
 @if (showLivreDor)
 {
-    <div class="row g-3">
-        @foreach (var message in Model.LivreDorMessages)
-        {
-            <div class="col-md-6">
-                <div class="card-3d p-4 h-100" style="@(!message.EstValide ? "border-left:4px solid var(--vert-logo);" : "opacity:0.75;")">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <div class="d-flex flex-wrap gap-2">
-                            <span class="badge-3d badge-soumise" style="font-size:0.7rem;">Livre d'or</span>
-                            @if (message.EstValide)
-                            {
-                                <span class="badge-3d badge-validee" style="font-size:0.65rem;">Publie</span>
-                            }
-                            else
-                            {
-                                <span class="badge-3d badge-rejetee" style="font-size:0.65rem;">En attente</span>
-                            }
-                        </div>
-                        <small class="text-muted-custom">@message.DateCreation.ToString("dd/MM/yyyy HH:mm")</small>
-                    </div>
-                    <p class="mb-2"><strong style="color:var(--bleu-logo);">@message.NomAuteur</strong></p>
-                    <p class="small mb-3" style="color:var(--texte-secondaire);line-height:1.6;">@message.Message</p>
-                    @if (message.DateValidation.HasValue)
+    @if (Model.LivreDorMessages.Any())
+    {
+        <div class="js-view-switch" id="messages-livredor-view" data-default-view="cards">
+            <div class="d-flex justify-content-end mb-3">
+                <div class="btn-group lv-toggle" role="group" aria-label="Changer de vue">
+                    <button type="button" class="btn btn-sm" data-view-set="cards" title="Vue en cartes"><i class="bi bi-grid-3x3-gap"></i></button>
+                    <button type="button" class="btn btn-sm" data-view-set="list" title="Vue en liste"><i class="bi bi-list-ul"></i></button>
+                </div>
+            </div>
+            <div data-view-pane="cards">
+                <div class="row g-3">
+                    @foreach (var message in Model.LivreDorMessages)
                     {
-                        <p class="small text-muted-custom mb-3">Valide le @message.DateValidation.Value.ToString("dd/MM/yyyy HH:mm")</p>
+                        <div class="col-md-6">
+                            <div class="card-3d p-4 h-100" style="@(!message.EstValide ? "border-left:4px solid var(--vert-logo);" : "opacity:0.75;")">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <span class="badge-3d badge-soumise" style="font-size:0.7rem;">Livre d'or</span>
+                                        @if (message.EstValide)
+                                        {
+                                            <span class="badge-3d badge-validee" style="font-size:0.65rem;">Publie</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge-3d badge-rejetee" style="font-size:0.65rem;">En attente</span>
+                                        }
+                                    </div>
+                                    <small class="text-muted-custom">@message.DateCreation.ToString("dd/MM/yyyy HH:mm")</small>
+                                </div>
+                                <p class="mb-2"><strong style="color:var(--bleu-logo);">@message.NomAuteur</strong></p>
+                                <p class="small mb-3" style="color:var(--texte-secondaire);line-height:1.6;">@message.Message</p>
+                                @if (message.DateValidation.HasValue)
+                                {
+                                    <p class="small text-muted-custom mb-3">Valide le @message.DateValidation.Value.ToString("dd/MM/yyyy HH:mm")</p>
+                                }
+                                <div class="d-flex flex-wrap gap-2">
+                                    @if (!message.EstValide)
+                                    {
+                                        <form asp-action="ValiderLivreDor" asp-route-id="@message.Id" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-mango" title="Valider et publier">
+                                                <i class="bi bi-check2-circle"></i> Valider
+                                            </button>
+                                        </form>
+                                    }
+                                    <form asp-action="SupprimerLivreDor" asp-route-id="@message.Id" method="post" onsubmit="return confirm('Supprimer ce message du livre dor ?')">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Supprimer">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
                     }
-                    <div class="d-flex flex-wrap gap-2">
-                        @if (!message.EstValide)
-                        {
-                            <form asp-action="ValiderLivreDor" asp-route-id="@message.Id" method="post">
-                                @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-sm btn-mango" title="Valider et publier">
-                                    <i class="bi bi-check2-circle"></i> Valider
-                                </button>
-                            </form>
-                        }
-                        <form asp-action="SupprimerLivreDor" asp-route-id="@message.Id" method="post" onsubmit="return confirm('Supprimer ce message du livre dor ?')">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Supprimer">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </form>
+                </div>
+            </div>
+            <div data-view-pane="list">
+                <div class="card-3d p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Auteur</th>
+                                    <th scope="col">Message</th>
+                                    <th scope="col">Statut</th>
+                                    <th scope="col">Creation</th>
+                                    <th scope="col">Validation</th>
+                                    <th scope="col" class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var message in Model.LivreDorMessages)
+                                {
+                                    <tr>
+                                        <td>@message.NomAuteur</td>
+                                        <td>@(message.Message.Length > 120 ? message.Message[..120] + "..." : message.Message)</td>
+                                        <td><span class="badge-3d @(message.EstValide ? "badge-validee" : "badge-rejetee")">@(message.EstValide ? "Publie" : "En attente")</span></td>
+                                        <td>@message.DateCreation.ToString("dd/MM/yyyy HH:mm")</td>
+                                        <td>@(message.DateValidation?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                                        <td class="text-end">
+                                            <div class="d-inline-flex flex-wrap gap-1 justify-content-end">
+                                                @if (!message.EstValide)
+                                                {
+                                                    <form asp-action="ValiderLivreDor" asp-route-id="@message.Id" method="post" class="d-inline">
+                                                        @Html.AntiForgeryToken()
+                                                        <button type="submit" class="btn btn-sm btn-mango" title="Valider"><i class="bi bi-check2-circle"></i></button>
+                                                    </form>
+                                                }
+                                                <form asp-action="SupprimerLivreDor" asp-route-id="@message.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer ce message du livre dor ?')">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Supprimer">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
-        }
-        @if (!Model.LivreDorMessages.Any())
-        {
-            <div class="col-12 text-center text-muted-custom py-5">Aucun message du livre d'or</div>
-        }
-    </div>
+        </div>
+    }
+    else
+    {
+        <div class="col-12 text-center text-muted-custom py-5">Aucun message du livre d'or</div>
+    }
 }
 else
 {
-    <div class="row g-3">
-        @foreach (var m in Model.Messages)
-        {
-            <div class="col-md-6">
-                <div class="card-3d p-4 h-100" style="@(!m.EstLu ? "border-left:4px solid var(--vert-logo);" : "opacity:0.75;")">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <div>
-                            <span class="badge-3d @(m.Type == "Avis" ? "badge-archivee" : "badge-soumise")" style="font-size:0.7rem;">@m.Type</span>
-                            @if (!m.EstLu)
-                            {
-                                <span class="badge-3d badge-validee" style="font-size:0.65rem;">Nouveau</span>
-                            }
+    @if (Model.Messages.Any())
+    {
+        <div class="js-view-switch" id="messages-view" data-default-view="cards">
+            <div class="d-flex justify-content-end mb-3">
+                <div class="btn-group lv-toggle" role="group" aria-label="Changer de vue">
+                    <button type="button" class="btn btn-sm" data-view-set="cards" title="Vue en cartes"><i class="bi bi-grid-3x3-gap"></i></button>
+                    <button type="button" class="btn btn-sm" data-view-set="list" title="Vue en liste"><i class="bi bi-list-ul"></i></button>
+                </div>
+            </div>
+            <div data-view-pane="cards">
+                <div class="row g-3">
+                    @foreach (var m in Model.Messages)
+                    {
+                        <div class="col-md-6">
+                            <div class="card-3d p-4 h-100" style="@(!m.EstLu ? "border-left:4px solid var(--vert-logo);" : "opacity:0.75;")">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <span class="badge-3d @(m.Type == "Avis" ? "badge-archivee" : "badge-soumise")" style="font-size:0.7rem;">@m.Type</span>
+                                        @if (!m.EstLu)
+                                        {
+                                            <span class="badge-3d badge-validee" style="font-size:0.65rem;">Nouveau</span>
+                                        }
+                                    </div>
+                                    <small class="text-muted-custom">@m.DateEnvoi.ToString("dd/MM/yyyy HH:mm")</small>
+                                </div>
+                                <p class="mb-1"><strong style="color:var(--bleu-logo);">@m.Nom</strong></p>
+                                <p class="mb-1 small text-muted-custom">@m.Email</p>
+                                <p class="mb-1 small"><strong>Sujet :</strong> @m.Sujet</p>
+                                <p class="small mb-3" style="color:var(--texte-secondaire);line-height:1.6;">@m.Message</p>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a asp-action="Details" asp-route-id="@m.Id" class="btn btn-sm btn-outline-or" title="Details"><i class="bi bi-eye"></i></a>
+                                    @if (!m.EstLu)
+                                    {
+                                        <form asp-action="MarquerLu" asp-route-id="@m.Id" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-or" title="Marquer lu"><i class="bi bi-check2"></i></button>
+                                        </form>
+                                    }
+                                    <form asp-action="Supprimer" asp-route-id="@m.Id" method="post" onsubmit="return confirm('Supprimer ce message ?')">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Supprimer">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
-                        <small class="text-muted-custom">@m.DateEnvoi.ToString("dd/MM/yyyy HH:mm")</small>
-                    </div>
-                    <p class="mb-1"><strong style="color:var(--bleu-logo);">@m.Nom</strong></p>
-                    <p class="mb-1 small text-muted-custom">@m.Email</p>
-                    <p class="mb-1 small"><strong>Sujet :</strong> @m.Sujet</p>
-                    <p class="small mb-3" style="color:var(--texte-secondaire);line-height:1.6;">@m.Message</p>
-                    <div class="d-flex flex-wrap gap-2">
-                        <a asp-action="Details" asp-route-id="@m.Id" class="btn btn-sm btn-outline-or" title="Details"><i class="bi bi-eye"></i></a>
-                        @if (!m.EstLu)
-                        {
-                            <form asp-action="MarquerLu" asp-route-id="@m.Id" method="post">
-                                @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-sm btn-outline-or" title="Marquer lu"><i class="bi bi-check2"></i></button>
-                            </form>
-                        }
-                        <form asp-action="Supprimer" asp-route-id="@m.Id" method="post" onsubmit="return confirm('Supprimer ce message ?')">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Supprimer">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </form>
+                    }
+                </div>
+            </div>
+            <div data-view-pane="list">
+                <div class="card-3d p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Type</th>
+                                    <th scope="col">Nom</th>
+                                    <th scope="col">Email</th>
+                                    <th scope="col">Sujet</th>
+                                    <th scope="col">Statut</th>
+                                    <th scope="col">Date</th>
+                                    <th scope="col" class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var m in Model.Messages)
+                                {
+                                    <tr>
+                                        <td><span class="badge-3d @(m.Type == "Avis" ? "badge-archivee" : "badge-soumise")">@m.Type</span></td>
+                                        <td>@m.Nom</td>
+                                        <td>@m.Email</td>
+                                        <td>@m.Sujet</td>
+                                        <td><span class="badge-3d @(m.EstLu ? "badge-archivee" : "badge-validee")">@(m.EstLu ? "Lu" : "Nouveau")</span></td>
+                                        <td>@m.DateEnvoi.ToString("dd/MM/yyyy HH:mm")</td>
+                                        <td class="text-end">
+                                            <div class="d-inline-flex flex-wrap gap-1 justify-content-end">
+                                                <a asp-action="Details" asp-route-id="@m.Id" class="btn btn-sm btn-outline-or" title="Details"><i class="bi bi-eye"></i></a>
+                                                @if (!m.EstLu)
+                                                {
+                                                    <form asp-action="MarquerLu" asp-route-id="@m.Id" method="post" class="d-inline">
+                                                        @Html.AntiForgeryToken()
+                                                        <button type="submit" class="btn btn-sm btn-outline-or" title="Marquer lu"><i class="bi bi-check2"></i></button>
+                                                    </form>
+                                                }
+                                                <form asp-action="Supprimer" asp-route-id="@m.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer ce message ?')">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:14px;" title="Supprimer">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
-        }
-        @if (!Model.Messages.Any())
-        {
-            <div class="col-12 text-center text-muted-custom py-5">Aucun message</div>
-        }
-    </div>
+        </div>
+    }
+    else
+    {
+        <div class="col-12 text-center text-muted-custom py-5">Aucun message</div>
+    }
 }
 
 <partial name="_ListExportActions" />

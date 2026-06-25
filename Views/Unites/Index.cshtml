@@ -35,41 +35,89 @@
     </div>
 </form>
 
-<div class="row g-3">
-    @foreach (var unite in Model)
-    {
-        <div class="col-lg-4 col-md-6">
-            <div class="card-3d p-4 h-100">
-                <div class="d-flex gap-3 align-items-center mb-3">
-                    @if (!string.IsNullOrWhiteSpace(unite.ImageUrl))
-                    {
-                        <img src="@unite.ImageUrl" alt="@unite.Nom" class="rounded-3" style="width:64px;height:64px;object-fit:cover;" />
-                    }
-                    else
-                    {
-                        <div class="rounded-3 d-flex align-items-center justify-content-center bg-light" style="width:64px;height:64px;">
-                            <i class="bi bi-diagram-2 fs-3 text-or"></i>
-                        </div>
-                    }
-                    <div>
-                        <h5 class="mb-1">@unite.Nom</h5>
-                        <div class="text-muted-custom small">@unite.Branche?.Nom</div>
-                    </div>
-                </div>
-                <p class="text-muted-custom small mb-3">@(unite.Description ?? "Aucune description renseignee.")</p>
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="badge-3d badge-soumise">@unite.Affectations.Count scout(s)</span>
-                    <div class="d-flex gap-2">
-                        <a asp-action="Details" asp-route-id="@unite.Id" class="btn btn-sm btn-outline-or"><i class="bi bi-eye"></i></a>
-                        <a asp-action="Edit" asp-route-id="@unite.Id" class="btn btn-sm btn-bleu"><i class="bi bi-pencil"></i></a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-</div>
-
 @if (!Model.Any())
 {
     <div class="card-3d p-4 text-muted-custom">Aucune unite creee sur votre perimetre.</div>
+}
+else
+{
+    <div class="js-view-switch" id="unites-view" data-default-view="cards">
+        <div class="d-flex justify-content-end mb-3">
+            <div class="btn-group lv-toggle" role="group" aria-label="Changer de vue">
+                <button type="button" class="btn btn-sm" data-view-set="cards" title="Vue en cartes"><i class="bi bi-grid-3x3-gap"></i></button>
+                <button type="button" class="btn btn-sm" data-view-set="list" title="Vue en liste"><i class="bi bi-list-ul"></i></button>
+            </div>
+        </div>
+
+        <div data-view-pane="cards">
+            <div class="row g-3">
+                @foreach (var unite in Model)
+                {
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card-3d p-4 h-100">
+                            <div class="d-flex gap-3 align-items-center mb-3">
+                                @if (!string.IsNullOrWhiteSpace(unite.ImageUrl))
+                                {
+                                    <img src="@unite.ImageUrl" alt="@unite.Nom" class="rounded-3" style="width:64px;height:64px;object-fit:cover;" />
+                                }
+                                else
+                                {
+                                    <div class="rounded-3 d-flex align-items-center justify-content-center bg-light" style="width:64px;height:64px;">
+                                        <i class="bi bi-diagram-2 fs-3 text-or"></i>
+                                    </div>
+                                }
+                                <div>
+                                    <h5 class="mb-1">@unite.Nom</h5>
+                                    <div class="text-muted-custom small">@unite.Branche?.Nom</div>
+                                </div>
+                            </div>
+                            <p class="text-muted-custom small mb-3">@(unite.Description ?? "Aucune description renseignee.")</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge-3d badge-soumise">@unite.Affectations.Count scout(s)</span>
+                                <div class="d-flex gap-2">
+                                    <a asp-action="Details" asp-route-id="@unite.Id" class="btn btn-sm btn-outline-or"><i class="bi bi-eye"></i></a>
+                                    <a asp-action="Edit" asp-route-id="@unite.Id" class="btn btn-sm btn-bleu"><i class="bi bi-pencil"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div data-view-pane="list">
+            <div class="card-3d p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Unite</th>
+                                <th scope="col">Branche</th>
+                                <th scope="col">Description</th>
+                                <th scope="col">Scouts</th>
+                                <th scope="col" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var unite in Model)
+                            {
+                                <tr>
+                                    <td>@unite.Nom</td>
+                                    <td>@(unite.Branche?.Nom ?? "-")</td>
+                                    <td>@(unite.Description ?? "-")</td>
+                                    <td>@unite.Affectations.Count</td>
+                                    <td class="text-end">
+                                        <div class="d-inline-flex flex-wrap gap-1 justify-content-end">
+                                            <a asp-action="Details" asp-route-id="@unite.Id" class="btn btn-sm btn-outline-or" title="Details"><i class="bi bi-eye"></i></a>
+                                            <a asp-action="Edit" asp-route-id="@unite.Id" class="btn btn-sm btn-bleu" title="Modifier"><i class="bi bi-pencil"></i></a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 }

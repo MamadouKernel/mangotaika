@@ -137,7 +137,7 @@ public class TicketService(AppDbContext db, IHubContext<NotificationHub> hubCont
         var ticket = new Ticket
         {
             Id = ticketId,
-            NumeroTicket = GenerateTicketNumber(dateCreation, ticketId),
+            NumeroTicket = GenerateTicketNumber(type, dateCreation, ticketId),
             Sujet = dto.Sujet,
             Description = dto.Description,
             Type = type,
@@ -277,6 +277,7 @@ public class TicketService(AppDbContext db, IHubContext<NotificationHub> hubCont
         ticket.Impact = impact;
         ticket.Urgence = urgence;
         ticket.Priorite = priorite;
+        ticket.NumeroTicket = ApplyTypePrefix(ticket.NumeroTicket, type, ticket.DateCreation, ticket.Id);
         ticket.DateLimiteSla = ComputeSlaDeadline(ticket.DateCreation, priorite);
         await db.SaveChangesAsync();
         return true;
@@ -475,7 +476,7 @@ public class TicketService(AppDbContext db, IHubContext<NotificationHub> hubCont
         return new TicketDto
         {
             Id = ticket.Id,
-            NumeroTicket = string.IsNullOrWhiteSpace(ticket.NumeroTicket) ? GenerateTicketNumber(ticket.DateCreation, ticket.Id) : ticket.NumeroTicket,
+            NumeroTicket = string.IsNullOrWhiteSpace(ticket.NumeroTicket) ? GenerateTicketNumber(ticket.Type, ticket.DateCreation, ticket.Id) : ticket.NumeroTicket,
             ServiceCatalogueId = ticket.ServiceCatalogueId,
             NomServiceCatalogue = ticket.ServiceCatalogue?.Nom,
             Sujet = ticket.Sujet,
@@ -864,10 +865,26 @@ public class TicketService(AppDbContext db, IHubContext<NotificationHub> hubCont
         }
     }
 
-    private static string GenerateTicketNumber(DateTime dateCreation, Guid? id = null)
+    private static string PrefixForType(TypeTicket type) => type == TypeTicket.Requete ? "REQ" : "INC";
+
+    private static string GenerateTicketNumber(TypeTicket type, DateTime dateCreation, Guid? id = null)
     {
         var suffix = (id ?? Guid.NewGuid()).ToString("N")[..6].ToUpperInvariant();
-        return $"INC-{dateCreation:yyyyMMdd}-{suffix}";
+        return $"{PrefixForType(type)}-{dateCreation:yyyyMMdd}-{suffix}";
+    }
+
+    // Aligne le prefixe du numero sur le type courant (INC/REQ) en conservant la date et le suffixe.
+    private static string ApplyTypePrefix(string? numero, TypeTicket type, DateTime dateCreation, Guid id)
+    {
+        if (string.IsNullOrWhiteSpace(numero))
+        {
+            return GenerateTicketNumber(type, dateCreation, id);
+        }
+
+        var dashIndex = numero.IndexOf('-');
+        return dashIndex > 0
+            ? $"{PrefixForType(type)}-{numero[(dashIndex + 1)..]}"
+            : GenerateTicketNumber(type, dateCreation, id);
     }
 
     private static DateTime ComputeSlaDeadline(DateTime createdAt, PrioriteTicket priorite)

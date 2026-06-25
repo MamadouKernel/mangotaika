@@ -22,58 +22,117 @@
         </div>
     </section>
 
-    <section class="support-ticket-grid">
-        @foreach (var item in Model)
-        {
-            <article class="support-resource-card">
-                <div class="support-resource-card__head">
-                    <div>
-                        <span class="support-resource-card__code"><i class="bi bi-hash"></i> @item.Code</span>
-                        <h5 class="support-resource-card__title">@item.Nom</h5>
-                    </div>
-                    <span class="badge-3d @(item.EstActif ? "badge-validee" : "badge-brouillon")">@(item.EstActif ? "Actif" : "Inactif")</span>
+    @{ var items = Model.ToList(); }
+    @if (!items.Any())
+    {
+        <div class="support-empty">
+            <i class="bi bi-grid" style="font-size:2rem;opacity:0.3;"></i>
+            <div class="mt-2">Aucun service n'est encore configure.</div>
+        </div>
+    }
+    else
+    {
+        <div class="js-view-switch" id="supportcatalog-view" data-default-view="cards">
+            <div class="d-flex justify-content-end mb-3">
+                <div class="btn-group lv-toggle" role="group" aria-label="Changer de vue">
+                    <button type="button" class="btn btn-sm" data-view-set="cards" title="Vue en cartes"><i class="bi bi-grid-3x3-gap"></i></button>
+                    <button type="button" class="btn btn-sm" data-view-set="list" title="Vue en liste"><i class="bi bi-list-ul"></i></button>
                 </div>
-                <div class="support-resource-card__body">@item.Description</div>
-                <div class="support-resource-card__stats">
-                    <div class="support-resource-card__stat">
-                        <span class="support-resource-card__stat-label">Type</span>
-                        <span class="support-resource-card__stat-value">@item.TypeParDefaut</span>
-                    </div>
-                    <div class="support-resource-card__stat">
-                        <span class="support-resource-card__stat-label">Categorie</span>
-                        <span class="support-resource-card__stat-value">@item.CategorieParDefaut</span>
-                    </div>
-                    <div class="support-resource-card__stat">
-                        <span class="support-resource-card__stat-label">SLA</span>
-                        <span class="support-resource-card__stat-value">@item.DelaiSlaHeures h</span>
-                    </div>
-                </div>
-                <div class="small d-flex flex-column gap-1">
-                    <span><i class="bi bi-layers text-bleu"></i> Impact @item.ImpactParDefaut / Urgence @item.UrgenceParDefaut</span>
-                </div>
-                <div class="support-resource-card__footer">
-                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-or"><i class="bi bi-eye"></i></a>
-                    @if (canManage)
-                    {
-                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-bleu"><i class="bi bi-pencil"></i></a>
-                        <form asp-action="Toggle" method="post">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="id" value="@item.Id" />
-                            <button type="submit" class="btn btn-sm @(item.EstActif ? "btn-outline-or" : "btn-mango")">@(item.EstActif ? "Desactiver" : "Activer")</button>
-                        </form>
-                    }
-                </div>
-            </article>
-        }
-
-        @if (!Model.Any())
-        {
-            <div class="support-empty" style="grid-column:1 / -1;">
-                <i class="bi bi-grid" style="font-size:2rem;opacity:0.3;"></i>
-                <div class="mt-2">Aucun service n'est encore configure.</div>
             </div>
-        }
-    </section>
+            <div data-view-pane="cards">
+                <section class="support-ticket-grid">
+                    @foreach (var item in items)
+                    {
+                        <article class="support-resource-card">
+                            <div class="support-resource-card__head">
+                                <div>
+                                    <span class="support-resource-card__code"><i class="bi bi-hash"></i> @item.Code</span>
+                                    <h5 class="support-resource-card__title">@item.Nom</h5>
+                                </div>
+                                <span class="badge-3d @(item.EstActif ? "badge-validee" : "badge-brouillon")">@(item.EstActif ? "Actif" : "Inactif")</span>
+                            </div>
+                            <div class="support-resource-card__body">@item.Description</div>
+                            <div class="support-resource-card__stats">
+                                <div class="support-resource-card__stat">
+                                    <span class="support-resource-card__stat-label">Type</span>
+                                    <span class="support-resource-card__stat-value">@item.TypeParDefaut</span>
+                                </div>
+                                <div class="support-resource-card__stat">
+                                    <span class="support-resource-card__stat-label">Categorie</span>
+                                    <span class="support-resource-card__stat-value">@item.CategorieParDefaut</span>
+                                </div>
+                                <div class="support-resource-card__stat">
+                                    <span class="support-resource-card__stat-label">SLA</span>
+                                    <span class="support-resource-card__stat-value">@item.DelaiSlaHeures h</span>
+                                </div>
+                            </div>
+                            <div class="small d-flex flex-column gap-1">
+                                <span><i class="bi bi-layers text-bleu"></i> Impact @item.ImpactParDefaut / Urgence @item.UrgenceParDefaut</span>
+                            </div>
+                            <div class="support-resource-card__footer">
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-or"><i class="bi bi-eye"></i></a>
+                                @if (canManage)
+                                {
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-bleu"><i class="bi bi-pencil"></i></a>
+                                    <form asp-action="Toggle" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <button type="submit" class="btn btn-sm @(item.EstActif ? "btn-outline-or" : "btn-mango")">@(item.EstActif ? "Desactiver" : "Activer")</button>
+                                    </form>
+                                }
+                            </div>
+                        </article>
+                    }
+                </section>
+            </div>
+            <div data-view-pane="list">
+                <div class="card-3d p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Code</th>
+                                    <th scope="col">Service</th>
+                                    <th scope="col">Type</th>
+                                    <th scope="col">Categorie</th>
+                                    <th scope="col">SLA</th>
+                                    <th scope="col">Statut</th>
+                                    <th scope="col" class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in items)
+                                {
+                                    <tr>
+                                        <td>@item.Code</td>
+                                        <td>@item.Nom</td>
+                                        <td>@item.TypeParDefaut</td>
+                                        <td>@item.CategorieParDefaut</td>
+                                        <td>@item.DelaiSlaHeures h</td>
+                                        <td><span class="badge-3d @(item.EstActif ? "badge-validee" : "badge-brouillon")">@(item.EstActif ? "Actif" : "Inactif")</span></td>
+                                        <td class="text-end">
+                                            <div class="d-inline-flex flex-wrap gap-1 justify-content-end">
+                                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-or" title="Voir"><i class="bi bi-eye"></i></a>
+                                                @if (canManage)
+                                                {
+                                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-bleu" title="Modifier"><i class="bi bi-pencil"></i></a>
+                                                    <form asp-action="Toggle" method="post" class="d-inline">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="id" value="@item.Id" />
+                                                        <button type="submit" class="btn btn-sm @(item.EstActif ? "btn-outline-or" : "btn-mango")">@(item.EstActif ? "Desactiver" : "Activer")</button>
+                                                    </form>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 
     <partial name="_ListExportActions" />
 </div>

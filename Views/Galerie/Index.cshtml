@@ -18,41 +18,116 @@
     <div class="alert alert-warning border-0 mb-3" role="alert">@warn</div>
 }
 
-<div class="row g-3">
-    @foreach (var item in Model)
-    {
-        <div class="col-6 col-md-3">
-            <div class="card-3d" style="overflow:hidden;">
-                @if (item.TypeMedia == "video")
+@if (Model.Any())
+{
+    <div class="js-view-switch" id="galerie-view" data-default-view="cards">
+        <div class="d-flex justify-content-end mb-3">
+            <div class="btn-group lv-toggle" role="group" aria-label="Changer de vue">
+                <button type="button" class="btn btn-sm" data-view-set="cards" title="Vue en cartes"><i class="bi bi-grid-3x3-gap"></i></button>
+                <button type="button" class="btn btn-sm" data-view-set="list" title="Vue en liste"><i class="bi bi-list-ul"></i></button>
+            </div>
+        </div>
+        <div data-view-pane="cards">
+            <div class="row g-3">
+                @foreach (var item in Model)
                 {
-                    <video src="@item.CheminMedia" style="width:100%;height:180px;object-fit:cover;" muted></video>
-                }
-                else
-                {
-                    <img src="@item.CheminMedia" alt="@item.Titre" style="width:100%;height:180px;object-fit:cover;" />
-                }
-                <div class="p-2">
-                    <small class="fw-semibold" style="color:var(--bleu-logo);">@item.Titre</small>
-                    <div class="d-flex align-items-center flex-wrap gap-1 mt-1">
-                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-or py-0 px-2" style="font-size:0.7rem;" title="Details"><i class="bi bi-eye"></i></a>
-                        @if (canManage)
-                        {
-                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-bleu py-0 px-2" style="font-size:0.7rem;" title="Modifier"><i class="bi bi-pencil"></i></a>
-                            @if (item.EstPublie)
+                    <div class="col-6 col-md-3">
+                        <div class="card-3d" style="overflow:hidden;">
+                            @if (item.TypeMedia == "video")
                             {
-                                <form asp-action="Depublier" asp-route-id="@item.Id" method="post" class="d-inline"><button class="btn btn-sm p-0 px-1" style="color:#facc15;font-size:0.75rem;" title="Depublier"><i class="bi bi-eye-slash"></i></button></form>
+                                <video src="@item.CheminMedia" style="width:100%;height:180px;object-fit:cover;" muted></video>
                             }
                             else
                             {
-                                <form asp-action="Publier" asp-route-id="@item.Id" method="post" class="d-inline"><button class="btn btn-sm p-0 px-1" style="color:#34d399;font-size:0.75rem;" title="Publier"><i class="bi bi-send"></i></button></form>
+                                <img src="@item.CheminMedia" alt="@item.Titre" style="width:100%;height:180px;object-fit:cover;" />
                             }
-                            <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer ce media ?')"><button type="submit" class="btn btn-sm p-0 px-1" style="color:#f87171;font-size:0.75rem;" title="Supprimer"><i class="bi bi-trash"></i></button></form>
-                        }
+                            <div class="p-2">
+                                <small class="fw-semibold" style="color:var(--bleu-logo);">@item.Titre</small>
+                                <div class="d-flex align-items-center flex-wrap gap-1 mt-1">
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-or py-0 px-2" style="font-size:0.7rem;" title="Details"><i class="bi bi-eye"></i></a>
+                                    @if (canManage)
+                                    {
+                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-bleu py-0 px-2" style="font-size:0.7rem;" title="Modifier"><i class="bi bi-pencil"></i></a>
+                                        @if (item.EstPublie)
+                                        {
+                                            <form asp-action="Depublier" asp-route-id="@item.Id" method="post" class="d-inline"><button class="btn btn-sm p-0 px-1" style="color:#facc15;font-size:0.75rem;" title="Depublier"><i class="bi bi-eye-slash"></i></button></form>
+                                        }
+                                        else
+                                        {
+                                            <form asp-action="Publier" asp-route-id="@item.Id" method="post" class="d-inline"><button class="btn btn-sm p-0 px-1" style="color:#34d399;font-size:0.75rem;" title="Publier"><i class="bi bi-send"></i></button></form>
+                                        }
+                                        <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer ce media ?')"><button type="submit" class="btn btn-sm p-0 px-1" style="color:#f87171;font-size:0.75rem;" title="Supprimer"><i class="bi bi-trash"></i></button></form>
+                                    }
+                                </div>
+                            </div>
+                        </div>
                     </div>
+                }
+            </div>
+        </div>
+        <div data-view-pane="list">
+            <div class="card-3d p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Titre</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Statut</th>
+                                <th scope="col">Media</th>
+                                <th scope="col" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td>@item.Titre</td>
+                                    <td>@item.TypeMedia</td>
+                                    <td><span class="badge-3d @(item.EstPublie ? "badge-validee" : "badge-rejetee")">@(item.EstPublie ? "Publie" : "Brouillon")</span></td>
+                                    <td>
+                                        @if (item.TypeMedia == "video")
+                                        {
+                                            <span class="small text-muted-custom">Video</span>
+                                        }
+                                        else
+                                        {
+                                            <img src="@item.CheminMedia" alt="@item.Titre" style="width:56px;height:40px;object-fit:cover;border-radius:8px;" />
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="d-inline-flex flex-wrap gap-1 justify-content-end">
+                                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-or" title="Details"><i class="bi bi-eye"></i></a>
+                                            @if (canManage)
+                                            {
+                                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-bleu" title="Modifier"><i class="bi bi-pencil"></i></a>
+                                                @if (item.EstPublie)
+                                                {
+                                                    <form asp-action="Depublier" asp-route-id="@item.Id" method="post" class="d-inline"><button class="btn btn-sm" style="color:#facc15;" title="Depublier"><i class="bi bi-eye-slash"></i></button></form>
+                                                }
+                                                else
+                                                {
+                                                    <form asp-action="Publier" asp-route-id="@item.Id" method="post" class="d-inline"><button class="btn btn-sm" style="color:#34d399;" title="Publier"><i class="bi bi-send"></i></button></form>
+                                                }
+                                                <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer ce media ?')"><button type="submit" class="btn btn-sm" style="color:#f87171;" title="Supprimer"><i class="bi bi-trash"></i></button></form>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-    }
-</div>
+    </div>
+}
+else
+{
+    <div class="card-3d p-5 text-center text-muted-custom">
+        <i class="bi bi-images" style="font-size:2rem;opacity:0.35;"></i>
+        <p class="mt-3 mb-0">Aucun media dans la galerie.</p>
+    </div>
+}
 
 <partial name="_ListExportActions" />
