@@ -4,16 +4,6 @@
     ViewData["Title"] = "Detail de la branche";
     Layout = "_LayoutAdmin";
     var canManage = User.IsInRole("Administrateur") || User.IsInRole("Gestionnaire");
-
-    var groupPalette = new[]
-    {
-        "#6a7f43",
-        "#eab308",
-        "#8b5cf6",
-        "#0ea5e9",
-        "#ec4899",
-        "#ef4444"
-    };
 }
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
@@ -217,36 +207,8 @@
 </div>
 
 <div class="card-3d p-4 mb-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
-        <div>
-            <h4 class="mb-1">Total par groupe</h4>
-            <p class="text-muted-custom mb-0">Vue d'ensemble district de cette branche par groupe rattache.</p>
-        </div>
-    </div>
-
     @if (Model.TotauxParGroupes.Any())
     {
-        <div class="branche-groupes-strip mb-4">
-            @for (var i = 0; i < Model.TotauxParGroupes.Count; i++)
-            {
-                var groupe = Model.TotauxParGroupes[i];
-                var accent = groupPalette[i % groupPalette.Length];
-                <div class="branche-groupe-card" style="--group-accent:@accent">
-                    <span class="branche-groupe-card__logo-shell">
-                        <img src="@BranchDisplay.LogoOrDefault(groupe.LogoGroupeUrl)" alt="Logo du groupe @groupe.NomGroupe" class="branche-groupe-card__logo" />
-                    </span>
-                    <span class="branche-groupe-card__identity">
-                        <span class="branche-groupe-card__name">@groupe.NomGroupe</span>
-                        <span class="branche-groupe-card__meta">@groupe.NombreFilles fille(s) | @groupe.NombreGarcons garcon(s)</span>
-                    </span>
-                    <span class="branche-groupe-card__metrics">
-                        <strong class="branche-groupe-card__total">@groupe.NombreScouts</strong>
-                        <span class="branche-groupe-card__unit">membre(s)</span>
-                    </span>
-                </div>
-            }
-        </div>
-
         <div class="table-responsive">
             <table class="table table-sm align-middle branche-groupes-table mb-0">
                 <thead>
@@ -254,7 +216,14 @@
                         <th scope="col">Categorie</th>
                         @foreach (var groupe in Model.TotauxParGroupes)
                         {
-                            <th scope="col">@groupe.NomGroupe</th>
+                            <th scope="col">
+                                <span class="branche-groupe-head">
+                                    <span class="branche-groupe-head__logo-shell">
+                                        <img src="@BranchDisplay.LogoOrDefault(groupe.LogoGroupeUrl)" alt="Logo du groupe @groupe.NomGroupe" class="branche-groupe-head__logo" />
+                                    </span>
+                                    <span class="branche-groupe-head__name">@groupe.NomGroupe</span>
+                                </span>
+                            </th>
                         }
                     </tr>
                 </thead>
@@ -299,7 +268,7 @@
     }
 </div>
 
-<div class="card-3d p-4">
+<div class="card-3d p-4" id="branche-membres-panel">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
             <h4 class="mb-1">Liste des scouts et adultes de la branche</h4>
@@ -309,7 +278,24 @@
 
     @if (Model.Membres.Any())
     {
-        <div class="table-responsive">
+        <div class="branche-membres-toolbar d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
+            <div class="branche-membres-search">
+                <i class="bi bi-search"></i>
+                <input type="search" id="brancheMembresSearch" class="form-control form-control-sm"
+                       placeholder="Rechercher (matricule, nom, prenom, groupe, fonction)..." autocomplete="off" />
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <label for="brancheMembresPageSize" class="small text-muted-custom mb-0">Par page</label>
+                <select id="brancheMembresPageSize" class="form-select form-select-sm" style="width:auto; border-radius:12px;">
+                    <option value="10">10</option>
+                    <option value="20" selected>20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-responsive" id="brancheMembresTableWrap">
             <table class="table table-sm align-middle branche-membres-table mb-0">
                 <thead>
                     <tr>
@@ -323,7 +309,7 @@
                 <tbody>
                     @foreach (var membre in Model.Membres)
                     {
-                        <tr>
+                        <tr class="branche-membre-row" data-search="@($"{membre.Matricule} {membre.Nom} {membre.Prenoms} {membre.Groupe} {membre.Fonction}")">
                             <td>@membre.Matricule</td>
                             <td>@membre.Nom</td>
                             <td>@membre.Prenoms</td>
@@ -333,6 +319,16 @@
                     }
                 </tbody>
             </table>
+        </div>
+
+        <div id="brancheMembresNoResults" class="text-center py-4 text-muted-custom" style="display:none;">
+            <i class="bi bi-search" style="font-size: 1.6rem; opacity: 0.35;"></i>
+            <p class="mt-2 mb-0">Aucun membre ne correspond a la recherche.</p>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mt-3">
+            <span class="small text-muted-custom" id="brancheMembresCount"></span>
+            <div class="d-flex flex-wrap align-items-center gap-1" id="brancheMembresPager"></div>
         </div>
     }
     else
@@ -451,144 +447,62 @@
         font-weight: 600;
     }
 
-        border-radius: 26px;
-        overflow: hidden;
-        border: 1px solid rgba(234, 179, 8, 0.22);
-        background: linear-gradient(180deg, rgba(234, 179, 8, 0.08), rgba(255, 255, 255, 0.88));
-        padding: 14px;
-    }
-
-        width: 100%;
-        max-height: 320px;
-        object-fit: cover;
-        border-radius: 20px;
-    }
-
-    .branche-groupes-strip {
+    .branche-groupe-head {
         display: flex;
         flex-direction: column;
-        gap: 10px;
-    }
-
-    .branche-groupe-card {
-        border: 1px solid color-mix(in srgb, var(--group-accent) 24%, #dfe6ee 76%);
-        border-left: 7px solid var(--group-accent);
-        border-radius: 16px;
-        padding: 12px 14px;
-        color: var(--bleu-logo);
-        background:
-            linear-gradient(90deg, color-mix(in srgb, var(--group-accent) 8%, #fff 92%), #fff 46%),
-            #fff;
-        box-shadow: 0 12px 24px rgba(18, 24, 33, 0.07);
-        display: flex;
-        flex-direction: row;
         align-items: center;
-        gap: 14px;
-        min-height: 72px;
-        text-align: left;
-        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+        gap: 6px;
+        text-align: center;
+        min-width: 88px;
     }
 
-    .branche-groupe-card:hover {
-        transform: translateY(-1px);
-        border-color: color-mix(in srgb, var(--group-accent) 42%, #dfe6ee 58%);
-        box-shadow: 0 16px 30px rgba(18, 24, 33, 0.11);
-    }
-
-    .branche-groupe-card__logo-shell {
-        width: 50px;
-        height: 50px;
-        border-radius: 14px;
+    .branche-groupe-head__logo-shell {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
         background: #fff;
-        border: 1px solid color-mix(in srgb, var(--group-accent) 26%, #dfe6ee 74%);
+        border: 1px solid rgba(94, 117, 188, 0.18);
         display: inline-flex;
         align-items: center;
         justify-content: center;
         flex: 0 0 auto;
-        box-shadow: inset 0 0 0 4px color-mix(in srgb, var(--group-accent) 7%, #fff 93%);
+        box-shadow: 0 4px 10px rgba(18, 24, 33, 0.08);
     }
 
-    .branche-groupe-card__logo {
-        width: 36px;
-        height: 36px;
+    .branche-groupe-head__logo {
+        width: 30px;
+        height: 30px;
         object-fit: contain;
-        border-radius: 10px;
+        border-radius: 8px;
     }
 
-    .branche-groupe-card__logo--placeholder {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: rgba(255, 255, 255, 0.92);
-        font-size: 1.5rem;
-    }
-
-    .branche-groupe-card__name {
+    .branche-groupe-head__name {
         display: block;
-        font-size: 0.94rem;
-        font-weight: 800;
-        color: var(--bleu-logo);
-        line-height: 1.2;
-    }
-
-    .branche-groupe-card__identity {
-        flex: 1 1 auto;
-        min-width: 0;
-    }
-
-    .branche-groupe-card__meta {
-        display: block;
-        margin-top: 0.18rem;
         font-size: 0.78rem;
-        font-weight: 600;
-        color: var(--texte-secondaire);
-    }
-
-    .branche-groupe-card__metrics {
-        min-width: 118px;
-        text-align: right;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 0.1rem;
-    }
-
-    .branche-groupe-card__total {
-        font-size: 1.35rem;
-        line-height: 1;
-        font-weight: 900;
-        color: var(--group-accent);
-    }
-
-    .branche-groupe-card__unit {
-        font-size: 0.72rem;
         font-weight: 700;
-        color: var(--texte-secondaire);
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
+        line-height: 1.15;
+        color: var(--bleu-logo);
     }
 
-    @@media (max-width: 575.98px) {
-        .branche-groupe-card {
-            align-items: flex-start;
-            gap: 10px;
-            padding: 12px;
-        }
+    .branche-membres-search {
+        position: relative;
+        flex: 1 1 280px;
+        max-width: 420px;
+    }
 
-        .branche-groupe-card__logo-shell {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-        }
+    .branche-membres-search .bi-search {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9aa7b6;
+        font-size: 0.9rem;
+        pointer-events: none;
+    }
 
-        .branche-groupe-card__logo {
-            width: 32px;
-            height: 32px;
-        }
-
-        .branche-groupe-card__metrics {
-            min-width: 76px;
-        }
+    .branche-membres-search input {
+        padding-left: 34px;
+        border-radius: 12px;
     }
 
     .branche-groupes-table thead th,
@@ -609,3 +523,142 @@
         color: var(--bleu-logo);
     }
 </style>
+
+@section Scripts {
+    <script>
+        (function () {
+            var panel = document.getElementById('branche-membres-panel');
+            if (!panel) {
+                return;
+            }
+
+            var rows = Array.prototype.slice.call(panel.querySelectorAll('.branche-membre-row'));
+            if (!rows.length) {
+                return;
+            }
+
+            var searchInput = document.getElementById('brancheMembresSearch');
+            var pageSizeSelect = document.getElementById('brancheMembresPageSize');
+            var pager = document.getElementById('brancheMembresPager');
+            var countLabel = document.getElementById('brancheMembresCount');
+            var noResults = document.getElementById('brancheMembresNoResults');
+            var tableWrap = document.getElementById('brancheMembresTableWrap');
+
+            var pageSize = parseInt(pageSizeSelect.value, 10) || 20;
+            var currentPage = 1;
+            var term = '';
+
+            function filtered() {
+                if (!term) {
+                    return rows;
+                }
+                return rows.filter(function (row) {
+                    return (row.getAttribute('data-search') || '').toLowerCase().indexOf(term) !== -1;
+                });
+            }
+
+            function makeBtn(label, page, opts) {
+                opts = opts || {};
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-sm ' + (opts.active ? 'btn-mango' : 'btn-outline-or');
+                btn.innerHTML = label;
+                btn.style.minWidth = '38px';
+                if (opts.disabled) {
+                    btn.disabled = true;
+                    btn.style.opacity = '0.5';
+                } else {
+                    btn.addEventListener('click', function () {
+                        currentPage = page;
+                        render();
+                    });
+                }
+                return btn;
+            }
+
+            function buildPager(totalPages) {
+                pager.innerHTML = '';
+                if (totalPages <= 1) {
+                    return;
+                }
+
+                pager.appendChild(makeBtn('<i class="bi bi-chevron-left"></i>', currentPage - 1, { disabled: currentPage <= 1 }));
+
+                var start = Math.max(1, currentPage - 2);
+                var end = Math.min(totalPages, currentPage + 2);
+                if (end - start < 4) {
+                    if (start === 1) { end = Math.min(totalPages, start + 4); }
+                    else if (end === totalPages) { start = Math.max(1, end - 4); }
+                }
+                if (start > 1) {
+                    pager.appendChild(makeBtn('1', 1, {}));
+                    if (start > 2) {
+                        var dots = document.createElement('span');
+                        dots.className = 'small text-muted-custom px-1';
+                        dots.textContent = '...';
+                        pager.appendChild(dots);
+                    }
+                }
+                for (var i = start; i <= end; i++) {
+                    pager.appendChild(makeBtn(String(i), i, { active: i === currentPage }));
+                }
+                if (end < totalPages) {
+                    if (end < totalPages - 1) {
+                        var dots2 = document.createElement('span');
+                        dots2.className = 'small text-muted-custom px-1';
+                        dots2.textContent = '...';
+                        pager.appendChild(dots2);
+                    }
+                    pager.appendChild(makeBtn(String(totalPages), totalPages, {}));
+                }
+
+                pager.appendChild(makeBtn('<i class="bi bi-chevron-right"></i>', currentPage + 1, { disabled: currentPage >= totalPages }));
+            }
+
+            function render() {
+                var list = filtered();
+                var total = list.length;
+                var totalPages = Math.max(1, Math.ceil(total / pageSize));
+                if (currentPage > totalPages) {
+                    currentPage = totalPages;
+                }
+
+                rows.forEach(function (row) { row.style.display = 'none'; });
+
+                var startIndex = (currentPage - 1) * pageSize;
+                var pageRows = list.slice(startIndex, startIndex + pageSize);
+                pageRows.forEach(function (row) { row.style.display = ''; });
+
+                if (noResults) { noResults.style.display = total === 0 ? '' : 'none'; }
+                if (tableWrap) { tableWrap.style.display = total === 0 ? 'none' : ''; }
+
+                if (countLabel) {
+                    if (total === 0) {
+                        countLabel.textContent = '0 membre';
+                    } else {
+                        countLabel.textContent = (startIndex + 1) + '-' + (startIndex + pageRows.length) + ' sur ' + total + ' membre(s)';
+                    }
+                }
+
+                buildPager(totalPages);
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('input', function () {
+                    term = this.value.trim().toLowerCase();
+                    currentPage = 1;
+                    render();
+                });
+            }
+            if (pageSizeSelect) {
+                pageSizeSelect.addEventListener('change', function () {
+                    pageSize = parseInt(this.value, 10) || 20;
+                    currentPage = 1;
+                    render();
+                });
+            }
+
+            render();
+        })();
+    </script>
+}
