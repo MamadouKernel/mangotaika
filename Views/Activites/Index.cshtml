@@ -113,6 +113,14 @@
 
     @if (Model.Any())
     {
+        <div class="js-view-switch" id="activites-view" data-default-view="cards">
+        <div class="d-flex justify-content-end mb-3">
+            <div class="btn-group lv-toggle" role="group" aria-label="Changer de vue">
+                <button type="button" class="btn btn-sm" data-view-set="cards" title="Vue en cartes"><i class="bi bi-grid-3x3-gap"></i></button>
+                <button type="button" class="btn btn-sm" data-view-set="list" title="Vue en liste"><i class="bi bi-list-ul"></i></button>
+            </div>
+        </div>
+        <div data-view-pane="cards">
         <section class="tracking-card-grid">
             @foreach (var a in Model)
             {
@@ -174,6 +182,62 @@
                 </article>
             }
         </section>
+        </div>
+        <div data-view-pane="list">
+            <div class="card-3d p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Date</th>
+                                <th scope="col">Titre</th>
+                                <th scope="col">Groupe</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Lieu</th>
+                                <th scope="col">Participants</th>
+                                <th scope="col">Statut</th>
+                                <th scope="col" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var a in Model)
+                            {
+                                <tr>
+                                    <td>@a.DateDebut.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td><a asp-action="Details" asp-route-id="@a.Id">@a.Titre</a></td>
+                                    <td>@(a.NomGroupe ?? "Tout le district")</td>
+                                    <td>@a.Type</td>
+                                    <td>@(string.IsNullOrWhiteSpace(a.Lieu) ? "-" : a.Lieu)</td>
+                                    <td>@a.NbParticipants</td>
+                                    <td><span class="tracking-status-pill @GetStatusClass(a.Statut)">@a.Statut</span></td>
+                                    <td class="text-end">
+                                        <div class="d-inline-flex flex-wrap gap-1 justify-content-end">
+                                            <a asp-action="Details" asp-route-id="@a.Id" class="btn btn-outline-or btn-sm" title="Voir"><i class="bi bi-eye"></i></a>
+                                            @if (canManage && (a.Statut == StatutActivite.EnCours || a.Statut == StatutActivite.Terminee))
+                                            {
+                                                <a asp-action="Presence" asp-route-id="@a.Id" class="btn btn-outline-or btn-sm" title="Presence"><i class="bi bi-qr-code-scan"></i></a>
+                                            }
+                                            @if (canManage)
+                                            {
+                                                <a asp-action="Edit" asp-route-id="@a.Id" class="btn btn-bleu btn-sm" title="Modifier"><i class="bi bi-pencil"></i></a>
+                                            }
+                                            @if (canDelete)
+                                            {
+                                                <form asp-action="Delete" asp-route-id="@a.Id" method="post" class="d-inline" onsubmit="return confirm('Supprimer cette activite ?')">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-sm activite-card__delete" title="Supprimer"><i class="bi bi-trash"></i></button>
+                                                </form>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        </div>
     }
     else
     {
