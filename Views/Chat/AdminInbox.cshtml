@@ -1,0 +1,81 @@
+@{
+    ViewData["Title"] = "Messagerie en direct";
+}
+<div class="container py-4">
+    <h1 class="h4 mb-3"><i class="bi bi-chat-dots"></i> Messagerie en direct</h1>
+    <div class="row">
+        <div class="col-md-4">
+            <div id="adminChatList" class="list-group"></div>
+        </div>
+        <div class="col-md-8">
+            <div id="adminChatMessages" class="border rounded p-3 mb-2" style="height:400px; overflow-y:auto;"></div>
+            <form id="adminChatForm" class="d-flex gap-2" hidden>
+                <input type="text" id="adminChatInput" class="form-control" placeholder="Répondre..." autocomplete="off" />
+                <button type="submit" class="btn btn-or">Envoyer</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    var token = document.querySelector('meta[name="request-verification-token"]').content;
+    var currentId = null;
+    var connection = new signalR.HubConnectionBuilder().withUrl('/hubs/chat').withAutomaticReconnect().build();
+
+    function loadInbox() {
+        fetch('/Chat/Inbox').then(r => r.json()).then(function (list) {
+            var container = document.getElementById('adminChatList');
+            container.innerHTML = list.map(function (c) {
+                return '<button type="button" class="list-group-item list-group-item-action" data-conv="' + c.id + '">' +
+                    '<strong>' + c.visiteur + '</strong><br><small class="text-muted">' + (c.dernierMessage || '...') + '</small></button>';
+            }).join('') || '<div class="text-muted small p-2">Aucune conversation ouverte.</div>';
+
+            container.querySelectorAll('[data-conv]').forEach(function (btn) {
+                btn.addEventListener('click', function () { openConversation(btn.getAttribute('data-conv')); });
+            });
+        });
+    }
+
+    function openConversation(id) {
+        currentId = id;
+        connection.invoke('JoinConversation', id);
+        document.getElementById('adminChatForm').hidden = false;
+        fetch('/Chat/History/' + id).then(r => r.json()).then(function (data) {
+            var box = document.getElementById('adminChatMessages');
+            box.innerHTML = (data.messages || []).map(function (m) {
+                return '<div class="mb-1"><strong>' + (m.estMoi ? 'Moi' : 'Visiteur') + ':</strong> ' + m.contenu + '</div>';
+            }).join('');
+            box.scrollTop = box.scrollHeight;
+        });
+    }
+
+    connection.on('NouveauMessage', function (msg) {
+        if (msg.conversationId !== currentId) { loadInbox(); return; }
+        var box = document.getElementById('adminChatMessages');
+        box.innerHTML += '<div class="mb-1"><strong>' + (msg.expediteurNom || 'Visiteur') + ':</strong> ' + msg.contenu + '</div>';
+        box.scrollTop = box.scrollHeight;
+    });
+
+    connection.start().then(function () { connection.invoke('JoinAgentQueue'); });
+    connection.on('NouvelleConversation', loadInbox);
+
+    document.getElementById('adminChatForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var input = document.getElementById('adminChatInput');
+        var texte = input.value.trim();
+        if (!texte || !currentId) return;
+        var body = new URLSearchParams();
+        body.set('contenu', texte);
+        fetch('/Chat/Send/' + currentId, {
+            method: 'POST',
+            headers: { 'RequestVerificationToken': token, 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString()
+        }).then(function () { input.value = ''; });
+    });
+
+    loadInbox();
+})();
+</script>
+}

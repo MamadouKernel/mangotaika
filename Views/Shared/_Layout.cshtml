@@ -226,6 +226,8 @@
 
     <div class="notification-toast-stack" id="notificationToastStack" aria-live="polite" aria-atomic="true"></div>
 
+    <partial name="_ChatWidget" />
+
     @if (ViewData["IsAdminLayout"] == null)
     {
         var footerLiensRS = await FooterDb.LiensReseauxSociaux.Where(l => l.EstActif).OrderBy(l => l.Ordre).ToListAsync();
@@ -284,6 +286,7 @@
     <script src="~/js/maps-leaflet-osm.js" asp-append-version="true"></script>
     <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/chatbox.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

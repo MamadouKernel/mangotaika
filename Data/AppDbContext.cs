@@ -76,6 +76,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<RoleMetadonnee> RolesMetadonnees => Set<RoleMetadonnee>();
     public DbSet<SecurityAuditLog> SecurityAuditLogs => Set<SecurityAuditLog>();
     public DbSet<DemandeRapprochementCompte> DemandesRapprochementComptes => Set<DemandeRapprochementCompte>();
+    public DbSet<ChatConversation> ChatConversations => Set<ChatConversation>();
+    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<FaqEntry> FaqEntries => Set<FaqEntry>();
 
     // LMS
     public DbSet<Formation> Formations => Set<Formation>();
@@ -567,6 +570,31 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
                 .HasForeignKey(doc => doc.DemandeId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+
+        // ChatConversation / ChatMessage
+        builder.Entity<ChatConversation>(e =>
+        {
+            e.HasIndex(c => new { c.Statut, c.DateCreation });
+            e.HasIndex(c => c.VisiteurId);
+            e.HasOne(c => c.Visiteur).WithMany().HasForeignKey(c => c.VisiteurId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(c => c.Agent).WithMany().HasForeignKey(c => c.AgentId).OnDelete(DeleteBehavior.SetNull);
+            e.HasMany(c => c.Messages).WithOne(m => m.Conversation).HasForeignKey(m => m.ConversationId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ChatMessage>(e =>
+        {
+            e.HasIndex(m => new { m.ConversationId, m.DateEnvoi });
+            e.HasOne(m => m.Expediteur).WithMany().HasForeignKey(m => m.ExpediteurId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        builder.Entity<FaqEntry>(e =>
+        {
+            e.HasIndex(f => new { f.EstActif, f.Categorie });
+            e.Property(f => f.Question).HasMaxLength(300);
+            e.Property(f => f.MotsCles).HasMaxLength(500);
+        });
+
+        builder.Entity<ChatConversation>().HasQueryFilter(e => !e.EstSupprime);
 
         // === LMS ===
 

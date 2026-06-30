@@ -1,0 +1,39 @@
+@{
+    var estConnecte = User.Identity?.IsAuthenticated == true;
+    var estAgent = User.IsInRole("AgentSupport") || User.IsInRole("Administrateur");
+}
+<div id="chatWidget" class="chat-widget" data-est-agent="@estAgent.ToString().ToLower()" data-est-connecte="@estConnecte.ToString().ToLower()">
+    <button type="button" id="chatWidgetToggle" class="chat-widget__toggle" aria-label="Ouvrir le chat">
+        <i class="bi bi-chat-dots"></i>
+    </button>
+
+    <div id="chatWidgetPanel" class="chat-widget__panel" hidden>
+        <div class="chat-widget__head">
+            <span class="chat-widget__title">Assistant MANGO TAÏKA</span>
+            <button type="button" id="chatWidgetClose" class="chat-widget__close" aria-label="Fermer">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <div class="chat-widget__body">
+            <div id="chatThread" class="chat-widget__thread">
+                <div class="chat-widget__message chat-widget__message--theirs">
+                    Bonjour ! Je peux vous renseigner sur la boutique, les activités, les actualités, ou vos tickets/demandes si vous êtes connecté. Posez votre question, ou choisissez une suggestion ci-dessous.
+                </div>
+            </div>
+            <div id="chatSuggestions" class="chat-widget__suggestions">
+                <button type="button" class="chat-widget__chip" data-suggestion="Voir les articles de la boutique">Boutique</button>
+                <button type="button" class="chat-widget__chip" data-suggestion="Quelles sont les prochaines activités ?">Activités</button>
+                <button type="button" class="chat-widget__chip" data-suggestion="Dernières actualités">Actualités</button>
+                <button type="button" class="chat-widget__chip" data-suggestion="Voir mes tickets">Mes tickets</button>
+                <button type="button" class="chat-widget__chip" data-suggestion="Voir mes demandes">Mes demandes</button>
+                <button type="button" class="chat-widget__chip" data-suggestion="Parler à un agent">Parler à un agent</button>
+            </div>
+        </div>
+
+        <form id="chatThreadForm" class="chat-widget__form">
+            <input type="text" id="chatThreadInput" class="form-control form-control-sm" placeholder="Écrivez votre question..." autocomplete="off" />
+            <button type="submit" class="btn btn-sm btn-or"><i class="bi bi-send"></i></button>
+        </form>
+    </div>
+</div>

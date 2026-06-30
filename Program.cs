@@ -111,6 +111,8 @@ builder.Services.AddScoped<INotificationDispatchService, NotificationDispatchSer
 builder.Services.AddScoped<IMobilePaymentGateway, ManualMobilePaymentGateway>();
 builder.Services.AddScoped<OperationalAccessService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddScoped<IChatBotService, ChatBotService>();
+builder.Services.AddScoped<IChatBotIntentService, ChatBotIntentService>();
 builder.Services.AddScoped<PermissionSeeder>();
 builder.Services.AddScoped<IClaimsTransformation, CommissaireDistrictClaimsTransformation>();
 builder.Services.AddHttpContextAccessor();
@@ -187,6 +189,7 @@ app.UseAuthorization();
 
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
 app.MapHub<NotificationHub>("/hubs/notifications").RequireAuthorization();
+app.MapHub<ChatHub>("/hubs/chat").RequireAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 using (var scope = app.Services.CreateScope())
